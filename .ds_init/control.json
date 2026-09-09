@@ -1,0 +1,53 @@
+{
+  "harness_version": "0.1.0",
+  "perfil": "python-jupyter-data",
+  "fecha_utc": "2026-09-09T18:08:09Z",
+  "configuracion": {
+    "nombre": "harmessi",
+    "notebooks_dir": "notebooks",
+    "venv_dir": ".venv",
+    "destino": "."
+  },
+  "archivos": [
+    {
+      "ruta": ".claude/agents/python-data-engineer.md",
+      "sha256": "ec04956822539ac99273b8e1d8572ea29fde2c4db009b9e4d6b95197461b4ee8"
+    },
+    {
+      "ruta": ".claude/agents/data-science-reviewer.md",
+      "sha256": "4f6e788a8e5dc4afd6da3a2daecc99644cbf39d6cedc0623609c141856b199b9"
+    },
+    {
+      "ruta": ".claude/agents/metodologo.md",
+      "sha256": "9215f71287cab31d8a2a73bbe99dadcc28b5c892cbf8223fb3192f84ffb6b010"
+    },
+    {
+      "ruta": ".claude/agents/notebook-runner.md",
+      "sha256": "62cd87ca8c8676b4fe5d8606e173863086183666a32d5c1d14f9f5a4e701a400"
+    },
+    {
+      "ruta": ".claude/skills/lead-data-scientist/SKILL.md",
+      "sha256": "21d47927d07068cf8ef57024b0b7978a2e9f59fdcb00cf3054a903d376580038"
+    },
+    {
+      "ruta": ".claude/skills/lead-data-scientist/sdd.md",
+      "sha256": "3410acf59fee1f6a6ec3a8009cd29665cae3fb447b9cdb7439eec0580033a742"
+    },
+    {
+      "ruta": ".claude/skills/lead-data-scientist/verificador.md",
+      "sha256": "e5b70d0ef401f6e94c71a40dca636d1eac519d78a7b1de8f7f86ad928c356c5e"
+    },
+    {
+      "ruta": "tools/tests/test_harness_smoke.py",
+      "sha256": "ccf4ee46ad504abcde044e6d606fabf42368a4f5e0bac5a692a6c35bd1a6d917"
+    },
+    {
+      "ruta": ".claude/settings.json",
+      "sha256": "c96fa916ecc68421732619db62f4a8c6349a5ac608134b71ce325e9682335e2d"
+    },
+    {
+      "ruta": "CLAUDE.md",
+      "sha256": "aa968cf1b56b6c4f51ebb188a3919cb48952c0d261821d3eb64dbdcc67ac0635"
+    }
+  ]
+}

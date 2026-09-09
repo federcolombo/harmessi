@@ -38,9 +38,13 @@ def generar_control(destino, perfil: str, config: dict, archivos_aplicados: list
     - `destino`: raíz del repo instalado (str o `Path`).
     - `perfil`: identificador público de perfil (p. ej. `python-jupyter-data`).
     - `config`: dict de configuración de la corrida; se usan las claves
-      `nombre`, `notebooks_dir`, `venv_dir` y `destino` (esta última con el
-      valor tal como se pasó por `--destino`, si está disponible; si no, se
-      usa `str(destino)`).
+      `nombre`, `notebooks_dir` y `venv_dir`. La clave `destino` del control
+      (bajo `configuracion`) se registra siempre como `"."`, una referencia
+      portable relativa a la raiz del propio repo instalado: el archivo de
+      control ya vive dentro de ese destino
+      (`<destino>/.ds_init/control.json`), por lo que grabar una ruta
+      absoluta de una maquina/usuario particular no aporta informacion
+      necesaria.
     - `archivos_aplicados`: rutas relativas (al destino) de los archivos ya
       escritos en su ubicación final — el hash se calcula leyendo cada uno de
       esos archivos reales.
@@ -65,7 +69,7 @@ def generar_control(destino, perfil: str, config: dict, archivos_aplicados: list
             "nombre": config.get("nombre"),
             "notebooks_dir": config.get("notebooks_dir"),
             "venv_dir": config.get("venv_dir"),
-            "destino": config.get("destino", str(destino)),
+            "destino": ".",
         },
         "archivos": archivos,
     }

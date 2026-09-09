@@ -83,10 +83,24 @@ class TestArchivoDeControl(unittest.TestCase):
         self.assertEqual(configuracion["nombre"], self.config["nombre"])
         self.assertEqual(configuracion["notebooks_dir"], self.config["notebooks_dir"])
         self.assertEqual(configuracion["venv_dir"], self.config["venv_dir"])
-        self.assertEqual(configuracion["destino"], self.config["destino"])
+        self.assertEqual(configuracion["destino"], ".")
 
         self.assertIn("archivos", contenido)
         self.assertTrue(len(contenido["archivos"]) > 0)
+
+    def test_destino_no_es_una_ruta_absoluta(self):
+        """El control.json vive dentro del propio destino instalado: grabar
+        ahi la ruta absoluta de la maquina/usuario que corrio la instalacion
+        no aporta informacion y filtra datos locales/privados al repo
+        versionado. `configuracion.destino` debe ser una referencia
+        portable, nunca una ruta absoluta (ni POSIX ni Windows)."""
+        contenido = json.loads(self.ruta_control.read_text(encoding="utf-8"))
+        destino_registrado = contenido["configuracion"]["destino"]
+
+        self.assertFalse(Path(destino_registrado).is_absolute())
+        self.assertFalse(destino_registrado.startswith("/"))
+        self.assertNotRegex(destino_registrado, r"^[A-Za-z]:[\\/]")
+        self.assertNotIn(str(self.repo), destino_registrado)
 
     def test_hashes_coinciden_con_los_archivos_reales_del_destino(self):
         contenido = json.loads(self.ruta_control.read_text(encoding="utf-8"))

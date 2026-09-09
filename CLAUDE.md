@@ -1,0 +1,68 @@
+# CLAUDE.md — harmessi
+
+Reglas de trabajo para este proyecto. Leer siempre antes de actuar.
+
+Instalado por `ds_init` (harness `0.1.0`) el 2026-09-09T18:01:03Z. Este bloque es un
+punto de partida genérico: ajustalo a las reglas reales de negocio, datos y flujo del proyecto.
+
+---
+
+## 1. Alcance y prohibiciones
+
+- El proyecto vive exclusivamente en su propio repositorio — no crear, modificar ni borrar fuera
+  de él.
+- Los directorios de datos crudos (`data/raw/` o equivalente) son solo lectura.
+- No instalar dependencias pesadas sin avisar.
+- No crear config, tests ni scaffolding fuera del plan acordado.
+- No ejecutar procesos largos sobre datasets completos sin avisar.
+
+## 2. Reglas que deben aplicarse siempre
+
+**Datos**
+- Definir un flujo fijo `raw/` → `interim/` → `processed/` → `scoring/` (o el que aplique) y
+  documentarlo. Todo lo posterior lee de `interim/` (o el paso intermedio equivalente), nunca de
+  `raw/`. No versionar datos (`data/` en `.gitignore`).
+
+**Anti-leakage (crítico, si el proyecto tiene target temporal)**
+- Features de un corte: solo con información **anterior** a la fecha de corte.
+- Cualquier holdout o dataset sellado es intocable hasta la fase de evaluación final: ninguna
+  decisión de features, modelo, hiperparámetros, calibración ni umbral se toma mirándolo.
+- Toda foto sin fecha del estado actual puede ser leakage como feature histórica: sospechar si un
+  campo se comporta como evento (arranca en la misma fecha para varios registros, se apila en un
+  día, o falta en los casos positivos) en vez de como snapshot verdadero.
+- Transformaciones que aprenden de los datos (escalado, imputación, encoding) van **dentro del
+  pipeline**, ajustadas solo con train. Ante la duda de leakage: preguntar antes de incluir.
+
+**Convenciones de código**
+- Python + pandas (u otro stack declarado), notebooks con celdas separadas y comentadas.
+- Rutas y constantes hardcodeadas en un notebook/módulo de setup, bloque editable. Sin config
+  aparte salvo que el proyecto lo requiera.
+- `RANDOM_STATE` fijo en todo lo que tenga aleatoriedad.
+- Español en variables/comentarios; `snake_case` en columnas.
+- Reutilizables en `utils/io.py` y `utils/features.py` (o equivalente); notebooks importan, no
+  duplican.
+- QA después de cada transformación importante.
+
+**Verificación**
+- Los números de un resumen (notebook, chat, doc) salen de la corrida, nunca de memoria.
+
+## 3. Workflow y aprobaciones
+
+- No avanzar sin aprobación explícita del autor en decisiones relevantes (target, features,
+  modelo, qué se descarta): **proponer y esperar respuesta**.
+- Al cerrar una fase o tarea: resumir qué se hizo, qué se encontró y qué queda abierto.
+- Preferir cambios pequeños/snippets sobre reescrituras completas.
+
+## 4. Notebooks
+
+- Directorio de notebooks: `notebooks`.
+- Entorno virtual del proyecto: `.venv`.
+- Notebook: abre con celda de objetivo/entradas/salidas, cierra con conclusiones y pendientes.
+
+## 5. Harness instalado
+
+Este proyecto usa un harness de agentes de Claude Code para ciencia de datos: subagentes en
+`.claude/agents/`, skill orquestador en `.claude/skills/lead-data-scientist/`, guardas técnicas en
+`tools/ds_guard.py` y `tools/dsguard/`, ejecución controlada de notebooks en `tools/nbrunner/`.
+Ver `.claude/skills/lead-data-scientist/SKILL.md` para el rol del Lead y el enrutamiento de
+tareas.
