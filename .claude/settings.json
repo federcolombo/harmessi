@@ -1,0 +1,27 @@
+{
+  "worktree": {
+    "bgIsolation": "none"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/tools/nbrunner/hook_launcher.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Agent|SendMessage|Write|Edit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/tools/dsguard/hook_launcher_presupuesto.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

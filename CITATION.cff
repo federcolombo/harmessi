@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use Harmessi, please cite it as below."
+title: "Harmessi"
+type: software
+version: 0.1.0
+date-released: "2026-09-09"
+url: "https://github.com/federcolombo/harmessi"
+repository-code: "https://github.com/federcolombo/harmessi"
+license: Apache-2.0
+authors:
+  - family-names: "Colombo"
+    given-names: "Federico"
