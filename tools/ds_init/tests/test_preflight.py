@@ -64,6 +64,53 @@ class TestValidarDestino(unittest.TestCase):
         # No debe levantar ninguna excepción.
         validar_destino(ruta)
 
+    def test_staging_huerfano_de_ds_init_se_detecta_con_mensaje_especifico(self):
+        """Reliability v0.2.0: un `.ds_init_staging_*` remanente (instalación
+        anterior interrumpida a mitad de camino) debe rechazarse con un
+        mensaje específico, distinto del genérico "working tree sucio", y sin
+        intentar ninguna reparación/reanudación automática."""
+        ruta = self._nuevo_repo()
+        staging = ruta / ".ds_init_staging_20260101T000000000000Z"
+        staging.mkdir()
+        (staging / "journal.json").write_text("[]", encoding="utf-8")
+
+        with self.assertRaises(DestinoInvalidoError) as cm:
+            validar_destino(ruta)
+
+        mensaje = str(cm.exception)
+        self.assertIn("interrumpida", mensaje)
+        self.assertIn(".ds_init_staging_20260101T000000000000Z", mensaje)
+
+    def test_staging_huerfano_se_detecta_aunque_git_no_lo_marque_sucio(self):
+        """La detección no depende de `git status`: un `.gitignore` amplio en
+        el destino podría ocultar el staging huérfano de Git, y aun así debe
+        detectarse."""
+        ruta = self._nuevo_repo()
+        (ruta / ".gitignore").write_text(".ds_init_staging_*\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(ruta), "add", "."], check=True)
+        subprocess.run(
+            ["git", "-C", str(ruta), "commit", "-m", "gitignore"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        staging = ruta / ".ds_init_staging_20260101T000000000000Z"
+        staging.mkdir()
+        (staging / "journal.json").write_text("[]", encoding="utf-8")
+
+        # Confirma la premisa: Git considera el working tree limpio.
+        status = subprocess.run(
+            ["git", "-C", str(ruta), "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        self.assertEqual(status.stdout.strip(), "")
+
+        with self.assertRaises(DestinoInvalidoError) as cm:
+            validar_destino(ruta)
+        self.assertIn("interrumpida", str(cm.exception))
+
 
 class TestDetectarColisiones(unittest.TestCase):
     def setUp(self):

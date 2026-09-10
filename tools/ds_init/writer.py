@@ -2,23 +2,34 @@
 dentro del destino, validación, journal con backups, aplicación atómica y
 rollback en reversa ante cualquier fallo.
 
-Flujo de `instalar()` (`design.md` §5):
+Flujo de `instalar()` (`design.md` §5, ajustado en la reliability v0.2.0):
 
 1. Crea `<destino>/.ds_init_staging_<timestamp>/` y arma ahí el árbol
    completo (verbatim + plantillas renderizadas + settings.json fusionado +
    CLAUDE.md resuelto), sin tocar `.ds_init/control.json` (se genera aparte,
-   después de aplicar, vía `control.generar_control`).
+   más adelante, vía `control.generar_control`).
 2. Valida el staging completo: JSON parseable, sin placeholders `{{...}}`
    pendientes, ninguna ruta de exclusión permanente (R7), ninguna cadena
    prohibida (R17). Si algo falla: borra el staging, no toca el destino.
 3. Si la validación pasa: arma un journal (orden de aplicación + backups de
-   todo lo que se va a reemplazar/fusionar) y aplica cada entrada con
-   `os.replace`.
-4. Si una excepción interrumpe la aplicación: revierte en orden inverso lo ya
-   aplicado (borra lo creado, restaura los backups) y borra el staging — el
-   destino queda igual que antes de `--execute`.
-5. Si todo aplica sin excepciones: borra el staging y genera
-   `.ds_init/control.json`.
+   todo lo que se va a reemplazar/fusionar), aplica cada entrada con
+   `os.replace` y, si eso terminó bien, genera `.ds_init/control.json`
+   (`control.generar_control`) — todo dentro de la misma transacción
+   protegida por rollback, control.json incluido.
+4. Si una excepción interrumpe cualquiera de esos pasos (incluida la
+   generación de `control.json`): intenta revertir, en orden inverso, todo lo
+   que llegó a aplicarse (borra lo creado, restaura los backups desde
+   `.backup/`), de forma resiliente — una falla puntual al revertir una
+   entrada no impide intentar las demás. Se preserva la excepción original
+   como causa (`raise ... from exc`) y, si alguna entrada no pudo
+   restaurarse, se la nombra en el mensaje de `InstalacionAbortadaError`.
+5. El staging (con sus backups) recién se borra al final, tanto si todo salió
+   bien (journal aplicado + `control.json` generado) como si hubo que
+   revertir. Esta garantía cubre excepciones manejadas dentro del proceso: si
+   el proceso termina de forma abrupta (`kill`, corte de luz) a mitad de
+   camino, el staging queda en disco para revisión manual — `ds_init` no lo
+   repara ni lo reanuda automáticamente (ver `preflight.validar_destino`,
+   que detecta y señala ese caso en la próxima corrida).
 """
 from __future__ import annotations
 
@@ -242,6 +253,18 @@ def _validar_staging(staging: Path) -> None:
                 raise InstalacionAbortadaError(f"JSON inválido en {rel}: {exc}") from exc
 
 
+def _respaldar_archivo(destino: Path, staging: Path, rel: str) -> None:
+    """Copia `<destino>/rel` a `<staging>/.backup/rel`, creando el
+    subdirectorio de backup si hace falta. Un único punto de la copia de
+    seguridad, reutilizado tanto por `_preparar_backups` (entradas
+    `reemplazar-merge` del journal) como por el respaldo puntual de
+    `.ds_init/control.json` cuando ya existía antes de una reinstalación."""
+    origen = destino / rel
+    backup_path = staging / NOMBRE_DIR_BACKUP / rel
+    backup_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(origen, backup_path)
+
+
 def _preparar_backups(entradas_journal: list, destino: Path, staging: Path) -> None:
     """Para cada entrada `reemplazar-merge` del journal, copia el archivo
     original del destino a `<staging>/.backup/<ruta-relativa>` antes de tocar
@@ -249,10 +272,7 @@ def _preparar_backups(entradas_journal: list, destino: Path, staging: Path) -> N
     for entrada in entradas_journal:
         if entrada["accion"] != ACCION_JOURNAL_REEMPLAZAR_MERGE:
             continue
-        origen = destino / entrada["destino"]
-        backup_path = staging / NOMBRE_DIR_BACKUP / entrada["destino"]
-        backup_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(origen, backup_path)
+        _respaldar_archivo(destino, staging, entrada["destino"])
 
 
 def _escribir_journal(journal_path: Path, entradas_journal: list) -> None:
@@ -276,24 +296,39 @@ def _aplicar_journal(entradas_journal: list, journal_path: Path, destino: Path, 
         _escribir_journal(journal_path, entradas_journal)
 
 
-def _revertir_journal(entradas_journal: list, destino: Path, staging: Path) -> None:
+def _revertir_journal(entradas_journal: list, destino: Path, staging: Path) -> list:
     """Revierte, en orden inverso, todo lo que llegó a aplicarse: borra los
-    `crear`, restaura desde `.backup/` los `reemplazar-merge`."""
+    `crear`, restaura desde `.backup/` los `reemplazar-merge`.
+
+    Resiliente ante fallos propios: si revertir una entrada puntual levanta
+    una excepción (p. ej. un archivo quedó bloqueado o sin permisos), se
+    registra el fallo y se sigue intentando revertir el resto — una falla
+    aislada no debe dejar sin intentar la reversión de todo lo anterior.
+
+    Devuelve la lista de entradas que no pudieron revertirse, cada una como
+    `{"destino": ruta_relativa, "error": str(excepción)}`; lista vacía si
+    todo se revirtió sin problemas."""
+    fallos = []
     for entrada in reversed(entradas_journal):
         if not entrada.get("aplicado"):
             continue
         rel = entrada["destino"]
         destino_final = destino / rel
 
-        if entrada["accion"] == ACCION_JOURNAL_CREAR:
-            if destino_final.exists():
-                destino_final.unlink()
-            _limpiar_padres_vacios(destino_final, destino)
-        elif entrada["accion"] == ACCION_JOURNAL_REEMPLAZAR_MERGE:
-            backup_path = staging / NOMBRE_DIR_BACKUP / rel
-            if backup_path.exists():
-                destino_final.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(backup_path, destino_final)
+        try:
+            if entrada["accion"] == ACCION_JOURNAL_CREAR:
+                if destino_final.exists():
+                    destino_final.unlink()
+                _limpiar_padres_vacios(destino_final, destino)
+            elif entrada["accion"] == ACCION_JOURNAL_REEMPLAZAR_MERGE:
+                backup_path = staging / NOMBRE_DIR_BACKUP / rel
+                if backup_path.exists():
+                    destino_final.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(backup_path, destino_final)
+        except Exception as exc:
+            fallos.append({"destino": rel, "error": str(exc)})
+
+    return fallos
 
 
 def instalar(plan: list, destino, config: dict) -> ResultadoInstalacion:
@@ -340,24 +375,74 @@ def instalar(plan: list, destino, config: dict) -> ResultadoInstalacion:
 
     journal_path = staging / NOMBRE_JOURNAL
 
-    # `_preparar_backups`, `_escribir_journal` y `_aplicar_journal` comparten
-    # el mismo try/except: si cualquiera de las dos primeras falla, todavía
-    # no se aplicó nada (todas las entradas siguen con "aplicado": False), así
-    # que `_revertir_journal` no tiene nada que revertir y el bloque se
-    # reduce, en la práctica, a limpiar el staging y abortar — mismo
-    # tratamiento que un fallo dentro de `_aplicar_journal` (R11: el destino
+    # `_preparar_backups`, `_escribir_journal`, `_aplicar_journal` y
+    # `control.generar_control` comparten el mismo try/except: la generación
+    # de `control.json` es parte de la misma transacción protegida por
+    # rollback que la aplicación del journal, no un paso aparte — un fallo en
+    # cualquiera de los cuatro revierte todo lo ya aplicado. Si las primeras
+    # dos fallan, todavía no se aplicó nada (todas las entradas siguen con
+    # "aplicado": False), así que `_revertir_journal` no tiene nada que
+    # revertir y el bloque se reduce, en la práctica, a limpiar el staging y
+    # abortar — mismo tratamiento que un fallo más adelante (R11: el destino
     # queda exactamente como estaba).
+    #
+    # `.ds_init/control.json` no pasa por `_armar_staging`/`_aplicar_journal`
+    # (su contenido depende de los hashes de los archivos ya aplicados, no se
+    # puede precalcular antes del journal) pero sí participa del mismo
+    # mecanismo de backup/rollback que el resto: si ya existía (reinstalación
+    # sobre un proyecto ya inicializado), se respalda con `_respaldar_archivo`
+    # antes de tocarlo, igual que cualquier entrada `reemplazar-merge`, y se
+    # agrega a `entradas_journal` ya marcada "aplicado" — así, si
+    # `generar_control` falla (total o parcialmente, ya que escribe con un
+    # `open(..., "w")` que no es atómico), `_revertir_journal` la revierte con
+    # la misma lógica que usa para todo lo demás: restaura el backup si
+    # existía, o borra el archivo parcial (y el directorio `.ds_init/` si
+    # queda vacío) si no existía.
+    #
+    # El staging (con sus backups) recién se borra al final de este bloque,
+    # ya sea en el camino exitoso o en el de rollback — nunca antes, porque
+    # `_revertir_journal` necesita los backups todavía presentes ahí.
     try:
         _preparar_backups(entradas_journal, destino, staging)
         _escribir_journal(journal_path, entradas_journal)
         _aplicar_journal(entradas_journal, journal_path, destino, staging)
-    except Exception as exc:
-        _revertir_journal(entradas_journal, destino, staging)
-        remanente = _rmtree_seguro(staging)
-        mensaje = (
-            f"Fallo durante la aplicación de la instalación; se revirtió todo "
-            f"lo ya aplicado y el destino quedó como antes de --execute: {exc}"
+
+        archivos_aplicados = [entrada["destino"] for entrada in entradas_journal]
+
+        ruta_control_final = destino / DESTINO_CONTROL_JSON
+        control_ya_existia = ruta_control_final.exists()
+        if control_ya_existia:
+            _respaldar_archivo(destino, staging, DESTINO_CONTROL_JSON)
+        entradas_journal.append(
+            {
+                "destino": DESTINO_CONTROL_JSON,
+                "accion": ACCION_JOURNAL_REEMPLAZAR_MERGE if control_ya_existia else ACCION_JOURNAL_CREAR,
+                "aplicado": True,
+            }
         )
+        _escribir_journal(journal_path, entradas_journal)
+
+        control_mod.generar_control(destino, perfil, config, archivos_aplicados)
+    except Exception as exc:
+        fallos_rollback = _revertir_journal(entradas_journal, destino, staging)
+        remanente = _rmtree_seguro(staging)
+
+        if fallos_rollback:
+            detalle_fallos = "; ".join(
+                f"{fallo['destino']} ({fallo['error']})" for fallo in fallos_rollback
+            )
+            mensaje = (
+                f"Fallo durante la aplicación de la instalación ({exc}); el "
+                f"rollback no pudo restaurar por completo el destino — "
+                f"entradas no revertidas: {detalle_fallos}. Revisar esas rutas "
+                f"a mano."
+            )
+        else:
+            mensaje = (
+                f"Fallo durante la aplicación de la instalación; se revirtió "
+                f"todo lo ya aplicado y el destino quedó como antes de "
+                f"--execute: {exc}"
+            )
         if remanente:
             mensaje += f" (advertencia: no se pudo borrar el staging remanente: {remanente})"
         raise InstalacionAbortadaError(mensaje) from exc
@@ -369,8 +454,6 @@ def instalar(plan: list, destino, config: dict) -> ResultadoInstalacion:
             f"No se pudo borrar completamente el staging tras una instalación exitosa: {remanente}"
         )
 
-    archivos_aplicados = [entrada["destino"] for entrada in entradas_journal]
-    control_mod.generar_control(destino, perfil, config, archivos_aplicados)
     control_path = destino / ".ds_init" / "control.json"
 
     return ResultadoInstalacion(

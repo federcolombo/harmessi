@@ -83,7 +83,11 @@ def main(argv: list = None) -> int:
     print(formatear_plan(plan))
 
     if args.execute:
-        resultado = writer.instalar(plan, destino, config)
+        try:
+            resultado = writer.instalar(plan, destino, config)
+        except writer.InstalacionAbortadaError as exc:
+            print(f"[ABORTADO] {exc}", file=sys.stderr)
+            return 1
         print(
             f"\n[EXECUTE] Instalación completa: {len(resultado.aplicados)} archivo(s) "
             f"aplicado(s), {len(resultado.omitidos)} omitido(s) por colisión existente."

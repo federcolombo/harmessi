@@ -31,9 +31,10 @@ science project.
   always output-forbidden) enforced independently of what any manifest
   declares.
 - **A safe installer (`ds_init`)** — `--dry-run` by default, atomic
-  `--execute` (staged, journaled, with full rollback on any failure), never
-  overwrites files that already exist in the destination, and merges
-  `.claude/settings.json` instead of clobbering it.
+  `--execute` (staged, journaled, with rollback on any handled failure —
+  including `control.json` generation), never overwrites files that already
+  exist in the destination, and merges `.claude/settings.json` instead of
+  clobbering it.
 
 ## Requirements
 
@@ -93,8 +94,20 @@ options:
 full installation plan without writing anything. Only `--execute` writes to
 disk, and it does so atomically — a staged tree is validated in full (JSON
 parses, no unresolved template placeholders, no forbidden strings) before
-anything is moved into place, and any failure mid-installation rolls back
-everything already applied.
+anything is moved into place. Any exception raised while applying the staged
+tree or generating `.ds_init/control.json` rolls back everything already
+applied, restoring the destination to its pre-`--execute` state; a rollback
+failure on one individual entry doesn't stop the rest from being reverted,
+and any entry that still couldn't be restored is named in the error message.
+
+This guarantee covers exceptions handled within the same process — it does
+not cover the process itself being killed or the machine losing power
+mid-installation. In that case the destination can be left with a stray
+`.ds_init_staging_<timestamp>/` directory (holding the journal and any
+backups). `ds_init` detects that on the next run and refuses to proceed with
+a specific message, but it does not repair or resume the interrupted
+installation automatically — recovering from that state (inspecting and,
+once safe, deleting the leftover staging directory) is a manual step.
 
 ## Profile
 

@@ -6,12 +6,16 @@ modificado."""
 from __future__ import annotations
 
 import hashlib
+import io
 import shutil
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
+from unittest.mock import patch
 
+from tools.ds_init import writer
 from tools.ds_init.cli import main
 
 
@@ -113,6 +117,41 @@ class TestCliDryRun(unittest.TestCase):
         self.assertEqual(codigo, 0)
         self.assertEqual(_snapshot_arbol(self.repo), snapshot_antes)
         self.assertEqual(status_antes, _git_status_porcelain(self.repo))
+
+
+class TestCliExecuteAbortadoControlado(unittest.TestCase):
+    """Reliability v0.2.0: si `writer.instalar` levanta
+    `InstalacionAbortadaError` durante `--execute`, `main()` debe manejarla
+    de forma controlada -- mensaje `[ABORTADO]` por stderr y código de salida
+    != 0 -- en vez de dejar propagar un traceback crudo."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_fallo_de_instalacion_produce_mensaje_abortado_y_codigo_no_cero(self):
+        with patch(
+            "tools.ds_init.cli.writer.instalar",
+            side_effect=writer.InstalacionAbortadaError("fallo inyectado por el test"),
+        ):
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                codigo = main(
+                    [
+                        "--destino",
+                        str(self.repo),
+                        "--nombre",
+                        "proyecto-de-prueba",
+                        "--execute",
+                    ]
+                )
+
+        self.assertNotEqual(codigo, 0)
+        salida_error = stderr.getvalue()
+        self.assertIn("[ABORTADO]", salida_error)
+        self.assertIn("fallo inyectado por el test", salida_error)
 
 
 if __name__ == "__main__":

@@ -211,6 +211,223 @@ class TestRollbackAnteFalloInyectado(unittest.TestCase):
         )
 
 
+class TestFalloGenerandoControlRevierteTodo(unittest.TestCase):
+    """Reliability v0.2.0: `control.generar_control` corre dentro de la misma
+    transacción protegida por rollback que la aplicación del journal — un
+    fallo ahí (disco lleno, permiso denegado, etc.) debe revertir todo lo ya
+    aplicado, igual que un fallo a mitad del journal."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_fallo_en_generar_control_revierte_instalacion_completa(self):
+        config = _config_base(self.repo)
+        plan = construir_plan(PERFIL, self.repo, config)
+
+        snapshot_antes = _snapshot_arbol(self.repo)
+
+        with patch(
+            "tools.ds_init.writer.control_mod.generar_control",
+            side_effect=OSError("fallo inyectado por el test generando control.json"),
+        ):
+            with self.assertRaises(writer.InstalacionAbortadaError) as ctx:
+                writer.instalar(plan, self.repo, config)
+
+        self.assertIsInstance(ctx.exception.__cause__, OSError)
+        self.assertIn("generando control.json", str(ctx.exception.__cause__))
+
+        snapshot_despues = _snapshot_arbol(self.repo)
+        self.assertEqual(
+            snapshot_antes,
+            snapshot_despues,
+            "El destino quedó modificado tras un fallo en generar_control: "
+            "debía quedar exactamente como antes (incluyendo la ausencia de "
+            "control.json)",
+        )
+        self.assertFalse((self.repo / ".ds_init" / "control.json").exists())
+        self.assertFalse(
+            (self.repo / ".ds_init").exists(),
+            "El directorio .ds_init/ no debía quedar creado tras revertir una "
+            "instalación nueva (sin control.json previo)",
+        )
+        self.assertEqual(
+            _dirs_staging_remanentes(self.repo),
+            [],
+            "Quedó un directorio de staging sin limpiar tras el rollback por "
+            "fallo en generar_control",
+        )
+
+
+class TestControlJsonParticipaDeLaTransaccion(unittest.TestCase):
+    """Reliability v0.2.0 (segunda vuelta): `.ds_init/control.json` participa
+    de la misma transacción protegida por rollback que el resto del journal.
+    Si ya existía (reinstalación sobre un proyecto ya inicializado), se
+    respalda antes de regenerarlo y se restaura exactamente si
+    `generar_control` falla -- incluso si alcanzó a escribir contenido
+    parcial antes de fallar, porque su escritura no es atómica."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _escribir_control_previo(self, contenido: str) -> Path:
+        # `newline=""` preserva literalmente los "\n" de `contenido`, igual
+        # que `writer._escribir_texto` -- sin esto, el modo texto de Windows
+        # los traduciría a CRLF y la comparación byte a byte del test daría
+        # un falso negativo (no un problema de `writer.py`, sino de este
+        # helper de setup).
+        dir_control = self.repo / ".ds_init"
+        dir_control.mkdir(parents=True, exist_ok=True)
+        ruta_control = dir_control / "control.json"
+        with open(ruta_control, "w", encoding="utf-8", newline="") as f:
+            f.write(contenido)
+        return ruta_control
+
+    def test_reinstalacion_con_control_previo_y_fallo_restaura_el_original_byte_a_byte(self):
+        control_previo = (
+            '{\n  "harness_version": "0.1.0-previa",\n  "perfil": "otra-cosa",\n'
+            '  "archivos": []\n}\n'
+        )
+        ruta_control = self._escribir_control_previo(control_previo)
+
+        config = _config_base(self.repo)
+        plan = construir_plan(PERFIL, self.repo, config)
+
+        with patch(
+            "tools.ds_init.writer.control_mod.generar_control",
+            side_effect=OSError("fallo inyectado por el test generando control.json"),
+        ):
+            with self.assertRaises(writer.InstalacionAbortadaError):
+                writer.instalar(plan, self.repo, config)
+
+        self.assertTrue(ruta_control.exists(), "El control.json anterior no debía desaparecer")
+        self.assertEqual(
+            ruta_control.read_bytes(),
+            control_previo.encode("utf-8"),
+            "El control.json restaurado no es byte a byte igual al anterior",
+        )
+        # El resto del rollback también se completó: nada del harness quedó
+        # instalado.
+        self.assertFalse((self.repo / "tools" / "ds_guard.py").exists())
+        self.assertEqual(_dirs_staging_remanentes(self.repo), [])
+
+    def test_reinstalacion_con_escritura_parcial_de_control_restaura_el_original(self):
+        """`control.generar_control` escribe con `open(..., "w")`, que trunca
+        el archivo antes de volcar el JSON: no es atómico. Este test simula
+        justamente ese peor caso -- el mock alcanza a truncar/escribir un
+        fragmento antes de fallar -- para confirmar que el backup tomado
+        antes de tocar el archivo permite restaurar el original igual, no
+        solo cuando el fallo ocurre antes de cualquier escritura."""
+        control_previo = '{"harness_version": "0.1.0-previa", "archivos": []}\n'
+        ruta_control = self._escribir_control_previo(control_previo)
+
+        config = _config_base(self.repo)
+        plan = construir_plan(PERFIL, self.repo, config)
+
+        def _generar_control_con_escritura_parcial(destino, perfil, config, archivos_aplicados):
+            Path(destino, ".ds_init", "control.json").write_text(
+                '{"harness_ver', encoding="utf-8"
+            )
+            raise OSError("fallo inyectado por el test a mitad de la escritura")
+
+        with patch(
+            "tools.ds_init.writer.control_mod.generar_control",
+            side_effect=_generar_control_con_escritura_parcial,
+        ):
+            with self.assertRaises(writer.InstalacionAbortadaError):
+                writer.instalar(plan, self.repo, config)
+
+        self.assertEqual(
+            ruta_control.read_bytes(),
+            control_previo.encode("utf-8"),
+            "El control.json truncado a medio escribir no se restauró al original",
+        )
+        self.assertEqual(_dirs_staging_remanentes(self.repo), [])
+
+
+class TestRollbackResilienteAntePropioFallo(unittest.TestCase):
+    """Reliability v0.2.0: si revertir una entrada puntual del journal falla
+    (p. ej. no se puede restaurar un backup), `_revertir_journal` debe seguir
+    intentando revertir el resto, y `instalar()` debe seguir levantando
+    `InstalacionAbortadaError` (nunca la excepción cruda del fallo de
+    rollback), preservando la excepción original como causa y nombrando la
+    entrada que no pudo restaurarse."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+        # Pre-existe settings.json para forzar una entrada
+        # "reemplazar-merge" en el journal: así el rollback tiene que
+        # restaurar un backup, que es el paso que vamos a hacer fallar.
+        dir_claude = self.repo / ".claude"
+        dir_claude.mkdir(parents=True, exist_ok=True)
+        (dir_claude / "settings.json").write_text(
+            json.dumps({"miClaveDeProyecto": {"algo": "propio"}}, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_fallo_al_restaurar_un_backup_no_detiene_el_resto_del_rollback(self):
+        config = _config_base(self.repo)
+        plan = construir_plan(PERFIL, self.repo, config)
+
+        snapshot_antes = _snapshot_arbol(self.repo)
+
+        _COPY2_REAL = shutil.copy2
+
+        def _copy2_falla_al_restaurar(origen, destino_final, *args, **kwargs):
+            # Distingue la copia de creación del backup (origen bajo el
+            # destino real) de la restauración durante el rollback (origen
+            # bajo `staging/.backup/`) — solo la segunda debe fallar.
+            if ".backup" in str(origen):
+                raise OSError("fallo inyectado por el test al restaurar el backup")
+            return _COPY2_REAL(origen, destino_final, *args, **kwargs)
+
+        with patch(
+            "tools.ds_init.writer.control_mod.generar_control",
+            side_effect=RuntimeError("fallo inyectado por el test generando control.json"),
+        ), patch(
+            "tools.ds_init.writer.shutil.copy2", side_effect=_copy2_falla_al_restaurar
+        ):
+            with self.assertRaises(writer.InstalacionAbortadaError) as ctx:
+                writer.instalar(plan, self.repo, config)
+
+        excepcion = ctx.exception
+        # La excepción que disparó el rollback (no la del propio rollback)
+        # queda preservada como causa principal.
+        self.assertIsInstance(excepcion.__cause__, RuntimeError)
+        self.assertIn("generando control.json", str(excepcion.__cause__))
+        # El mensaje nombra la entrada que no se pudo restaurar.
+        self.assertIn(".claude/settings.json", str(excepcion))
+
+        snapshot_despues = _snapshot_arbol(self.repo)
+        rutas_distintas = {
+            ruta
+            for ruta in set(snapshot_antes) | set(snapshot_despues)
+            if snapshot_antes.get(ruta) != snapshot_despues.get(ruta)
+        }
+        # Único archivo que no pudo volver a su estado original: aquel cuyo
+        # backup no se pudo restaurar. Todo lo demás sí se revirtió, a pesar
+        # del fallo puntual. `_snapshot_arbol` guarda rutas con el separador
+        # nativo del SO (Windows usa "\\"), a diferencia del mensaje de
+        # `InstalacionAbortadaError` (que usa siempre "/", tal como están
+        # las rutas en el manifiesto).
+        self.assertEqual(rutas_distintas, {str(Path(".claude") / "settings.json")})
+        self.assertFalse(
+            (self.repo / "tools" / "ds_guard.py").exists(),
+            "Una entrada 'crear' no relacionada con el fallo de rollback debía "
+            "revertirse igual",
+        )
+        self.assertFalse((self.repo / ".ds_init" / "control.json").exists())
+        self.assertEqual(_dirs_staging_remanentes(self.repo), [])
+
+
 class TestFalloAntesDeAplicarJournalNoDejaStaging(unittest.TestCase):
     """Hallazgo 1: un fallo en `_preparar_backups`/`_escribir_journal` (antes
     de que `_aplicar_journal` arranque) también debe abortar limpio, sin
