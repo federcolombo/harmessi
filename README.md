@@ -20,6 +20,12 @@ science project.
 - **A governed workflow** — a `lead-data-scientist` orchestrator skill that
   drives a lightweight SDD loop (proposal → spec → design → tasks →
   verification) instead of ad hoc prompting.
+- **KDD project lifecycle** — a separate, persisted state
+  (`openspec/kdd/state.json`) tracking which Data Science lifecycle stage
+  (Problem Understanding → ... → Monitoring) the project is in, kept distinct
+  from SDD's per-change state: a change can declare which stage(s) it
+  belongs to, and closing it appends evidence to that stage without ever
+  auto-advancing it — advancing a stage stays an explicit, approved action.
 - **Reproducible validation (`dsguard`)** — deterministic, reproducible
   SHA-256 hashing of approved artifacts (`sha256/lf/v1`, LF-normalized) and an
   append-only `control.json` approval ledger, so an approval can never

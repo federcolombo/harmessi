@@ -148,6 +148,12 @@ MANIFEST: tuple = (
         descripcion="Referencia del verificador determinista",
     ),
     EntradaManifiesto(
+        fuente=f"{_dir_templates('python_jupyter_data')}/kdd.md.tmpl",
+        tratamiento=PLANTILLA,
+        destino=".claude/skills/lead-data-scientist/kdd.md",
+        descripcion="Referencia del lifecycle KDD del proyecto (Bloque 4)",
+    ),
+    EntradaManifiesto(
         fuente=".claude/skills/lead-data-scientist/templates/proposal.md",
         tratamiento=VERBATIM,
         destino=".claude/skills/lead-data-scientist/templates/proposal.md",
@@ -196,6 +202,12 @@ MANIFEST: tuple = (
         fuente="tools/dsguard/sdd.py",
         tratamiento=VERBATIM,
         destino="tools/dsguard/sdd.py",
+    ),
+    EntradaManifiesto(
+        fuente="tools/dsguard/kdd.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/kdd.py",
+        descripcion="Lifecycle KDD del proyecto: state.json, criterios detectables, sync al cierre (Bloque 4)",
     ),
     EntradaManifiesto(
         fuente="tools/dsguard/notebooks.py",
@@ -315,6 +327,7 @@ EXCLUSIONES_PERMANENTES: tuple = (
     "docs/",
     "openspec/archive/",
     "openspec/changes/",
+    "openspec/kdd/",
     "requirements.txt",
     "requirements-lock.txt",
     "tools/tests/test_ds_guard.py",
@@ -323,6 +336,7 @@ EXCLUSIONES_PERMANENTES: tuple = (
     "tools/tests/test_launcher_common.py",
     "tools/tests/test_pathguard.py",
     "tools/tests/test_hook_rutas.py",
+    "tools/tests/test_kdd.py",
 )
 
 

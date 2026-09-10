@@ -31,7 +31,7 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-from dsguard import core, notebooks, repo, sdd  # noqa: E402
+from dsguard import core, kdd, notebooks, repo, sdd  # noqa: E402
 
 
 # --- Helpers compartidos --------------------------------------------------
@@ -232,18 +232,50 @@ def cmd_transition(args: argparse.Namespace) -> int:
         return 3
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
+    if args.a == "cerrada":
+        # Pre-chequeo KDD (Bloque 4): corre ANTES de tocar tasks.md/control.json,
+        # para que un state.json ausente/corrupto bloquee el cierre de forma
+        # atómica en vez de dejarlo cerrado sin evidencia KDD sincronizada
+        # ("no debe quedar silenciosamente inconsistente"). Si el cambio no
+        # declara ninguna etapa KDD, esto es un no-op (lista vacía).
+        pre_findings = kdd.validar_antes_de_cerrar(repo_root, control)
+        if pre_findings:
+            _imprimir_findings(pre_findings, 1, args.json)
+            return 1
+
     sesion_activa = sdd._sesion_activa(control)
     ok, findings = sdd.transition(control, tasks_path, control_path, repo_root, args.a, sesion_activa)
 
-    if ok:
-        if args.json:
-            print(json.dumps({"transicion_aplicada": args.a}, ensure_ascii=False))
-        else:
-            print(f"Transición aplicada -> {args.a}")
-        return 0
+    if not ok:
+        _imprimir_findings(findings, 1, args.json)
+        return 1
 
-    _imprimir_findings(findings, 1, args.json)
-    return 1
+    kdd_sync_resultado = None
+    kdd_sync_error = None
+    if args.a == "cerrada":
+        try:
+            kdd_sync_resultado = kdd.sync_al_cerrar(repo_root, control, args.change_id)
+        except Exception as e:  # nunca silencioso: la transición SDD ya se aplicó
+            kdd_sync_error = str(e)
+
+    if args.json:
+        payload = {"transicion_aplicada": args.a}
+        if kdd_sync_resultado is not None:
+            payload["kdd_sync"] = kdd_sync_resultado
+        if kdd_sync_error is not None:
+            payload["kdd_sync_error"] = kdd_sync_error
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(f"Transición aplicada -> {args.a}")
+        if kdd_sync_resultado is not None:
+            if kdd_sync_resultado["sincronizado"]:
+                print(f"KDD sincronizado: {', '.join(kdd_sync_resultado['etapas_actualizadas'])}")
+            else:
+                print(f"KDD: {kdd_sync_resultado['motivo']}")
+        if kdd_sync_error is not None:
+            print(f"[KDD-SYNC-FALLO] {kdd_sync_error}", file=sys.stderr)
+
+    return 1 if kdd_sync_error is not None else 0
 
 
 # --- session ----------------------------------------------------------------
@@ -524,6 +556,102 @@ def cmd_archive(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- kdd ---------------------------------------------------------------------
+
+def cmd_kdd_init(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+
+    try:
+        estado, creado = kdd.kdd_init(repo_root)
+    except kdd.KddEstadoError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+
+    ruta_relativa = kdd.state_path(repo_root).relative_to(repo_root).as_posix()
+    if args.json:
+        print(json.dumps({"creado": creado, "ruta": ruta_relativa}, ensure_ascii=False))
+    else:
+        if creado:
+            print(f"KDD inicializado: {ruta_relativa}")
+        else:
+            print(f"{ruta_relativa} ya existía: init es idempotente, no se modificó nada.")
+    return 0
+
+
+def cmd_kdd_status(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+
+    ruta = kdd.state_path(repo_root)
+    if not ruta.exists():
+        print(
+            f"{ruta.relative_to(repo_root).as_posix()} no existe. Correr 'ds_guard kdd init' primero.",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        payload = kdd.kdd_status(repo_root)
+    except kdd.KddEstadoError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        for etapa in kdd.ETAPAS:
+            info = payload["etapas"][etapa]
+            print(f"{etapa}: {info['estado']} ({len(info['changes'])} cambio(s))")
+            for c in info["criterios_detectables"]:
+                marca = "OK" if c["cumplido"] else "--"
+                print(f"    [{marca}] {c['criterio']}")
+            if info["changes_no_localizados"]:
+                print(
+                    "    (no localizados en openspec/changes/ ni openspec/archive/: "
+                    + ", ".join(info["changes_no_localizados"])
+                    + ")"
+                )
+    return 0
+
+
+def cmd_kdd_transition(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+
+    ruta = kdd.state_path(repo_root)
+    if not ruta.exists():
+        print(
+            f"{ruta.relative_to(repo_root).as_posix()} no existe. Correr 'ds_guard kdd init' primero.",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        ok, findings = kdd.kdd_transition(repo_root, args.etapa, args.a, motivo=args.motivo)
+    except kdd.KddEstadoError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+
+    if ok:
+        if args.json:
+            print(json.dumps({"transicion_aplicada": {"etapa": args.etapa, "hacia": args.a}}, ensure_ascii=False))
+        else:
+            print(f"Transición KDD aplicada -> {args.etapa}: {args.a}")
+        return 0
+
+    _imprimir_findings(findings, 1, args.json)
+    return 1
+
+
 # --- init -------------------------------------------------------------------
 
 # Artefactos posibles de un cambio: si cualquiera ya existe, `init` no toca
@@ -722,6 +850,28 @@ def construir_parser() -> argparse.ArgumentParser:
     p_notebook_diff.add_argument("--max-celdas", type=int, default=200, dest="max_celdas")
     p_notebook_diff.add_argument("--json", action="store_true")
     p_notebook_diff.set_defaults(func=cmd_notebook_diff)
+
+    p_kdd = subparsers.add_parser("kdd", help="Lifecycle KDD del proyecto (openspec/kdd/state.json).")
+    kdd_sub = p_kdd.add_subparsers(dest="subcomando", required=True)
+
+    p_kdd_init = kdd_sub.add_parser("init", help="Crea openspec/kdd/state.json si no existe (idempotente).")
+    p_kdd_init.add_argument("--json", action="store_true")
+    p_kdd_init.set_defaults(func=cmd_kdd_init)
+
+    p_kdd_status = kdd_sub.add_parser(
+        "status", help="Estado de las 10 etapas KDD y criterios detectables (informativo)."
+    )
+    p_kdd_status.add_argument("--json", action="store_true")
+    p_kdd_status.set_defaults(func=cmd_kdd_status)
+
+    p_kdd_transition = kdd_sub.add_parser("transition", help="Avanza/retrocede el estado de una etapa KDD.")
+    p_kdd_transition.add_argument("--etapa", required=True, choices=list(kdd.ETAPAS))
+    p_kdd_transition.add_argument(
+        "--a", required=True, dest="a", choices=sorted(kdd.ESTADOS_ETAPA_DESTINO_VALIDOS)
+    )
+    p_kdd_transition.add_argument("--motivo", default=None)
+    p_kdd_transition.add_argument("--json", action="store_true")
+    p_kdd_transition.set_defaults(func=cmd_kdd_transition)
 
     p_archive = subparsers.add_parser(
         "archive", help="Archiva un cambio cerrado de openspec/changes/ a openspec/archive/ (git mv)."

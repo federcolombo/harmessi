@@ -161,9 +161,14 @@ comandos y hallazgos en `.claude/skills/lead-data-scientist/verificador.md`.
 ## 10. Relación con la documentación existente
 
 - Vive en SDD: problema/evidencia/decisión/tareas/verificación de un cambio acotado.
-- Sigue en la documentación del proyecto: estado vigente y acumulado del diseño, handoff vigente,
-  esquema de datos, y el histórico de fase — SDD no los reemplaza, se suma como nivel más granular
-  dentro de la jerarquía de `CLAUDE.md`.
+- Sigue en la documentación del proyecto: estado vigente y acumulado del diseño, handoff vigente y
+  esquema de datos — SDD no los reemplaza, se suma como nivel más granular dentro de la jerarquía
+  de `CLAUDE.md`.
+- El histórico de fase del proyecto (en qué etapa de Data Science está: Data Understanding,
+  Modeling, Evaluation, etc.) ya no es un concepto sin artefacto: lo cubre KDD, un nivel por
+  encima de SDD — ver `.claude/skills/lead-data-scientist/kdd.md`. Un cambio puede declarar a qué
+  etapa pertenece (`control["kdd"]`); cerrarlo agrega evidencia a esa etapa, nunca la avanza por sí
+  solo.
 - El handoff se actualiza cuándo ya se actualiza hoy: al cerrar una fase, aparte. Ningún cambio SDD
   individual lo dispara por sí solo.
 - Los artefactos SDD **enlazan, nunca copian** `CLAUDE.md`, el documento maestro, el handoff y el

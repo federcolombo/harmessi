@@ -83,6 +83,18 @@ categoría, estados y evidencia de aprobación. No se carga por defecto: se lee 
 routing ya clasificó la tarea como mediana, metodológica o sensible. Las plantillas viven en
 `.claude/skills/lead-data-scientist/templates/`.
 
+## KDD (lifecycle del proyecto)
+
+Distinto de SDD: SDD especifica/decide/implementa/verifica un cambio puntual; KDD es en qué etapa
+del lifecycle de Data Science está el proyecto (`problem_understanding` → ... → `monitoring`,
+persistido en `openspec/kdd/state.json`). Leer
+`.claude/skills/lead-data-scientist/kdd.md` bajo demanda — no por defecto — cuando un cambio
+metodológico, de datos, de features, de modelo o de evaluación declara o afecta una etapa, o
+cuando haga falta interpretar el estado KDD del proyecto. Un cambio declara su etapa en
+`control["kdd"]`, nunca en `tasks.md`; cerrar el cambio agrega evidencia a esa etapa
+automáticamente, pero nunca la avanza de estado por sí solo — avanzar una etapa es siempre
+`ds_guard kdd transition`, explícito y con aprobación del usuario cuando corresponda.
+
 ## Gestión de sesiones
 
 **Apertura**: si el usuario ya indicó modo, objetivo, alcance y presupuesto al invocar el skill, se

@@ -1,7 +1,8 @@
 # Verificador determinista (`ds_guard`) — referencia
 
-Se lee bajo demanda, junto con `sdd.md`, cuando hace falta correr o interpretar `ds_guard`. No se
-carga por defecto. Código real: `tools/ds_guard.py` + `tools/dsguard/{core,repo,sdd,notebooks}.py`.
+Se lee bajo demanda, junto con `sdd.md` (y `kdd.md` para los comandos `kdd *`), cuando hace falta
+correr o interpretar `ds_guard`. No se carga por defecto. Código real: `tools/ds_guard.py` +
+`tools/dsguard/{core,repo,sdd,kdd,notebooks}.py`.
 
 ## 1. Qué es y qué no es
 
@@ -88,6 +89,18 @@ para salida estructurada. Exit codes generales: `0` correcto, `1` gate/validaci�
 - **`notebook-diff --change-id <id> (--path <ruta> [--path ...] | --tocados) [--contra baseline]
   [--max-celdas 200] [--json]`**: diff por celdas de uno o más `.ipynb` contra una revisión de git
   (por defecto `control["baseline"]["commit"]`). Nunca ejecuta el notebook.
+- **`kdd init [--json]`**: crea `openspec/kdd/state.json` si no existe (idempotente — si ya existe
+  y es válido, no lo toca; si existe y está corrupto, no lo sobreescribe: falla explícito). No
+  requiere `--change-id`, opera a nivel de proyecto.
+- **`kdd status [--json]`**: informativo, no falla nunca por contenido (mismo espíritu que
+  `status`). Reporta `estado` y `changes` de cada una de las 10 etapas, más sus criterios
+  detectables (presencia de sección esperada en al menos un cambio referenciado — nunca su
+  calidad). Falla (exit 2) si `state.json` no existe todavía.
+- **`kdd transition --etapa <etapa> --a no_iniciada|en_progreso|cerrada [--motivo texto]
+  [--json]`**: valida estructura y tabla de transiciones de la etapa
+  (`no_iniciada → en_progreso → cerrada → en_progreso`). Una etapa `futura`
+  (`production_readiness`/`deployment`/`monitoring`) rechaza cualquier transición en v0.2. Cerrar
+  una etapa sin evidencia registrada se rechaza. Nunca juzga contenido/calidad metodológica (v0.2).
 - **`archive --change-id <id> [--dry-run] [--execute] [--json]`**: mueve
   `openspec/changes/<id>/` a `openspec/archive/<id>/` con `git mv` exclusivamente — nunca
   automático. Exige: `estado: cerrada` en `tasks.md`, gate de cierre en verde, el directorio
@@ -124,6 +137,19 @@ para salida estructurada. Exit codes generales: `0` correcto, `1` gate/validaci�
   bloqueante solo si `estado` es `en_implementacion`.
 - **`NB-ARCHIVO-AUSENTE`**: el `.ipynb` pedido no existe en el working tree.
 - **`NB-REVISION-INVALIDA`**: la revisión de git pedida (`--contra`) no resuelve a ningún commit.
+- **`KDD-NO-INICIALIZADO`**: `transition --a cerrada` de un cambio que declara etapa(s) KDD pero
+  `openspec/kdd/state.json` no existe. Bloquea el cierre entero (nada se escribe).
+- **`KDD-ESTADO-CORRUPTO`**: `state.json` existe pero no es JSON válido o no cumple la schema
+  esperada (10 etapas exactas, campos requeridos). Bloquea igual que el anterior.
+- **`KDD-ETAPA-DESCONOCIDA`**: `control["kdd"]` referencia una etapa que no está en el catálogo de
+  10, o `kdd transition --etapa` recibe un valor fuera del catálogo.
+- **`KDD-ETAPA-DESTINO-INVALIDO`**: `kdd transition --a` recibe un valor que no es
+  `no_iniciada`/`en_progreso`/`cerrada`.
+- **`KDD-ETAPA-FUTURA`**: se pidió una transición sobre una etapa en estado `futura`
+  (`production_readiness`/`deployment`/`monitoring` en v0.2).
+- **`KDD-TRANSICION-INVALIDA`**: la transición de etapa pedida no está permitida desde el estado
+  actual de esa etapa.
+- **`KDD-SIN-EVIDENCIA`**: se pidió cerrar una etapa sin ninguna entrada en su `evidencia`.
 
 ## 4. `control.json`
 
@@ -133,6 +159,8 @@ Campos: `schema_version`, `change_id`, `creado_utc`, `modo` (`completo`/`abrevia
 `session start`, con `estado_final` `activa`/`completada`/`pausada`), `archivado` (`null` o
 `{utc, destino}` tras `archive --execute`). Cada entrada de `sesiones[]` agrega `deadline_utc`,
 `minutos_consumidos`, `resultado`, `subagentes`, y `presupuesto.max_continuaciones_por_subagente`.
+Campo opcional `kdd` (Bloque 4): `{"etapa_primaria": "...", "etapas_afectadas": [...]}` — ver
+`kdd.md` §4. Ausente en un cambio que no declara lifecycle; no es requerido por ningún gate SDD.
 
 **`tasks.md` sigue siendo la única fuente de verdad del `estado:`** — `control.json` es historial
 mecánico (aprobaciones, transiciones, sesiones), no autoridad. `status` reporta discrepancia si no

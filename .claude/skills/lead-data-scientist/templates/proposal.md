@@ -12,9 +12,20 @@
 ## Supuestos descartados
 <!-- qué se creía y la exploración desmintió -->
 
+## Hipótesis (condicional — solo cambios metodológicos)
+<!-- qué se espera confirmar/descartar, si el cambio prueba una hipótesis concreta -->
+
 ## Alcance
 
 ## Fuera de alcance
+
+## Holdout policy (condicional — solo cambios "sensible")
+<!-- si el cambio toca o podría tocar un holdout/dataset sellado: acceso solicitado, por qué, qué
+decisión depende de eso, y la autorización del usuario transcripta literal (ver SKILL.md,
+categoría "Sensible") -->
+
+## Impacto en production-readiness (opcional)
+<!-- nota libre; pasa a condicional cuando esa etapa KDD se active en un bloque futuro -->
 
 ## Criterios de aceptación (spec-lite — solo SDD abreviado)
 <!-- en SDD completo, ver spec.md en su lugar -->
