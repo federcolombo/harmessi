@@ -180,25 +180,52 @@ Toda convocatoria sale de esta conversación principal. `notebook-runner` tiene 
 real: un hook `PreToolUse` (`.claude/settings.json` + `tools/nbrunner/hook_launcher.py` +
 `tools/nbrunner/hook_validar_comando.py`) valida el comando Bash propuesto contra el manifest
 versionado antes de dejarlo correr. Ese bloqueo cubre únicamente la restricción de comando único de
-`notebook-runner` — no el resto de las guardas del proyecto: los archivos autorizados de los otros
-subagentes y la prohibición de acceder a holdouts/datasets sellados siguen siendo **guardas de
-comportamiento**, sin bloqueo técnico, dependientes de que el Lead y los subagentes cumplan estas
-instrucciones; el verificador determinista las detecta después, no las impide.
+`notebook-runner`.
 
-Existe además un segundo hook `PreToolUse` real: `tools/dsguard/hook_presupuesto.py` +
+Existe un segundo hook `PreToolUse` real: `tools/dsguard/hook_presupuesto.py` +
 `tools/dsguard/hook_launcher_presupuesto.py`, registrado en `.claude/settings.json` con
 `matcher: "Agent|SendMessage|Write|Edit|Bash|PowerShell"`. Bloquea técnicamente, sobre la sesión de
 control activa de un cambio en `openspec/changes/`: nuevas convocatorias de subagente (`Agent`) y
 continuaciones (`SendMessage`) en los últimos 5 minutos antes del `deadline_utc`; y, vencido el
 `deadline_utc`, además `Write`/`Edit`/`Bash`/`PowerShell`, salvo el allowlist de diagnóstico/
 checkpoint (`git status`/`git diff` de solo lectura — excluye explícitamente `--output`/`-o`, que
-escriben — y `ds_guard session note|status|close`). Este segundo hook cubre únicamente presupuesto
-de tiempo y continuaciones de una sesión de control activa: no reemplaza las guardas de
-comportamiento de archivos autorizados por rol ni la prohibición de holdout/dataset sellado, que
-siguen sin bloqueo técnico propio.
+escriben — y `ds_guard session note|status|close`). Este hook cubre únicamente presupuesto de
+tiempo y continuaciones de una sesión de control activa, sin awareness de rutas.
+
+**Bloque 3 (protección de rutas): tercer hook `PreToolUse` real**, `tools/dsguard/hook_rutas.py` +
+`tools/dsguard/hook_launcher_rutas.py`, registrado con
+`matcher: "Read|Grep|Edit|Write|NotebookEdit|Bash|PowerShell"` — corre siempre, con o sin sesión de
+control activa (a diferencia del hook de presupuesto). Bloquea técnicamente, para **cualquier**
+llamador (Lead incluido, no solo subagentes):
+
+- **Secretos** (`.env`, `.env.*`, `*.pem`, `*.key`, `*.pfx`, `*.p12`, `id_rsa*`/`id_ed25519*`/
+  `id_ecdsa*`, `.ssh/**`, `credentials.json`, `*_credentials.json`, `.aws/`/`.gcloud/`/`.azure/`,
+  `*.kdbx`): lectura y escritura denegadas siempre, sin excepción posible.
+- **Holdouts/datasets sellados** (declarados en `.claude/guardrails.json`, vacío por defecto —
+  cada proyecto declara los suyos): escritura denegada siempre; lectura denegada salvo una
+  excepción explícita, exacta y auditable en `guardrails.json` (nunca un patrón amplio, y nunca
+  algo que el Lead pueda agregarse a sí mismo: ver más abajo).
+- **`data/raw`**: lectura permitida, escritura/borrado denegado siempre (default aunque
+  `guardrails.json` no exista; configurable en `data_raw`).
+- **`.claude/guardrails.json`**: protegido por sí mismo — ni el Lead ni ningún subagente pueden
+  modificarlo vía `Write`/`Edit`/`NotebookEdit`, ni (best-effort) vía un `Bash`/`PowerShell` que
+  se detecte intentando escribirlo. La única vía de edición en v0.2 es manual, fuera de Claude
+  Code — cualquier excepción de holdout queda así como acto humano, no algo que un agente pueda
+  concederse.
+- **`write_scopes`** (opt-in, vacío por defecto): si un proyecto declara rutas autorizadas por
+  agente en `guardrails.json`, se enforcian para `Write`/`Edit`/`NotebookEdit` de subagentes
+  identificados — nunca para el Lead (no se rediseñan sus capacidades en este bloque).
+
+Para `Write`/`Edit`/`NotebookEdit`/`Read`/`Grep` (con `path` explícito) la garantía es real: la
+ruta llega estructurada en el payload, se resuelve (symlinks y `..` incluidos) y se compara con
+certeza. **Para `Bash`/`PowerShell` el enforcement es best-effort, deliberadamente no
+equivalente**: es un escaneo de texto sobre el comando (sin parser de shell), que detecta
+referencias directas y literales pero no indirección (`cd` previo, variables, comandos generados
+dinámicamente). Las excepciones de holdout tampoco aplican vía `Bash`/`PowerShell` — solo vía
+`Read`/`Grep`, donde se sabe con certeza que es una lectura pura.
 
 El verificador determinista de alcance/estados/aprobaciones/sesiones ya existe (`tools/ds_guard.py`)
 — ver `.claude/skills/lead-data-scientist/verificador.md` para el detalle de comandos y hallazgos.
-Fuera del hook acotado de `notebook-runner` descrito arriba, sigue sin haber hook `PreToolUse`
-general: Read/Bash sobre datos sensibles o rutas fuera de alcance para los demás subagentes no está
-técnicamente bloqueado, solo verificable después, si el Lead corre `ds_guard`.
+Fuera de los tres hooks descritos arriba, sigue sin haber enforcement técnico de: `Grep` sin `path`
+explícito (búsqueda amplia), y del alcance de archivos por rol más allá de `write_scopes` cuando
+un proyecto no lo configura — eso lo sigue verificando `ds_guard` después, no antes.

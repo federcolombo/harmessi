@@ -250,6 +250,19 @@ class TestChecksHarmessiInstalacionReal(unittest.TestCase):
         resultados = doctor_mod._check_hooks(self.repo, settings_data)
         self.assertIn(doctor_mod.NIVEL_ERROR, _niveles(resultados))
 
+    def test_hooks_error_si_falta_matcher_de_rutas(self):
+        """Bloque 3: el hook PreToolUse de protección de rutas (matcher con
+        'NotebookEdit') debe estar presente igual que los otros dos."""
+        ruta_settings = self.repo / ".claude" / "settings.json"
+        datos = json.loads(ruta_settings.read_text(encoding="utf-8"))
+        datos["hooks"]["PreToolUse"] = [
+            h for h in datos["hooks"]["PreToolUse"] if "NotebookEdit" not in (h.get("matcher") or "")
+        ]
+        ruta_settings.write_text(json.dumps(datos), encoding="utf-8")
+        settings_data, _ = doctor_mod._check_settings(self.repo)
+        resultados = doctor_mod._check_hooks(self.repo, settings_data)
+        self.assertIn(doctor_mod.NIVEL_ERROR, _niveles(resultados))
+
     def test_coherencia_version_ok(self):
         control_data, _ = doctor_mod._leer_control_json(self.repo)
         resultados = doctor_mod._check_coherencia_version(control_data)
@@ -260,6 +273,21 @@ class TestChecksHarmessiInstalacionReal(unittest.TestCase):
         control_data["harness_version"] = "0.0.1-otra"
         resultados = doctor_mod._check_coherencia_version(control_data)
         self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_WARN)
+
+    def test_guardrails_json_ok(self):
+        resultados = doctor_mod._check_guardrails_json(self.repo)
+        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_OK)
+
+    def test_guardrails_json_warn_si_falta(self):
+        (self.repo / ".claude" / "guardrails.json").unlink()
+        resultados = doctor_mod._check_guardrails_json(self.repo)
+        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_WARN)
+
+    def test_guardrails_json_error_si_corrupto(self):
+        (self.repo / ".claude" / "guardrails.json").write_text("{ esto no es json valido", encoding="utf-8")
+        resultados = doctor_mod._check_guardrails_json(self.repo)
+        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_ERROR)
+        self.assertIn("fail-closed", resultados[0].mensaje.lower())
 
 
 class TestChecksRuntimeInstalacionReal(unittest.TestCase):

@@ -21,6 +21,15 @@
             "command": "python \"${CLAUDE_PROJECT_DIR}/tools/dsguard/hook_launcher_presupuesto.py\""
           }
         ]
+      },
+      {
+        "matcher": "Read|Grep|Edit|Write|NotebookEdit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/tools/dsguard/hook_launcher_rutas.py\""
+          }
+        ]
       }
     ]
   }

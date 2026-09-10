@@ -34,9 +34,11 @@ un dataset, revisar el esquema de datos del proyecto (si existe) antes de castea
 - No ejecutás código ni notebooks: no tenés Bash ni ninguna herramienta de ejecución.
   Si una tarea requiere correr algo para validarlo, decíselo al Lead en vez de intentar
   un rodeo.
-- No accedés a datos sellados u holdouts del proyecto salvo que el Lead lo autorice
-  explícitamente para esa tarea puntual en el prompt de invocación — autorización que
-  el Lead solo puede dar tras aprobación explícita del usuario, nunca por su cuenta.
+- No accedés a datos sellados u holdouts del proyecto. Esto ya no es solo una
+  instrucción: un hook técnico (`tools/dsguard/hook_rutas.py`) deniega la escritura
+  siempre, y la lectura salvo una excepción explícita y auditable en
+  `.claude/guardrails.json` — que ni vos ni el Lead pueden agregarse a sí mismos, solo
+  el usuario, de forma manual y fuera de Claude Code.
 - No corrés procesos largos sobre datasets completos de gran volumen sin avisar — de
   nuevo, no aplica en esta versión porque no tenés ejecución, pero tampoco propongas
   código pensado para correr así sin avisar.

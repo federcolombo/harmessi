@@ -29,6 +29,7 @@ from tools import launcher_common
 from tools.ds_init import control as control_mod
 from tools.ds_init import manifest as manifest_mod
 from tools.ds_init.version import HARNESS_VERSION
+from tools.dsguard import pathguard
 
 NIVEL_OK = "OK"
 NIVEL_WARN = "WARN"
@@ -54,9 +55,13 @@ _RUTAS_CRITICAS = frozenset(
         ".claude/skills/lead-data-scientist/SKILL.md",
         "tools/dsguard/hook_presupuesto.py",
         "tools/dsguard/hook_launcher_presupuesto.py",
+        "tools/dsguard/pathguard.py",
+        "tools/dsguard/hook_rutas.py",
+        "tools/dsguard/hook_launcher_rutas.py",
         "tools/nbrunner/hook_validar_comando.py",
         "tools/nbrunner/hook_launcher.py",
         "tools/launcher_common.py",
+        ".claude/guardrails.json",
     }
 )
 
@@ -81,6 +86,7 @@ _ARCHIVOS_SKILL_ESPERADOS = (
 _LANZADORES_ESPERADOS = (
     "tools/nbrunner/hook_launcher.py",
     "tools/dsguard/hook_launcher_presupuesto.py",
+    "tools/dsguard/hook_launcher_rutas.py",
 )
 
 _PREFIJOS_SHELL = ("bash", "sh", "zsh", "dash", "cmd", "cmd.exe", "powershell", "powershell.exe", "pwsh")
@@ -639,11 +645,62 @@ def _check_hooks(destino: Path, settings_data: Optional[dict]) -> list:
                 "Falta el hook PreToolUse del guardrail de presupuesto de sesión (matcher con 'PowerShell')",
             )
         )
+    if not any(matcher and "NotebookEdit" in matcher for matcher in matchers):
+        resultados.append(
+            ResultadoCheck(
+                NIVEL_ERROR,
+                SECCION_HARMESSI,
+                "HARMESSI-HOOKS",
+                "Falta el hook PreToolUse de protección de rutas (matcher con 'NotebookEdit')",
+            )
+        )
     if not resultados:
         resultados.append(
             ResultadoCheck(NIVEL_OK, SECCION_HARMESSI, "HARMESSI-HOOKS", f"{len(comandos)} hook(s) configurado(s)")
         )
     return resultados
+
+
+def _check_guardrails_json(destino: Path) -> list:
+    """`.claude/guardrails.json` (Bloque 3): reusa `pathguard.cargar_config`
+    directamente en vez de reimplementar su propio parseo/validación de
+    schema -- si `pathguard` lo rechazaría en runtime (fail-closed, deniega
+    todo), `doctor` debe reportarlo como `ERROR`, no revalidar con su propia
+    lógica potencialmente distinta."""
+    ruta = destino / pathguard.RUTA_CONFIG_RELATIVA
+    if not ruta.exists():
+        return [
+            ResultadoCheck(
+                NIVEL_WARN,
+                SECCION_HARMESSI,
+                "HARMESSI-GUARDRAILS-JSON",
+                f"No existe {ruta}: pathguard usa los defaults seguros (data/raw protegido, "
+                "sin holdouts ni write_scopes declarados)",
+                str(ruta),
+            )
+        ]
+    try:
+        config = pathguard.cargar_config(destino)
+    except pathguard.ConfigGuardrailsError as exc:
+        return [
+            ResultadoCheck(
+                NIVEL_ERROR,
+                SECCION_HARMESSI,
+                "HARMESSI-GUARDRAILS-JSON",
+                f"guardrails.json corrupto -- pathguard lo trata como fail-closed (deniega todo): {exc}",
+                str(ruta),
+            )
+        ]
+    return [
+        ResultadoCheck(
+            NIVEL_OK,
+            SECCION_HARMESSI,
+            "HARMESSI-GUARDRAILS-JSON",
+            f"guardrails.json válido ({len(config.holdouts)} holdout(s), "
+            f"{len(config.data_raw)} patrón(es) data_raw, {len(config.write_scopes)} write_scope(s))",
+            str(ruta),
+        )
+    ]
 
 
 def _check_coherencia_version(control_data: Optional[dict]) -> list:
@@ -898,6 +955,7 @@ def ejecutar(destino) -> tuple:
     )
     resultados += resultados_settings
     resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-HOOKS", _check_hooks, destino, settings_data)
+    resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-GUARDRAILS-JSON", _check_guardrails_json, destino)
     resultados += _ejecutar_check(
         SECCION_HARMESSI, "HARMESSI-VERSION", _check_coherencia_version, control_data
     )

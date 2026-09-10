@@ -7,32 +7,44 @@ carga por defecto. Código real: `tools/ds_guard.py` + `tools/dsguard/{core,repo
 
 Verificación determinista **posterior** + scaffolding mecánico de transiciones/sesiones/
 aprobaciones sobre los artefactos SDD (`tasks.md`, `control.json`) de un cambio en
-`openspec/changes/<change-id>/`. No es un bloqueo técnico general: salvo el hook `PreToolUse`
-acotado descrito abajo, ninguna herramienta (Read, Edit, Bash) está impedida de tocar lo que sea,
-incluidos datos crudos o rutas fuera de alcance. `ds_guard` solo lo **detecta después**, si alguien
-lo corre. `init` bootstrapea `control.json` a partir de las plantillas de
+`openspec/changes/<change-id>/`. Complementa, no reemplaza, los tres hooks `PreToolUse` reales
+descritos abajo — cubre el alcance declarado por cambio (`control["alcance"]["rutas_autorizadas"]`)
+y el resto de la mecánica SDD, que sigue siendo detección posterior (nadie impide técnicamente que
+un archivo quede fuera de ese alcance en el momento de escribirlo; `ds_guard` solo lo señala al
+cerrar el cambio). `init` bootstrapea `control.json` a partir de las plantillas de
 `.claude/skills/lead-data-scientist/templates/`.
 
-Excepción puntual: el agente `notebook-runner` (`.claude/agents/notebook-runner.md`) sí tiene hoy
-un hook `PreToolUse` real (`.claude/settings.json` + `tools/nbrunner/hook_launcher.py` +
+Primer hook: el agente `notebook-runner` (`.claude/agents/notebook-runner.md`) tiene un hook
+`PreToolUse` real (`.claude/settings.json` + `tools/nbrunner/hook_launcher.py` +
 `tools/nbrunner/hook_validar_comando.py`) que valida técnicamente su único comando Bash permitido
 contra el manifest versionado antes de dejarlo correr. Ese bloqueo es exclusivo de ese agente y de
-ese comando — no cubre el resto de lo que describe este documento: Read/Bash sobre datos crudos o
-rutas fuera de alcance para los demás subagentes sigue sin bloqueo técnico, solo verificable después
-con `ds_guard`.
+ese comando.
 
-Segunda excepción: `tools/dsguard/hook_presupuesto.py` + `tools/dsguard/hook_launcher_presupuesto.py`,
+Segundo hook: `tools/dsguard/hook_presupuesto.py` + `tools/dsguard/hook_launcher_presupuesto.py`,
 registrado en `.claude/settings.json` con `matcher: "Agent|SendMessage|Write|Edit|Bash|PowerShell"`.
 Bloquea técnicamente, cuando hay una sesión de control activa (`sesiones[].estado_final == "activa"`
 en algún `control.json` de `openspec/changes/*/`): `Agent` nuevo y `SendMessage` de continuación en
 los últimos 5 minutos antes de `deadline_utc`, y — vencido `deadline_utc` — también `Write`/`Edit`/
 `Bash`/`PowerShell`, salvo el allowlist (`git status`/`git diff` sin `--output`/`-o`, y
-`ds_guard session note|status|close`). Misma aclaración de alcance que la excepción de
-`notebook-runner`: cubre solo presupuesto/continuaciones de la sesión de control, no los archivos
-autorizados por rol ni holdout/dataset sellado, que siguen siendo guardas de comportamiento sin
-bloqueo técnico propio. Fail-safe explícito: sin sesión activa, sin `control.json` legible, o con
-`deadline_utc` ilegible, el hook permite siempre — nunca bloquea el repo por un dato corrupto o
-ausente.
+`ds_guard session note|status|close`). Cubre solo presupuesto/continuaciones de la sesión de
+control, sin awareness de rutas. Fail-safe explícito: sin sesión activa, sin `control.json`
+legible, o con `deadline_utc` ilegible, el hook permite siempre — nunca bloquea el repo por un dato
+corrupto o ausente.
+
+Tercer hook (Bloque 3, reliability v0.2.0): `tools/dsguard/hook_rutas.py` +
+`tools/dsguard/hook_launcher_rutas.py` + `tools/dsguard/pathguard.py`, registrado con
+`matcher: "Read|Grep|Edit|Write|NotebookEdit|Bash|PowerShell"` — corre siempre, con o sin sesión
+activa, para **cualquier** llamador (Lead incluido). Bloquea técnicamente, contra
+`.claude/guardrails.json`: secretos (lectura y escritura, siempre, sin excepción), holdouts
+(escritura siempre, lectura salvo excepción explícita en `guardrails.json`), `data/raw` (escritura
+denegada, lectura permitida), y el propio `guardrails.json` (protegido de `Write`/`Edit`/
+`NotebookEdit`, y de un `Bash`/`PowerShell` que se detecte escribiéndolo). Garantía real para
+`Write`/`Edit`/`NotebookEdit`/`Read`/`Grep` (ruta estructurada, resuelta con symlinks/`..`
+incluidos); **best-effort, no equivalente**, para `Bash`/`PowerShell` (escaneo de texto, no un
+parser de shell — no detecta indirección). `write_scopes` por agente es opt-in y vacío por
+defecto; no aplica al Lead. Fail-closed explícito, al revés del hook de presupuesto: cualquier cosa
+que no se pueda evaluar con certeza (`guardrails.json` corrupto, ruta no resoluble, error interno)
+deniega, no permite.
 
 ## 2. Comandos
 

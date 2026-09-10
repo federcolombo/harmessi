@@ -214,6 +214,29 @@ MANIFEST: tuple = (
         descripcion="Lanzador Python puro del hook de presupuesto (sin bash, cross-platform)",
     ),
     EntradaManifiesto(
+        fuente="tools/dsguard/pathguard.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/pathguard.py",
+        descripcion="Protección de rutas: holdouts, data/raw, secretos, guardrails.json (Bloque 3)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/dsguard/hook_rutas.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/hook_rutas.py",
+    ),
+    EntradaManifiesto(
+        fuente="tools/dsguard/hook_launcher_rutas.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/hook_launcher_rutas.py",
+        descripcion="Lanzador Python puro del hook de protección de rutas (sin bash, cross-platform)",
+    ),
+    EntradaManifiesto(
+        fuente=".claude/guardrails.json",
+        tratamiento=VERBATIM,
+        destino=".claude/guardrails.json",
+        descripcion="Config de pathguard: holdouts/data_raw/secretos_extra/write_scopes/excepciones (R10: no se sobrescribe si ya existe)",
+    ),
+    EntradaManifiesto(
         fuente="tools/nbrunner/__init__.py",
         tratamiento=VERBATIM,
         destino="tools/nbrunner/__init__.py",
@@ -298,6 +321,8 @@ EXCLUSIONES_PERMANENTES: tuple = (
     "tools/tests/test_hook_presupuesto.py",
     "tools/tests/test_nbrunner.py",
     "tools/tests/test_launcher_common.py",
+    "tools/tests/test_pathguard.py",
+    "tools/tests/test_hook_rutas.py",
 )
 
 

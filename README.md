@@ -24,6 +24,18 @@ science project.
   SHA-256 hashing of approved artifacts (`sha256/lf/v1`, LF-normalized) and an
   append-only `control.json` approval ledger, so an approval can never
   silently drift from the artifact it was granted for.
+- **Technical path protection (`dsguard.pathguard`)** — a `PreToolUse` hook
+  that enforces, for every agent and the Lead alike, not just prompt-level
+  instructions: secrets (`.env`, private keys, SSH files, cloud credentials —
+  read and write, always) and holdouts/sealed datasets (write always denied,
+  read denied unless an explicit, auditable exception is recorded in
+  `.claude/guardrails.json`) are blocked outright; `data/raw` stays
+  write-protected but readable; `.claude/guardrails.json` itself can't be
+  edited by any agent or the Lead through `Write`/`Edit`/`NotebookEdit`. The
+  guarantee is exact for `Write`/`Edit`/`NotebookEdit`/`Read`/`Grep`
+  (structured, resolved paths — symlinks and `..` included); for
+  `Bash`/`PowerShell` it's a best-effort text scan, explicitly not
+  equivalent, since no shell parser is involved.
 - **Safe notebook execution (`nbrunner`)** — a JSON run manifest schema that
   declares the interpreter (must resolve inside the project's own `.venv`),
   the notebook's approved hash, and explicit allow-lists for input/output

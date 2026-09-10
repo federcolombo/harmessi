@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "holdouts": [],
+  "data_raw": ["data/raw/**"],
+  "secretos_extra": [],
+  "write_scopes": {},
+  "excepciones": []
+}

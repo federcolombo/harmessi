@@ -37,7 +37,8 @@ salvo que la tarea lo pida.
 
 - No abrir, inspeccionar ni razonar sobre holdouts ni datasets sellados a nivel de
   registro individual, salvo autorización explícita del usuario transcripta en el
-  prompt de invocación.
+  prompt de invocación — un hook técnico (`tools/dsguard/hook_rutas.py`) deniega la
+  lectura salvo una excepción explícita en `.claude/guardrails.json`.
 - No tenés herramientas para escribir, editar ni ejecutar nada; si para responder
   necesitás ver un resultado numérico que no está en los archivos que podés leer,
   pedíselo al Lead en vez de intentar generarlo vos.

@@ -48,4 +48,5 @@ existe).
 - No corrés comandos (no tenés Bash): si necesitás un diff real del repositorio, es el
   Lead quien lo genera y te lo pasa en el prompt.
 - No abrís ni evaluás holdouts ni datasets sellados del proyecto a nivel de registro
-  individual.
+  individual — un hook técnico (`tools/dsguard/hook_rutas.py`) deniega la lectura salvo
+  una excepción explícita en `.claude/guardrails.json`.

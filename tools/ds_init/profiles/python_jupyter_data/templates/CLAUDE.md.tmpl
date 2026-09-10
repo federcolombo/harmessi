@@ -10,8 +10,16 @@ punto de partida genérico: ajustalo a las reglas reales de negocio, datos y flu
 ## 1. Alcance y prohibiciones
 
 - El proyecto vive exclusivamente en su propio repositorio — no crear, modificar ni borrar fuera
-  de él.
-- Los directorios de datos crudos (`data/raw/` o equivalente) son solo lectura.
+  de él. Un hook técnico (`tools/dsguard/hook_rutas.py`) lo hace cumplir para `Write`/`Edit`/
+  `NotebookEdit`/`Read`/`Grep`, no solo para Bash/PowerShell (best-effort ahí).
+- Los directorios de datos crudos (`data/raw/` o equivalente) son solo lectura — enforcement
+  técnico por defecto, no requiere configuración.
+- Holdouts/datasets sellados: declararlos en `.claude/guardrails.json` (`holdouts`, vacío por
+  defecto) para que el mismo hook los proteja técnicamente. Cualquier excepción de lectura va en
+  `excepciones` de ese archivo — edición manual, nunca vía Write/Edit de un agente (el archivo
+  está protegido de sí mismo).
+- Secretos (`.env`, claves, credenciales, certificados, SSH) ya están protegidos por una denylist
+  fija, sin necesidad de configurarlos.
 - No instalar dependencias pesadas sin avisar.
 - No crear config, tests ni scaffolding fuera del plan acordado.
 - No ejecutar procesos largos sobre datasets completos sin avisar.
