@@ -35,6 +35,21 @@ science project.
   including `control.json` generation), never overwrites files that already
   exist in the destination, and merges `.claude/settings.json` instead of
   clobbering it.
+- **A health check (`harmessi doctor`)** — read-only diagnostic over an
+  installed project: Python/Git/venv sanity, whether the managed files
+  (`control.json`, agents, the `lead-data-scientist` skill, settings, hooks)
+  are present and match their recorded hash, and whether the configured
+  `PreToolUse` hooks and their launchers actually work — including flagging
+  any hook that still depends on an external shell instead of invoking
+  Python directly.
+- **Cross-platform hook launchers** — the `PreToolUse` hook launchers
+  (`tools/nbrunner/hook_launcher.py`, `tools/dsguard/hook_launcher_presupuesto.py`)
+  are pure Python, with no dependency on `bash` or any other shell: they
+  resolve the shared Git repo (Git worktrees included), respect a
+  custom `venv_dir` from `control.json`, and use the correct interpreter
+  layout for the host OS (`Scripts/python.exe` on Windows, `bin/python` on
+  Linux/macOS) — failing closed if the authorized interpreter can't be
+  resolved.
 
 ## Requirements
 
@@ -61,7 +76,23 @@ python -m tools.ds_init --destino /path/to/your/project --nombre my-project --ex
 
 ## Commands
 
-Harmessi ships one CLI today, the installer:
+Harmessi ships two CLIs today: the installer, and a read-only health check.
+
+### `harmessi doctor`
+
+```
+python -m tools.harmessi doctor [--destino DESTINO]
+```
+
+Diagnoses an already-installed project (default `--destino`: the current
+directory) and prints one `[OK]` / `[WARN]` / `[ERROR]` line per check,
+grouped under `CORE`, `HARMESSI`, and `RUNTIME`, plus a summary count. Exits
+`0` if there is no `[ERROR]`, `1` otherwise. It never writes to the
+destination (aside from a temporary file it creates and deletes as part of
+the permissions check) and never repairs anything — v0.2 is diagnosis only.
+Run it from a Harmessi source checkout, the same way as `ds_init`.
+
+### `ds_init` (the installer)
 
 ```
 usage: python -m tools.ds_init [-h] --destino DESTINO --nombre NOMBRE
@@ -109,6 +140,22 @@ a specific message, but it does not repair or resume the interrupted
 installation automatically — recovering from that state (inspecting and,
 once safe, deleting the leftover staging directory) is a manual step.
 
+### Platform compatibility
+
+Harmessi runs on Windows, Linux, and macOS. Everything under `tools/`
+(the installer, `doctor`, `dsguard`, `nbrunner`, and both `PreToolUse` hook
+launchers) is pure Python, invoked as `python -m tools....` or via the
+Python interpreter directly — no step depends on `bash`, PowerShell, or any
+other shell. `subprocess` is always called with an argument list (never
+`shell=True`), and the two hook launchers resolve the project's `.venv`
+interpreter using the correct layout for the host OS (`Scripts/python.exe`
+on Windows, `bin/python` on Linux/macOS), honoring a custom `venv_dir` from
+`control.json` when one was used at install time, and correctly supporting
+Git worktrees (the shared repo's own `.venv`, not the worktree's checkout,
+is always the one used). Run `python -m tools.harmessi doctor` on an
+installed project to verify this end to end, including whether any
+configured hook still depends on an external shell.
+
 ## Profile
 
 The current (and only) profile is `python-jupyter-data`: agents, the
@@ -119,6 +166,8 @@ Python/Jupyter data science project.
 
 ```bash
 python -m unittest discover -s tools/ds_init/tests -p "test_*.py"
+python -m unittest discover -s tools/harmessi/tests -p "test_*.py"
+python -m unittest discover -s tools/tests -p "test_*.py"
 python -m tools.ds_init.check_manifest_parity   # dev-only, read-only drift check
 ```
 

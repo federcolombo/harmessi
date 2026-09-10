@@ -20,9 +20,11 @@ NOMBRE_ARCHIVO_CONTROL = "control.json"
 DIR_CONTROL = ".ds_init"
 
 
-def _sha256_de_archivo(ruta: Path) -> str:
+def sha256_de_archivo(ruta: Path) -> str:
     """Hash SHA-256 en hex de `ruta`, leído en bloques (no carga el archivo
-    completo en memoria de una vez)."""
+    completo en memoria de una vez). Pública: la reusa también
+    `tools/harmessi/doctor.py` para el check de drift de archivos
+    administrados, sin duplicar la lógica de hashing."""
     hasher = hashlib.sha256()
     with open(ruta, "rb") as f:
         for bloque in iter(lambda: f.read(65536), b""):
@@ -57,7 +59,7 @@ def generar_control(destino, perfil: str, config: dict, archivos_aplicados: list
         archivos.append(
             {
                 "ruta": ruta_relativa,
-                "sha256": _sha256_de_archivo(ruta_absoluta),
+                "sha256": sha256_de_archivo(ruta_absoluta),
             }
         )
 

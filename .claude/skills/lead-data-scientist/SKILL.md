@@ -177,7 +177,7 @@ vive en el chat, así que no es persistente ni reproducible desde una sesión nu
 
 Ninguno de los subagentes tiene la herramienta Agent: no pueden convocar a otro subagente.
 Toda convocatoria sale de esta conversación principal. `notebook-runner` tiene un bloqueo técnico
-real: un hook `PreToolUse` (`.claude/settings.json` + `tools/nbrunner/hook_launcher.sh` +
+real: un hook `PreToolUse` (`.claude/settings.json` + `tools/nbrunner/hook_launcher.py` +
 `tools/nbrunner/hook_validar_comando.py`) valida el comando Bash propuesto contra el manifest
 versionado antes de dejarlo correr. Ese bloqueo cubre únicamente la restricción de comando único de
 `notebook-runner` — no el resto de las guardas del proyecto: los archivos autorizados de los otros
@@ -186,7 +186,7 @@ comportamiento**, sin bloqueo técnico, dependientes de que el Lead y los subage
 instrucciones; el verificador determinista las detecta después, no las impide.
 
 Existe además un segundo hook `PreToolUse` real: `tools/dsguard/hook_presupuesto.py` +
-`tools/dsguard/hook_launcher_presupuesto.sh`, registrado en `.claude/settings.json` con
+`tools/dsguard/hook_launcher_presupuesto.py`, registrado en `.claude/settings.json` con
 `matcher: "Agent|SendMessage|Write|Edit|Bash|PowerShell"`. Bloquea técnicamente, sobre la sesión de
 control activa de un cambio en `openspec/changes/`: nuevas convocatorias de subagente (`Agent`) y
 continuaciones (`SendMessage`) en los últimos 5 minutos antes del `deadline_utc`; y, vencido el

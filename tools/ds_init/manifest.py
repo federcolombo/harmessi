@@ -208,9 +208,10 @@ MANIFEST: tuple = (
         destino="tools/dsguard/hook_presupuesto.py",
     ),
     EntradaManifiesto(
-        fuente="tools/dsguard/hook_launcher_presupuesto.sh",
+        fuente="tools/dsguard/hook_launcher_presupuesto.py",
         tratamiento=VERBATIM,
-        destino="tools/dsguard/hook_launcher_presupuesto.sh",
+        destino="tools/dsguard/hook_launcher_presupuesto.py",
+        descripcion="Lanzador Python puro del hook de presupuesto (sin bash, cross-platform)",
     ),
     EntradaManifiesto(
         fuente="tools/nbrunner/__init__.py",
@@ -238,9 +239,16 @@ MANIFEST: tuple = (
         destino="tools/nbrunner/hook_validar_comando.py",
     ),
     EntradaManifiesto(
-        fuente="tools/nbrunner/hook_launcher.sh",
+        fuente="tools/nbrunner/hook_launcher.py",
         tratamiento=VERBATIM,
-        destino="tools/nbrunner/hook_launcher.sh",
+        destino="tools/nbrunner/hook_launcher.py",
+        descripcion="Lanzador Python puro del hook de notebook-runner (sin bash, cross-platform)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/launcher_common.py",
+        tratamiento=VERBATIM,
+        destino="tools/launcher_common.py",
+        descripcion="Lógica compartida de resolución de worktree/intérprete de venv de ambos lanzadores",
     ),
     EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/nbrunner_manifest.py.tmpl",
@@ -289,6 +297,7 @@ EXCLUSIONES_PERMANENTES: tuple = (
     "tools/tests/test_ds_guard.py",
     "tools/tests/test_hook_presupuesto.py",
     "tools/tests/test_nbrunner.py",
+    "tools/tests/test_launcher_common.py",
 )
 
 

@@ -2,10 +2,12 @@
 `20260908-control-determinista-sesiones`). Solo biblioteca estándar, mismo
 patrón que `tools/dsguard/{core,sdd,repo}.py`.
 
-Se invoca vía `tools/dsguard/hook_launcher_presupuesto.sh`, que resuelve el
-repo compartido con `git` y ejecuta este script bajo el intérprete de ese
-repo (`repo_root/.venv/Scripts/python.exe`) -- este módulo aprovecha eso para
-usar directamente `sys.executable` como intérprete autorizado, igual que
+Se invoca vía `tools/dsguard/hook_launcher_presupuesto.py`, que resuelve el
+repo compartido con `git` (soporta worktrees, ver `tools/launcher_common.py`)
+y ejecuta este script bajo el intérprete de ese repo -- respetando `venv_dir`
+de `control.json` y el layout correcto según el SO (`Scripts/python.exe` en
+Windows, `bin/python` en POSIX) -- este módulo aprovecha eso para usar
+directamente `sys.executable` como intérprete autorizado, igual que
 `tools/nbrunner/hook_validar_comando.py`.
 
 Contrato de entrada: JSON por stdin con el payload de la tool call de Claude
@@ -49,7 +51,7 @@ from typing import Optional
 
 # Raíz del repo: este script vive en `tools/dsguard/`, así que `parents[2]`
 # es la raíz -- sin necesidad de invocar `git` de nuevo desde Python (ya lo
-# hizo `hook_launcher_presupuesto.sh` para decidir bajo qué intérprete correr
+# hizo `hook_launcher_presupuesto.py` para decidir bajo qué intérprete correr
 # esto).
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

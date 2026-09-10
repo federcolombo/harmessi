@@ -14,14 +14,14 @@ lo corre. `init` bootstrapea `control.json` a partir de las plantillas de
 `.claude/skills/lead-data-scientist/templates/`.
 
 Excepción puntual: el agente `notebook-runner` (`.claude/agents/notebook-runner.md`) sí tiene hoy
-un hook `PreToolUse` real (`.claude/settings.json` + `tools/nbrunner/hook_launcher.sh` +
+un hook `PreToolUse` real (`.claude/settings.json` + `tools/nbrunner/hook_launcher.py` +
 `tools/nbrunner/hook_validar_comando.py`) que valida técnicamente su único comando Bash permitido
 contra el manifest versionado antes de dejarlo correr. Ese bloqueo es exclusivo de ese agente y de
 ese comando — no cubre el resto de lo que describe este documento: Read/Bash sobre datos crudos o
 rutas fuera de alcance para los demás subagentes sigue sin bloqueo técnico, solo verificable después
 con `ds_guard`.
 
-Segunda excepción: `tools/dsguard/hook_presupuesto.py` + `tools/dsguard/hook_launcher_presupuesto.sh`,
+Segunda excepción: `tools/dsguard/hook_presupuesto.py` + `tools/dsguard/hook_launcher_presupuesto.py`,
 registrado en `.claude/settings.json` con `matcher: "Agent|SendMessage|Write|Edit|Bash|PowerShell"`.
 Bloquea técnicamente, cuando hay una sesión de control activa (`sesiones[].estado_final == "activa"`
 en algún `control.json` de `openspec/changes/*/`): `Agent` nuevo y `SendMessage` de continuación en

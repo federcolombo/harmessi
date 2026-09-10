@@ -28,7 +28,7 @@ Cualquier otro comando Bash (incluida cualquier variante con separadores de shel
 comillas, `&&`, `;`, `|`, backticks, `$`, intérprete distinto del Python autorizado
 del proyecto, o ruta de manifest fuera de `openspec/changes/<id>/runs/<run-id>.json`)
 es rechazado antes de ejecutarse — no por convención de prompt, sino por
-`tools/nbrunner/hook_launcher.sh` (que resuelve el repo del proyecto y el intérprete
+`tools/nbrunner/hook_launcher.py` (que resuelve el repo del proyecto y el intérprete
 real de `{{VENV_DIR}}`, sin depender de una variable de entorno) invocando
 `tools/nbrunner/hook_validar_comando.py`, que aplica la restricción únicamente cuando
 el payload del hook trae `agent_type == "notebook-runner"` y valida el comando por

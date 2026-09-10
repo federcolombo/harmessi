@@ -111,7 +111,7 @@ class TestArchivoDeControl(unittest.TestCase):
         for entrada in contenido["archivos"]:
             ruta_absoluta = self.repo / entrada["ruta"]
             self.assertTrue(ruta_absoluta.exists(), f"{entrada['ruta']} listado en control.json no existe")
-            hash_real = control_mod._sha256_de_archivo(ruta_absoluta)
+            hash_real = control_mod.sha256_de_archivo(ruta_absoluta)
             self.assertEqual(
                 entrada["sha256"],
                 hash_real,

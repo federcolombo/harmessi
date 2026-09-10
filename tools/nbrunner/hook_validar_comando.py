@@ -3,10 +3,13 @@
 y los dos bugs de regex encontrados por `data-science-reviewer`).
 
 Este script ya NO se invoca directamente por Claude Code: lo invoca
-`tools/nbrunner/hook_launcher.sh`, que resuelve el repo compartido con `git` y
-lo ejecuta bajo el Python real de `repo_root/.venv/Scripts/python.exe` --
-garantía que este módulo aprovecha para no tener que volver a invocar `git` ni
-adivinar el intérprete autorizado: es, literalmente, `sys.executable`.
+`tools/nbrunner/hook_launcher.py`, que resuelve el repo compartido con `git`
+(soporta worktrees, ver `tools/launcher_common.py`) y lo ejecuta bajo el
+Python real del `.venv` de ese repo -- respetando `venv_dir` de
+`control.json` y el layout correcto según el SO (`Scripts/python.exe` en
+Windows, `bin/python` en POSIX) -- garantía que este módulo aprovecha para no
+tener que volver a invocar `git` ni adivinar el intérprete autorizado: es,
+literalmente, `sys.executable`.
 
 Contrato de entrada: JSON por stdin con el payload de la tool call de Claude
 Code. La restricción solo aplica cuando `agent_type == "notebook-runner"`
@@ -36,7 +39,7 @@ from pathlib import Path
 
 # Raíz del repo: este script vive en `tools/nbrunner/`, así que `parents[2]`
 # es la raíz -- sin necesidad de invocar `git` de nuevo desde Python (ya lo
-# hizo `hook_launcher.sh` para decidir bajo qué intérprete correr esto).
+# hizo `hook_launcher.py` para decidir bajo qué intérprete correr esto).
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -49,7 +52,7 @@ def normalizar_interprete(ruta: str) -> str:
 
 
 # El intérprete bajo el que corre este script ES el Python autorizado, porque
-# `hook_launcher.sh` ya garantizó que es `repo_root/.venv/Scripts/python.exe`.
+# `hook_launcher.py` ya garantizó que es el intérprete autorizado del `.venv`.
 INTERPRETE_AUTORIZADO = normalizar_interprete(sys.executable) if sys.executable else None
 
 # El intérprete se captura como token genérico entre comillas (sin restringir
