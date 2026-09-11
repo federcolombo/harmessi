@@ -210,6 +210,12 @@ MANIFEST: tuple = (
         destino="tools/dsguard/sdd.py",
     ),
     EntradaManifiesto(
+        fuente="tools/dsguard/decision.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/decision.py",
+        descripcion="Decision ledger append-only del proyecto (Bloque 5)",
+    ),
+    EntradaManifiesto(
         fuente="tools/dsguard/kdd.py",
         tratamiento=VERBATIM,
         destino="tools/dsguard/kdd.py",
@@ -414,6 +420,8 @@ EXCLUSIONES_PERMANENTES: tuple = (
     "tools/tests/test_pathguard.py",
     "tools/tests/test_hook_rutas.py",
     "tools/tests/test_kdd.py",
+    "tools/tests/test_decision.py",
+    "tools/tests/test_remediation.py",
     "tools/ds_profile/tests/__init__.py",
     "tools/ds_profile/tests/test_io_readers.py",
     "tools/ds_profile/tests/test_fingerprint.py",

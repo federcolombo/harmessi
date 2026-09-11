@@ -68,6 +68,13 @@ science project.
   layout for the host OS (`Scripts/python.exe` on Windows, `bin/python` on
   Linux/macOS) — failing closed if the authorized interpreter can't be
   resolved.
+- **Deterministic dataset profiling (`ds_profile`) and Project EDA** — a
+  standalone CLI that computes reproducible facts and quality flags for a
+  CSV or Parquet dataset (no business interpretation), written to
+  `.harmessi/profiles/<profile_id>/profile.json`, with holdouts protected in
+  depth via `dsguard.pathguard` even from a direct CLI call; Project EDA is
+  the Lead-driven process that interprets those facts for modeling decisions
+  while respecting cutoff and holdout boundaries.
 
 ## Requirements
 
@@ -94,7 +101,8 @@ python -m tools.ds_init --destino /path/to/your/project --nombre my-project --ex
 
 ## Commands
 
-Harmessi ships two CLIs today: the installer, and a read-only health check.
+Harmessi ships three CLIs today: the installer, a read-only health check, and
+a deterministic dataset profiler.
 
 ### `harmessi doctor`
 
@@ -109,6 +117,31 @@ grouped under `CORE`, `HARMESSI`, and `RUNTIME`, plus a summary count. Exits
 destination (aside from a temporary file it creates and deletes as part of
 the permissions check) and never repairs anything — v0.2 is diagnosis only.
 Run it from a Harmessi source checkout, the same way as `ds_init`.
+
+### `ds_profile`
+
+```
+python -m tools.ds_profile run --input INPUT --output OUTPUT [--markdown]
+```
+
+A deterministic dataset profiling CLI: it reports facts and quality flags
+about a CSV or Parquet file — row count, schema, null counts, cardinality,
+quantiles, a reproducible fingerprint, and deterministic quality flags — and
+never interprets business meaning. CSV is read with pure stdlib (no pandas
+dependency); Parquet support is optional and imported lazily via `pyarrow` —
+if it isn't installed, `ds_profile` exits with code `3` and a clear message
+instead of failing obscurely. Output is written to
+`.harmessi/profiles/<profile_id>/profile.json` (the JSON is the source of
+truth; pass `--markdown` to also derive a human-readable `profile.md`). Like
+`nbrunner`, it defends holdouts in depth: it reuses `dsguard.pathguard` to
+refuse profiling a declared holdout even when invoked directly from the CLI,
+not only through an agent.
+
+Project EDA — documented for the Lead in the installed
+`.claude/skills/lead-data-scientist/eda.md` — is the process that interprets
+these deterministic facts for modeling decisions while respecting cutoff and
+holdout boundaries; it consumes `ds_profile`'s output rather than duplicating
+its computation.
 
 ### `ds_init` (the installer)
 
@@ -186,6 +219,7 @@ Python/Jupyter data science project.
 python -m unittest discover -s tools/ds_init/tests -p "test_*.py"
 python -m unittest discover -s tools/harmessi/tests -p "test_*.py"
 python -m unittest discover -s tools/tests -p "test_*.py"
+python -m unittest discover -s tools/ds_profile/tests -p "test_*.py"
 python -m tools.ds_init.check_manifest_parity   # dev-only, read-only drift check
 ```
 

@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "change_id": "20260911-release-v0-2-0-blockers",
+  "modo": "abreviado",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-11T14:49:02Z",
+  "baseline": {
+    "commit": "07f4c14bb0a3804316c14a4610e6532731a1791e",
+    "rama": "main",
+    "capturado_utc": "2026-09-11T14:49:02Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260911-release-v0-2-0-blockers/proposal.md",
+      "openspec/changes/20260911-release-v0-2-0-blockers/tasks.md",
+      "openspec/changes/20260911-release-v0-2-0-blockers/control.json",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/version.py",
+      "CITATION.cff",
+      "README.md",
+      "tools/ds_init/profiles/python_jupyter_data/templates/SKILL_lead_data_scientist.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/CLAUDE.md.tmpl",
+      "tools/tests/test_manifest_dsguard_parity.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ba3854c92f65276d135c038befb9dfa8a57d6ffad0af027c5142bfa6d5fa63b2",
+      "registrado_utc": "2026-09-11T14:50:41Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-11",
+      "alcance_aprobado": "Corregir blocker de manifest (decision.py), version bump a 0.2.0, README/templates sincronizados con ds_profile/Project EDA, exclusiones de tests menores",
+      "cita": "Corregi unicamente los hallazgos minimos de la auditoria final necesarios para dejar Harmessi v0.2.0 READY. No agregues features nuevas. No refactorices fuera de alcance. No hagas tag ni push. Usa el flujo SDD normal y mantene el cambio acotado."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "beae0b6d421d46c32c2772f8fb4ca02639cac9149589918bc1b62c57f3972f33",
+      "registrado_utc": "2026-09-11T14:50:41Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-11",
+      "alcance_aprobado": "Corregir blocker de manifest (decision.py), version bump a 0.2.0, README/templates sincronizados con ds_profile/Project EDA, exclusiones de tests menores",
+      "cita": "Corregi unicamente los hallazgos minimos de la auditoria final necesarios para dejar Harmessi v0.2.0 READY. No agregues features nuevas. No refactorices fuera de alcance. No hagas tag ni push. Usa el flujo SDD normal y mantene el cambio acotado."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-11T14:50:42Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-11T15:07:06Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-11T14:50:43Z",
+      "cierre_utc": "2026-09-11T15:07:07Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 10,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-11T16:20:43Z",
+      "minutos_consumidos": 16.4,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {},
+      "tareas": [
+        "revision-diff"
+      ],
+      "roles": [
+        "data-science-reviewer"
+      ],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

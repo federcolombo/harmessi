@@ -97,6 +97,11 @@ cuando haga falta interpretar el estado KDD del proyecto. Un cambio declara su e
 automáticamente, pero nunca la avanza de estado por sí solo — avanzar una etapa es siempre
 `ds_guard kdd transition`, explícito y con aprobación del usuario cuando corresponda.
 
+`.claude/skills/lead-data-scientist/eda.md` existe como referencia de Project EDA (Bloque 6): qué
+hace válida una EDA para decisiones de modelado (cutoff, holdout, reproducibilidad vía
+`profile_id`/fingerprint) y cómo la conduce el Lead. Se lee bajo demanda, mismo patrón que `kdd.md`/
+`decision-ledger.md` -- nunca por defecto.
+
 ## Gestión de sesiones
 
 **Apertura**: si el usuario ya indicó modo, objetivo, alcance y presupuesto al invocar el skill, se
@@ -246,3 +251,8 @@ El verificador determinista de alcance/estados/aprobaciones/sesiones ya existe (
 Fuera de los tres hooks descritos arriba, sigue sin haber enforcement técnico de: `Grep` sin `path`
 explícito (búsqueda amplia), y del alcance de archivos por rol más allá de `write_scopes` cuando
 un proyecto no lo configura — eso lo sigue verificando `ds_guard` después, no antes.
+
+`ds_profile` (`python -m tools.ds_profile`) es, igual que `ds_guard`, un CLI que el Lead puede
+correr directo por Bash — no es un subagente, es lectura pura sobre un dataset. Su output vive en
+`.harmessi/profiles/<profile_id>/profile.json`. Ver `.claude/skills/lead-data-scientist/eda.md`
+para cuándo y cómo usarlo (Project EDA, Bloque 6).

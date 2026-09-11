@@ -10,4 +10,4 @@ este archivo solo deja el número fijo para que una fase futura pueda diffear
 contra la lista de hashes instalados.
 """
 
-HARNESS_VERSION = "0.1.0"
+HARNESS_VERSION = "0.2.0"
