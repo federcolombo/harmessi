@@ -304,6 +304,77 @@ MANIFEST: tuple = (
         descripcion="Smoke test mínimo instalado en el destino (no la suite completa de desarrollo)",
     ),
     EntradaManifiesto(
+        fuente="tools/ds_profile/__init__.py",
+        tratamiento=VERBATIM,
+        destino="tools/ds_profile/__init__.py",
+        descripcion="Paquete ds_profile: profiling determinista de datasets CSV/Parquet (Bloque 6)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/ds_profile/__main__.py",
+        tratamiento=VERBATIM,
+        destino="tools/ds_profile/__main__.py",
+    ),
+    EntradaManifiesto(
+        fuente="tools/ds_profile/cli.py",
+        tratamiento=VERBATIM,
+        destino="tools/ds_profile/cli.py",
+        descripcion="CLI de ds_profile (subcomando 'run', exit codes 0/1/2/3)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/ds_profile/io_readers.py",
+        tratamiento=VERBATIM,
+        destino="tools/ds_profile/io_readers.py",
+        descripcion="Capa de lectura desacoplada: lector CSV (stdlib) y lector Parquet (pyarrow perezoso)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/ds_profile/fingerprint.py",
+        tratamiento=VERBATIM,
+        destino="tools/ds_profile/fingerprint.py",
+    ),
+    EntradaManifiesto(
+        fuente="tools/ds_profile/schema.py",
+        tratamiento=VERBATIM,
+        destino="tools/ds_profile/schema.py",
+    ),
+    EntradaManifiesto(
+        fuente="tools/ds_profile/column_stats.py",
+        tratamiento=VERBATIM,
+        destino="tools/ds_profile/column_stats.py",
+    ),
+    EntradaManifiesto(
+        fuente="tools/ds_profile/quality_flags.py",
+        tratamiento=VERBATIM,
+        destino="tools/ds_profile/quality_flags.py",
+    ),
+    EntradaManifiesto(
+        fuente="tools/ds_profile/sampling.py",
+        tratamiento=VERBATIM,
+        destino="tools/ds_profile/sampling.py",
+    ),
+    EntradaManifiesto(
+        fuente="tools/ds_profile/holdout_guard.py",
+        tratamiento=VERBATIM,
+        destino="tools/ds_profile/holdout_guard.py",
+        descripcion="Defensa en profundidad de holdouts para --input/--output, reusa dsguard.pathguard",
+    ),
+    EntradaManifiesto(
+        fuente="tools/ds_profile/report.py",
+        tratamiento=VERBATIM,
+        destino="tools/ds_profile/report.py",
+        descripcion="Ensamblado y escritura atómica de profile.json/profile.md",
+    ),
+    EntradaManifiesto(
+        fuente=f"{_dir_templates('python_jupyter_data')}/eda.md.tmpl",
+        tratamiento=PLANTILLA,
+        destino=".claude/skills/lead-data-scientist/eda.md",
+        descripcion="Referencia de Project EDA (Bloque 6)",
+    ),
+    EntradaManifiesto(
+        fuente=".claude/skills/lead-data-scientist/templates/eda.md",
+        tratamiento=VERBATIM,
+        destino=".claude/skills/lead-data-scientist/templates/eda.md",
+    ),
+    EntradaManifiesto(
         fuente=".claude/settings.json",
         tratamiento=MERGE,
         destino=".claude/settings.json",
@@ -343,6 +414,15 @@ EXCLUSIONES_PERMANENTES: tuple = (
     "tools/tests/test_pathguard.py",
     "tools/tests/test_hook_rutas.py",
     "tools/tests/test_kdd.py",
+    "tools/ds_profile/tests/__init__.py",
+    "tools/ds_profile/tests/test_io_readers.py",
+    "tools/ds_profile/tests/test_fingerprint.py",
+    "tools/ds_profile/tests/test_column_stats.py",
+    "tools/ds_profile/tests/test_quality_flags.py",
+    "tools/ds_profile/tests/test_sampling.py",
+    "tools/ds_profile/tests/test_holdout_guard.py",
+    "tools/ds_profile/tests/test_report.py",
+    "tools/ds_profile/tests/test_cli.py",
 )
 
 

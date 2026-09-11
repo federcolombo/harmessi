@@ -1,0 +1,245 @@
+{
+  "schema_version": 1,
+  "change_id": "20260911-ds-profile-project-eda",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-11T12:48:28Z",
+  "baseline": {
+    "commit": "b653e6a5612e1ee7a7899117b20f23b87143fd4a",
+    "rama": "main",
+    "capturado_utc": "2026-09-11T12:48:28Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260911-ds-profile-project-eda/proposal.md",
+      "openspec/changes/20260911-ds-profile-project-eda/tasks.md",
+      "openspec/changes/20260911-ds-profile-project-eda/spec.md",
+      "openspec/changes/20260911-ds-profile-project-eda/design.md",
+      "openspec/changes/20260911-ds-profile-project-eda/control.json",
+      ".claude/skills/lead-data-scientist/SKILL.md",
+      ".claude/skills/lead-data-scientist/eda.md",
+      ".claude/skills/lead-data-scientist/templates/eda.md",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/profiles/python_jupyter_data/templates/eda.md.tmpl",
+      "tools/ds_profile/__init__.py",
+      "tools/ds_profile/__main__.py",
+      "tools/ds_profile/cli.py",
+      "tools/ds_profile/column_stats.py",
+      "tools/ds_profile/fingerprint.py",
+      "tools/ds_profile/holdout_guard.py",
+      "tools/ds_profile/io_readers.py",
+      "tools/ds_profile/quality_flags.py",
+      "tools/ds_profile/report.py",
+      "tools/ds_profile/sampling.py",
+      "tools/ds_profile/schema.py",
+      "tools/ds_profile/tests/__init__.py",
+      "tools/ds_profile/tests/test_cli.py",
+      "tools/ds_profile/tests/test_column_stats.py",
+      "tools/ds_profile/tests/test_fingerprint.py",
+      "tools/ds_profile/tests/test_holdout_guard.py",
+      "tools/ds_profile/tests/test_io_readers.py",
+      "tools/ds_profile/tests/test_quality_flags.py",
+      "tools/ds_profile/tests/test_report.py",
+      "tools/ds_profile/tests/test_sampling.py",
+      "openspec/changes/20260911-ds-profile-project-eda/verification.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e44f2daf338aa46ab3d25a66cca48869a0fe65dc9eacddba1ce17531e0e114ad",
+      "registrado_utc": "2026-09-11T12:52:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-11",
+      "alcance_aprobado": "ds_profile (tools/ds_profile/, python -m tools.ds_profile, sin tocar ds_guard.py) + Project EDA (eda.md skill+plantilla opcional, sin tocar el set fijo de ds_guard init), segun spec.md/design.md de este cambio",
+      "cita": "Confirmado: para v0.2 usar CSV con stdlib puro. CSV: csv + statistics + stdlib, sin pandas. Parquet: pyarrow mediante import perezoso. No instalar pandas, pyarrow ni ninguna dependencia nueva automaticamente. Si Parquet requiere pyarrow y no esta disponible: exit 3 + mensaje claro. Mantener la capa de lectura desacoplada. Aprobado el diseno final del Bloque 6. Avanza ahora con el cambio SDD y la implementacion del scope propuesto."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "56109266e04573d59904ace58d18375388992a6f11f8ddc9fb4e5f56f6e954b0",
+      "registrado_utc": "2026-09-11T12:52:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-11",
+      "alcance_aprobado": "ds_profile (tools/ds_profile/, python -m tools.ds_profile, sin tocar ds_guard.py) + Project EDA (eda.md skill+plantilla opcional, sin tocar el set fijo de ds_guard init), segun spec.md/design.md de este cambio",
+      "cita": "Confirmado: para v0.2 usar CSV con stdlib puro. CSV: csv + statistics + stdlib, sin pandas. Parquet: pyarrow mediante import perezoso. No instalar pandas, pyarrow ni ninguna dependencia nueva automaticamente. Si Parquet requiere pyarrow y no esta disponible: exit 3 + mensaje claro. Mantener la capa de lectura desacoplada. Aprobado el diseno final del Bloque 6. Avanza ahora con el cambio SDD y la implementacion del scope propuesto."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "df833ab1b153d7ca1bc37d54777a0878cd64e66f4525fa5d86c4052bff0f766f",
+      "registrado_utc": "2026-09-11T12:52:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-11",
+      "alcance_aprobado": "ds_profile (tools/ds_profile/, python -m tools.ds_profile, sin tocar ds_guard.py) + Project EDA (eda.md skill+plantilla opcional, sin tocar el set fijo de ds_guard init), segun spec.md/design.md de este cambio",
+      "cita": "Confirmado: para v0.2 usar CSV con stdlib puro. CSV: csv + statistics + stdlib, sin pandas. Parquet: pyarrow mediante import perezoso. No instalar pandas, pyarrow ni ninguna dependencia nueva automaticamente. Si Parquet requiere pyarrow y no esta disponible: exit 3 + mensaje claro. Mantener la capa de lectura desacoplada. Aprobado el diseno final del Bloque 6. Avanza ahora con el cambio SDD y la implementacion del scope propuesto."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a5910b34be0b3baebeb4094e9da44bf44748b4a44e00bb9736122407e83e0bb2",
+      "registrado_utc": "2026-09-11T12:52:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-11",
+      "alcance_aprobado": "ds_profile (tools/ds_profile/, python -m tools.ds_profile, sin tocar ds_guard.py) + Project EDA (eda.md skill+plantilla opcional, sin tocar el set fijo de ds_guard init), segun spec.md/design.md de este cambio",
+      "cita": "Confirmado: para v0.2 usar CSV con stdlib puro. CSV: csv + statistics + stdlib, sin pandas. Parquet: pyarrow mediante import perezoso. No instalar pandas, pyarrow ni ninguna dependencia nueva automaticamente. Si Parquet requiere pyarrow y no esta disponible: exit 3 + mensaje claro. Mantener la capa de lectura desacoplada. Aprobado el diseno final del Bloque 6. Avanza ahora con el cambio SDD y la implementacion del scope propuesto."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-11T12:52:21Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-11T13:54:51Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-11T12:52:31Z",
+      "cierre_utc": "2026-09-11T13:52:50Z",
+      "modo": "prolongada",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 20,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-11T16:52:31Z",
+      "minutos_consumidos": 60.31666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {},
+      "tareas": [
+        "revision-diff-completo",
+        "correccion-hallazgos-reviewer"
+      ],
+      "roles": [
+        "data-science-reviewer",
+        "python-data-engineer"
+      ],
+      "reintentos": 3,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-09-11T13:52:57Z",
+      "cierre_utc": "2026-09-11T13:55:01Z",
+      "modo": "cierre",
+      "presupuesto": {
+        "minutos": 60,
+        "max_tareas": 3,
+        "max_roles": 1,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-11T14:52:57Z",
+      "minutos_consumidos": 2.066666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {},
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "remediaciones": [
+    {
+      "remediation_id": "r1",
+      "finding_id": "F2-holdout-output-sin-chequeo",
+      "origen": "python-data-engineer",
+      "tipo": "bug",
+      "estado": "resuelta",
+      "creado_utc": "2026-09-11T13:27:22Z",
+      "ventanas": [
+        {
+          "ventana": 1,
+          "max_intentos": 2,
+          "autorizado_por": null,
+          "fecha_autorizacion": null,
+          "motivo": null,
+          "intentos": [
+            {
+              "attempt": 1,
+              "causa": "verificar_salida_permitida no chequeaba config.holdouts, solo data_raw",
+              "cambio_aplicado": "Agregado chequeo de holdouts (sin excepciones) en verificar_salida_permitida, holdout_guard.py:147-148",
+              "resultado": "corregido y testeado",
+              "session_id": "s1",
+              "utc": "2026-09-11T13:27:22Z"
+            }
+          ]
+        }
+      ],
+      "resuelto_utc": "2026-09-11T13:42:49Z",
+      "resultado_final": "Corregido: verificar_salida_permitida ahora chequea config.holdouts sin excepciones, holdout_guard.py:147-148. Test agregado y verificado por el Lead."
+    },
+    {
+      "remediation_id": "r2",
+      "finding_id": "F4-fail-open-ruta-no-resoluble",
+      "origen": "python-data-engineer",
+      "tipo": "bug",
+      "estado": "resuelta",
+      "creado_utc": "2026-09-11T13:27:23Z",
+      "ventanas": [
+        {
+          "ventana": 1,
+          "max_intentos": 2,
+          "autorizado_por": null,
+          "fecha_autorizacion": null,
+          "motivo": null,
+          "intentos": [
+            {
+              "attempt": 1,
+              "causa": "holdout_guard trataba ruta no resoluble igual que ruta fuera del repo (fail-open), divergiendo del fail-closed de pathguard.py",
+              "cambio_aplicado": "Agregado helper _es_ruta_no_resoluble, aplicado antes de resolver_ruta_relativa en verificar_permitido y verificar_salida_permitida, holdout_guard.py:66-86",
+              "resultado": "corregido y testeado",
+              "session_id": "s1",
+              "utc": "2026-09-11T13:27:23Z"
+            }
+          ]
+        }
+      ],
+      "resuelto_utc": "2026-09-11T13:42:50Z",
+      "resultado_final": "Corregido: helper _es_ruta_no_resoluble aplicado en ambas funciones, fail-closed ante error de resolucion. Test agregado y verificado por el Lead."
+    },
+    {
+      "remediation_id": "r3",
+      "finding_id": "F3-fecha-microsegundos",
+      "origen": "python-data-engineer",
+      "tipo": "bug",
+      "estado": "resuelta",
+      "creado_utc": "2026-09-11T13:27:24Z",
+      "ventanas": [
+        {
+          "ventana": 1,
+          "max_intentos": 2,
+          "autorizado_por": null,
+          "fecha_autorizacion": null,
+          "motivo": null,
+          "intentos": [
+            {
+              "attempt": 1,
+              "causa": "FORMATOS_FECHA no cubria fraccion de segundo, columnas timestamp de Parquet caian a texto",
+              "cambio_aplicado": "Agregados 2 formatos con .%f a FORMATOS_FECHA, column_stats.py:32-44",
+              "resultado": "corregido y testeado",
+              "session_id": "s1",
+              "utc": "2026-09-11T13:27:24Z"
+            }
+          ]
+        }
+      ],
+      "resuelto_utc": "2026-09-11T13:42:51Z",
+      "resultado_final": "Corregido: 2 formatos con .%f agregados a FORMATOS_FECHA. Test agregado y verificado por el Lead."
+    }
+  ]
+}

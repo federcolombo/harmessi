@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "change_id": "20260911-ds-profile-fix-clasificacion-sampling",
+  "modo": "abreviado",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-11T13:58:59Z",
+  "baseline": {
+    "commit": "b653e6a5612e1ee7a7899117b20f23b87143fd4a",
+    "rama": "main",
+    "capturado_utc": "2026-09-11T13:58:59Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260911-ds-profile-fix-clasificacion-sampling/proposal.md",
+      "openspec/changes/20260911-ds-profile-fix-clasificacion-sampling/tasks.md",
+      "openspec/changes/20260911-ds-profile-fix-clasificacion-sampling/control.json",
+      "tools/ds_profile/column_stats.py",
+      "tools/ds_profile/io_readers.py",
+      "tools/ds_profile/sampling.py",
+      "tools/ds_profile/tests/test_column_stats.py",
+      "tools/ds_profile/tests/test_io_readers.py",
+      "tools/ds_profile/tests/test_report.py",
+      "openspec/changes/20260911-ds-profile-project-eda/proposal.md",
+      "openspec/changes/20260911-ds-profile-project-eda/tasks.md",
+      "openspec/changes/20260911-ds-profile-project-eda/spec.md",
+      "openspec/changes/20260911-ds-profile-project-eda/design.md",
+      "openspec/changes/20260911-ds-profile-project-eda/control.json",
+      ".claude/skills/lead-data-scientist/SKILL.md",
+      ".claude/skills/lead-data-scientist/eda.md",
+      ".claude/skills/lead-data-scientist/templates/eda.md",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/profiles/python_jupyter_data/templates/eda.md.tmpl",
+      "tools/ds_profile/__init__.py",
+      "tools/ds_profile/__main__.py",
+      "tools/ds_profile/cli.py",
+      "tools/ds_profile/fingerprint.py",
+      "tools/ds_profile/holdout_guard.py",
+      "tools/ds_profile/quality_flags.py",
+      "tools/ds_profile/report.py",
+      "tools/ds_profile/schema.py",
+      "tools/ds_profile/tests/__init__.py",
+      "tools/ds_profile/tests/test_cli.py",
+      "tools/ds_profile/tests/test_fingerprint.py",
+      "tools/ds_profile/tests/test_holdout_guard.py",
+      "tools/ds_profile/tests/test_quality_flags.py",
+      "tools/ds_profile/tests/test_sampling.py",
+      "openspec/changes/20260911-ds-profile-project-eda/verification.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a3861aeb93907cef252f98cc0e7997e72f4fdfeee4e29c571e4caaae70b7df87",
+      "registrado_utc": "2026-09-11T14:01:05Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-11",
+      "alcance_aprobado": "Corregir clasificacion binaria numerica (0/1 entero/flotante conserva dtype + flag binary_numeric) y umbral de filas en CSV (--max-filas-exactas aplica via segunda pasada streaming), sin tocar el resto del diseno ya cerrado",
+      "cita": "Antes de commitear el Bloque 6, corregi unicamente estas dos limitaciones: 1. BINARIAS NUMERICAS (0/1 numerico conserva dtype/estadisticas + flag binary_numeric; booleanos reales siguen booleanos; sin inferencia por nombre). 2. UMBRAL DE FILAS EN CSV (max-filas-exactas debe aplicar tambien a CSV, exactitud de filas/tamano/schema/fingerprint se mantiene, sampling reproducible, nunca cargar todo el CSV antes de samplear). No tocar el diseno restante. No instalar pyarrow. No reabrir Project EDA ni agregar nuevas capacidades."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "84bb0fd7d616392a32a5951b8eb8641047d6aac8e701a5f5f0a442e6e5d411b1",
+      "registrado_utc": "2026-09-11T14:01:05Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-11",
+      "alcance_aprobado": "Corregir clasificacion binaria numerica (0/1 entero/flotante conserva dtype + flag binary_numeric) y umbral de filas en CSV (--max-filas-exactas aplica via segunda pasada streaming), sin tocar el resto del diseno ya cerrado",
+      "cita": "Antes de commitear el Bloque 6, corregi unicamente estas dos limitaciones: 1. BINARIAS NUMERICAS (0/1 numerico conserva dtype/estadisticas + flag binary_numeric; booleanos reales siguen booleanos; sin inferencia por nombre). 2. UMBRAL DE FILAS EN CSV (max-filas-exactas debe aplicar tambien a CSV, exactitud de filas/tamano/schema/fingerprint se mantiene, sampling reproducible, nunca cargar todo el CSV antes de samplear). No tocar el diseno restante. No instalar pyarrow. No reabrir Project EDA ni agregar nuevas capacidades."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-11T14:01:13Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-11T14:19:40Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-11T14:01:14Z",
+      "cierre_utc": "2026-09-11T14:19:41Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 8,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-11T15:31:14Z",
+      "minutos_consumidos": 18.45,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {},
+      "tareas": [
+        "correccion-hallazgo-reviewer",
+        "revision-diff"
+      ],
+      "roles": [
+        "python-data-engineer",
+        "data-science-reviewer"
+      ],
+      "reintentos": 1,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "remediaciones": [
+    {
+      "remediation_id": "r1",
+      "finding_id": "F1-filas-exactas-lineas-blanco",
+      "origen": "python-data-engineer",
+      "tipo": "bug",
+      "estado": "resuelta",
+      "creado_utc": "2026-09-11T14:10:13Z",
+      "ventanas": [
+        {
+          "ventana": 1,
+          "max_intentos": 2,
+          "autorizado_por": null,
+          "fecha_autorizacion": null,
+          "motivo": null,
+          "intentos": [
+            {
+              "attempt": 1,
+              "causa": "filas_exactas() contaba filas en blanco con csv.reader crudo, mientras iter_filas() via DictReader las descarta -- desincroniza la decision de modo",
+              "cambio_aplicado": "pendiente",
+              "resultado": "pendiente",
+              "session_id": "s1",
+              "utc": "2026-09-11T14:10:13Z"
+            }
+          ]
+        }
+      ],
+      "resuelto_utc": "2026-09-11T14:11:34Z",
+      "resultado_final": "Corregido: LectorCSV.filas_exactas() ahora usa csv.DictReader (mismo motor que iter_filas), consistente en el descarte de lineas en blanco. Test de consistencia agregado. Docstring de sampling.py actualizado. Verificado por el Lead."
+    }
+  ]
+}
