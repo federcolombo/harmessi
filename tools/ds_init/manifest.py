@@ -154,6 +154,12 @@ MANIFEST: tuple = (
         descripcion="Referencia del lifecycle KDD del proyecto (Bloque 4)",
     ),
     EntradaManifiesto(
+        fuente=f"{_dir_templates('python_jupyter_data')}/decision-ledger.md.tmpl",
+        tratamiento=PLANTILLA,
+        destino=".claude/skills/lead-data-scientist/decision-ledger.md",
+        descripcion="Referencia del decision ledger del proyecto (Bloque 5)",
+    ),
+    EntradaManifiesto(
         fuente=".claude/skills/lead-data-scientist/templates/proposal.md",
         tratamiento=VERBATIM,
         destino=".claude/skills/lead-data-scientist/templates/proposal.md",

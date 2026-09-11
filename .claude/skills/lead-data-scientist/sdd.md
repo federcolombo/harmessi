@@ -149,6 +149,42 @@ Tres contadores distintos, ninguno se confunde con otro:
   hallazgo de `data-science-reviewer` sobre código ya implementado, porque no cumplió su criterio
   de aceptación. Cuenta contra el límite de 2 reinvocaciones de `SKILL.md`.
 
+### Bounded remediation (`control["remediaciones"]`)
+
+Extensión de este mismo §8 (Bloque 5, `20260910-decision-ledger-bounded-remediation`): además del
+contador agregado `sesiones[].reintentos` (el freno que lee `hook_presupuesto.py` en tiempo real),
+`control.json` del cambio lleva un detalle por finding en `control["remediaciones"]` — no lo
+reemplaza, es un nivel de trazabilidad adicional.
+
+| Tipo (`--remediation-tipo`) | `--finding-id` | Uso típico |
+|---|---|---|
+| `retry_tecnico` | Opcional | Reintento técnico puntual sin un finding formal asociado |
+| `bug` | Obligatorio | Corrección de un bug de implementación sobre código ya aprobado |
+| `metodologica` | Obligatorio | Corrección sobre un hallazgo metodológico del reviewer/metodólogo |
+
+Cada remediación nace con una **ventana** de intentos (`ventana: 1`, sin autorización humana,
+`max_intentos` = default de sesión). Un intento se registra con
+`ds_guard session note --tipo reintento --finding-id <id> --remediation-tipo <tipo> --causa <texto>
+--cambio-aplicado <texto> --resultado <texto>`; si la ventana vigente ya está en su máximo, el
+comando se rehúsa entero (`REMEDIACION-LIMITE`) — ni el intento ni el agregado
+`sesiones[].reintentos` avanzan.
+
+- **`ds_guard remediation resolve --remediation-id <id> --resultado <texto>`**: cierra la
+  remediación (`estado: resuelta`), conserva todos los intentos como historial. Un segundo
+  `resolve` sobre la misma remediación se rehúsa (`REMEDIACION-YA-RESUELTA`); ningún intento nuevo
+  se admite después de resuelta (`REMEDIACION-RESUELTA`).
+- **`ds_guard remediation extend --remediation-id <id> --usuario <u> --fecha <f> --motivo <texto>
+  [--max-intentos 2]`**: agrega una ventana nueva (nunca reinicia ni borra las anteriores),
+  siempre con autorización humana explícita. Sobre una remediación ya `resuelta` se rehúsa
+  (`REMEDIACION-RESUELTA`) — reabrir un finding cerrado es una remediación nueva, no un extend.
+
+**Regla explícita: un cambio de enfoque metodológico no es una remediación.** Reemplazar el
+target, la estrategia de split, la métrica primaria, etc. no se resuelve con
+`session note --tipo reintento` ni con `remediation extend` — requiere pasar por el decision
+ledger (`ds_guard decision supersede`, ver
+`.claude/skills/lead-data-scientist/decision-ledger.md`) y, si corresponde, reabrir el SDD del
+cambio afectado con aprobación explícita del usuario.
+
 ## 9. Archivado
 
 Al cerrar, el cambio **permanece** en `openspec/changes/<id>/` con `estado: cerrada` hasta que se

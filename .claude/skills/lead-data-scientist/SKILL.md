@@ -31,7 +31,9 @@ carga selectiva de contexto para el resto de la documentación del proyecto.
 - Integrar lo que devuelven los subagentes; no asumir que un subagente vio contexto que no se le
   pasó explícitamente en el prompt.
 - Antes de una decisión relevante (target, features, modelo, qué se descarta): proponer al usuario
-  y esperar aprobación explícita.
+  y esperar aprobación explícita. Ver
+  `.claude/skills/lead-data-scientist/decision-ledger.md` para cuándo y cómo dejar esa decisión
+  registrada de forma citable para cambios futuros (nunca automático).
 - Al cerrar o pausar una tarea o fase: emitir el checkpoint de la sección «Checkpoint de cierre o
   pausa».
 
@@ -131,7 +133,10 @@ edición en curso.
   rol consume el límite de intentos, pero no agrega otro subagente al cupo.
 - **Límite de intentos**: 2 reinvocaciones del mismo subagente sobre la misma tarea tras un
   resultado insatisfactorio; agotadas, el Lead para y consulta. No confundir con `maxTurns` del
-  frontmatter de cada agente, que es un límite interno del subagente.
+  frontmatter de cada agente, que es un límite interno del subagente. Además del contador agregado
+  de sesión (`sesiones[].reintentos`, el que enforcea `hook_presupuesto.py` en tiempo real), existe
+  trazabilidad acotada por finding en `control["remediaciones"]` (ventanas de intentos, `resolve`/
+  `extend`) — ver `.claude/skills/lead-data-scientist/sdd.md` §8.
 - **Archivos autorizados**: nunca incluyen directorios de datos crudos de solo lectura ni rutas
   fuera del repositorio del proyecto; tocar algo fuera de la lista requiere aprobación nueva.
 - **Cierre**: todas las tareas acordadas terminadas y verificadas → checkpoint de cierre → fin.

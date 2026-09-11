@@ -439,6 +439,179 @@ def transition(
     return True, []
 
 
+# --- Bounded remediation (control["remediaciones"]) ---------------------------
+
+REMEDIATION_TIPOS = frozenset({"retry_tecnico", "bug", "metodologica"})
+
+
+def _hallar_remediacion(control: dict, finding_id: Optional[str]) -> Optional[dict]:
+    """Busca en `control.get("remediaciones", [])` una entrada cuyo
+    `finding_id == finding_id`. Si `finding_id` es `None`, siempre devuelve
+    `None` -- cada nota sin `finding_id` crea una remediación nueva (caso
+    típico de `retry_tecnico` puntual, sin finding asociado)."""
+    if finding_id is None:
+        return None
+    for remediacion in control.get("remediaciones", []):
+        if remediacion.get("finding_id") == finding_id:
+            return remediacion
+    return None
+
+
+def remediation_note(
+    control: dict,
+    remediation_tipo: str,
+    causa: Optional[str],
+    cambio_aplicado: Optional[str],
+    resultado: Optional[str],
+    session_id: str,
+    finding_id: Optional[str] = None,
+    origen: Optional[str] = None,
+    max_intentos_default: int = 2,
+) -> tuple:
+    """(ok, findings, remediation_id). Ver spec R11-R15. Crea la remediación
+    si no existe (ventana 1 automática, sin autorización humana). Si la
+    ventana vigente está agotada, o la remediación ya está resuelta, o el
+    tipo pedido es inconsistente con el ya fijado: no escribe nada (ni el
+    intento ni bookkeeping de sesión -- eso es responsabilidad del
+    llamador, `session_note`, que no debe incrementar `reintentos` si acá
+    `ok` es `False`)."""
+    if remediation_tipo not in REMEDIATION_TIPOS:
+        return False, [
+            Finding("REMEDIACION-TIPO-INVALIDO", f"Tipo de remediación inválido: {remediation_tipo}")
+        ], None
+
+    if remediation_tipo in ("bug", "metodologica") and not finding_id:
+        return False, [
+            Finding(
+                "REMEDIACION-FINDING-REQUERIDO",
+                f"'{remediation_tipo}' requiere --finding-id no vacío",
+            )
+        ], None
+
+    remediacion = _hallar_remediacion(control, finding_id)
+
+    if remediacion is not None:
+        if remediacion.get("estado") == "resuelta":
+            return False, [
+                Finding(
+                    "REMEDIACION-RESUELTA",
+                    f"La remediación {remediacion.get('remediation_id')} ya está resuelta: no admite intentos nuevos",
+                )
+            ], None
+        tipo_existente = remediacion.get("tipo")
+        if tipo_existente is not None and tipo_existente != remediation_tipo:
+            return False, [
+                Finding(
+                    "REMEDIACION-TIPO-INCONSISTENTE",
+                    f"La remediación {remediacion.get('remediation_id')} ya está tipada como "
+                    f"{tipo_existente}, no se puede registrar un intento como {remediation_tipo}",
+                )
+            ], None
+    else:
+        remediaciones = control.setdefault("remediaciones", [])
+        remediation_id = f"r{len(remediaciones) + 1}"
+        remediacion = {
+            "remediation_id": remediation_id,
+            "finding_id": finding_id,
+            "origen": origen,
+            "tipo": remediation_tipo,
+            "estado": "abierta",
+            "creado_utc": ahora_utc(),
+            "ventanas": [
+                {
+                    "ventana": 1,
+                    "max_intentos": max_intentos_default,
+                    "autorizado_por": None,
+                    "fecha_autorizacion": None,
+                    "motivo": None,
+                    "intentos": [],
+                }
+            ],
+            "resuelto_utc": None,
+            "resultado_final": None,
+        }
+        remediaciones.append(remediacion)
+
+    ventana_vigente = remediacion["ventanas"][-1]
+    if len(ventana_vigente["intentos"]) >= ventana_vigente["max_intentos"]:
+        return False, [
+            Finding(
+                "REMEDIACION-LIMITE",
+                f"Se agotaron los {ventana_vigente['max_intentos']} intentos de la ventana "
+                f"{ventana_vigente['ventana']} para {finding_id or remediacion['remediation_id']}; "
+                "usar 'ds_guard remediation extend' o 'resolve'",
+            )
+        ], None
+
+    intento = {
+        "attempt": len(ventana_vigente["intentos"]) + 1,
+        "causa": causa,
+        "cambio_aplicado": cambio_aplicado,
+        "resultado": resultado,
+        "session_id": session_id,
+        "utc": ahora_utc(),
+    }
+    ventana_vigente["intentos"].append(intento)
+    return True, [], remediacion["remediation_id"]
+
+
+def remediation_resolve(control: dict, remediation_id: str, resultado: Optional[str]) -> tuple:
+    for remediacion in control.get("remediaciones", []):
+        if remediacion.get("remediation_id") == remediation_id:
+            if remediacion.get("estado") == "resuelta":
+                return False, [
+                    Finding(
+                        "REMEDIACION-YA-RESUELTA",
+                        f"La remediación {remediation_id} ya estaba resuelta",
+                    )
+                ]
+            remediacion["estado"] = "resuelta"
+            remediacion["resuelto_utc"] = ahora_utc()
+            remediacion["resultado_final"] = resultado
+            return True, []
+    return False, [Finding("REMEDIACION-INEXISTENTE", f"No existe la remediación: {remediation_id}")]
+
+
+def remediation_extend(
+    control: dict,
+    remediation_id: str,
+    usuario: str,
+    fecha: str,
+    motivo: str,
+    max_intentos: int = 2,
+) -> tuple:
+    for remediacion in control.get("remediaciones", []):
+        if remediacion.get("remediation_id") == remediation_id:
+            if remediacion.get("estado") == "resuelta":
+                return False, [
+                    Finding(
+                        "REMEDIACION-RESUELTA",
+                        f"La remediación {remediation_id} ya está resuelta: reabrir requiere una remediación nueva, no extender la cerrada",
+                    )
+                ], None
+            if not usuario or not fecha or not motivo:
+                return False, [
+                    Finding(
+                        "REMEDIACION-CAMPO-VACIO",
+                        "usuario/fecha/motivo son obligatorios para 'remediation extend'",
+                    )
+                ], None
+            ventanas = remediacion["ventanas"]
+            nueva_ventana_num = len(ventanas) + 1
+            ventanas.append(
+                {
+                    "ventana": nueva_ventana_num,
+                    "max_intentos": max_intentos,
+                    "autorizado_por": usuario,
+                    "fecha_autorizacion": fecha,
+                    "motivo": motivo,
+                    "intentos": [],
+                }
+            )
+            return True, [], nueva_ventana_num
+    return False, [Finding("REMEDIACION-INEXISTENTE", f"No existe la remediación: {remediation_id}")], None
+
+
 # --- Sesiones ----------------------------------------------------------------
 
 class SesionYaActivaError(Exception):
@@ -447,6 +620,17 @@ class SesionYaActivaError(Exception):
 
 class SesionAusenteError(Exception):
     pass
+
+
+class RemediacionLimiteError(Exception):
+    """Un intento de remediación (`session note --tipo reintento
+    --remediation-tipo ...`) se rehusó -- ver `remediation_note`. Lleva los
+    `Finding` para que el llamador (`cmd_session_note`) los traduzca a exit 2,
+    mismo patrón que `SesionAusenteError`."""
+
+    def __init__(self, findings: list):
+        self.findings = findings
+        super().__init__("; ".join(f.mensaje for f in findings))
 
 
 def _sesion_activa(control: dict) -> Optional[dict]:
@@ -503,13 +687,42 @@ def session_start(
     return entrada
 
 
-def session_note(control: dict, rol: Optional[str], tipo: str, tarea: Optional[str] = None) -> dict:
+def session_note(
+    control: dict,
+    rol: Optional[str],
+    tipo: str,
+    tarea: Optional[str] = None,
+    finding_id: Optional[str] = None,
+    remediation_tipo: Optional[str] = None,
+    causa: Optional[str] = None,
+    cambio_aplicado: Optional[str] = None,
+    resultado: Optional[str] = None,
+    max_intentos_remediacion: int = 2,
+) -> dict:
     if tipo not in ("planificada", "reintento", "ronda"):
         raise ValueError(f"tipo de nota inválido: {tipo!r}")
     activa = _sesion_activa(control)
     if activa is None:
         raise SesionAusenteError("No hay sesión activa: 'session note' requiere una sesión abierta")
     if tipo == "reintento":
+        if remediation_tipo is not None:
+            # Bounded remediation (R11-R18): si `remediation_note` rehúsa
+            # (ventana agotada, tipo inválido, etc.), no se toca nada -- ni la
+            # remediación ni el agregado `reintentos` de la sesión. Regresión
+            # cero para quien no use estos flags: ver rama `else` de abajo.
+            ok, findings_remediacion, _remediation_id = remediation_note(
+                control,
+                remediation_tipo,
+                causa,
+                cambio_aplicado,
+                resultado,
+                session_id=activa["id"],
+                finding_id=finding_id,
+                origen=rol,
+                max_intentos_default=max_intentos_remediacion,
+            )
+            if not ok:
+                raise RemediacionLimiteError(findings_remediacion)
         activa["reintentos"] = activa.get("reintentos", 0) + 1
     elif tipo == "ronda":
         activa["rondas_revision"] = activa.get("rondas_revision", 0) + 1

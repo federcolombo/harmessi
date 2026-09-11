@@ -35,7 +35,14 @@ design.md`, secciones 2 y 3 (puntos 1-5, 4a, 4b). Resumen:
   - `0 < minutos_restantes <= 5`: deniega `Agent` nuevo y `SendMessage` que
     sea continuación de un `agent_id` ya registrado en `subagentes`;
     `Write`/`Edit`/`Bash`/`PowerShell` (fuera del allowlist) siguen permitidos.
-  - `minutos_restantes > 5`: permite.
+  - `reintentos >= max_reintentos` de la sesión activa (Bloque 5, bounded
+    remediation): deniega `Agent` nuevo, chequeado después de los dos puntos
+    de tiempo de arriba y antes de registrar el `agent_id` -- mismo criterio
+    fail-safe que el resto del hook (sin sesión activa o dato ilegible, se
+    permite). Detalle por finding vive en `control["remediaciones"]`
+    (`tools/dsguard/sdd.py`), evaluado por `ds_guard session note`/
+    `remediation resolve|extend`, no por este hook.
+  - `minutos_restantes > 5` y reintentos dentro de presupuesto: permite.
 - `SendMessage` cuyo `to` no matchea ninguna clave de `subagentes`: antes del
   deadline se permite sin contar (aunque esté en la ventana de 5 min);
   vencido el deadline se deniega igual que cualquier otro `SendMessage`.
@@ -270,6 +277,15 @@ def evaluar(
                 f"⏸️ Quedan {restantes:.1f} min de presupuesto (≤5): se reserva el tiempo "
                 "restante para verificación mínima y checkpoint; no se permiten convocatorias "
                 "nuevas de subagente.",
+                False,
+            )
+        max_reintentos = sesion.get("presupuesto", {}).get("max_reintentos", float("inf"))
+        if sesion.get("reintentos", 0) >= max_reintentos:
+            return (
+                False,
+                "🛑 LÍMITE DE REINTENTOS: la sesión agotó su máximo de reintentos "
+                "(max_reintentos). No se permiten nuevas convocatorias de subagente; resolver "
+                "el finding, pedir 'remediation extend', o pasar a pausada_bloqueada.",
                 False,
             )
         agent_id = _extraer_agent_id(payload)

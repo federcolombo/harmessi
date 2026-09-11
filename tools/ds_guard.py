@@ -31,7 +31,7 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-from dsguard import core, kdd, notebooks, repo, sdd  # noqa: E402
+from dsguard import core, decision, kdd, notebooks, repo, sdd  # noqa: E402
 
 
 # --- Helpers compartidos --------------------------------------------------
@@ -308,6 +308,13 @@ def cmd_session_start(args: argparse.Namespace) -> int:
 
 
 def cmd_session_note(args: argparse.Namespace) -> int:
+    if args.remediation_tipo is not None and args.tipo != "reintento":
+        print(
+            "--remediation-tipo solo es válido junto con --tipo reintento",
+            file=sys.stderr,
+        )
+        return 2
+
     try:
         repo_root = _repo_root()
     except RuntimeError as e:
@@ -316,9 +323,22 @@ def cmd_session_note(args: argparse.Namespace) -> int:
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     try:
-        sdd.session_note(control, args.rol, args.tipo, args.tarea)
+        sdd.session_note(
+            control,
+            args.rol,
+            args.tipo,
+            args.tarea,
+            finding_id=args.finding_id,
+            remediation_tipo=args.remediation_tipo,
+            causa=args.causa,
+            cambio_aplicado=args.cambio_aplicado,
+            resultado=args.resultado,
+        )
     except (sdd.SesionAusenteError, ValueError) as e:
         print(str(e), file=sys.stderr)
+        return 2
+    except sdd.RemediacionLimiteError as e:
+        print(core.formatear_findings_texto(e.findings), file=sys.stderr)
         return 2
 
     core.escribir_control(control_path, control)
@@ -378,6 +398,191 @@ def cmd_session_close(args: argparse.Namespace) -> int:
     elif estado_final == "pausada":
         print("⏸️ SESIÓN PAUSADA")
     print("Sesión cerrada.")
+    return 0
+
+
+# --- remediation --------------------------------------------------------------
+
+def cmd_remediation_resolve(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+
+    ok, findings = sdd.remediation_resolve(control, args.remediation_id, args.resultado)
+    if not ok:
+        _imprimir_findings(findings, 1, args.json)
+        return 1
+
+    core.escribir_control(control_path, control)
+    if args.json:
+        print(json.dumps({"remediation_id": args.remediation_id, "estado": "resuelta"}, ensure_ascii=False))
+    else:
+        print(f"Remediación resuelta: {args.remediation_id}")
+    return 0
+
+
+def cmd_remediation_extend(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+
+    ok, findings, ventana = sdd.remediation_extend(
+        control, args.remediation_id, args.usuario, args.fecha, args.motivo, max_intentos=args.max_intentos
+    )
+    if not ok:
+        _imprimir_findings(findings, 1, args.json)
+        return 1
+
+    core.escribir_control(control_path, control)
+    if args.json:
+        print(json.dumps({"remediation_id": args.remediation_id, "ventana": ventana}, ensure_ascii=False))
+    else:
+        print(f"Ventana {ventana} agregada a la remediación {args.remediation_id}")
+    return 0
+
+
+# --- decision -------------------------------------------------------------
+
+def cmd_decision_add(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+
+    ok, findings = decision.decision_add(
+        repo_root,
+        args.decision_id,
+        args.tipo,
+        args.resumen,
+        args.rationale,
+        args.usuario,
+        args.fecha,
+        args.cita,
+        change_id=args.change_id,
+        kdd_etapa=args.kdd_etapa,
+        evidencia=args.evidencia,
+    )
+    if not ok:
+        _imprimir_findings(findings, 2, args.json)
+        return 2
+
+    if args.json:
+        print(json.dumps({"decision_id": args.decision_id, "accion": "registrar"}, ensure_ascii=False))
+    else:
+        print(f"Decisión registrada: {args.decision_id}")
+    return 0
+
+
+def cmd_decision_supersede(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+
+    ok, findings = decision.decision_supersede(
+        repo_root,
+        args.referencia,
+        args.decision_id,
+        args.tipo,
+        args.resumen,
+        args.rationale,
+        args.usuario,
+        args.fecha,
+        args.cita,
+        change_id=args.change_id,
+        kdd_etapa=args.kdd_etapa,
+        evidencia=args.evidencia,
+    )
+    if not ok:
+        _imprimir_findings(findings, 2, args.json)
+        return 2
+
+    if args.json:
+        print(
+            json.dumps(
+                {"decision_id": args.decision_id, "accion": "supersede", "referencia": args.referencia},
+                ensure_ascii=False,
+            )
+        )
+    else:
+        print(f"Decisión {args.referencia} supersedida por {args.decision_id}")
+    return 0
+
+
+def cmd_decision_revoke(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+
+    ok, findings = decision.decision_revoke(
+        repo_root, args.referencia, args.motivo, args.usuario, args.fecha
+    )
+    if not ok:
+        _imprimir_findings(findings, 2, args.json)
+        return 2
+
+    if args.json:
+        print(json.dumps({"accion": "revocar", "referencia": args.referencia}, ensure_ascii=False))
+    else:
+        print(f"Decisión revocada: {args.referencia}")
+    return 0
+
+
+def cmd_decision_list(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+
+    entradas, findings = decision.decision_list(
+        repo_root, tipo=args.tipo, estado=args.estado, change_id=args.change_id
+    )
+    if args.json:
+        print(
+            json.dumps(
+                {"decisiones": entradas, "findings": [f.to_dict() for f in findings]},
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+    else:
+        for f in findings:
+            print(f"  [{f.codigo}] {f.mensaje}")
+        for e in entradas:
+            print(f"{e.get('decision_id')} [{e.get('tipo')}] estado={e.get('estado')}: {e.get('resumen')}")
+    return 0
+
+
+def cmd_decision_show(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+
+    entrada, findings = decision.decision_show(repo_root, args.decision_id)
+    if entrada is None:
+        _imprimir_findings(findings, 1, args.json)
+        return 1
+
+    if args.json:
+        print(json.dumps({"decision": entrada, "findings": [f.to_dict() for f in findings]}, indent=2, ensure_ascii=False))
+    else:
+        for clave, valor in entrada.items():
+            print(f"{clave}: {valor}")
+        for f in findings:
+            print(f"  [{f.codigo}] {f.mensaje}")
     return 0
 
 
@@ -828,6 +1033,16 @@ def construir_parser() -> argparse.ArgumentParser:
     p_session_note.add_argument("--rol", default=None)
     p_session_note.add_argument("--tipo", required=True, choices=["planificada", "reintento", "ronda"])
     p_session_note.add_argument("--tarea", default=None)
+    p_session_note.add_argument("--finding-id", default=None, dest="finding_id")
+    p_session_note.add_argument(
+        "--remediation-tipo",
+        default=None,
+        dest="remediation_tipo",
+        choices=["retry_tecnico", "bug", "metodologica"],
+    )
+    p_session_note.add_argument("--causa", default=None)
+    p_session_note.add_argument("--cambio-aplicado", default=None, dest="cambio_aplicado")
+    p_session_note.add_argument("--resultado", default=None)
     p_session_note.set_defaults(func=cmd_session_note)
 
     p_session_status = session_sub.add_parser("status")
@@ -882,6 +1097,73 @@ def construir_parser() -> argparse.ArgumentParser:
     grupo_archive.add_argument("--execute", action="store_true", help="Ejecuta el git mv real.")
     p_archive.add_argument("--json", action="store_true")
     p_archive.set_defaults(func=cmd_archive)
+
+    p_remediation = subparsers.add_parser(
+        "remediation", help="Bounded remediation (control['remediaciones']): resolve/extend."
+    )
+    remediation_sub = p_remediation.add_subparsers(dest="subcomando", required=True)
+
+    p_remediation_resolve = remediation_sub.add_parser("resolve")
+    p_remediation_resolve.add_argument("--change-id", required=True)
+    p_remediation_resolve.add_argument("--remediation-id", required=True, dest="remediation_id")
+    p_remediation_resolve.add_argument("--resultado", required=True)
+    p_remediation_resolve.add_argument("--json", action="store_true")
+    p_remediation_resolve.set_defaults(func=cmd_remediation_resolve)
+
+    p_remediation_extend = remediation_sub.add_parser("extend")
+    p_remediation_extend.add_argument("--change-id", required=True)
+    p_remediation_extend.add_argument("--remediation-id", required=True, dest="remediation_id")
+    p_remediation_extend.add_argument("--usuario", required=True)
+    p_remediation_extend.add_argument("--fecha", required=True)
+    p_remediation_extend.add_argument("--motivo", required=True)
+    p_remediation_extend.add_argument("--max-intentos", type=int, default=2, dest="max_intentos")
+    p_remediation_extend.add_argument("--json", action="store_true")
+    p_remediation_extend.set_defaults(func=cmd_remediation_extend)
+
+    p_decision = subparsers.add_parser("decision", help="Decision ledger del proyecto (openspec/decisions/ledger.jsonl).")
+    decision_sub = p_decision.add_subparsers(dest="subcomando", required=True)
+
+    def _agregar_flags_comunes_decision(p):
+        p.add_argument("--decision-id", required=True, dest="decision_id")
+        p.add_argument("--tipo", required=True, choices=sorted(decision.TIPOS_DECISION))
+        p.add_argument("--resumen", required=True)
+        p.add_argument("--rationale", required=True)
+        p.add_argument("--usuario", required=True)
+        p.add_argument("--fecha", required=True)
+        p.add_argument("--cita", required=True)
+        p.add_argument("--change-id", default=None, dest="change_id")
+        p.add_argument("--kdd-etapa", default=None, dest="kdd_etapa", choices=list(kdd.ETAPAS))
+        p.add_argument("--evidencia", action="append", default=None)
+        p.add_argument("--json", action="store_true")
+
+    p_decision_add = decision_sub.add_parser("add")
+    _agregar_flags_comunes_decision(p_decision_add)
+    p_decision_add.set_defaults(func=cmd_decision_add)
+
+    p_decision_supersede = decision_sub.add_parser("supersede")
+    _agregar_flags_comunes_decision(p_decision_supersede)
+    p_decision_supersede.add_argument("--referencia", required=True)
+    p_decision_supersede.set_defaults(func=cmd_decision_supersede)
+
+    p_decision_revoke = decision_sub.add_parser("revoke")
+    p_decision_revoke.add_argument("--referencia", required=True)
+    p_decision_revoke.add_argument("--motivo", required=True)
+    p_decision_revoke.add_argument("--usuario", required=True)
+    p_decision_revoke.add_argument("--fecha", required=True)
+    p_decision_revoke.add_argument("--json", action="store_true")
+    p_decision_revoke.set_defaults(func=cmd_decision_revoke)
+
+    p_decision_list = decision_sub.add_parser("list")
+    p_decision_list.add_argument("--tipo", default=None, choices=sorted(decision.TIPOS_DECISION))
+    p_decision_list.add_argument("--estado", default=None, choices=["activa", "superseded", "revocada"])
+    p_decision_list.add_argument("--change-id", default=None, dest="change_id")
+    p_decision_list.add_argument("--json", action="store_true")
+    p_decision_list.set_defaults(func=cmd_decision_list)
+
+    p_decision_show = decision_sub.add_parser("show")
+    p_decision_show.add_argument("--decision-id", required=True, dest="decision_id")
+    p_decision_show.add_argument("--json", action="store_true")
+    p_decision_show.set_defaults(func=cmd_decision_show)
 
     return parser
 

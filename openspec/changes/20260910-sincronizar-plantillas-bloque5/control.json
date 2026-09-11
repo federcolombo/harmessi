@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "change_id": "20260910-sincronizar-plantillas-bloque5",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-10T23:38:37Z",
+  "baseline": {
+    "commit": "24c07e4a7c10b7754169567791f1b465d1e8d8be",
+    "rama": "main",
+    "capturado_utc": "2026-09-10T23:38:37Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260910-sincronizar-plantillas-bloque5/proposal.md",
+      "openspec/changes/20260910-sincronizar-plantillas-bloque5/tasks.md",
+      "openspec/changes/20260910-sincronizar-plantillas-bloque5/spec.md",
+      "openspec/changes/20260910-sincronizar-plantillas-bloque5/design.md",
+      "openspec/changes/20260910-sincronizar-plantillas-bloque5/control.json",
+      "openspec/changes/20260910-sincronizar-plantillas-bloque5/verification.md",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/profiles/python_jupyter_data/templates/sdd.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/SKILL_lead_data_scientist.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/verificador.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/decision-ledger.md.tmpl",
+      ".claude/skills/lead-data-scientist/SKILL.md",
+      ".claude/skills/lead-data-scientist/sdd.md",
+      ".claude/skills/lead-data-scientist/verificador.md",
+      ".claude/skills/lead-data-scientist/decision-ledger.md",
+      "tools/ds_guard.py",
+      "tools/dsguard/hook_presupuesto.py",
+      "tools/dsguard/sdd.py",
+      "tools/dsguard/decision.py",
+      "tools/tests/test_decision.py",
+      "tools/tests/test_remediation.py",
+      "openspec/changes/20260910-decision-ledger-bounded-remediation/control.json",
+      "openspec/changes/20260910-decision-ledger-bounded-remediation/design.md",
+      "openspec/changes/20260910-decision-ledger-bounded-remediation/proposal.md",
+      "openspec/changes/20260910-decision-ledger-bounded-remediation/spec.md",
+      "openspec/changes/20260910-decision-ledger-bounded-remediation/tasks.md",
+      "openspec/changes/20260910-decision-ledger-bounded-remediation/verification.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "9f8205f6ea4088e879a290f4c16b39910202befcd016a1beda03a28f007de228",
+      "registrado_utc": "2026-09-10T23:41:16Z",
+      "usuario": "federico.colombo",
+      "fecha_declarada": "2026-09-10",
+      "alcance_aprobado": "Sincronizar sdd.md.tmpl/SKILL_lead_data_scientist.md.tmpl/verificador.md.tmpl con Bloque 5, crear decision-ledger.md.tmpl, registrar en manifest.py",
+      "cita": "Antes de commitear el Bloque 5, corregi unicamente la paridad del scaffold instalable (mensaje completo del usuario, puntos 1-5, con exclusiones explicitas de deuda v0.3+)"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "808255d0409f4c953011a2db115a8467dd462a3bc47c158711d419d88e890f1b",
+      "registrado_utc": "2026-09-10T23:41:16Z",
+      "usuario": "federico.colombo",
+      "fecha_declarada": "2026-09-10",
+      "alcance_aprobado": "Sincronizar sdd.md.tmpl/SKILL_lead_data_scientist.md.tmpl/verificador.md.tmpl con Bloque 5, crear decision-ledger.md.tmpl, registrar en manifest.py",
+      "cita": "Antes de commitear el Bloque 5, corregi unicamente la paridad del scaffold instalable (mensaje completo del usuario, puntos 1-5, con exclusiones explicitas de deuda v0.3+)"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "9fcb19f39d14d0d0c4e9d0fbaa7c8f24f4aefe4ffd532ce7d0e0bd0430a4605d",
+      "registrado_utc": "2026-09-10T23:41:16Z",
+      "usuario": "federico.colombo",
+      "fecha_declarada": "2026-09-10",
+      "alcance_aprobado": "Sincronizar sdd.md.tmpl/SKILL_lead_data_scientist.md.tmpl/verificador.md.tmpl con Bloque 5, crear decision-ledger.md.tmpl, registrar en manifest.py",
+      "cita": "Antes de commitear el Bloque 5, corregi unicamente la paridad del scaffold instalable (mensaje completo del usuario, puntos 1-5, con exclusiones explicitas de deuda v0.3+)"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-10T23:41:26Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-10T23:41:28Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-10T23:49:08Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-10T23:58:47Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-10T23:41:27Z",
+      "cierre_utc": "2026-09-10T23:58:56Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 60,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-11T00:41:27Z",
+      "minutos_consumidos": 17.483333333333334,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-10T23:58:17Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-10T23:47:39Z"
+        }
+      },
+      "tareas": [
+        "sincronizar-plantillas",
+        "cierre-verification",
+        "ampliar-alcance-control-json",
+        "ampliar-alcance-control-json-2"
+      ],
+      "roles": [
+        "python-data-engineer"
+      ],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}
