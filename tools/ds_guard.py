@@ -31,7 +31,7 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-from dsguard import core, decision, kdd, kdd_compat, lifecycle, notebooks, repo, sdd  # noqa: E402
+from dsguard import core, decision, kdd, kdd_compat, lifecycle, maturity, notebooks, repo, sdd  # noqa: E402
 
 
 # --- Helpers compartidos --------------------------------------------------
@@ -906,6 +906,93 @@ def cmd_lifecycle_migrate(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- project -------------------------------------------------------------------
+
+def cmd_project_init(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    try:
+        estado, creado = maturity.project_init(repo_root, stage=args.stage, adopt=args.adopt)
+    except maturity.MaturityEstadoError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+    ruta_relativa = maturity.state_path(repo_root).relative_to(repo_root).as_posix()
+    if args.json:
+        print(json.dumps({"creado": creado, "ruta": ruta_relativa, "estado": estado}, ensure_ascii=False))
+    else:
+        if creado:
+            via = estado["stage_history"][-1]["via"]
+            print(f"project.json inicializado -> {ruta_relativa} (project_stage={estado['project_stage']}, via={via})")
+        else:
+            print(f"{ruta_relativa} ya existía: init es idempotente, no se modificó nada.")
+    return 0
+
+
+def cmd_project_calibrate(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    try:
+        estado = maturity.calibrar(repo_root, args.stage, args.reason)
+    except maturity.MaturityEstadoError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps({"project_stage": estado["project_stage"]}, ensure_ascii=False))
+    else:
+        print(f"Calibrado -> project_stage={estado['project_stage']} (via=calibrate)")
+    return 0
+
+
+def cmd_project_set_risk(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    try:
+        estado = maturity.set_risk(repo_root, args.nivel, args.reason)
+    except maturity.MaturityEstadoError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps({"risk_level": estado["risk_level"]}, ensure_ascii=False))
+    else:
+        print(f"risk_level -> {estado['risk_level']}")
+    return 0
+
+
+def cmd_project_status(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    try:
+        payload = maturity.project_status(repo_root)
+    except FileNotFoundError:
+        ruta_relativa = maturity.state_path(repo_root).relative_to(repo_root).as_posix()
+        print(f"{ruta_relativa} no existe. Correr 'ds_guard project init' primero.", file=sys.stderr)
+        return 2
+    except maturity.MaturityEstadoError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(f"project_stage: {payload['project_stage']}")
+        print(f"risk_level: {payload['risk_level']} ({payload['risk_status']})")
+        if payload["origen_stage"]:
+            o = payload["origen_stage"]
+            print(f"origen del stage actual: via={o['via']} reason={o['reason']!r} utc={o['utc']}")
+    return 0
+
+
 # --- init -------------------------------------------------------------------
 
 # Artefactos posibles de un cambio: si cualquiera ya existe, `init` no toca
@@ -1146,6 +1233,32 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     p_lifecycle_migrate.add_argument("--json", action="store_true")
     p_lifecycle_migrate.set_defaults(func=cmd_lifecycle_migrate)
+
+    p_project = subparsers.add_parser("project", help="Estado de madurez/gobernanza del proyecto (.harmessi/project.json).")
+    project_sub = p_project.add_subparsers(dest="subcomando", required=True)
+
+    p_project_init = project_sub.add_parser("init")
+    grupo_init = p_project_init.add_mutually_exclusive_group()
+    grupo_init.add_argument("--stage", choices=list(maturity.STAGES_INIT_PERMITIDOS), default=None)
+    grupo_init.add_argument("--adopt", action="store_true")
+    p_project_init.add_argument("--json", action="store_true")
+    p_project_init.set_defaults(func=cmd_project_init)
+
+    p_project_calibrate = project_sub.add_parser("calibrate")
+    p_project_calibrate.add_argument("--stage", required=True, choices=list(maturity.PROJECT_STAGES))
+    p_project_calibrate.add_argument("--reason", required=True)
+    p_project_calibrate.add_argument("--json", action="store_true")
+    p_project_calibrate.set_defaults(func=cmd_project_calibrate)
+
+    p_project_set_risk = project_sub.add_parser("set-risk")
+    p_project_set_risk.add_argument("nivel", choices=list(maturity.RISK_LEVELS))
+    p_project_set_risk.add_argument("--reason", required=True)
+    p_project_set_risk.add_argument("--json", action="store_true")
+    p_project_set_risk.set_defaults(func=cmd_project_set_risk)
+
+    p_project_status = project_sub.add_parser("status")
+    p_project_status.add_argument("--json", action="store_true")
+    p_project_status.set_defaults(func=cmd_project_status)
 
     p_archive = subparsers.add_parser(
         "archive", help="Archiva un cambio cerrado de openspec/changes/ a openspec/archive/ (git mv)."

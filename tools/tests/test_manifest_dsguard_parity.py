@@ -102,5 +102,19 @@ class TestParidadManifestLifecycleYKddCompatExplicita(unittest.TestCase):
         self.assertIn("tools/dsguard/kdd_compat.py", destinos_verbatim)
 
 
+class TestParidadManifestMaturityExplicita(unittest.TestCase):
+    """Regresión de `20260915-project-maturity-state-and-calibration`: mismo
+    criterio que `TestParidadManifestLifecycleYKddCompatExplicita` -- nombre
+    hardcodeado, no dependiente de qué importe `ds_guard.py` a nivel de
+    módulo, para que `maturity.py` siga cubierto aunque el import cambie
+    algún día."""
+
+    def test_maturity_py_tiene_entrada_verbatim_en_manifest(self):
+        destinos_verbatim = {
+            entrada.destino for entrada in MANIFEST if entrada.tratamiento == VERBATIM
+        }
+        self.assertIn("tools/dsguard/maturity.py", destinos_verbatim)
+
+
 if __name__ == "__main__":
     unittest.main()

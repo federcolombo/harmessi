@@ -234,6 +234,12 @@ MANIFEST: tuple = (
         descripcion="Compatibilidad legacy v0.2 -> lifecycle v0.3: migracion, mapeo, roll-up (Change 2 v0.3)",
     ),
     EntradaManifiesto(
+        fuente="tools/dsguard/maturity.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/maturity.py",
+        descripcion="Estado de madurez/gobernanza del proyecto: .harmessi/project.json (Change 3 v0.3)",
+    ),
+    EntradaManifiesto(
         fuente="tools/dsguard/notebooks.py",
         tratamiento=VERBATIM,
         destino="tools/dsguard/notebooks.py",
@@ -424,6 +430,7 @@ EXCLUSIONES_PERMANENTES: tuple = (
     "openspec/changes/",
     "openspec/kdd/",
     "openspec/lifecycle/",
+    ".harmessi/",
     "requirements.txt",
     "requirements-lock.txt",
     "tools/tests/test_ds_guard.py",

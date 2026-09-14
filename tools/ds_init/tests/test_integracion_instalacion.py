@@ -99,6 +99,7 @@ class TestIntegracionInstalacionCompleta(unittest.TestCase):
             "tools/ds_guard.py",
             "tools/dsguard/lifecycle.py",
             "tools/dsguard/kdd_compat.py",
+            "tools/dsguard/maturity.py",
             ".ds_init/control.json",
         )
         for relativo in archivos_clave:
@@ -106,6 +107,14 @@ class TestIntegracionInstalacionCompleta(unittest.TestCase):
                 (self.repo / relativo).exists(),
                 f"Archivo clave no instalado: {relativo}",
             )
+
+        # `.harmessi/project.json` es estado generado en uso (Change 3
+        # v0.3), no contenido estático -- la instalación scratch nunca debe
+        # crearlo.
+        self.assertFalse(
+            (self.repo / ".harmessi" / "project.json").exists(),
+            "La instalación scratch no debe crear .harmessi/project.json (es estado generado en uso).",
+        )
 
         # `git status --porcelain`: los archivos nuevos aparecen como
         # untracked (`??`), sin nada roto ni corrupto reportado por Git.
