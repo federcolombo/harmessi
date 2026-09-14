@@ -222,6 +222,18 @@ MANIFEST: tuple = (
         descripcion="Lifecycle KDD del proyecto: state.json, criterios detectables, sync al cierre (Bloque 4)",
     ),
     EntradaManifiesto(
+        fuente="tools/dsguard/lifecycle.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/lifecycle.py",
+        descripcion="Lifecycle metodologico neutral: CRISP-DM/KDD/MLOps, openspec/lifecycle/state.json (Change 1 v0.3)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/dsguard/kdd_compat.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/kdd_compat.py",
+        descripcion="Compatibilidad legacy v0.2 -> lifecycle v0.3: migracion, mapeo, roll-up (Change 2 v0.3)",
+    ),
+    EntradaManifiesto(
         fuente="tools/dsguard/notebooks.py",
         tratamiento=VERBATIM,
         destino="tools/dsguard/notebooks.py",
@@ -411,6 +423,7 @@ EXCLUSIONES_PERMANENTES: tuple = (
     "openspec/archive/",
     "openspec/changes/",
     "openspec/kdd/",
+    "openspec/lifecycle/",
     "requirements.txt",
     "requirements-lock.txt",
     "tools/tests/test_ds_guard.py",

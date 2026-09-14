@@ -31,7 +31,7 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-from dsguard import core, decision, kdd, notebooks, repo, sdd  # noqa: E402
+from dsguard import core, decision, kdd, kdd_compat, lifecycle, notebooks, repo, sdd  # noqa: E402
 
 
 # --- Helpers compartidos --------------------------------------------------
@@ -770,13 +770,24 @@ def cmd_kdd_init(args: argparse.Namespace) -> int:
         print(str(e), file=sys.stderr)
         return 3
 
+    ruta_lifecycle = lifecycle.state_path(repo_root)
+    if not ruta_lifecycle.exists():
+        ruta_legacy = kdd.state_path(repo_root)
+        if ruta_legacy.exists():
+            print(
+                f"{ruta_legacy.relative_to(repo_root).as_posix()} (legacy) existe pero no se migro. "
+                "Correr 'ds_guard lifecycle migrate' primero.",
+                file=sys.stderr,
+            )
+            return 2
+
     try:
         estado, creado = kdd.kdd_init(repo_root)
     except kdd.KddEstadoError as e:
         print(str(e), file=sys.stderr)
         return 1
 
-    ruta_relativa = kdd.state_path(repo_root).relative_to(repo_root).as_posix()
+    ruta_relativa = lifecycle.state_path(repo_root).relative_to(repo_root).as_posix()
     if args.json:
         print(json.dumps({"creado": creado, "ruta": ruta_relativa}, ensure_ascii=False))
     else:
@@ -794,12 +805,17 @@ def cmd_kdd_status(args: argparse.Namespace) -> int:
         print(str(e), file=sys.stderr)
         return 3
 
-    ruta = kdd.state_path(repo_root)
-    if not ruta.exists():
-        print(
-            f"{ruta.relative_to(repo_root).as_posix()} no existe. Correr 'ds_guard kdd init' primero.",
-            file=sys.stderr,
-        )
+    ruta_lifecycle = lifecycle.state_path(repo_root)
+    if not ruta_lifecycle.exists():
+        ruta_legacy = kdd.state_path(repo_root)
+        if ruta_legacy.exists():
+            print(
+                f"{ruta_legacy.relative_to(repo_root).as_posix()} (legacy) existe pero no se migro. "
+                "Correr 'ds_guard lifecycle migrate' primero.",
+                file=sys.stderr,
+            )
+        else:
+            print(f"{ruta_lifecycle.relative_to(repo_root).as_posix()} no existe. Correr 'ds_guard kdd init' primero.", file=sys.stderr)
         return 2
     try:
         payload = kdd.kdd_status(repo_root)
@@ -832,12 +848,17 @@ def cmd_kdd_transition(args: argparse.Namespace) -> int:
         print(str(e), file=sys.stderr)
         return 3
 
-    ruta = kdd.state_path(repo_root)
-    if not ruta.exists():
-        print(
-            f"{ruta.relative_to(repo_root).as_posix()} no existe. Correr 'ds_guard kdd init' primero.",
-            file=sys.stderr,
-        )
+    ruta_lifecycle = lifecycle.state_path(repo_root)
+    if not ruta_lifecycle.exists():
+        ruta_legacy = kdd.state_path(repo_root)
+        if ruta_legacy.exists():
+            print(
+                f"{ruta_legacy.relative_to(repo_root).as_posix()} (legacy) existe pero no se migro. "
+                "Correr 'ds_guard lifecycle migrate' primero.",
+                file=sys.stderr,
+            )
+        else:
+            print(f"{ruta_lifecycle.relative_to(repo_root).as_posix()} no existe. Correr 'ds_guard kdd init' primero.", file=sys.stderr)
         return 2
 
     try:
@@ -855,6 +876,34 @@ def cmd_kdd_transition(args: argparse.Namespace) -> int:
 
     _imprimir_findings(findings, 1, args.json)
     return 1
+
+
+# --- lifecycle -----------------------------------------------------------------
+
+def cmd_lifecycle_migrate(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+
+    try:
+        resultado = kdd_compat.migrar_desde_legacy(repo_root)
+    except FileNotFoundError as e:
+        print(str(e), file=sys.stderr)
+        return 2
+    except (lifecycle.LifecycleEstadoError, kdd_compat.KddCompatError) as e:
+        print(str(e), file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps(resultado, ensure_ascii=False))
+    else:
+        if resultado["migrado"]:
+            print(f"Migracion completa -> {lifecycle.state_path(repo_root).relative_to(repo_root).as_posix()}")
+        else:
+            print(resultado["motivo"])
+    return 0
 
 
 # --- init -------------------------------------------------------------------
@@ -1087,6 +1136,16 @@ def construir_parser() -> argparse.ArgumentParser:
     p_kdd_transition.add_argument("--motivo", default=None)
     p_kdd_transition.add_argument("--json", action="store_true")
     p_kdd_transition.set_defaults(func=cmd_kdd_transition)
+
+    p_lifecycle = subparsers.add_parser(
+        "lifecycle", help="Lifecycle metodologico neutral del proyecto (openspec/lifecycle/state.json)."
+    )
+    lifecycle_sub = p_lifecycle.add_subparsers(dest="subcomando", required=True)
+    p_lifecycle_migrate = lifecycle_sub.add_parser(
+        "migrate", help="Migra openspec/kdd/state.json (legacy v0.2) a openspec/lifecycle/state.json."
+    )
+    p_lifecycle_migrate.add_argument("--json", action="store_true")
+    p_lifecycle_migrate.set_defaults(func=cmd_lifecycle_migrate)
 
     p_archive = subparsers.add_parser(
         "archive", help="Archiva un cambio cerrado de openspec/changes/ a openspec/archive/ (git mv)."

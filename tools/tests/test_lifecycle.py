@@ -253,5 +253,50 @@ class TestLifecycleStatePath(unittest.TestCase):
         self.assertEqual(lifecycle.state_path(repo), esperado)
 
 
+class TestCalcularEstadoFase(unittest.TestCase):
+    """Tests dedicados de `lifecycle.calcular_estado_fase` (Change 2,
+    20260914-lifecycle-migration-and-kdd-repoint) -- roll-up puro, sin
+    conocimiento legacy ni I/O."""
+
+    def test_todos_no_iniciada(self):
+        self.assertEqual(
+            lifecycle.calcular_estado_fase(["no_iniciada", "no_iniciada"]), "no_iniciada"
+        )
+
+    def test_todos_cerrada(self):
+        self.assertEqual(
+            lifecycle.calcular_estado_fase(["cerrada", "cerrada"]), "cerrada"
+        )
+
+    def test_mezcla_cerrada_no_iniciada_da_en_progreso(self):
+        self.assertEqual(
+            lifecycle.calcular_estado_fase(["cerrada", "no_iniciada"]), "en_progreso"
+        )
+
+    def test_mezcla_con_en_progreso_da_en_progreso(self):
+        self.assertEqual(
+            lifecycle.calcular_estado_fase(["en_progreso", "no_iniciada"]), "en_progreso"
+        )
+
+    def test_mezcla_cerrada_en_progreso_da_en_progreso(self):
+        self.assertEqual(
+            lifecycle.calcular_estado_fase(["cerrada", "en_progreso"]), "en_progreso"
+        )
+
+    def test_lista_vacia_levanta_valueerror(self):
+        with self.assertRaises(ValueError):
+            lifecycle.calcular_estado_fase([])
+
+    def test_valor_fuera_de_estados_validos_levanta_valueerror(self):
+        with self.assertRaises(ValueError):
+            lifecycle.calcular_estado_fase(["no_iniciada", "futura"])
+
+    def test_invarianza_de_orden(self):
+        self.assertEqual(
+            lifecycle.calcular_estado_fase(["cerrada", "no_iniciada"]),
+            lifecycle.calcular_estado_fase(["no_iniciada", "cerrada"]),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

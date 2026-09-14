@@ -1,148 +1,86 @@
-"""Lifecycle KDD del proyecto (Bloque 4, v0.2.0): estado de las 10 etapas en
-`openspec/kdd/state.json`, separado del estado SDD por cambio (`tasks.md`).
+"""Adapter publico de compatibilidad legacy v0.2 (Change 2:
+20260914-lifecycle-migration-and-kdd-repoint). Las 10 etapas legacy y el
+storage real viven en kdd_compat.py -- este modulo expone la misma
+superficie publica que tenia en v0.2 (mismos nombres/firmas/retornos) para
+que ds_guard.py/dsguard/decision.py/los tests existentes sigan funcionando
+sin cambios de contrato, mientras el storage real pasa a ser
+openspec/lifecycle/state.json.
 
-No conoce Git (usa rutas relativas a `repo_root`, resuelto por el llamador vía
-`repo.py`) y duplica deliberadamente el pequeño helper de secciones de
-`sdd.py` (`_contenido_de_seccion`) en vez de importarlo: KDD se apoya en la
-convención de artefactos de SDD, pero no depende de su código interno — ver
-`kdd.md` §"Relación con SDD".
-
-v0.2: solo valida estructura y transiciones. Ningún gate juzga calidad o
-contenido metodológico (eso queda para v0.3+, ver `kdd.md`).
+evaluation/interpretation son sinonimos funcionales despues de migrar
+(ambos mapean al mismo paso KDD interpretation_evaluation) -- ver
+kdd_compat.MAPEO_LEGACY_A_KDD y design.md del change.
 """
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 from typing import Optional
 
-from .core import Finding, ahora_utc, escribir_texto_atomico
+from . import kdd_compat, lifecycle
 
-# --- Catálogo de etapas --------------------------------------------------------
-
-ETAPAS = (
-    "problem_understanding",
-    "data_understanding",
-    "data_preparation",
-    "feature_engineering",
-    "modeling",
-    "evaluation",
-    "interpretation",
-    "production_readiness",
-    "deployment",
-    "monitoring",
-)
-
-# Declaradas en el catálogo pero sin gates ni campos obligatorios activos en
-# v0.2 (SKILL.md/kdd.md): nacen en estado "futura" y no admiten transiciones
-# todavía.
-ETAPAS_FUTURAS = frozenset({"production_readiness", "deployment", "monitoring"})
-
-ESTADOS_ETAPA_VALIDOS = frozenset({"no_iniciada", "en_progreso", "cerrada", "futura"})
-
-# Estados a los que se puede pedir avanzar/retroceder vía `kdd transition`.
-# "futura" nunca es un destino válido en v0.2 -- no hay forma de sacar una
-# etapa de "futura" desde este comando todavía.
-ESTADOS_ETAPA_DESTINO_VALIDOS = frozenset({"no_iniciada", "en_progreso", "cerrada"})
-
-_TRANSICIONES_VALIDAS_ETAPA = {
-    "no_iniciada": {"en_progreso"},
-    "en_progreso": {"cerrada"},
-    "cerrada": {"en_progreso"},
-}
-
-SCHEMA_VERSION_SOPORTADA = 1
+ETAPAS = kdd_compat.ETAPAS
+ETAPAS_FUTURAS = kdd_compat.ETAPAS_FUTURAS
+ESTADOS_ETAPA_VALIDOS = kdd_compat.ESTADOS_ETAPA_VALIDOS
+ESTADOS_ETAPA_DESTINO_VALIDOS = kdd_compat.ESTADOS_ETAPA_DESTINO_VALIDOS
 
 
 class KddEstadoError(Exception):
-    """`state.json` existe pero no es válido: JSON corrupto o schema inesperada.
+    """Excepcion publica del adapter -- envuelve tanto
+    lifecycle.LifecycleEstadoError como kdd_compat.KddCompatError en el
+    borde (ver design.md del change). Nunca se repara/sobreescribe."""
 
-    Nunca se repara ni se sobreescribe automáticamente -- se propaga para que
-    el llamador decida (típicamente bloquear el comando, nunca continuar como
-    si el archivo estuviera bien)."""
-
-
-# --- Ruta y schema ----------------------------------------------------------
 
 def state_path(repo_root: Path) -> Path:
-    return Path(repo_root) / "openspec" / "kdd" / "state.json"
+    """Ruta del legacy (historico, read-only tras migrar). Para storage
+    vivo usar lifecycle.state_path."""
+    return kdd_compat.state_path_legacy(repo_root)
 
 
-def estado_inicial() -> dict:
-    ahora = ahora_utc()
-    etapas = {}
-    for etapa in ETAPAS:
-        etapas[etapa] = {
-            "estado": "futura" if etapa in ETAPAS_FUTURAS else "no_iniciada",
-            "changes": [],
-            "evidencia": [],
-            "actualizado_utc": ahora,
-        }
-    return {
-        "schema_version": SCHEMA_VERSION_SOPORTADA,
-        "creado_utc": ahora,
-        "etapas": etapas,
-        "historial_transiciones": [],
-    }
+def _envolver(fn, *args, **kwargs):
+    try:
+        return fn(*args, **kwargs)
+    except (lifecycle.LifecycleEstadoError, kdd_compat.KddCompatError) as e:
+        raise KddEstadoError(str(e)) from e
 
-
-def leer_estado(path: Path) -> dict:
-    """Lee y valida `state.json`. Levanta `FileNotFoundError` si no existe
-    (caso "todavía no se corrió `kdd init`", distinto de corrupción) o
-    `KddEstadoError` si existe pero el contenido no es válido."""
-    path = Path(path)
-    if not path.exists():
-        raise FileNotFoundError(f"No existe {path}")
-    with open(path, "r", encoding="utf-8") as f:
-        try:
-            datos = json.load(f)
-        except json.JSONDecodeError as e:
-            raise KddEstadoError(f"{path} no es JSON válido: {e}")
-
-    if not isinstance(datos, dict):
-        raise KddEstadoError(f"{path}: se esperaba un objeto JSON en la raíz")
-    if datos.get("schema_version") != SCHEMA_VERSION_SOPORTADA:
-        raise KddEstadoError(
-            f"schema_version desconocida en {path}: {datos.get('schema_version')!r} "
-            f"(se esperaba {SCHEMA_VERSION_SOPORTADA})"
-        )
-    etapas = datos.get("etapas")
-    if not isinstance(etapas, dict) or set(etapas.keys()) != set(ETAPAS):
-        raise KddEstadoError(
-            f"{path}: 'etapas' debe tener exactamente las {len(ETAPAS)} etapas del catálogo KDD"
-        )
-    for etapa, entrada in etapas.items():
-        if not isinstance(entrada, dict) or entrada.get("estado") not in ESTADOS_ETAPA_VALIDOS:
-            raise KddEstadoError(f"{path}: etapa '{etapa}' con 'estado' ausente o inválido")
-        if not isinstance(entrada.get("changes"), list) or not isinstance(entrada.get("evidencia"), list):
-            raise KddEstadoError(f"{path}: etapa '{etapa}' con 'changes'/'evidencia' inválidos")
-    if not isinstance(datos.get("historial_transiciones"), list):
-        raise KddEstadoError(f"{path}: 'historial_transiciones' debe ser una lista")
-    return datos
-
-
-def _escribir_estado(path: Path, estado: dict) -> None:
-    texto = json.dumps(estado, indent=2, ensure_ascii=False) + "\n"
-    escribir_texto_atomico(path, texto)
-
-
-# --- init --------------------------------------------------------------------
 
 def kdd_init(repo_root: Path):
-    """(estado, creado: bool). Idempotente: si `state.json` ya existe y es
-    válido, lo devuelve tal cual sin tocarlo (`creado=False`). Si existe pero
-    está corrupto, deja que `KddEstadoError` se propague -- nunca lo
-    sobreescribe."""
-    path = state_path(repo_root)
-    if path.exists():
-        return leer_estado(path), False
-    estado = estado_inicial()
-    _escribir_estado(path, estado)
-    return estado, True
+    return _envolver(kdd_compat.kdd_init, repo_root)
 
 
-# --- Criterios detectables (informativo, nunca bloquea) ------------------------
+def kdd_status(repo_root: Path) -> dict:
+    payload = _envolver(kdd_compat.kdd_status, repo_root)
+    etapas_out = {}
+    for etapa in ETAPAS:
+        info = payload["etapas"][etapa]
+        entrada_para_criterios = {"changes": info["changes"], "evidencia": info["evidencia"]}
+        change_ids = info["changes"]
+        no_localizados = [cid for cid in change_ids if _dir_del_change(repo_root, cid) is None]
+        etapas_out[etapa] = {
+            "estado": info["estado"],
+            "changes": change_ids,
+            "criterios_detectables": _criterios_detectables_etapa(repo_root, etapa, entrada_para_criterios),
+            "changes_no_localizados": no_localizados,
+        }
+    return {"schema_version": payload.get("schema_version"), "etapas": etapas_out}
+
+
+def kdd_transition(repo_root: Path, etapa: str, hacia: str, motivo: Optional[str] = None):
+    return _envolver(kdd_compat.kdd_transition, repo_root, etapa, hacia, motivo=motivo)
+
+
+def etapas_declaradas(control: dict) -> list:
+    return kdd_compat.etapas_declaradas(control)
+
+
+def validar_antes_de_cerrar(repo_root: Path, control: dict) -> list:
+    return _envolver(kdd_compat.validar_antes_de_cerrar, repo_root, control)
+
+
+def sync_al_cerrar(repo_root: Path, control: dict, change_id: str) -> dict:
+    return _envolver(kdd_compat.sync_al_cerrar, repo_root, control, change_id)
+
+
+# --- Criterios detectables (informativo, nunca bloquea) -- SIN CAMBIOS vs v0.2 ----
 
 def _contenido_de_seccion(texto: str, encabezado: str) -> str:
     """Copia deliberada del helper homónimo de `sdd.py` -- ver docstring del
@@ -216,168 +154,3 @@ def _criterios_detectables_etapa(repo_root: Path, etapa: str, entrada_etapa: dic
                 break
         resultado.append({"criterio": f"{archivo}:{encabezado}", "cumplido": cumplido})
     return resultado
-
-
-def kdd_status(repo_root: Path) -> dict:
-    """Informativo puro: nunca levanta por contenido, solo por
-    `state.json` ausente/corrupto (responsabilidad del llamador via
-    `FileNotFoundError`/`KddEstadoError`)."""
-    path = state_path(repo_root)
-    estado = leer_estado(path)
-    etapas_out = {}
-    for etapa in ETAPAS:
-        entrada = estado["etapas"][etapa]
-        change_ids = entrada.get("changes", [])
-        # Informativo (no persiste en state.json, no cambia su schema): un
-        # change_id que no aparece ni en openspec/changes/ ni en
-        # openspec/archive/ no crashea nada -- se reporta acá para que no
-        # quede invisible, en vez de tratarse como "criterio no cumplido" sin
-        # explicación.
-        no_localizados = [cid for cid in change_ids if _dir_del_change(repo_root, cid) is None]
-        etapas_out[etapa] = {
-            "estado": entrada["estado"],
-            "changes": list(change_ids),
-            "criterios_detectables": _criterios_detectables_etapa(repo_root, etapa, entrada),
-            "changes_no_localizados": no_localizados,
-        }
-    return {"schema_version": estado.get("schema_version"), "etapas": etapas_out}
-
-
-# --- transition ----------------------------------------------------------------
-
-def kdd_transition(repo_root: Path, etapa: str, hacia: str, motivo: Optional[str] = None):
-    """(ok: bool, findings: list[Finding]). Si `ok`, ya escribió `state.json`
-    atómicamente; si no, no escribió nada. Nunca reevalúa ni toca evidencia --
-    eso es responsabilidad exclusiva de `sync_al_cerrar`. Deja propagar
-    `FileNotFoundError`/`KddEstadoError` al llamador si `state.json` no existe
-    o está corrupto."""
-    if etapa not in ETAPAS:
-        return False, [Finding("KDD-ETAPA-DESCONOCIDA", f"Etapa KDD desconocida: {etapa}")]
-    if hacia not in ESTADOS_ETAPA_DESTINO_VALIDOS:
-        return False, [
-            Finding("KDD-ETAPA-DESTINO-INVALIDO", f"Estado destino desconocido para una etapa KDD: {hacia}")
-        ]
-
-    path = state_path(repo_root)
-    estado = leer_estado(path)
-
-    entrada = estado["etapas"][etapa]
-    actual = entrada["estado"]
-
-    if actual == "futura":
-        return False, [
-            Finding(
-                "KDD-ETAPA-FUTURA",
-                f"La etapa '{etapa}' es futura en v0.2: no admite transiciones todavía",
-            )
-        ]
-
-    if hacia not in _TRANSICIONES_VALIDAS_ETAPA.get(actual, set()):
-        return False, [Finding("KDD-TRANSICION-INVALIDA", f"Transición inválida: {actual} -> {hacia}")]
-
-    if hacia == "cerrada" and not entrada.get("evidencia"):
-        return False, [
-            Finding(
-                "KDD-SIN-EVIDENCIA",
-                f"La etapa '{etapa}' no tiene evidencia registrada todavía: no se puede cerrar",
-            )
-        ]
-
-    entrada["estado"] = hacia
-    entrada["actualizado_utc"] = ahora_utc()
-    hist_entry = {"utc": ahora_utc(), "etapa": etapa, "desde": actual, "hacia": hacia}
-    if motivo:
-        hist_entry["motivo"] = motivo
-    estado.setdefault("historial_transiciones", []).append(hist_entry)
-
-    _escribir_estado(path, estado)
-    return True, []
-
-
-# --- Vínculo con el cierre de un cambio SDD -------------------------------------
-
-def etapas_declaradas(control: dict) -> list:
-    """Etapas que un cambio declara en `control["kdd"]` (`etapa_primaria` +
-    `etapas_afectadas`, deduplicadas, en ese orden). Lista vacía si el cambio
-    no declara ninguna -- caso normal para cambios sin decisión de lifecycle."""
-    kdd_decl = control.get("kdd") or {}
-    etapas = []
-    primaria = kdd_decl.get("etapa_primaria")
-    if primaria:
-        etapas.append(primaria)
-    for e in kdd_decl.get("etapas_afectadas") or []:
-        if e not in etapas:
-            etapas.append(e)
-    return etapas
-
-
-def validar_antes_de_cerrar(repo_root: Path, control: dict) -> list:
-    """Pre-chequeo estructural, corrido ANTES de escribir la transición SDD a
-    `cerrada` (spec: "si el sync mecánico falla, el cierre no debe quedar
-    silenciosamente inconsistente"). Si el cambio no declara ninguna etapa
-    KDD, no hay nada que validar. Nunca escribe nada."""
-    etapas = etapas_declaradas(control)
-    if not etapas:
-        return []
-    path = state_path(repo_root)
-    try:
-        estado = leer_estado(path)
-    except FileNotFoundError:
-        return [
-            Finding(
-                "KDD-NO-INICIALIZADO",
-                "El cambio declara etapa(s) KDD pero openspec/kdd/state.json no existe. "
-                "Correr 'ds_guard kdd init' antes de cerrar.",
-                str(path),
-            )
-        ]
-    except KddEstadoError as e:
-        return [Finding("KDD-ESTADO-CORRUPTO", str(e), str(path))]
-
-    desconocidas = [e for e in etapas if e not in estado.get("etapas", {})]
-    if desconocidas:
-        return [
-            Finding(
-                "KDD-ETAPA-DESCONOCIDA",
-                f"Etapa(s) KDD declaradas en control.json no reconocidas: {', '.join(desconocidas)}",
-            )
-        ]
-    return []
-
-
-def sync_al_cerrar(repo_root: Path, control: dict, change_id: str) -> dict:
-    """Se invoca solo DESPUÉS de que la transición SDD a `cerrada` ya se
-    escribió, y solo si `validar_antes_de_cerrar` no encontró nada. Agrega
-    punteros/evidencia a `state.json` para cada etapa declarada -- nunca
-    avanza `estado` de ninguna etapa. Idempotente: reintentar el sync del
-    mismo `change_id` no duplica entradas."""
-    etapas = etapas_declaradas(control)
-    if not etapas:
-        return {"sincronizado": False, "motivo": "el cambio no declara etapa_primaria ni etapas_afectadas"}
-
-    path = state_path(repo_root)
-    estado = leer_estado(path)
-
-    modo = control.get("modo", "completo")
-    if modo == "completo":
-        artefacto = f"openspec/changes/{change_id}/verification.md"
-    else:
-        artefacto = f"openspec/changes/{change_id}/tasks.md#Verificación"
-
-    ahora = ahora_utc()
-    actualizadas = []
-    for etapa in etapas:
-        entrada = estado["etapas"].get(etapa)
-        if entrada is None:
-            continue
-        cambios = entrada.setdefault("changes", [])
-        if change_id not in cambios:
-            cambios.append(change_id)
-        evidencia = entrada.setdefault("evidencia", [])
-        if not any(ev.get("change_id") == change_id for ev in evidencia):
-            evidencia.append({"change_id": change_id, "artefacto": artefacto})
-        entrada["actualizado_utc"] = ahora
-        actualizadas.append(etapa)
-
-    _escribir_estado(path, estado)
-    return {"sincronizado": True, "etapas_actualizadas": actualizadas}

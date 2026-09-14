@@ -1,5 +1,7 @@
 # KDD — lifecycle del proyecto (referencia)
 
+> **Actualización v0.3 (Change 2 — `20260914-lifecycle-migration-and-kdd-repoint`)**: el estado canónico del proyecto pasó a ser `openspec/lifecycle/state.json` (CRISP-DM como lifecycle principal, KDD como proceso técnico subordinado, MLOps como capacidades progresivas). Las 10 etapas legacy descritas en este documento siguen disponibles como superficie de compatibilidad v0.2 — `ds_guard kdd init/status/transition` sigue aceptando esos nombres, pero opera internamente sobre `lifecycle/state.json` a través de un adapter de compatibilidad (`tools/dsguard/kdd_compat.py`). Tras correr `ds_guard lifecycle migrate`, `openspec/kdd/state.json` queda congelado como artefacto histórico — ningún flujo normal vuelve a escribirlo. La experiencia metodológica completa del Lead (project_stage, risk_level, readiness) se documenta en un change posterior; esta página describe el modelo v0.2 de 10 etapas tal como sigue siendo válido como vocabulario de compatibilidad.
+
 Se lee bajo demanda, cuando un cambio declara o afecta una etapa KDD, o cuando hace falta
 interpretar `openspec/kdd/state.json`. Nunca se carga por defecto.
 
@@ -39,6 +41,7 @@ Relación exacta:
 Las tres etapas futuras existen en el catálogo (para que un cambio de hoy pueda referenciarlas sin
 forzar una etiqueta incorrecta) pero nacen en `estado: futura` y no admiten transiciones ni campos
 obligatorios en v0.2 — se activan en un bloque futuro.
+(Tras `ds_guard lifecycle migrate` — ver nota al inicio de este documento — estas tres etapas quedan `no_iniciada` en `openspec/lifecycle/state.json`, sin el estado `futura` ni el bloqueo especial: transicionan como cualquier otra etapa del catálogo de compatibilidad.)
 
 ## 3. `openspec/kdd/state.json`
 
@@ -117,7 +120,7 @@ ds_guard kdd transition --etapa modeling --a cerrada
 ```
 
 Transiciones válidas: `no_iniciada → en_progreso → cerrada → en_progreso` (reapertura). Una etapa
-`futura` no admite ninguna transición en v0.2 (`KDD-ETAPA-FUTURA`). Cerrar una etapa sin ninguna
+`futura` no admite ninguna transición en v0.2 (`KDD-ETAPA-FUTURA`). Esto describe el comportamiento sobre `openspec/kdd/state.json` (legacy). Tras migrar a `openspec/lifecycle/state.json`, el estado `futura` no existe — ver nota al inicio del documento — por lo que `KDD-ETAPA-FUTURA` ya no puede ocurrir. Cerrar una etapa sin ninguna
 evidencia registrada se rechaza (`KDD-SIN-EVIDENCIA`) — chequeo estructural (¿hay evidencia?), no
 de calidad (si esa evidencia alcanza, lo evalúa el Lead con el usuario antes de correr el comando).
 

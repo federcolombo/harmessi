@@ -79,5 +79,28 @@ class TestParidadImportsDsguardVsManifest(unittest.TestCase):
         )
 
 
+class TestParidadManifestLifecycleYKddCompatExplicita(unittest.TestCase):
+    """Regresión de `20260914-lifecycle-migration-and-kdd-repoint`: a
+    diferencia de `TestParidadImportsDsguardVsManifest` (que depende de qué
+    importe `ds_guard.py` a nivel de módulo), este test hardcodea los nombres
+    para que siga cubriendo el caso aunque `ds_guard.py` deje de importarlos
+    algún día -- `lifecycle.py` y `kdd_compat.py` deben tener entrada VERBATIM
+    en MANIFEST de todos modos (los usa `kdd_compat.migrar_desde_legacy` vía
+    `cmd_lifecycle_migrate`, y el storage vivo del proyecto instalado depende
+    de ambos)."""
+
+    def test_lifecycle_py_tiene_entrada_verbatim_en_manifest(self):
+        destinos_verbatim = {
+            entrada.destino for entrada in MANIFEST if entrada.tratamiento == VERBATIM
+        }
+        self.assertIn("tools/dsguard/lifecycle.py", destinos_verbatim)
+
+    def test_kdd_compat_py_tiene_entrada_verbatim_en_manifest(self):
+        destinos_verbatim = {
+            entrada.destino for entrada in MANIFEST if entrada.tratamiento == VERBATIM
+        }
+        self.assertIn("tools/dsguard/kdd_compat.py", destinos_verbatim)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -97,6 +97,8 @@ class TestIntegracionInstalacionCompleta(unittest.TestCase):
         archivos_clave = (
             ".claude/agents/python-data-engineer.md",
             "tools/ds_guard.py",
+            "tools/dsguard/lifecycle.py",
+            "tools/dsguard/kdd_compat.py",
             ".ds_init/control.json",
         )
         for relativo in archivos_clave:

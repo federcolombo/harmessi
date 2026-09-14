@@ -212,6 +212,25 @@ def escribir_estado(repo_root: Path, estado: dict) -> None:
     escribir_texto_atomico(state_path(repo_root), texto)
 
 
+def calcular_estado_fase(estados_pasos: list) -> str:
+    """Roll-up determinista del estado de una fase CRISP-DM a partir de sus
+    pasos KDD subordinados (Change 2, ajuste del usuario): todos
+    `no_iniciada` -> `no_iniciada`; todos `cerrada` -> `cerrada`; cualquier
+    combinacion intermedia -> `en_progreso`. Pura, no requiere I/O ni
+    conocimiento legacy. El resultado no depende del orden de
+    `estados_pasos` (comparacion por conjunto)."""
+    if not estados_pasos:
+        raise ValueError("calcular_estado_fase requiere al menos un paso")
+    estados = set(estados_pasos)
+    if not estados.issubset(ESTADOS_VALIDOS):
+        raise ValueError(f"estados_pasos contiene valores fuera de ESTADOS_VALIDOS: {estados - ESTADOS_VALIDOS}")
+    if estados == {"no_iniciada"}:
+        return "no_iniciada"
+    if estados == {"cerrada"}:
+        return "cerrada"
+    return "en_progreso"
+
+
 def lifecycle_init(repo_root: Path):
     """(estado, creado: bool). Idempotente: si `state.json` ya existe y es
     válido, lo devuelve tal cual sin tocarlo (`creado=False`). Si existe pero
