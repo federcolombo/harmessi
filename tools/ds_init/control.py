@@ -13,6 +13,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 from .version import HARNESS_VERSION
 
@@ -32,7 +33,13 @@ def sha256_de_archivo(ruta: Path) -> str:
     return hasher.hexdigest()
 
 
-def generar_control(destino, perfil: str, config: dict, archivos_aplicados: list) -> dict:
+def generar_control(
+    destino,
+    perfil: str,
+    config: dict,
+    archivos_aplicados: list,
+    fecha_utc: Optional[str] = None,
+) -> dict:
     """Arma el archivo de control de una instalación exitosa y lo escribe en
     `<destino>/.ds_init/control.json` (creando el directorio `.ds_init/` si
     hace falta). Devuelve el dict escrito.
@@ -50,6 +57,11 @@ def generar_control(destino, perfil: str, config: dict, archivos_aplicados: list
     - `archivos_aplicados`: rutas relativas (al destino) de los archivos ya
       escritos en su ubicación final — el hash se calcula leyendo cada uno de
       esos archivos reales.
+    - `fecha_utc`: valor literal opcional para el campo `fecha_utc` del
+      control. Si no se pasa (o es `None`), se estampa
+      `datetime.now(timezone.utc)` como hasta ahora — comportamiento sin
+      cambios para quien no pase este parámetro (p. ej. `writer.py`, que
+      sigue llamando posicionalmente con 4 argumentos).
     """
     destino = Path(destino)
 
@@ -66,7 +78,9 @@ def generar_control(destino, perfil: str, config: dict, archivos_aplicados: list
     control = {
         "harness_version": HARNESS_VERSION,
         "perfil": perfil,
-        "fecha_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "fecha_utc": fecha_utc
+        if fecha_utc is not None
+        else datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "configuracion": {
             "nombre": config.get("nombre"),
             "notebooks_dir": config.get("notebooks_dir"),
@@ -84,3 +98,61 @@ def generar_control(destino, perfil: str, config: dict, archivos_aplicados: list
         f.write("\n")
 
     return control
+
+
+def regenerar_control(destino, control_previo: dict, *, perfil: Optional[str] = None) -> dict:
+    """Recalcula y reescribe `<destino>/.ds_init/control.json` a partir de un
+    `control_previo` ya existente, para recalibrar `harness_version` y
+    `archivos` cuando quedaron desactualizados respecto del manifiesto
+    vigente (p. ej. tras agregar archivos administrados por el harness
+    directamente al repo sin pasar por una reinstalación).
+
+    No reinstala nada: asume que los archivos administrados ya existen en
+    `destino`, y solo recalcula sus hashes reales.
+
+    - `destino`: raíz del repo instalado (str o `Path`).
+    - `control_previo`: dict con el contenido previo de `control.json` (p.
+      ej. cargado de disco). Se usan sus claves `perfil` (si no se pasa
+      `perfil` explícito), `configuracion` y `fecha_utc`.
+    - `perfil` (solo keyword): perfil a usar para recalcular el manifiesto.
+      Si no se pasa, se usa `control_previo["perfil"]`.
+
+    Comportamiento:
+    - `configuracion` se preserva exactamente igual a la de `control_previo`
+      (se delega en `generar_control`, que la reconstruye a partir de
+      `control_previo["configuracion"]`).
+    - `fecha_utc` se preserva exactamente igual a la de `control_previo` —
+      no se retro-corrige la fecha de instalación original.
+    - `harness_version` se actualiza al valor vigente de `HARNESS_VERSION`
+      (no el de `control_previo`), porque `generar_control` siempre lo
+      estampa así.
+    - `archivos` se reconstruye EXCLUSIVAMENTE a partir de
+      `manifest_para_perfil(perfil_efectivo)` vigente (con hashes reales
+      leídos de `destino`) — nunca es una unión con
+      `control_previo["archivos"]`. Cualquier entrada de
+      `control_previo["archivos"]` cuya ruta ya no esté en el manifiesto
+      vigente queda ausente del resultado, sin lógica extra: simplemente no
+      se itera sobre `control_previo["archivos"]`.
+    - Se excluye del manifiesto la entrada `.ds_init/control.json` (misma
+      exclusión que ya aplica `tools/harmessi/doctor.py` al verificar
+      archivos esperados), porque ese archivo se verifica aparte.
+    - No introduce escritura atómica nueva: reutiliza el mismo patrón
+      no-atómico de `generar_control` (escritura directa con `open`/`write`).
+    """
+    from .manifest import manifest_para_perfil
+
+    perfil_efectivo = perfil or control_previo["perfil"]
+
+    archivos_aplicados = [
+        entrada.destino
+        for entrada in manifest_para_perfil(perfil_efectivo)
+        if entrada.destino != ".ds_init/control.json"
+    ]
+
+    return generar_control(
+        destino,
+        perfil_efectivo,
+        control_previo["configuracion"],
+        archivos_aplicados,
+        fecha_utc=control_previo.get("fecha_utc"),
+    )

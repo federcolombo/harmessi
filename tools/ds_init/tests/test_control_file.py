@@ -119,5 +119,102 @@ class TestArchivoDeControl(unittest.TestCase):
             )
 
 
+class TestGenerarControlSinFechaUtc(unittest.TestCase):
+    """No-regresión: `generar_control()` sin pasar `fecha_utc` debe seguir
+    comportándose exactamente igual que antes del cambio (estampa
+    `datetime.now(timezone.utc)`)."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+        self.config = _config_base(self.repo)
+        plan = construir_plan(PERFIL, self.repo, self.config)
+        self.resultado = writer.instalar(plan, self.repo, self.config)
+        self.ruta_control = self.repo / ".ds_init" / "control.json"
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_generar_control_sin_fecha_utc_estampa_ahora(self):
+        antes = datetime.now(timezone.utc)
+        control = control_mod.generar_control(
+            self.repo,
+            PERFIL,
+            self.config,
+            self.resultado.aplicados,
+        )
+        despues = datetime.now(timezone.utc)
+
+        fecha_control = datetime.strptime(control["fecha_utc"], "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=timezone.utc
+        )
+        self.assertGreaterEqual(fecha_control, antes.replace(microsecond=0))
+        self.assertLessEqual(fecha_control, despues)
+
+
+class TestRegenerarControl(unittest.TestCase):
+    """Tests de `regenerar_control()` (tarea 2/3 del change
+    20260914-fix-harness-version-drift). Repo git temporal propio, nunca este
+    repositorio (R14/AC15)."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+        self.config = _config_base(self.repo)
+        plan = construir_plan(PERFIL, self.repo, self.config)
+        self.resultado = writer.instalar(plan, self.repo, self.config)
+        self.ruta_control = self.repo / ".ds_init" / "control.json"
+        self.control_previo = json.loads(self.ruta_control.read_text(encoding="utf-8"))
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_preserva_configuracion_exactamente(self):
+        control_nuevo = control_mod.regenerar_control(self.repo, self.control_previo)
+        self.assertEqual(control_nuevo["configuracion"], self.control_previo["configuracion"])
+
+    def test_preserva_fecha_utc_original(self):
+        control_previo = dict(self.control_previo)
+        control_previo["fecha_utc"] = "2026-09-09T18:08:09Z"
+        self.ruta_control.write_text(json.dumps(control_previo, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+        control_nuevo = control_mod.regenerar_control(self.repo, control_previo)
+        self.assertEqual(control_nuevo["fecha_utc"], "2026-09-09T18:08:09Z")
+
+    def test_actualiza_harness_version_al_valor_vigente(self):
+        control_previo = dict(self.control_previo)
+        control_previo["harness_version"] = "0.1.0"
+
+        control_nuevo = control_mod.regenerar_control(self.repo, control_previo)
+        self.assertEqual(control_nuevo["harness_version"], HARNESS_VERSION)
+
+    def test_reconstruye_archivos_exclusivamente_desde_manifest_vigente(self):
+        from tools.ds_init.manifest import manifest_para_perfil
+
+        control_nuevo = control_mod.regenerar_control(self.repo, self.control_previo)
+
+        rutas_esperadas = {
+            entrada.destino
+            for entrada in manifest_para_perfil(self.control_previo["perfil"])
+            if entrada.destino != ".ds_init/control.json"
+        }
+        rutas_obtenidas = {entrada["ruta"] for entrada in control_nuevo["archivos"]}
+        self.assertEqual(rutas_obtenidas, rutas_esperadas)
+
+        for entrada in control_nuevo["archivos"]:
+            ruta_absoluta = self.repo / entrada["ruta"]
+            hash_real = control_mod.sha256_de_archivo(ruta_absoluta)
+            self.assertEqual(entrada["sha256"], hash_real)
+
+    def test_no_conserva_entradas_obsoletas(self):
+        control_previo = json.loads(json.dumps(self.control_previo))
+        control_previo["archivos"].append(
+            {"ruta": "archivo-obsoleto-inventado.md", "sha256": "0" * 64}
+        )
+
+        control_nuevo = control_mod.regenerar_control(self.repo, control_previo)
+
+        rutas_obtenidas = {entrada["ruta"] for entrada in control_nuevo["archivos"]}
+        self.assertNotIn("archivo-obsoleto-inventado.md", rutas_obtenidas)
+
+
 if __name__ == "__main__":
     unittest.main()

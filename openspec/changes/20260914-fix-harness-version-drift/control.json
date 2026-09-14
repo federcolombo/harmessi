@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "change_id": "20260914-fix-harness-version-drift",
+  "modo": "abreviado",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-14T13:17:33Z",
+  "baseline": {
+    "commit": "145805406cc29eeb3d663c167015871d2223df1a",
+    "rama": "main",
+    "capturado_utc": "2026-09-14T13:17:33Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260914-fix-harness-version-drift/proposal.md",
+      "openspec/changes/20260914-fix-harness-version-drift/tasks.md",
+      "openspec/changes/20260914-fix-harness-version-drift/control.json",
+      "tools/ds_init/control.py",
+      "tools/ds_init/tests/test_control_file.py",
+      ".ds_init/control.json"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "8c68f8acab1a7a0e93ab4fa3eeb1fd99137ec71da6a5ddcda65e3b5ee942d9d5",
+      "registrado_utc": "2026-09-14T13:42:50Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Alcance de proposal.md (5 puntos): fecha_utc opcional en generar_control, regenerar_control() nueva, tests, aplicacion puntual sobre este repo, verificacion con doctor",
+      "cita": "Aprobado con un ajuste menor. La propuesta y el alcance estan bien. ... Con esa aclaracion, aproba e implementa unicamente este change 0."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-14T13:42:57Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-14T13:43:36Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-14T13:53:13Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-14T13:54:37Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-14T13:43:29Z",
+      "cierre_utc": "2026-09-14T13:54:52Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 60,
+        "max_tareas": 10,
+        "max_roles": 3,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-14T14:43:29Z",
+      "minutos_consumidos": 11.383333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-14T13:53:37Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-14T13:49:19Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}
