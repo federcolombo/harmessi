@@ -252,6 +252,18 @@ MANIFEST: tuple = (
         descripcion="Fundamentos MLOps (reproducibilidad/versionado/lineage/artifacts) desde experiment, vía checks.py (Change 5 v0.3)",
     ),
     EntradaManifiesto(
+        fuente="tools/dsguard/mlops_evidence.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/mlops_evidence.py",
+        descripcion="Evidencia genérica de artifact para tiers production_readiness/operations, vía mlops evidence add (Change 6 v0.3)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/dsguard/readiness.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/readiness.py",
+        descripcion="Matriz de readiness + promocion secuencial gateada, vía project readiness/promote (Change 6 v0.3)",
+    ),
+    EntradaManifiesto(
         fuente="tools/dsguard/notebooks.py",
         tratamiento=VERBATIM,
         destino="tools/dsguard/notebooks.py",

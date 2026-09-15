@@ -146,5 +146,25 @@ class TestParidadManifestMlopsFoundationsExplicita(unittest.TestCase):
         self.assertIn("tools/dsguard/mlops_foundations.py", destinos_verbatim)
 
 
+class TestParidadManifestReadinessYMlopsEvidenceExplicita(unittest.TestCase):
+    """Regresión de `20260915-readiness-and-promotion` (Change 6): mismo
+    criterio que las clases hermanas de arriba -- nombre hardcodeado, no
+    dependiente de qué importe `ds_guard.py` a nivel de módulo, para que
+    `readiness.py`/`mlops_evidence.py` sigan cubiertos por el manifiesto de
+    todos modos."""
+
+    def test_readiness_py_tiene_entrada_verbatim_en_manifest(self):
+        destinos_verbatim = {
+            entrada.destino for entrada in MANIFEST if entrada.tratamiento == VERBATIM
+        }
+        self.assertIn("tools/dsguard/readiness.py", destinos_verbatim)
+
+    def test_mlops_evidence_py_tiene_entrada_verbatim_en_manifest(self):
+        destinos_verbatim = {
+            entrada.destino for entrada in MANIFEST if entrada.tratamiento == VERBATIM
+        }
+        self.assertIn("tools/dsguard/mlops_evidence.py", destinos_verbatim)
+
+
 if __name__ == "__main__":
     unittest.main()

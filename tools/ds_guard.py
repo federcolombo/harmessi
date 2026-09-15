@@ -39,8 +39,10 @@ from dsguard import (  # noqa: E402
     kdd_compat,
     lifecycle,
     maturity,
+    mlops_evidence,
     mlops_foundations,
     notebooks,
+    readiness,
     repo,
     sdd,
 )
@@ -1005,6 +1007,63 @@ def cmd_project_status(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- readiness / promote (Change 6, v0.3) -----------------------------------
+
+def cmd_project_readiness(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    resultados = readiness.evaluar_readiness(repo_root, args.target)
+    ready = not checks.hay_bloqueo(resultados)
+    if args.json:
+        payload = {
+            "target": args.target,
+            "ready": ready,
+            "resultados": [r.to_dict() for r in resultados],
+        }
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(f"Readiness: {args.target}\n")
+        for r in resultados:
+            print(f"{r.status:<6} {r.message}")
+        print(f"\nResultado: {'READY' if ready else 'NOT READY'}")
+    return checks.exit_code(resultados)
+
+
+def cmd_project_promote(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    try:
+        resultado = readiness.promote(repo_root, args.stage, args.reason)
+    except FileNotFoundError as e:
+        print(str(e), file=sys.stderr)
+        return 2
+    except readiness.PromotionError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+
+    if args.json:
+        payload = {
+            "promovido": resultado["promovido"],
+            "project_stage": resultado["project_stage"],
+            "resultados": [r.to_dict() for r in resultado["resultados"]],
+        }
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        if resultado["promovido"]:
+            print(f"Promovido -> project_stage={resultado['project_stage']} (via=promote)")
+        else:
+            print(f"No promovido: readiness con FAIL para target={args.stage}")
+            for r in resultado["resultados"]:
+                print(f"{r.status:<6} {r.message}")
+    return 0 if resultado["promovido"] else 1
+
+
 # --- mlops -----------------------------------------------------------------
 
 _NOMBRE_CAPABILITY_MLOPS = {
@@ -1063,6 +1122,38 @@ def cmd_mlops_record(args: argparse.Namespace) -> int:
     else:
         print(f"Evidencia registrada -> {', '.join(resultado_registro['capacidades_actualizadas'])}")
     return checks.exit_code(resultados)
+
+
+def cmd_mlops_evidence_add(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    try:
+        resultado = mlops_evidence.agregar_evidencia(
+            repo_root, args.tier, args.capability, args.artifact, args.reason
+        )
+    except FileNotFoundError:
+        ruta_relativa = lifecycle.state_path(repo_root).relative_to(repo_root).as_posix()
+        print(
+            f"{ruta_relativa} no existe. Correr 'ds_guard lifecycle migrate' o inicializar lifecycle primero.",
+            file=sys.stderr,
+        )
+        return 2
+    except (mlops_evidence.EvidenciaError, lifecycle.LifecycleEstadoError) as e:
+        print(str(e), file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps(resultado, ensure_ascii=False))
+    else:
+        entrada = resultado["entrada"]
+        if resultado["duplicado"]:
+            print(f"Evidencia ya registrada (duplicado, no se agrega de nuevo): {entrada['path']}")
+        else:
+            print(f"Evidencia agregada: {entrada['path']} (sha256={entrada['sha256'][:12]}...)")
+    return 0
 
 
 # --- init -------------------------------------------------------------------
@@ -1332,6 +1423,21 @@ def construir_parser() -> argparse.ArgumentParser:
     p_project_status.add_argument("--json", action="store_true")
     p_project_status.set_defaults(func=cmd_project_status)
 
+    p_project_readiness = project_sub.add_parser(
+        "readiness", help="Matriz de readiness hacia un target de madurez (solo lectura)."
+    )
+    p_project_readiness.add_argument("--target", required=True, choices=list(readiness.TARGETS_VALIDOS))
+    p_project_readiness.add_argument("--json", action="store_true")
+    p_project_readiness.set_defaults(func=cmd_project_readiness)
+
+    p_project_promote = project_sub.add_parser(
+        "promote", help="Promueve project_stage al proximo stage secuencial, gateado por readiness."
+    )
+    p_project_promote.add_argument("stage", choices=list(readiness.TARGETS_VALIDOS))
+    p_project_promote.add_argument("--reason", required=True)
+    p_project_promote.add_argument("--json", action="store_true")
+    p_project_promote.set_defaults(func=cmd_project_promote)
+
     p_mlops = subparsers.add_parser("mlops", help="Fundamentos MLOps del proyecto (openspec/lifecycle/state.json -> mlops).")
     mlops_sub = p_mlops.add_subparsers(dest="subcomando", required=True)
 
@@ -1342,6 +1448,19 @@ def construir_parser() -> argparse.ArgumentParser:
     p_mlops_record = mlops_sub.add_parser("record", help="Evalúa y persiste evidencia de los fundamentos MLOps en lifecycle/state.json.")
     p_mlops_record.add_argument("--json", action="store_true")
     p_mlops_record.set_defaults(func=cmd_mlops_record)
+
+    p_mlops_evidence = mlops_sub.add_parser(
+        "evidence", help="Evidencia de artifact para los tiers production_readiness/operations."
+    )
+    mlops_evidence_sub = p_mlops_evidence.add_subparsers(dest="subcomando_evidence", required=True)
+
+    p_mlops_evidence_add = mlops_evidence_sub.add_parser("add", help="Registra evidencia de un artifact.")
+    p_mlops_evidence_add.add_argument("--tier", required=True, choices=list(mlops_evidence.TIERS_EVIDENCIABLES))
+    p_mlops_evidence_add.add_argument("--capability", required=True)
+    p_mlops_evidence_add.add_argument("--artifact", required=True)
+    p_mlops_evidence_add.add_argument("--reason", required=True)
+    p_mlops_evidence_add.add_argument("--json", action="store_true")
+    p_mlops_evidence_add.set_defaults(func=cmd_mlops_evidence_add)
 
     p_archive = subparsers.add_parser(
         "archive", help="Archiva un cambio cerrado de openspec/changes/ a openspec/archive/ (git mv)."
