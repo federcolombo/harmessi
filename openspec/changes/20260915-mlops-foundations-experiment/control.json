@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "change_id": "20260915-mlops-foundations-experiment",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-15T12:32:03Z",
+  "baseline": {
+    "commit": "e24d43fd75a76027e0056ef0296eb31672f1dc42",
+    "rama": "main",
+    "capturado_utc": "2026-09-15T12:32:03Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260915-mlops-foundations-experiment/proposal.md",
+      "openspec/changes/20260915-mlops-foundations-experiment/tasks.md",
+      "openspec/changes/20260915-mlops-foundations-experiment/spec.md",
+      "openspec/changes/20260915-mlops-foundations-experiment/design.md",
+      "openspec/changes/20260915-mlops-foundations-experiment/control.json",
+      "tools/dsguard/mlops_foundations.py",
+      "tools/ds_guard.py",
+      "tools/ds_init/manifest.py",
+      "tools/tests/test_manifest_dsguard_parity.py",
+      "tools/tests/test_mlops_foundations.py",
+      "tools/ds_init/tests/test_integracion_instalacion.py",
+      "openspec/changes/20260915-mlops-foundations-experiment/verification.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a4d1b0f59945739e08430030057df74845b2f4cc87e48b18d1bcdf836d6296a9",
+      "registrado_utc": "2026-09-15T12:35:28Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "Fundamentos MLOps (reproducibilidad/versionado/lineage/artifacts) via checks.py, CLI ds_guard mlops status/record, persistencia explicita separada de la medicion read-only",
+      "cita": "BOUNDED AUTONOMY ... Ejecutar el change completo sin pausas intermedias: audit -> proposal/spec/design/tasks -> aprobacion SDD correspondiente -> implementacion -> tests -> reviewer -> correcciones -> re-tests -> verification -> cierre."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "bb82878fa570259506183aaab1014e8294fc4c2c3c11494ed73d035031a6de38",
+      "registrado_utc": "2026-09-15T12:35:29Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "Fundamentos MLOps (reproducibilidad/versionado/lineage/artifacts) via checks.py, CLI ds_guard mlops status/record, persistencia explicita separada de la medicion read-only",
+      "cita": "BOUNDED AUTONOMY ... Ejecutar el change completo sin pausas intermedias: audit -> proposal/spec/design/tasks -> aprobacion SDD correspondiente -> implementacion -> tests -> reviewer -> correcciones -> re-tests -> verification -> cierre."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "56d1f2da1c38ab50ad5353d6fefd8c0f4109e8280c5598569b2454576fc9aa5d",
+      "registrado_utc": "2026-09-15T12:35:30Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "Fundamentos MLOps (reproducibilidad/versionado/lineage/artifacts) via checks.py, CLI ds_guard mlops status/record, persistencia explicita separada de la medicion read-only",
+      "cita": "BOUNDED AUTONOMY ... Ejecutar el change completo sin pausas intermedias: audit -> proposal/spec/design/tasks -> aprobacion SDD correspondiente -> implementacion -> tests -> reviewer -> correcciones -> re-tests -> verification -> cierre."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "da6c38add93570759f246e716de603bc2eb70b3edc93f5757d05714f0924b72b",
+      "registrado_utc": "2026-09-15T12:35:31Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "Fundamentos MLOps (reproducibilidad/versionado/lineage/artifacts) via checks.py, CLI ds_guard mlops status/record, persistencia explicita separada de la medicion read-only",
+      "cita": "BOUNDED AUTONOMY ... Ejecutar el change completo sin pausas intermedias: audit -> proposal/spec/design/tasks -> aprobacion SDD correspondiente -> implementacion -> tests -> reviewer -> correcciones -> re-tests -> verification -> cierre."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-15T12:35:32Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-15T12:35:34Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-15T12:59:56Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-15T13:04:27Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-15T12:35:33Z",
+      "cierre_utc": "2026-09-15T13:04:28Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 150,
+        "max_tareas": 30,
+        "max_roles": 3,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-15T15:05:33Z",
+      "minutos_consumidos": 28.916666666666668,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-15T13:00:23Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-15T12:57:23Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

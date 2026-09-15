@@ -131,5 +131,20 @@ class TestParidadManifestChecksExplicita(unittest.TestCase):
         self.assertIn("tools/dsguard/checks.py", destinos_verbatim)
 
 
+class TestParidadManifestMlopsFoundationsExplicita(unittest.TestCase):
+    """Regresión de `20260915-mlops-foundations-experiment`: mismo criterio
+    que `TestParidadManifestLifecycleYKddCompatExplicita`/
+    `TestParidadManifestMaturityExplicita`/`TestParidadManifestChecksExplicita`
+    -- nombre hardcodeado, no dependiente de qué importe `ds_guard.py` a
+    nivel de módulo, para que `mlops_foundations.py` siga cubierto por el
+    manifiesto de todos modos."""
+
+    def test_mlops_foundations_py_tiene_entrada_verbatim_en_manifest(self):
+        destinos_verbatim = {
+            entrada.destino for entrada in MANIFEST if entrada.tratamiento == VERBATIM
+        }
+        self.assertIn("tools/dsguard/mlops_foundations.py", destinos_verbatim)
+
+
 if __name__ == "__main__":
     unittest.main()

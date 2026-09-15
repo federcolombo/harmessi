@@ -246,6 +246,12 @@ MANIFEST: tuple = (
         descripcion="Motor neutral de checks: CheckResult PASS/WARN/FAIL/N-A, reusado por harmessi doctor (Change 4 v0.3)",
     ),
     EntradaManifiesto(
+        fuente="tools/dsguard/mlops_foundations.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/mlops_foundations.py",
+        descripcion="Fundamentos MLOps (reproducibilidad/versionado/lineage/artifacts) desde experiment, vía checks.py (Change 5 v0.3)",
+    ),
+    EntradaManifiesto(
         fuente="tools/dsguard/notebooks.py",
         tratamiento=VERBATIM,
         destino="tools/dsguard/notebooks.py",

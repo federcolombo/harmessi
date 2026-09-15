@@ -31,7 +31,19 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-from dsguard import core, decision, kdd, kdd_compat, lifecycle, maturity, notebooks, repo, sdd  # noqa: E402
+from dsguard import (  # noqa: E402
+    checks,
+    core,
+    decision,
+    kdd,
+    kdd_compat,
+    lifecycle,
+    maturity,
+    mlops_foundations,
+    notebooks,
+    repo,
+    sdd,
+)
 
 
 # --- Helpers compartidos --------------------------------------------------
@@ -993,6 +1005,66 @@ def cmd_project_status(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- mlops -----------------------------------------------------------------
+
+_NOMBRE_CAPABILITY_MLOPS = {
+    mlops_foundations.CODIGO_REPRODUCIBILIDAD: "reproducibility",
+    mlops_foundations.CODIGO_VERSIONADO: "versioning",
+    mlops_foundations.CODIGO_LINEAGE: "lineage",
+    mlops_foundations.CODIGO_ARTIFACTS: "artifacts",
+}
+
+
+def cmd_mlops_status(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    resultados = mlops_foundations.evaluar_foundations(repo_root)
+    if args.json:
+        print(json.dumps([r.to_dict() for r in resultados], ensure_ascii=False))
+    else:
+        stage_result = resultados[0]
+        etiqueta_stage = stage_result.subject or "no determinado"
+        print(f"MLOps Foundations (project_stage: {etiqueta_stage})\n")
+        for r in resultados[1:]:
+            nombre = _NOMBRE_CAPABILITY_MLOPS.get(r.code, r.code)
+            print(f"{nombre:<20}{r.status:<6} {r.message}")
+        conteos = checks.contar_por_status(resultados[1:])
+        print(
+            f"\nResumen: {conteos[checks.STATUS_PASS]} PASS, {conteos[checks.STATUS_WARN]} WARN, "
+            f"{conteos[checks.STATUS_FAIL]} FAIL, {conteos[checks.STATUS_NA]} N/A"
+        )
+    return checks.exit_code(resultados)
+
+
+def cmd_mlops_record(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    resultados = mlops_foundations.evaluar_foundations(repo_root)
+    try:
+        resultado_registro = mlops_foundations.registrar_evidencia(repo_root, resultados)
+    except FileNotFoundError:
+        ruta_relativa = lifecycle.state_path(repo_root).relative_to(repo_root).as_posix()
+        print(
+            f"{ruta_relativa} no existe. Correr 'ds_guard lifecycle migrate' o inicializar lifecycle primero.",
+            file=sys.stderr,
+        )
+        return 2
+    except lifecycle.LifecycleEstadoError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps(resultado_registro, ensure_ascii=False))
+    else:
+        print(f"Evidencia registrada -> {', '.join(resultado_registro['capacidades_actualizadas'])}")
+    return checks.exit_code(resultados)
+
+
 # --- init -------------------------------------------------------------------
 
 # Artefactos posibles de un cambio: si cualquiera ya existe, `init` no toca
@@ -1259,6 +1331,17 @@ def construir_parser() -> argparse.ArgumentParser:
     p_project_status = project_sub.add_parser("status")
     p_project_status.add_argument("--json", action="store_true")
     p_project_status.set_defaults(func=cmd_project_status)
+
+    p_mlops = subparsers.add_parser("mlops", help="Fundamentos MLOps del proyecto (openspec/lifecycle/state.json -> mlops).")
+    mlops_sub = p_mlops.add_subparsers(dest="subcomando", required=True)
+
+    p_mlops_status = mlops_sub.add_parser("status", help="Evalúa los fundamentos MLOps (solo lectura).")
+    p_mlops_status.add_argument("--json", action="store_true")
+    p_mlops_status.set_defaults(func=cmd_mlops_status)
+
+    p_mlops_record = mlops_sub.add_parser("record", help="Evalúa y persiste evidencia de los fundamentos MLOps en lifecycle/state.json.")
+    p_mlops_record.add_argument("--json", action="store_true")
+    p_mlops_record.set_defaults(func=cmd_mlops_record)
 
     p_archive = subparsers.add_parser(
         "archive", help="Archiva un cambio cerrado de openspec/changes/ a openspec/archive/ (git mv)."
