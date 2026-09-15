@@ -100,6 +100,7 @@ class TestIntegracionInstalacionCompleta(unittest.TestCase):
             "tools/dsguard/lifecycle.py",
             "tools/dsguard/kdd_compat.py",
             "tools/dsguard/maturity.py",
+            "tools/dsguard/checks.py",
             ".ds_init/control.json",
         )
         for relativo in archivos_clave:

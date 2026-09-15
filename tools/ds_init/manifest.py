@@ -240,6 +240,12 @@ MANIFEST: tuple = (
         descripcion="Estado de madurez/gobernanza del proyecto: .harmessi/project.json (Change 3 v0.3)",
     ),
     EntradaManifiesto(
+        fuente="tools/dsguard/checks.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/checks.py",
+        descripcion="Motor neutral de checks: CheckResult PASS/WARN/FAIL/N-A, reusado por harmessi doctor (Change 4 v0.3)",
+    ),
+    EntradaManifiesto(
         fuente="tools/dsguard/notebooks.py",
         tratamiento=VERBATIM,
         destino="tools/dsguard/notebooks.py",

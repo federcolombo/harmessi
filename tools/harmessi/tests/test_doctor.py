@@ -18,6 +18,7 @@ from tools import launcher_common
 from tools.ds_init import writer as ds_init_writer
 from tools.ds_init.planner import construir_plan
 from tools.ds_init.version import HARNESS_VERSION
+from tools.dsguard import checks
 from tools.harmessi import doctor as doctor_mod
 
 PERFIL = "python-jupyter-data"
@@ -91,6 +92,16 @@ def _niveles(resultados, codigo=None):
     return {r.nivel for r in resultados if r.codigo == codigo}
 
 
+def _statuses(resultados, code=None):
+    """Como `_niveles`, pero para resultados de funciones `_check_*` llamadas
+    DIRECTAMENTE (sin pasar por `doctor_mod.ejecutar`) -- esas devuelven
+    `list[checks.CheckResult]` (vocabulario neutral `.status`/`.code`), no
+    `list[doctor_mod.ResultadoCheck]` (`.nivel`/`.codigo`)."""
+    if code is None:
+        return {r.status for r in resultados}
+    return {r.status for r in resultados if r.code == code}
+
+
 class TestChecksCore(unittest.TestCase):
     def setUp(self):
         self.repo = _crear_repo_git_temporal()
@@ -100,50 +111,50 @@ class TestChecksCore(unittest.TestCase):
 
     def test_version_python_ok(self):
         resultados = doctor_mod._check_version_python()
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
 
     def test_git_disponible_ok(self):
         resultados = doctor_mod._check_git_disponible()
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
 
     def test_repo_git_valido_ok(self):
         resultados = doctor_mod._check_repo_git_valido(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
 
     def test_repo_git_invalido_error(self):
         no_git = Path(tempfile.mkdtemp(prefix="harmessi_doctor_test_no_git_"))
         try:
             resultados = doctor_mod._check_repo_git_valido(no_git)
-            self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_ERROR)
+            self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
         finally:
             shutil.rmtree(no_git, ignore_errors=True)
 
     def test_working_tree_limpio_ok(self):
         resultados = doctor_mod._check_working_tree(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
 
     def test_working_tree_sucio_warn(self):
         (self.repo / "archivo_sucio.txt").write_text("x", encoding="utf-8")
         resultados = doctor_mod._check_working_tree(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_WARN)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
 
     def test_venv_faltante_warn(self):
         resultados = doctor_mod._check_venv(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_WARN)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
 
     def test_venv_presente_ok(self):
         _crear_interprete_falso(self.repo)
         resultados = doctor_mod._check_venv(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
 
     def test_permisos_ok(self):
         resultados = doctor_mod._check_permisos(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
 
     def test_permisos_error_si_falla_escritura(self):
         with patch("tools.harmessi.doctor._probar_escritura", side_effect=OSError("sin permiso")):
             resultados = doctor_mod._check_permisos(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_ERROR)
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
 
 
 class TestChecksHarmessiInstalacionReal(unittest.TestCase):
@@ -160,84 +171,84 @@ class TestChecksHarmessiInstalacionReal(unittest.TestCase):
     def test_control_json_ok(self):
         control_data, resultados = doctor_mod._leer_control_json(self.repo)
         self.assertIsNotNone(control_data)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
 
     def test_archivos_administrados_ok(self):
         control_data, _ = doctor_mod._leer_control_json(self.repo)
         resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
-        self.assertEqual(_niveles(resultados), {doctor_mod.NIVEL_OK})
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
 
     def test_archivos_administrados_error_si_falta_critico(self):
         (self.repo / ".claude" / "settings.json").unlink()
         control_data, _ = doctor_mod._leer_control_json(self.repo)
         resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
-        self.assertIn(doctor_mod.NIVEL_ERROR, _niveles(resultados))
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
 
     def test_archivos_administrados_warn_si_falta_no_critico(self):
         (self.repo / ".claude" / "skills" / "lead-data-scientist" / "templates" / "tasks.md").unlink()
         control_data, _ = doctor_mod._leer_control_json(self.repo)
         resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
-        self.assertIn(doctor_mod.NIVEL_WARN, _niveles(resultados))
-        self.assertNotIn(doctor_mod.NIVEL_ERROR, _niveles(resultados))
+        self.assertIn(checks.STATUS_WARN, _statuses(resultados))
+        self.assertNotIn(checks.STATUS_FAIL, _statuses(resultados))
 
     def test_archivos_administrados_warn_sin_control_json(self):
         resultados = doctor_mod._check_archivos_administrados(self.repo, None)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_WARN)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
 
     def test_drift_ok_sin_cambios(self):
         control_data, _ = doctor_mod._leer_control_json(self.repo)
         resultados = doctor_mod._check_hashes_drift(self.repo, control_data)
-        self.assertEqual(_niveles(resultados), {doctor_mod.NIVEL_OK})
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
 
     def test_drift_warn_si_archivo_modificado(self):
         ruta = self.repo / "tools" / "ds_guard.py"
         ruta.write_text(ruta.read_text(encoding="utf-8") + "\n# modificado a mano\n", encoding="utf-8")
         control_data, _ = doctor_mod._leer_control_json(self.repo)
         resultados = doctor_mod._check_hashes_drift(self.repo, control_data)
-        self.assertIn(doctor_mod.NIVEL_WARN, _niveles(resultados))
+        self.assertIn(checks.STATUS_WARN, _statuses(resultados))
 
     def test_drift_error_si_archivo_administrado_falta(self):
         (self.repo / "tools" / "ds_guard.py").unlink()
         control_data, _ = doctor_mod._leer_control_json(self.repo)
         resultados = doctor_mod._check_hashes_drift(self.repo, control_data)
-        self.assertIn(doctor_mod.NIVEL_ERROR, _niveles(resultados))
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
 
     def test_agents_ok(self):
         resultados = doctor_mod._check_agents(self.repo)
-        self.assertEqual(_niveles(resultados), {doctor_mod.NIVEL_OK})
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
 
     def test_agents_error_si_falta(self):
         (self.repo / ".claude" / "agents" / "notebook-runner.md").unlink()
         resultados = doctor_mod._check_agents(self.repo)
-        self.assertIn(doctor_mod.NIVEL_ERROR, _niveles(resultados))
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
 
     def test_skill_ok(self):
         resultados = doctor_mod._check_skill_lead_data_scientist(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
 
     def test_skill_warn_si_falta_archivo(self):
         (self.repo / ".claude" / "skills" / "lead-data-scientist" / "verificador.md").unlink()
         resultados = doctor_mod._check_skill_lead_data_scientist(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_WARN)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
 
     def test_settings_ok(self):
         _, resultados = doctor_mod._check_settings(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
 
     def test_settings_error_si_falta(self):
         (self.repo / ".claude" / "settings.json").unlink()
         _, resultados = doctor_mod._check_settings(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_ERROR)
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
 
     def test_settings_error_si_json_invalido(self):
         (self.repo / ".claude" / "settings.json").write_text("{ no es json", encoding="utf-8")
         _, resultados = doctor_mod._check_settings(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_ERROR)
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
 
     def test_hooks_ok(self):
         settings_data, _ = doctor_mod._check_settings(self.repo)
         resultados = doctor_mod._check_hooks(self.repo, settings_data)
-        self.assertEqual(_niveles(resultados), {doctor_mod.NIVEL_OK})
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
 
     def test_hooks_error_si_falta_matcher(self):
         ruta_settings = self.repo / ".claude" / "settings.json"
@@ -248,7 +259,7 @@ class TestChecksHarmessiInstalacionReal(unittest.TestCase):
         ruta_settings.write_text(json.dumps(datos), encoding="utf-8")
         settings_data, _ = doctor_mod._check_settings(self.repo)
         resultados = doctor_mod._check_hooks(self.repo, settings_data)
-        self.assertIn(doctor_mod.NIVEL_ERROR, _niveles(resultados))
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
 
     def test_hooks_error_si_falta_matcher_de_rutas(self):
         """Bloque 3: el hook PreToolUse de protección de rutas (matcher con
@@ -261,33 +272,33 @@ class TestChecksHarmessiInstalacionReal(unittest.TestCase):
         ruta_settings.write_text(json.dumps(datos), encoding="utf-8")
         settings_data, _ = doctor_mod._check_settings(self.repo)
         resultados = doctor_mod._check_hooks(self.repo, settings_data)
-        self.assertIn(doctor_mod.NIVEL_ERROR, _niveles(resultados))
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
 
     def test_coherencia_version_ok(self):
         control_data, _ = doctor_mod._leer_control_json(self.repo)
         resultados = doctor_mod._check_coherencia_version(control_data)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
 
     def test_coherencia_version_warn_si_distinta(self):
         control_data, _ = doctor_mod._leer_control_json(self.repo)
         control_data["harness_version"] = "0.0.1-otra"
         resultados = doctor_mod._check_coherencia_version(control_data)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_WARN)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
 
     def test_guardrails_json_ok(self):
         resultados = doctor_mod._check_guardrails_json(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
 
     def test_guardrails_json_warn_si_falta(self):
         (self.repo / ".claude" / "guardrails.json").unlink()
         resultados = doctor_mod._check_guardrails_json(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_WARN)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
 
     def test_guardrails_json_error_si_corrupto(self):
         (self.repo / ".claude" / "guardrails.json").write_text("{ esto no es json valido", encoding="utf-8")
         resultados = doctor_mod._check_guardrails_json(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_ERROR)
-        self.assertIn("fail-closed", resultados[0].mensaje.lower())
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
+        self.assertIn("fail-closed", resultados[0].message.lower())
 
 
 class TestChecksRuntimeInstalacionReal(unittest.TestCase):
@@ -300,23 +311,23 @@ class TestChecksRuntimeInstalacionReal(unittest.TestCase):
 
     def test_launchers_existen_ok(self):
         resultados = doctor_mod._check_launchers_existen(self.repo)
-        self.assertEqual(_niveles(resultados), {doctor_mod.NIVEL_OK})
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
 
     def test_launchers_faltantes_error(self):
         (self.repo / "tools" / "nbrunner" / "hook_launcher.py").unlink()
         resultados = doctor_mod._check_launchers_existen(self.repo)
-        self.assertIn(doctor_mod.NIVEL_ERROR, _niveles(resultados))
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
 
     def test_interprete_ejecuta_hooks_sin_interprete_error(self):
         resultados = doctor_mod._check_interprete_ejecuta_hooks(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_ERROR)
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
 
     def test_interprete_ejecuta_hooks_ok_mockeado(self):
         _crear_interprete_falso(self.repo)
         with patch("tools.harmessi.doctor.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stderr="")
             resultados = doctor_mod._check_interprete_ejecuta_hooks(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
 
     def test_interprete_ejecuta_hooks_error_si_falla_import(self):
         _crear_interprete_falso(self.repo)
@@ -325,26 +336,26 @@ class TestChecksRuntimeInstalacionReal(unittest.TestCase):
                 args=[], returncode=1, stderr="ModuleNotFoundError"
             )
             resultados = doctor_mod._check_interprete_ejecuta_hooks(self.repo)
-        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_ERROR)
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
 
     def test_hooks_configurados_existen_ok(self):
         settings_data, _ = doctor_mod._check_settings(self.repo)
         resultados = doctor_mod._check_hooks_configurados_existen(self.repo, settings_data)
         self.assertTrue(resultados)
-        self.assertEqual(_niveles(resultados), {doctor_mod.NIVEL_OK})
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
 
     def test_hooks_configurados_existen_error_si_falta_script(self):
         (self.repo / "tools" / "nbrunner" / "hook_launcher.py").unlink()
         settings_data, _ = doctor_mod._check_settings(self.repo)
         resultados = doctor_mod._check_hooks_configurados_existen(self.repo, settings_data)
-        self.assertIn(doctor_mod.NIVEL_ERROR, _niveles(resultados))
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
 
     def test_dependencia_shell_ok_sin_bash(self):
         """El settings.json que instala esta versión de Harmessi ya no usa
         `bash "..."`: el objetivo cross-platform del Bloque 2."""
         settings_data, _ = doctor_mod._check_settings(self.repo)
         resultados = doctor_mod._check_dependencia_shell(settings_data)
-        self.assertEqual(_niveles(resultados), {doctor_mod.NIVEL_OK})
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
 
     def test_dependencia_shell_error_si_bash_no_disponible(self):
         ruta_settings = self.repo / ".claude" / "settings.json"
@@ -352,7 +363,7 @@ class TestChecksRuntimeInstalacionReal(unittest.TestCase):
         datos["hooks"]["PreToolUse"][0]["hooks"][0]["command"] = 'bash "${CLAUDE_PROJECT_DIR}/hook.sh"'
         with patch("tools.harmessi.doctor.shutil.which", return_value=None):
             resultados = doctor_mod._check_dependencia_shell(datos)
-        self.assertIn(doctor_mod.NIVEL_ERROR, _niveles(resultados))
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
 
     def test_dependencia_shell_warn_si_bash_disponible(self):
         ruta_settings = self.repo / ".claude" / "settings.json"
@@ -360,10 +371,10 @@ class TestChecksRuntimeInstalacionReal(unittest.TestCase):
         datos["hooks"]["PreToolUse"][0]["hooks"][0]["command"] = 'bash "${CLAUDE_PROJECT_DIR}/hook.sh"'
         with patch("tools.harmessi.doctor.shutil.which", return_value="/usr/bin/bash"):
             resultados = doctor_mod._check_dependencia_shell(datos)
-        niveles_bash = {
-            r.nivel for r in resultados if "bash" in r.mensaje.lower() and r.nivel != doctor_mod.NIVEL_OK
+        statuses_bash = {
+            r.status for r in resultados if "bash" in r.message.lower() and r.status != checks.STATUS_PASS
         }
-        self.assertIn(doctor_mod.NIVEL_WARN, niveles_bash)
+        self.assertIn(checks.STATUS_WARN, statuses_bash)
 
 
 class TestEjecutarIntegracion(unittest.TestCase):
@@ -447,6 +458,83 @@ class TestEjecutarIntegracion(unittest.TestCase):
         self.assertIn("=== RUNTIME ===", texto)
         self.assertIn("Resumen:", texto)
         self.assertIn("[OK]", texto)
+
+
+class TestRetrofitChecksEngine(unittest.TestCase):
+    """Tests nuevos de `20260915-checks-engine-foundation`: NO modifican
+    ninguna aserción existente arriba -- solo agregan cobertura del
+    vocabulario neutral interno (`checks.CheckResult`) y de la traducción a
+    `ResultadoCheck` (público de Doctor, sin cambios de UX)."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_check_individual_devuelve_list_checkresult_con_vocabulario_nuevo(self):
+        resultados = doctor_mod._check_version_python()
+        self.assertEqual(len(resultados), 1)
+        self.assertIsInstance(resultados[0], checks.CheckResult)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_check_repo_git_invalido_devuelve_checkresult_fail(self):
+        no_git = Path(tempfile.mkdtemp(prefix="harmessi_doctor_test_no_git_"))
+        try:
+            resultados = doctor_mod._check_repo_git_valido(no_git)
+            self.assertIsInstance(resultados[0], checks.CheckResult)
+            self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
+        finally:
+            shutil.rmtree(no_git, ignore_errors=True)
+
+    def test_traducir_mapea_pass_a_ok(self):
+        r = checks.CheckResult(checks.STATUS_PASS, "COD", "mensaje", subject="ubi")
+        traducido = doctor_mod._traducir(doctor_mod.SECCION_CORE, r)
+        self.assertEqual(traducido.nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(traducido.seccion, doctor_mod.SECCION_CORE)
+        self.assertEqual(traducido.codigo, "COD")
+        self.assertEqual(traducido.mensaje, "mensaje")
+        self.assertEqual(traducido.ubicacion, "ubi")
+
+    def test_traducir_mapea_warn_a_warn(self):
+        r = checks.CheckResult(checks.STATUS_WARN, "COD", "mensaje")
+        traducido = doctor_mod._traducir(doctor_mod.SECCION_HARMESSI, r)
+        self.assertEqual(traducido.nivel, doctor_mod.NIVEL_WARN)
+
+    def test_traducir_mapea_fail_a_error(self):
+        r = checks.CheckResult(checks.STATUS_FAIL, "COD", "mensaje")
+        traducido = doctor_mod._traducir(doctor_mod.SECCION_RUNTIME, r)
+        self.assertEqual(traducido.nivel, doctor_mod.NIVEL_ERROR)
+
+    def test_ejecutar_check_traduce_excepcion_a_resultadocheck_error(self):
+        def _explota():
+            raise RuntimeError("boom")
+
+        resultados = doctor_mod._ejecutar_check(doctor_mod.SECCION_CORE, "COD-BASE", _explota)
+        self.assertEqual(len(resultados), 1)
+        self.assertIsInstance(resultados[0], doctor_mod.ResultadoCheck)
+        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_ERROR)
+        self.assertEqual(resultados[0].codigo, "COD-BASE-EXCEPCION")
+
+    def test_formatear_agrega_segmento_na_si_conteo_mayor_a_cero(self):
+        resultados = [
+            doctor_mod.ResultadoCheck(doctor_mod.NIVEL_OK, doctor_mod.SECCION_CORE, "X-OK", "ok"),
+            doctor_mod.ResultadoCheck("N/A", doctor_mod.SECCION_CORE, "X-NA", "no aplica"),
+        ]
+        texto = doctor_mod.formatear(resultados)
+        self.assertIn("[N/A]", texto)
+        self.assertIn("1 [N/A]", texto.splitlines()[-1])
+
+    def test_formatear_sin_resultados_na_no_agrega_segmento(self):
+        _instalar_harness_real(self.repo)
+        resultados, _ = doctor_mod.ejecutar(self.repo)
+        # Caso real actual: ningún check emite N/A.
+        self.assertEqual(_niveles(resultados) & {"N/A"}, set())
+        texto = doctor_mod.formatear(resultados)
+        self.assertNotIn("[N/A]", texto)
+        ultima_linea = texto.splitlines()[-1]
+        self.assertTrue(ultima_linea.startswith("Resumen: "))
+        self.assertEqual(ultima_linea.count("["), 3)  # solo [OK], [WARN], [ERROR]
 
 
 if __name__ == "__main__":

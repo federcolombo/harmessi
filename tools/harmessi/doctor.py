@@ -8,11 +8,14 @@ permisos, que siempre limpia). No repara nada -- ver `README.md` y el diseño
 del Bloque 2 para qué queda deliberadamente fuera de v0.2 (instalar `doctor`
 en el destino, `--fix`, `update`/`uninstall`).
 
-Cada check es una función pura de la forma `(...) -> list[ResultadoCheck]`,
-nunca lanza -- cualquier excepción inesperada la atrapa `_ejecutar_check` y
-la convierte en un `ResultadoCheck` de nivel `ERROR` (R: nunca un traceback
-crudo en uso normal, mismo criterio que `writer.py`/`cli.py` de `ds_init`).
-"""
+Cada check es una función pura de la forma `(...) -> list[checks.CheckResult]`
+(vocabulario neutral PASS/WARN/FAIL/N-A, Change 4 v0.3), nunca lanza --
+cualquier excepción inesperada la atrapa `_ejecutar_check` y la convierte en
+un `ResultadoCheck` de nivel `ERROR` (R: nunca un traceback crudo en uso
+normal, mismo criterio que `writer.py`/`cli.py` de `ds_init`).
+`_ejecutar_check`/`_ejecutar_check_con_dato` delegan la ejecución/captura de
+excepciones en `tools.dsguard.checks` y traducen el resultado neutral a
+`ResultadoCheck` (vocabulario público de Doctor, sin cambios de UX)."""
 from __future__ import annotations
 
 import json
@@ -29,6 +32,7 @@ from tools import launcher_common
 from tools.ds_init import control as control_mod
 from tools.ds_init import manifest as manifest_mod
 from tools.ds_init.version import HARNESS_VERSION
+from tools.dsguard import checks
 from tools.dsguard import pathguard
 
 NIVEL_OK = "OK"
@@ -104,42 +108,43 @@ class ResultadoCheck:
     ubicacion: Optional[str] = None
 
 
+_MAPA_STATUS_A_NIVEL = {
+    checks.STATUS_PASS: NIVEL_OK,
+    checks.STATUS_WARN: NIVEL_WARN,
+    checks.STATUS_FAIL: NIVEL_ERROR,
+}
+
+
+def _traducir(seccion: str, r) -> ResultadoCheck:
+    """Traduce un `checks.CheckResult` (vocabulario neutral del engine) a un
+    `ResultadoCheck` público de Doctor. `N/A` no tiene mapeo hoy (ningún
+    check de Doctor lo emite) -- pasa tal cual como nivel si algún día
+    ocurre, en vez de fallar."""
+    nivel = _MAPA_STATUS_A_NIVEL.get(r.status, r.status)
+    return ResultadoCheck(nivel, seccion, r.code, r.message, r.subject)
+
+
 def _ejecutar_check(seccion: str, codigo_base: str, funcion: Callable, *args) -> list:
-    """Corre `funcion(*args)` (un check que devuelve `list[ResultadoCheck]`)
-    y nunca deja escapar una excepción: cualquier fallo inesperado se
-    convierte en un `ResultadoCheck` `ERROR` propio -- red de cierre final,
-    además de que cada check ya maneja sus propias excepciones esperables
-    (I/O, JSON inválido, subprocess)."""
-    try:
-        return funcion(*args)
-    except Exception as exc:  # noqa: BLE001 - red de cierre: doctor nunca debe crashear
-        return [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                seccion,
-                f"{codigo_base}-EXCEPCION",
-                f"Fallo inesperado ejecutando el check: {exc!r}",
-            )
-        ]
+    """Corre `funcion(*args)` (un check que devuelve `list[checks.CheckResult]`)
+    vía `checks.ejecutar_checks` -- nunca deja escapar una excepción: se
+    convierte en un `checks.CheckResult` FAIL/technical_error, traducido acá
+    a `ResultadoCheck` ERROR (mismo comportamiento público que antes del
+    retrofit)."""
+    resultados = checks.ejecutar_checks([(codigo_base, funcion, args)])
+    return [_traducir(seccion, r) for r in resultados]
 
 
 def _ejecutar_check_con_dato(seccion: str, codigo_base: str, funcion: Callable, *args):
     """Como `_ejecutar_check`, pero para los dos checks que además producen
     un dato reusado por checks posteriores (`_leer_control_json`,
-    `_check_settings`): devuelven `(dato_o_None, list[ResultadoCheck])`.
+    `_check_settings`): devuelven `(dato_o_None, list[checks.CheckResult])`.
     Nunca lanza; ante excepción, devuelve `(None, [ResultadoCheck ERROR])`
     para que el resto de la orquestación se degrade explícitamente."""
     try:
-        return funcion(*args)
+        dato, resultados = funcion(*args)
+        return dato, [_traducir(seccion, r) for r in resultados]
     except Exception as exc:  # noqa: BLE001 - red de cierre: doctor nunca debe crashear
-        return None, [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                seccion,
-                f"{codigo_base}-EXCEPCION",
-                f"Fallo inesperado ejecutando el check: {exc!r}",
-            )
-        ]
+        return None, [_traducir(seccion, checks.resultado_de_excepcion(codigo_base, exc))]
 
 
 # --- CORE --------------------------------------------------------------------
@@ -148,18 +153,16 @@ def _ejecutar_check_con_dato(seccion: str, codigo_base: str, funcion: Callable, 
 def _check_version_python() -> list:
     if sys.version_info >= VERSION_PYTHON_MINIMA:
         return [
-            ResultadoCheck(
-                NIVEL_OK,
-                SECCION_CORE,
+            checks.CheckResult(
+                checks.STATUS_PASS,
                 "CORE-PYTHON-VERSION",
                 f"Python {sys.version.split()[0]} (mínimo soportado: "
                 f"{'.'.join(map(str, VERSION_PYTHON_MINIMA))})",
             )
         ]
     return [
-        ResultadoCheck(
-            NIVEL_ERROR,
-            SECCION_CORE,
+        checks.CheckResult(
+            checks.STATUS_FAIL,
             "CORE-PYTHON-VERSION",
             f"Python {sys.version.split()[0]} es menor que el mínimo soportado "
             f"({'.'.join(map(str, VERSION_PYTHON_MINIMA))})",
@@ -175,30 +178,29 @@ def _check_git_disponible() -> list:
     ruta_git = shutil.which("git")
     if not ruta_git:
         return [
-            ResultadoCheck(
-                NIVEL_ERROR, SECCION_CORE, "CORE-GIT-DISPONIBLE", "No se encontró 'git' en el PATH"
+            checks.CheckResult(
+                checks.STATUS_FAIL, "CORE-GIT-DISPONIBLE", "No se encontró 'git' en el PATH"
             )
         ]
     try:
         resultado = subprocess.run(["git", "--version"], capture_output=True, text=True)
     except OSError as exc:
         return [
-            ResultadoCheck(
-                NIVEL_ERROR, SECCION_CORE, "CORE-GIT-DISPONIBLE", f"'git' no se pudo ejecutar: {exc}"
+            checks.CheckResult(
+                checks.STATUS_FAIL, "CORE-GIT-DISPONIBLE", f"'git' no se pudo ejecutar: {exc}"
             )
         ]
     if resultado.returncode != 0:
         return [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_CORE,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "CORE-GIT-DISPONIBLE",
                 "'git --version' terminó con código de error",
             )
         ]
     return [
-        ResultadoCheck(
-            NIVEL_OK, SECCION_CORE, "CORE-GIT-DISPONIBLE", resultado.stdout.strip(), ruta_git
+        checks.CheckResult(
+            checks.STATUS_PASS, "CORE-GIT-DISPONIBLE", resultado.stdout.strip(), subject=ruta_git
         )
     ]
 
@@ -206,28 +208,27 @@ def _check_git_disponible() -> list:
 def _check_repo_git_valido(destino: Path) -> list:
     if not destino.is_dir():
         return [
-            ResultadoCheck(
-                NIVEL_ERROR, SECCION_CORE, "CORE-REPO-GIT", f"El destino no existe: {destino}"
+            checks.CheckResult(
+                checks.STATUS_FAIL, "CORE-REPO-GIT", f"El destino no existe: {destino}"
             )
         ]
     try:
         resultado = _git(["rev-parse", "--is-inside-work-tree"], destino)
     except OSError as exc:
         return [
-            ResultadoCheck(
-                NIVEL_ERROR, SECCION_CORE, "CORE-REPO-GIT", f"No se pudo invocar git: {exc}"
+            checks.CheckResult(
+                checks.STATUS_FAIL, "CORE-REPO-GIT", f"No se pudo invocar git: {exc}"
             )
         ]
     if resultado.returncode != 0 or resultado.stdout.strip() != "true":
         return [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_CORE,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "CORE-REPO-GIT",
                 f"{destino} no es un repositorio Git válido",
             )
         ]
-    return [ResultadoCheck(NIVEL_OK, SECCION_CORE, "CORE-REPO-GIT", "Repositorio Git válido")]
+    return [checks.CheckResult(checks.STATUS_PASS, "CORE-REPO-GIT", "Repositorio Git válido")]
 
 
 def _check_working_tree(destino: Path) -> list:
@@ -235,15 +236,14 @@ def _check_working_tree(destino: Path) -> list:
         resultado = _git(["status", "--porcelain"], destino)
     except OSError as exc:
         return [
-            ResultadoCheck(
-                NIVEL_ERROR, SECCION_CORE, "CORE-WORKING-TREE", f"No se pudo invocar git status: {exc}"
+            checks.CheckResult(
+                checks.STATUS_FAIL, "CORE-WORKING-TREE", f"No se pudo invocar git status: {exc}"
             )
         ]
     if resultado.returncode != 0:
         return [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_CORE,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "CORE-WORKING-TREE",
                 "No se pudo consultar el estado de git (repositorio inválido o corrupto)",
             )
@@ -251,14 +251,13 @@ def _check_working_tree(destino: Path) -> list:
     sucios = resultado.stdout.strip()
     if sucios:
         return [
-            ResultadoCheck(
-                NIVEL_WARN,
-                SECCION_CORE,
+            checks.CheckResult(
+                checks.STATUS_WARN,
                 "CORE-WORKING-TREE",
                 f"Working tree con cambios sin confirmar ({len(sucios.splitlines())} entrada(s))",
             )
         ]
-    return [ResultadoCheck(NIVEL_OK, SECCION_CORE, "CORE-WORKING-TREE", "Working tree limpio")]
+    return [checks.CheckResult(checks.STATUS_PASS, "CORE-WORKING-TREE", "Working tree limpio")]
 
 
 def _check_venv(destino: Path) -> list:
@@ -266,17 +265,19 @@ def _check_venv(destino: Path) -> list:
     interprete = launcher_common.ruta_interprete_venv(destino, venv_dir)
     if not interprete.is_file():
         return [
-            ResultadoCheck(
-                NIVEL_WARN,
-                SECCION_CORE,
+            checks.CheckResult(
+                checks.STATUS_WARN,
                 "CORE-VENV",
                 f"No se encontró el intérprete del venv en {interprete} (venv_dir={venv_dir!r})",
-                str(interprete),
+                subject=str(interprete),
             )
         ]
     return [
-        ResultadoCheck(
-            NIVEL_OK, SECCION_CORE, "CORE-VENV", f"Intérprete encontrado en {interprete}", str(interprete)
+        checks.CheckResult(
+            checks.STATUS_PASS,
+            "CORE-VENV",
+            f"Intérprete encontrado en {interprete}",
+            subject=str(interprete),
         )
     ]
 
@@ -296,9 +297,8 @@ def _check_permisos(destino: Path) -> list:
         _probar_escritura(ruta_prueba)
     except OSError as exc:
         return [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_CORE,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "CORE-PERMISOS",
                 f"No se pudo escribir/leer en {destino}: {exc}",
             )
@@ -309,7 +309,7 @@ def _check_permisos(destino: Path) -> list:
                 ruta_prueba.unlink()
         except OSError:
             pass
-    return [ResultadoCheck(NIVEL_OK, SECCION_CORE, "CORE-PERMISOS", "Lectura/escritura verificadas")]
+    return [checks.CheckResult(checks.STATUS_PASS, "CORE-PERMISOS", "Lectura/escritura verificadas")]
 
 
 # --- HARMESSI ------------------------------------------------------------------
@@ -323,61 +323,59 @@ _CAMPOS_CONTROL_ESPERADOS = ("harness_version", "perfil", "fecha_utc", "configur
 
 
 def _leer_control_json(destino: Path):
-    """Devuelve `(contenido_o_None, list[ResultadoCheck])`. Nunca lanza:
+    """Devuelve `(contenido_o_None, list[checks.CheckResult])`. Nunca lanza:
     cualquier problema de lectura/parseo/schema se refleja en el resultado,
     y `contenido` queda en `None` para que los checks que dependen de él se
     degraden explícitamente (no asuman datos parciales)."""
     ruta = _ruta_control(destino)
     if not ruta.exists():
         return None, [
-            ResultadoCheck(
-                NIVEL_ERROR, SECCION_HARMESSI, "HARMESSI-CONTROL-JSON", f"No existe {ruta}", str(ruta)
+            checks.CheckResult(
+                checks.STATUS_FAIL, "HARMESSI-CONTROL-JSON", f"No existe {ruta}", subject=str(ruta)
             )
         ]
     try:
         contenido = json.loads(ruta.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         return None, [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "HARMESSI-CONTROL-JSON",
                 f"No se pudo leer/parsear {ruta}: {exc}",
-                str(ruta),
+                subject=str(ruta),
             )
         ]
     if not isinstance(contenido, dict):
         return None, [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "HARMESSI-CONTROL-JSON",
                 f"{ruta} no contiene un objeto JSON",
-                str(ruta),
+                subject=str(ruta),
             )
         ]
     faltantes = [campo for campo in _CAMPOS_CONTROL_ESPERADOS if campo not in contenido]
     if faltantes:
         return contenido, [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "HARMESSI-CONTROL-JSON",
                 f"control.json incompleto, faltan campos: {faltantes}",
-                str(ruta),
+                subject=str(ruta),
             )
         ]
     return contenido, [
-        ResultadoCheck(NIVEL_OK, SECCION_HARMESSI, "HARMESSI-CONTROL-JSON", "control.json válido", str(ruta))
+        checks.CheckResult(
+            checks.STATUS_PASS, "HARMESSI-CONTROL-JSON", "control.json válido", subject=str(ruta)
+        )
     ]
 
 
 def _check_archivos_administrados(destino: Path, control_data: Optional[dict]) -> list:
     if control_data is None:
         return [
-            ResultadoCheck(
-                NIVEL_WARN,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_WARN,
                 "HARMESSI-ARCHIVOS-ESPERADOS",
                 "No se puede determinar el perfil instalado sin control.json: chequeo omitido",
             )
@@ -387,7 +385,7 @@ def _check_archivos_administrados(destino: Path, control_data: Optional[dict]) -
         entradas = manifest_mod.manifest_para_perfil(perfil)
     except manifest_mod.PerfilDesconocidoError as exc:
         return [
-            ResultadoCheck(NIVEL_ERROR, SECCION_HARMESSI, "HARMESSI-ARCHIVOS-ESPERADOS", str(exc))
+            checks.CheckResult(checks.STATUS_FAIL, "HARMESSI-ARCHIVOS-ESPERADOS", str(exc))
         ]
 
     resultados = []
@@ -399,19 +397,17 @@ def _check_archivos_administrados(destino: Path, control_data: Optional[dict]) -
             continue
         critico = entrada.destino in _RUTAS_CRITICAS
         resultados.append(
-            ResultadoCheck(
-                NIVEL_ERROR if critico else NIVEL_WARN,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_FAIL if critico else checks.STATUS_WARN,
                 "HARMESSI-ARCHIVO-FALTANTE",
                 f"Archivo administrado faltante: {entrada.destino}",
-                entrada.destino,
+                subject=entrada.destino,
             )
         )
     if not resultados:
         resultados.append(
-            ResultadoCheck(
-                NIVEL_OK,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_PASS,
                 "HARMESSI-ARCHIVOS-ESPERADOS",
                 f"Los {len(entradas)} archivo(s) administrados del perfil {perfil!r} están presentes",
             )
@@ -422,9 +418,8 @@ def _check_archivos_administrados(destino: Path, control_data: Optional[dict]) -
 def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
     if control_data is None:
         return [
-            ResultadoCheck(
-                NIVEL_WARN,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_WARN,
                 "HARMESSI-DRIFT",
                 "No se puede verificar drift sin control.json: chequeo omitido",
             )
@@ -432,8 +427,8 @@ def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
     archivos = control_data.get("archivos")
     if not isinstance(archivos, list):
         return [
-            ResultadoCheck(
-                NIVEL_ERROR, SECCION_HARMESSI, "HARMESSI-DRIFT", "control.json no tiene una lista 'archivos' válida"
+            checks.CheckResult(
+                checks.STATUS_FAIL, "HARMESSI-DRIFT", "control.json no tiene una lista 'archivos' válida"
             )
         ]
 
@@ -448,12 +443,11 @@ def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
         ruta_abs = destino / ruta_rel
         if not ruta_abs.exists():
             resultados.append(
-                ResultadoCheck(
-                    NIVEL_ERROR,
-                    SECCION_HARMESSI,
+                checks.CheckResult(
+                    checks.STATUS_FAIL,
                     "HARMESSI-DRIFT-FALTANTE",
                     f"Archivo administrado listado en control.json pero ausente: {ruta_rel}",
-                    ruta_rel,
+                    subject=ruta_rel,
                 )
             )
             continue
@@ -461,30 +455,27 @@ def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
             hash_real = control_mod.sha256_de_archivo(ruta_abs)
         except OSError as exc:
             resultados.append(
-                ResultadoCheck(
-                    NIVEL_ERROR,
-                    SECCION_HARMESSI,
+                checks.CheckResult(
+                    checks.STATUS_FAIL,
                     "HARMESSI-DRIFT",
                     f"No se pudo calcular el hash de {ruta_rel}: {exc}",
-                    ruta_rel,
+                    subject=ruta_rel,
                 )
             )
             continue
         if hash_real != hash_esperado:
             resultados.append(
-                ResultadoCheck(
-                    NIVEL_WARN,
-                    SECCION_HARMESSI,
+                checks.CheckResult(
+                    checks.STATUS_WARN,
                     "HARMESSI-DRIFT",
                     f"Modificado desde la instalación: {ruta_rel}",
-                    ruta_rel,
+                    subject=ruta_rel,
                 )
             )
     if not resultados:
         resultados.append(
-            ResultadoCheck(
-                NIVEL_OK,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_PASS,
                 "HARMESSI-DRIFT",
                 "Ningún archivo administrado difiere de su hash registrado",
             )
@@ -498,12 +489,11 @@ def _check_agents(destino: Path) -> list:
         ruta = destino / ruta_rel
         if not ruta.exists():
             resultados.append(
-                ResultadoCheck(
-                    NIVEL_ERROR,
-                    SECCION_HARMESSI,
+                checks.CheckResult(
+                    checks.STATUS_FAIL,
                     "HARMESSI-AGENTE-FALTANTE",
                     f"Falta el agente {nombre!r}",
-                    ruta_rel,
+                    subject=ruta_rel,
                 )
             )
             continue
@@ -511,28 +501,28 @@ def _check_agents(destino: Path) -> list:
             texto = ruta.read_text(encoding="utf-8")
         except OSError as exc:
             resultados.append(
-                ResultadoCheck(
-                    NIVEL_ERROR,
-                    SECCION_HARMESSI,
+                checks.CheckResult(
+                    checks.STATUS_FAIL,
                     "HARMESSI-AGENTE-ILEGIBLE",
                     f"No se pudo leer el agente {nombre!r}: {exc}",
-                    ruta_rel,
+                    subject=ruta_rel,
                 )
             )
             continue
         if not texto.startswith("---") or f"name: {nombre}" not in texto:
             resultados.append(
-                ResultadoCheck(
-                    NIVEL_WARN,
-                    SECCION_HARMESSI,
+                checks.CheckResult(
+                    checks.STATUS_WARN,
                     "HARMESSI-AGENTE-FRONTMATTER",
                     f"El agente {nombre!r} no tiene el frontmatter esperado",
-                    ruta_rel,
+                    subject=ruta_rel,
                 )
             )
             continue
         resultados.append(
-            ResultadoCheck(NIVEL_OK, SECCION_HARMESSI, "HARMESSI-AGENTE", f"Agente {nombre!r} presente", ruta_rel)
+            checks.CheckResult(
+                checks.STATUS_PASS, "HARMESSI-AGENTE", f"Agente {nombre!r} presente", subject=ruta_rel
+            )
         )
     return resultados
 
@@ -541,17 +531,15 @@ def _check_skill_lead_data_scientist(destino: Path) -> list:
     faltantes = [ruta_rel for ruta_rel in _ARCHIVOS_SKILL_ESPERADOS if not (destino / ruta_rel).exists()]
     if faltantes:
         return [
-            ResultadoCheck(
-                NIVEL_WARN,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_WARN,
                 "HARMESSI-SKILL-FALTANTE",
                 f"Archivo(s) faltante(s) de la skill lead-data-scientist: {faltantes}",
             )
         ]
     return [
-        ResultadoCheck(
-            NIVEL_OK,
-            SECCION_HARMESSI,
+        checks.CheckResult(
+            checks.STATUS_PASS,
             "HARMESSI-SKILL",
             "La skill lead-data-scientist está completa",
         )
@@ -559,38 +547,41 @@ def _check_skill_lead_data_scientist(destino: Path) -> list:
 
 
 def _check_settings(destino: Path):
-    """Devuelve `(contenido_o_None, list[ResultadoCheck])` -- otros checks
-    (hooks, dependencia de shell) reusan `contenido` sin releer el archivo."""
+    """Devuelve `(contenido_o_None, list[checks.CheckResult])` -- otros
+    checks (hooks, dependencia de shell) reusan `contenido` sin releer el
+    archivo."""
     ruta = destino / ".claude" / "settings.json"
     if not ruta.exists():
         return None, [
-            ResultadoCheck(
-                NIVEL_ERROR, SECCION_HARMESSI, "HARMESSI-SETTINGS", f"No existe {ruta}", str(ruta)
+            checks.CheckResult(
+                checks.STATUS_FAIL, "HARMESSI-SETTINGS", f"No existe {ruta}", subject=str(ruta)
             )
         ]
     try:
         contenido = json.loads(ruta.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         return None, [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "HARMESSI-SETTINGS",
                 f"No se pudo leer/parsear {ruta}: {exc}",
-                str(ruta),
+                subject=str(ruta),
             )
         ]
     if not isinstance(contenido, dict) or "hooks" not in contenido:
         return contenido, [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "HARMESSI-SETTINGS",
                 f"{ruta} no tiene la clave 'hooks' esperada",
-                str(ruta),
+                subject=str(ruta),
             )
         ]
-    return contenido, [ResultadoCheck(NIVEL_OK, SECCION_HARMESSI, "HARMESSI-SETTINGS", "settings.json válido", str(ruta))]
+    return contenido, [
+        checks.CheckResult(
+            checks.STATUS_PASS, "HARMESSI-SETTINGS", "settings.json válido", subject=str(ruta)
+        )
+    ]
 
 
 def _iterar_comandos_hooks(settings_data: dict):
@@ -614,49 +605,48 @@ def _iterar_comandos_hooks(settings_data: dict):
 def _check_hooks(destino: Path, settings_data: Optional[dict]) -> list:
     if settings_data is None:
         return [
-            ResultadoCheck(
-                NIVEL_WARN, SECCION_HARMESSI, "HARMESSI-HOOKS", "No hay settings.json legible para revisar hooks"
+            checks.CheckResult(
+                checks.STATUS_WARN, "HARMESSI-HOOKS", "No hay settings.json legible para revisar hooks"
             )
         ]
     comandos = list(_iterar_comandos_hooks(settings_data))
     if not comandos:
         return [
-            ResultadoCheck(
-                NIVEL_ERROR, SECCION_HARMESSI, "HARMESSI-HOOKS", "No hay hooks 'PreToolUse' configurados"
+            checks.CheckResult(
+                checks.STATUS_FAIL, "HARMESSI-HOOKS", "No hay hooks 'PreToolUse' configurados"
             )
         ]
     matchers = {matcher for evento, matcher, _ in comandos if evento == "PreToolUse"}
     resultados = []
     if "Bash" not in matchers:
         resultados.append(
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "HARMESSI-HOOKS",
                 "Falta el hook PreToolUse del guardrail de notebook-runner (matcher 'Bash')",
             )
         )
     if not any(matcher and "PowerShell" in matcher for matcher in matchers):
         resultados.append(
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "HARMESSI-HOOKS",
                 "Falta el hook PreToolUse del guardrail de presupuesto de sesión (matcher con 'PowerShell')",
             )
         )
     if not any(matcher and "NotebookEdit" in matcher for matcher in matchers):
         resultados.append(
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "HARMESSI-HOOKS",
                 "Falta el hook PreToolUse de protección de rutas (matcher con 'NotebookEdit')",
             )
         )
     if not resultados:
         resultados.append(
-            ResultadoCheck(NIVEL_OK, SECCION_HARMESSI, "HARMESSI-HOOKS", f"{len(comandos)} hook(s) configurado(s)")
+            checks.CheckResult(
+                checks.STATUS_PASS, "HARMESSI-HOOKS", f"{len(comandos)} hook(s) configurado(s)"
+            )
         )
     return resultados
 
@@ -670,35 +660,32 @@ def _check_guardrails_json(destino: Path) -> list:
     ruta = destino / pathguard.RUTA_CONFIG_RELATIVA
     if not ruta.exists():
         return [
-            ResultadoCheck(
-                NIVEL_WARN,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_WARN,
                 "HARMESSI-GUARDRAILS-JSON",
                 f"No existe {ruta}: pathguard usa los defaults seguros (data/raw protegido, "
                 "sin holdouts ni write_scopes declarados)",
-                str(ruta),
+                subject=str(ruta),
             )
         ]
     try:
         config = pathguard.cargar_config(destino)
     except pathguard.ConfigGuardrailsError as exc:
         return [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "HARMESSI-GUARDRAILS-JSON",
                 f"guardrails.json corrupto -- pathguard lo trata como fail-closed (deniega todo): {exc}",
-                str(ruta),
+                subject=str(ruta),
             )
         ]
     return [
-        ResultadoCheck(
-            NIVEL_OK,
-            SECCION_HARMESSI,
+        checks.CheckResult(
+            checks.STATUS_PASS,
             "HARMESSI-GUARDRAILS-JSON",
             f"guardrails.json válido ({len(config.holdouts)} holdout(s), "
             f"{len(config.data_raw)} patrón(es) data_raw, {len(config.write_scopes)} write_scope(s))",
-            str(ruta),
+            subject=str(ruta),
         )
     ]
 
@@ -706,9 +693,8 @@ def _check_guardrails_json(destino: Path) -> list:
 def _check_coherencia_version(control_data: Optional[dict]) -> list:
     if control_data is None:
         return [
-            ResultadoCheck(
-                NIVEL_WARN,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_WARN,
                 "HARMESSI-VERSION",
                 "No se puede comparar la versión instalada sin control.json: chequeo omitido",
             )
@@ -716,17 +702,15 @@ def _check_coherencia_version(control_data: Optional[dict]) -> list:
     version_instalada = control_data.get("harness_version")
     if version_instalada == HARNESS_VERSION:
         return [
-            ResultadoCheck(
-                NIVEL_OK,
-                SECCION_HARMESSI,
+            checks.CheckResult(
+                checks.STATUS_PASS,
                 "HARMESSI-VERSION",
                 f"Instalado con la versión actual del harness ({HARNESS_VERSION})",
             )
         ]
     return [
-        ResultadoCheck(
-            NIVEL_WARN,
-            SECCION_HARMESSI,
+        checks.CheckResult(
+            checks.STATUS_WARN,
             "HARMESSI-VERSION",
             f"Instalado con harness_version={version_instalada!r}, la versión actual de "
             f"este checkout es {HARNESS_VERSION!r} -- puede haber drift de manifiesto",
@@ -743,16 +727,17 @@ def _check_launchers_existen(destino: Path) -> list:
         ruta = destino / ruta_rel
         if ruta.exists():
             resultados.append(
-                ResultadoCheck(NIVEL_OK, SECCION_RUNTIME, "RUNTIME-LAUNCHER", f"{ruta_rel} presente", ruta_rel)
+                checks.CheckResult(
+                    checks.STATUS_PASS, "RUNTIME-LAUNCHER", f"{ruta_rel} presente", subject=ruta_rel
+                )
             )
         else:
             resultados.append(
-                ResultadoCheck(
-                    NIVEL_ERROR,
-                    SECCION_RUNTIME,
+                checks.CheckResult(
+                    checks.STATUS_FAIL,
                     "RUNTIME-LAUNCHER-FALTANTE",
                     f"Lanzador de hook faltante: {ruta_rel}",
-                    ruta_rel,
+                    subject=ruta_rel,
                 )
             )
     return resultados
@@ -763,12 +748,11 @@ def _check_interprete_ejecuta_hooks(destino: Path) -> list:
     interprete = launcher_common.ruta_interprete_venv(destino, venv_dir)
     if not interprete.is_file():
         return [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_RUNTIME,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "RUNTIME-INTERPRETE",
                 f"No hay intérprete en {interprete}: los hooks no pueden ejecutarse",
-                str(interprete),
+                subject=str(interprete),
             )
         ]
     tools_dir = destino / "tools"
@@ -779,31 +763,28 @@ def _check_interprete_ejecuta_hooks(destino: Path) -> list:
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         return [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_RUNTIME,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "RUNTIME-INTERPRETE",
                 f"No se pudo ejecutar el intérprete {interprete}: {exc}",
-                str(interprete),
+                subject=str(interprete),
             )
         ]
     if resultado.returncode != 0:
         return [
-            ResultadoCheck(
-                NIVEL_ERROR,
-                SECCION_RUNTIME,
+            checks.CheckResult(
+                checks.STATUS_FAIL,
                 "RUNTIME-INTERPRETE",
                 f"El intérprete no pudo importar los módulos de los hooks: {resultado.stderr.strip()}",
-                str(interprete),
+                subject=str(interprete),
             )
         ]
     return [
-        ResultadoCheck(
-            NIVEL_OK,
-            SECCION_RUNTIME,
+        checks.CheckResult(
+            checks.STATUS_PASS,
             "RUNTIME-INTERPRETE",
             f"{interprete} puede importar dsguard.core y nbrunner.core",
-            str(interprete),
+            subject=str(interprete),
         )
     ]
 
@@ -823,9 +804,8 @@ def _extraer_rutas_script(comando: str, destino: Path) -> list:
 def _check_hooks_configurados_existen(destino: Path, settings_data: Optional[dict]) -> list:
     if settings_data is None:
         return [
-            ResultadoCheck(
-                NIVEL_WARN,
-                SECCION_RUNTIME,
+            checks.CheckResult(
+                checks.STATUS_WARN,
                 "RUNTIME-HOOKS-EXISTEN",
                 "No hay settings.json legible para verificar los scripts de los hooks",
             )
@@ -833,8 +813,8 @@ def _check_hooks_configurados_existen(destino: Path, settings_data: Optional[dic
     comandos = list(_iterar_comandos_hooks(settings_data))
     if not comandos:
         return [
-            ResultadoCheck(
-                NIVEL_WARN, SECCION_RUNTIME, "RUNTIME-HOOKS-EXISTEN", "No hay hooks configurados para verificar"
+            checks.CheckResult(
+                checks.STATUS_WARN, "RUNTIME-HOOKS-EXISTEN", "No hay hooks configurados para verificar"
             )
         ]
     resultados = []
@@ -842,9 +822,8 @@ def _check_hooks_configurados_existen(destino: Path, settings_data: Optional[dic
         rutas = [r for r in _extraer_rutas_script(comando, destino) if r.suffix in (".py", ".sh")]
         if not rutas:
             resultados.append(
-                ResultadoCheck(
-                    NIVEL_WARN,
-                    SECCION_RUNTIME,
+                checks.CheckResult(
+                    checks.STATUS_WARN,
                     "RUNTIME-HOOKS-EXISTEN",
                     f"No se pudo interpretar el script del hook {matcher!r} ({evento}): {comando}",
                 )
@@ -853,22 +832,20 @@ def _check_hooks_configurados_existen(destino: Path, settings_data: Optional[dic
         for ruta in rutas:
             if ruta.is_file():
                 resultados.append(
-                    ResultadoCheck(
-                        NIVEL_OK,
-                        SECCION_RUNTIME,
+                    checks.CheckResult(
+                        checks.STATUS_PASS,
                         "RUNTIME-HOOKS-EXISTEN",
                         f"Script del hook {matcher!r} ({evento}) existe: {ruta}",
-                        str(ruta),
+                        subject=str(ruta),
                     )
                 )
             else:
                 resultados.append(
-                    ResultadoCheck(
-                        NIVEL_ERROR,
-                        SECCION_RUNTIME,
+                    checks.CheckResult(
+                        checks.STATUS_FAIL,
                         "RUNTIME-HOOKS-EXISTEN",
                         f"Script del hook {matcher!r} ({evento}) no existe: {ruta}",
-                        str(ruta),
+                        subject=str(ruta),
                     )
                 )
     return resultados
@@ -877,9 +854,8 @@ def _check_hooks_configurados_existen(destino: Path, settings_data: Optional[dic
 def _check_dependencia_shell(settings_data: Optional[dict]) -> list:
     if settings_data is None:
         return [
-            ResultadoCheck(
-                NIVEL_WARN,
-                SECCION_RUNTIME,
+            checks.CheckResult(
+                checks.STATUS_WARN,
                 "RUNTIME-SHELL-DEP",
                 "No hay settings.json legible para revisar dependencias de shell en los hooks",
             )
@@ -887,8 +863,8 @@ def _check_dependencia_shell(settings_data: Optional[dict]) -> list:
     comandos = list(_iterar_comandos_hooks(settings_data))
     if not comandos:
         return [
-            ResultadoCheck(
-                NIVEL_WARN, SECCION_RUNTIME, "RUNTIME-SHELL-DEP", "No hay hooks configurados para revisar"
+            checks.CheckResult(
+                checks.STATUS_WARN, "RUNTIME-SHELL-DEP", "No hay hooks configurados para revisar"
             )
         ]
     resultados = []
@@ -898,23 +874,21 @@ def _check_dependencia_shell(settings_data: Optional[dict]) -> list:
         if nombre_ejecutable in _PREFIJOS_SHELL:
             disponible = shutil.which(nombre_ejecutable) is not None
             resultados.append(
-                ResultadoCheck(
-                    NIVEL_ERROR if not disponible else NIVEL_WARN,
-                    SECCION_RUNTIME,
+                checks.CheckResult(
+                    checks.STATUS_FAIL if not disponible else checks.STATUS_WARN,
                     "RUNTIME-SHELL-DEP",
                     f"Hook {matcher!r} ({evento}) depende de un shell externo ({nombre_ejecutable!r}), "
                     f"{'no encontrado en PATH' if not disponible else 'encontrado en PATH'}: {comando}",
-                    comando,
+                    subject=comando,
                 )
             )
         else:
             resultados.append(
-                ResultadoCheck(
-                    NIVEL_OK,
-                    SECCION_RUNTIME,
+                checks.CheckResult(
+                    checks.STATUS_PASS,
                     "RUNTIME-SHELL-DEP",
                     f"Hook {matcher!r} ({evento}) no depende de un shell externo",
-                    comando,
+                    subject=comando,
                 )
             )
     return resultados
@@ -975,9 +949,12 @@ def ejecutar(destino) -> tuple:
 
 def formatear(resultados: list) -> str:
     """Reporte de texto plano, agrupado por sección en el orden fijo
-    CORE/HARMESSI/RUNTIME, con un resumen final de conteos por nivel."""
+    CORE/HARMESSI/RUNTIME, con un resumen final de conteos por nivel. El
+    segmento `[N/A]` del resumen es condicional: solo aparece si el conteo
+    es mayor a 0 (ningún check de Doctor lo emite hoy, salida idéntica a
+    antes del retrofit de Change 4)."""
     lineas = ["Harmessi doctor"]
-    conteos = {NIVEL_OK: 0, NIVEL_WARN: 0, NIVEL_ERROR: 0}
+    conteos = {NIVEL_OK: 0, NIVEL_WARN: 0, NIVEL_ERROR: 0, "N/A": 0}
 
     for seccion in _SECCIONES_ORDEN:
         entradas = [r for r in resultados if r.seccion == seccion]
@@ -989,7 +966,8 @@ def formatear(resultados: list) -> str:
             sufijo = f" ({r.ubicacion})" if r.ubicacion else ""
             lineas.append(f"[{r.nivel}] {r.codigo}: {r.mensaje}{sufijo}")
 
-    lineas.append(
-        f"\nResumen: {conteos[NIVEL_OK]} [OK], {conteos[NIVEL_WARN]} [WARN], {conteos[NIVEL_ERROR]} [ERROR]"
-    )
+    resumen = f"{conteos[NIVEL_OK]} [OK], {conteos[NIVEL_WARN]} [WARN], {conteos[NIVEL_ERROR]} [ERROR]"
+    if conteos.get("N/A", 0) > 0:
+        resumen += f", {conteos['N/A']} [N/A]"
+    lineas.append(f"\nResumen: {resumen}")
     return "\n".join(lineas)

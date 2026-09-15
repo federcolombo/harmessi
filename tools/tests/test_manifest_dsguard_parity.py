@@ -116,5 +116,20 @@ class TestParidadManifestMaturityExplicita(unittest.TestCase):
         self.assertIn("tools/dsguard/maturity.py", destinos_verbatim)
 
 
+class TestParidadManifestChecksExplicita(unittest.TestCase):
+    """Regresión de `20260915-checks-engine-foundation`: mismo criterio que
+    `TestParidadManifestLifecycleYKddCompatExplicita`/`TestParidadManifestMaturityExplicita`
+    -- nombre hardcodeado, no dependiente de qué importe `ds_guard.py` a
+    nivel de módulo (`checks.py` no se wirea en `ds_guard.py` en este
+    change), para que `checks.py` siga cubierto por el manifiesto de todos
+    modos (lo usa `harmessi doctor` vía `tools.dsguard.checks`)."""
+
+    def test_checks_py_tiene_entrada_verbatim_en_manifest(self):
+        destinos_verbatim = {
+            entrada.destino for entrada in MANIFEST if entrada.tratamiento == VERBATIM
+        }
+        self.assertIn("tools/dsguard/checks.py", destinos_verbatim)
+
+
 if __name__ == "__main__":
     unittest.main()
