@@ -288,6 +288,16 @@ MANIFEST: tuple = (
         descripcion="Matriz de readiness + promocion secuencial gateada, vía project readiness/promote (Change 6 v0.3)",
     ),
     EntradaManifiesto(
+        fuente="tools/dsguard/status.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/status.py",
+        descripcion=(
+            "Superficie unificada de status de proyecto (project/installation/alignment/"
+            "lifecycle/mlops/readiness/harness), de solo lectura, vía ds_guard status "
+            "(sin --change-id) (Change 8 v0.3)"
+        ),
+    ),
+    EntradaManifiesto(
         fuente="tools/dsguard/notebooks.py",
         tratamiento=VERBATIM,
         destino="tools/dsguard/notebooks.py",

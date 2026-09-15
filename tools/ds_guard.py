@@ -45,6 +45,7 @@ from dsguard import (  # noqa: E402
     readiness,
     repo,
     sdd,
+    status,
 )
 
 
@@ -87,7 +88,35 @@ def _imprimir_findings(findings: list, exit_code: int, como_json: bool) -> None:
 
 # --- status -----------------------------------------------------------------
 
+def cmd_status_unificado(args: argparse.Namespace) -> int:
+    """Rama nueva de `status` (sin `--change-id`, Change 8 v0.3:
+    20260915-unified-status-surface): status unificado de proyecto, de solo
+    lectura, vía `dsguard.status.evaluar_status`. Exit code 0 siempre (es
+    informativo, nunca "falla" por contenido -- mismo criterio que `project
+    status`/`mlops status`), salvo error de entorno real (p. ej. no estar en
+    un repo Git, que sigue devolviendo 3, igual que la rama SDD)."""
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    resultado = status.evaluar_status(repo_root)
+    if args.json:
+        print(json.dumps(status.formatear_json(resultado), indent=2, ensure_ascii=False))
+    else:
+        print(status.formatear_texto(resultado, verbose=args.verbose))
+    return 0
+
+
 def cmd_status(args: argparse.Namespace) -> int:
+    # Bifurcación (R1 de spec.md, Change 8 v0.3: 20260915-unified-status-surface):
+    # sin --change-id -> nuevo status unificado de proyecto; con --change-id ->
+    # comportamiento SDD EXACTO existente, sin ningún cambio de lógica debajo de
+    # este punto (invariante dura: cualquier invocación con --change-id sigue
+    # produciendo exactamente el mismo resultado que antes de este change).
+    if not args.change_id:
+        return cmd_status_unificado(args)
+
     try:
         repo_root = _repo_root()
     except RuntimeError as e:
@@ -1287,9 +1316,20 @@ def construir_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--json", action="store_true")
     p_init.set_defaults(func=cmd_init)
 
-    p_status = subparsers.add_parser("status", help="Estado actual del cambio (informativo).")
-    p_status.add_argument("--change-id", required=True)
+    p_status = subparsers.add_parser(
+        "status",
+        help=(
+            "Con --change-id: estado del cambio SDD (informativo). Sin --change-id: status "
+            "unificado de proyecto (Change 8 v0.3), de solo lectura."
+        ),
+    )
+    p_status.add_argument("--change-id", required=False, default=None)
     p_status.add_argument("--json", action="store_true")
+    p_status.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Solo aplica a la rama sin --change-id: detalle completo de checks en vez del resumen compacto.",
+    )
     p_status.set_defaults(func=cmd_status)
 
     p_validate = subparsers.add_parser("validate", help="Corre chequeos deterministas sobre el cambio.")

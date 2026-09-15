@@ -166,5 +166,19 @@ class TestParidadManifestReadinessYMlopsEvidenceExplicita(unittest.TestCase):
         self.assertIn("tools/dsguard/mlops_evidence.py", destinos_verbatim)
 
 
+class TestParidadManifestStatusExplicita(unittest.TestCase):
+    """Regresión de `20260915-unified-status-surface` (Change 8): mismo
+    criterio que las clases hermanas de arriba -- nombre hardcodeado, no
+    dependiente de qué importe `ds_guard.py` a nivel de módulo, para que
+    `status.py` siga cubierto por el manifiesto de todos modos (lo usa
+    `ds_guard status` sin `--change-id`)."""
+
+    def test_status_py_tiene_entrada_verbatim_en_manifest(self):
+        destinos_verbatim = {
+            entrada.destino for entrada in MANIFEST if entrada.tratamiento == VERBATIM
+        }
+        self.assertIn("tools/dsguard/status.py", destinos_verbatim)
+
+
 if __name__ == "__main__":
     unittest.main()

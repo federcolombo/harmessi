@@ -5,8 +5,10 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -104,6 +106,7 @@ class TestIntegracionInstalacionCompleta(unittest.TestCase):
             "tools/dsguard/mlops_foundations.py",
             "tools/dsguard/mlops_evidence.py",
             "tools/dsguard/readiness.py",
+            "tools/dsguard/status.py",
             ".ds_init/control.json",
         )
         for relativo in archivos_clave:
@@ -119,6 +122,34 @@ class TestIntegracionInstalacionCompleta(unittest.TestCase):
             (self.repo / ".harmessi" / "project.json").exists(),
             "La instalación scratch no debe crear .harmessi/project.json (es estado generado en uso).",
         )
+
+        # `ds_guard status` (sin --change-id, Change 8 v0.3:
+        # 20260915-unified-status-surface) debe correr sin ImportError desde
+        # el destino instalado -- ni tools/harmessi/ ni tools/ds_init/ viajan
+        # con la instalación, así que status.py debe degradar con gracia
+        # (harness.disponible=False esperado, ver R11/R15 de spec.md).
+        resultado_status = subprocess.run(
+            [sys.executable, "tools/ds_guard.py", "status", "--json"],
+            cwd=str(self.repo),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        self.assertEqual(
+            resultado_status.returncode,
+            0,
+            f"ds_guard status (sin --change-id) falló desde el destino instalado: "
+            f"stdout={resultado_status.stdout!r} stderr={resultado_status.stderr!r}",
+        )
+        self.assertNotIn("ImportError", resultado_status.stderr)
+        self.assertNotIn("Traceback", resultado_status.stderr)
+        payload_status = json.loads(resultado_status.stdout)
+        self.assertIn("harness", payload_status)
+        self.assertFalse(
+            payload_status["harness"]["disponible"],
+            "harness.disponible debería ser False desde un destino instalado sin tools/harmessi/.",
+        )
+        self.assertIn("installation", payload_status)
 
         # `git status --porcelain`: los archivos nuevos aparecen como
         # untracked (`??`), sin nada roto ni corrupto reportado por Git.
