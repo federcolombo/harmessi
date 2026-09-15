@@ -87,20 +87,24 @@ routing ya clasificó la tarea como mediana, metodológica o sensible. Las plant
 
 ## KDD (lifecycle del proyecto)
 
-Distinto de SDD: SDD especifica/decide/implementa/verifica un cambio puntual; KDD es en qué etapa
-del lifecycle de Data Science está el proyecto (`problem_understanding` → ... → `monitoring`,
-persistido en `openspec/kdd/state.json`). Leer
+Distinto de SDD: SDD especifica/decide/implementa/verifica un cambio puntual; el lifecycle del
+**proyecto** tiene CRISP-DM como backbone (8 fases, `business_understanding` → ... →
+`monitoring`, persistidas en `openspec/lifecycle/state.json`), con KDD como proceso técnico
+subordinado dentro de las fases relevantes. La jerarquía completa (CRISP-DM/KDD/MLOps/SDD),
+el comportamiento esperado del Lead por `project_stage`, y las prohibiciones explícitas viven en
+`.claude/skills/lead-data-scientist/methodology.md` — leer bajo demanda, no por defecto. Leer
 `.claude/skills/lead-data-scientist/kdd.md` bajo demanda — no por defecto — cuando un cambio
 metodológico, de datos, de features, de modelo o de evaluación declara o afecta una etapa, o
-cuando haga falta interpretar el estado KDD del proyecto. Un cambio declara su etapa en
-`control["kdd"]`, nunca en `tasks.md`; cerrar el cambio agrega evidencia a esa etapa
-automáticamente, pero nunca la avanza de estado por sí solo — avanzar una etapa es siempre
-`ds_guard kdd transition`, explícito y con aprobación del usuario cuando corresponda.
+cuando haga falta interpretar el estado KDD del proyecto (incluye el vocabulario de compatibilidad
+v0.2 de 10 etapas legacy). Un cambio declara su etapa en `control["kdd"]`, nunca en `tasks.md`;
+cerrar el cambio agrega evidencia a esa etapa automáticamente, pero nunca la avanza de estado por
+sí solo — avanzar una etapa es siempre `ds_guard kdd transition`, explícito y con aprobación del
+usuario cuando corresponda.
 
 `.claude/skills/lead-data-scientist/eda.md` existe como referencia de Project EDA (Bloque 6): qué
 hace válida una EDA para decisiones de modelado (cutoff, holdout, reproducibilidad vía
 `profile_id`/fingerprint) y cómo la conduce el Lead. Se lee bajo demanda, mismo patrón que `kdd.md`/
-`decision-ledger.md` -- nunca por defecto.
+`decision-ledger.md`/`methodology.md` -- nunca por defecto.
 
 ## Gestión de sesiones
 

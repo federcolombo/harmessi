@@ -130,6 +130,47 @@ de validación sobre `control["remediaciones"]`, findings vía `_imprimir_findin
 devuelve `2` cuando la falla es `RemediacionLimiteError` (mismo criterio de "rehúso de uso", no
 gate).
 
+Comandos de lifecycle/madurez/MLOps (Changes 1/3/5/6/8, v0.3) — ninguno requiere `--change-id`, son
+de proyecto, no de cambio SDD. Detalle de diseño/gates en los `design.md` de esos changes y en
+`.claude/skills/lead-data-scientist/methodology.md`; acá solo sintaxis de invocación y
+comportamiento observable, mismo nivel que el resto de esta sección.
+
+- **`lifecycle migrate [--json]`**: migra `openspec/kdd/state.json` (v0.2, si existe) a
+  `openspec/lifecycle/state.json` (CRISP-DM + KDD + MLOps unificados, Change 1/2). Idempotente
+  sobre un `lifecycle/state.json` ya migrado; no toca `kdd/state.json` (queda congelado como
+  histórico).
+- **`project init [--stage <stage>|--adopt] [--json]`**: crea `.harmessi/project.json`.
+  `--stage` (`discovery`/`experiment`, mutuamente excluyente con `--adopt`) para proyecto nuevo;
+  `--adopt` para proyecto preexistente que se incorpora al harness (reglas de `maturity.py`, sin
+  heurística nueva). Sin ninguno de los dos, aplica el default (`experiment`).
+- **`project calibrate --stage <stage> --reason <texto> [--json]`**: recalibra `project_stage` de
+  forma excepcional (adopción/migración) — nunca un atajo de la promoción normal.
+- **`project set-risk <nivel> --reason <texto> [--json]`**: clasifica `risk_level`
+  (`low`/`medium`/`high`, posicional). Siempre explícito, nunca inferido.
+- **`project status [--json]`**: informativo, `project_stage`/`risk_level`/`installation_stage`
+  actuales, sin mutar nada.
+- **`project readiness --target <stage> [--json]`**: evalúa la matriz de readiness para el target
+  pedido (`--target`, targets válidos: `experiment`/`production_candidate`/`production`) —
+  `PASS`/`WARN`/`FAIL`/`N/A` por capability, sin mutar nada. Es la forma de chequear antes de
+  intentar `promote`.
+- **`project promote <stage> --reason <texto> [--json]`**: promueve `project_stage` al `stage`
+  pedido (posicional, **sin** `--target` — a diferencia de `readiness`). Atómico: si `readiness`
+  reporta algún `FAIL` para ese target, no promueve nada.
+- **`mlops status [--json]`**: evalúa los fundamentos MLOps (`foundations`) de solo lectura, sin
+  persistir nada.
+- **`mlops record [--json]`**: evalúa y además persiste esa evidencia en
+  `openspec/lifecycle/state.json` (`mlops.foundations`).
+- **`mlops evidence add --tier <tier> --capability <cap> --artifact <ruta> --reason <texto>
+  [--json]`**: registra evidencia determinista (identidad + hash del artefacto) para una
+  capability de un tier (`foundations`/`production_readiness`/`operations`). No valida calidad
+  semántica — solo integridad. Ver `production-readiness.md`/`operations.md` para el detalle por
+  tier.
+- **`status [--change-id <id>] [--json] [--verbose]`** (unificado, Change 8): sin `--change-id`,
+  status de proyecto de solo lectura — consolida `project status`/`mlops status`/`lifecycle`/
+  `readiness` del próximo target sugerido (`next_target`), sin crear un segundo engine de
+  evaluación. Con `--change-id`, se comporta como el `status` de cambio SDD ya documentado arriba
+  (misma superficie, un solo subcomando). `--verbose` solo aplica a la rama sin `--change-id`.
+
 ## 3. Códigos de hallazgo
 
 - **`ALCANCE-RUTA`**: archivo sucio fuera de `alcance.rutas_autorizadas`.

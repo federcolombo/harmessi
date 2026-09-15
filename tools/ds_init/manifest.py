@@ -184,6 +184,13 @@ MANIFEST: tuple = (
         stage_minimo="experiment",
     ),
     EntradaManifiesto(
+        fuente=f"{_dir_templates('python_jupyter_data')}/methodology.md.tmpl",
+        tratamiento=PLANTILLA,
+        destino=".claude/skills/lead-data-scientist/methodology.md",
+        descripcion="Jerarquía CRISP-DM/KDD/MLOps/SDD, comportamiento del Lead por project_stage "
+        "y prohibiciones explícitas (Change 9 v0.3)",
+    ),
+    EntradaManifiesto(
         fuente=".claude/skills/lead-data-scientist/templates/proposal.md",
         tratamiento=VERBATIM,
         destino=".claude/skills/lead-data-scientist/templates/proposal.md",

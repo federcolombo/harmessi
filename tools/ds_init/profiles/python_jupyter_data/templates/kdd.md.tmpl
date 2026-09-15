@@ -7,8 +7,12 @@ interpretar `openspec/kdd/state.json`. Nunca se carga por defecto.
 
 ## 1. Qué es y qué no es
 
-KDD es el lifecycle del **proyecto** de Data Science: en qué etapa está (Problem Understanding,
-Data Understanding, ..., Monitoring). SDD (`sdd.md`) sigue siendo el mecanismo para especificar,
+CRISP-DM es el backbone real del lifecycle del **proyecto** de Data Science; KDD es el proceso
+técnico subordinado dentro de él (ver `.claude/skills/lead-data-scientist/methodology.md` para la
+jerarquía completa CRISP-DM/KDD/MLOps/SDD). Esta página documenta específicamente el modelo v0.2
+de 10 etapas legacy (Problem Understanding, Data Understanding, ..., Monitoring), vigente hoy como
+superficie de compatibilidad (ver nota al inicio de este documento). SDD (`sdd.md`) sigue siendo el
+mecanismo para especificar,
 decidir, implementar, revisar y verificar un **cambio** puntual dentro de ese lifecycle. KDD no
 reemplaza a SDD, no tiene ledger de aprobaciones propio, no tiene sesión propia y no agrega ningún
 hook nuevo — reutiliza la maquinaria SDD ya existente (`control.json` de cada cambio, el gate de

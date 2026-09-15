@@ -1,8 +1,8 @@
 # Operations — referencia
 
 Se lee bajo demanda, cuando un proyecto se acerca a `project_stage: production` o el Lead necesita
-saber qué evidencia real hace falta para que `ds_guard project promote --target production` no
-bloquee. Nunca se carga por defecto.
+saber qué evidencia real hace falta para que `ds_guard project promote production --reason
+<texto>` no bloquee. Nunca se carga por defecto.
 
 ## 1. Qué es y qué no es
 
@@ -60,9 +60,9 @@ ds_guard mlops evidence add --tier operations --capability <capability> \
   mismo patrón de ejecución mecánica que el decision ledger (`decision-ledger.md` §4).
 - **Decide si algo cuenta como evidencia suficiente**: el usuario, de forma explícita — el Lead no
   inventa qué archivo alcanza, propone y espera aprobación (`CLAUDE.md` §3).
-- **Promueve**: `ds_guard project promote --target production --reason <texto>`, gateado por la
-  matriz completa (heredando todo lo de `production_readiness`) — atómico, no promueve si hay algún
-  `FAIL`.
+- **Promueve**: `ds_guard project promote production --reason <texto>` (posicional, sin
+  `--target`), gateado por la matriz completa (heredando todo lo de `production_readiness`) —
+  atómico, no promueve si hay algún `FAIL`.
 
 ## 5. Instalación física vs madurez alcanzada
 

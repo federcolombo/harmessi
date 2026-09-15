@@ -11,7 +11,9 @@ El decision ledger es un registro **append-only** de decisiones relevantes del p
 KDD:
 
 - SDD (`sdd.md`) especifica/decide/implementa/verifica un **cambio** puntual.
-- KDD (`kdd.md`) es en qué etapa del lifecycle de Data Science está el **proyecto**.
+- El lifecycle del **proyecto** tiene CRISP-DM como backbone real; KDD (`kdd.md`) es el proceso
+  técnico subordinado dentro de él — ver
+  `.claude/skills/lead-data-scientist/methodology.md` para la jerarquía completa.
 - El decision ledger es el **registro histórico de decisiones** tomadas a lo largo del proyecto
   (target, unidad de análisis, cutoff, métrica primaria, baseline, umbral, excepciones
   metodológicas, etc.), citables desde cualquier cambio SDD futuro sin tener que releer el chat
