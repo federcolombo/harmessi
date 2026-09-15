@@ -1,0 +1,67 @@
+# Production readiness — referencia
+
+Se lee bajo demanda, cuando un proyecto se acerca a `project_stage: production_candidate` o el
+Lead necesita saber qué evidencia real hace falta para que `ds_guard project promote --target
+production_candidate` no bloquee. Nunca se carga por defecto.
+
+## 1. Qué es y qué no es
+
+`production_readiness` es un **tier de la matriz de readiness** (`tools/dsguard/readiness.py`),
+no un checklist informal ni un conjunto de archivos a crear. Es el conjunto de capacidades que la
+matriz exige, con evidencia real, antes de que un proyecto pueda promoverse de `experiment` a
+`production_candidate`.
+
+Este documento **no satisface ningún gate por sí mismo**: instalarlo no cuenta como evidencia, no
+mueve `project_stage`, y no crea ningún archivo de scaffold (contrato, config de CI/CD, manifest de
+deployment). Es únicamente una guía de qué registrar y cómo — la evidencia real vive donde
+corresponde (código del proyecto, `mlops evidence add`), nunca acá.
+
+## 2. Las 5 capabilities de `production_readiness`
+
+Catálogo exacto (`tools/dsguard/lifecycle.py`, `MLOPS_CAPACIDADES["production_readiness"]`):
+
+1. **`packaging`**: el modelo/pipeline entrenado puede empaquetarse de forma reproducible (no
+   "funciona en mi notebook").
+2. **`environment_reproducible`**: el entorno de ejecución es reproducible. Regla especial: si el
+   proyecto tiene un lockfile reconocido (`requirements-lock.txt` u otro de
+   `mlops_foundations._ARCHIVOS_LOCKFILE`), esta capability se satisface automáticamente sin
+   necesidad de `mlops evidence add` — solo hace falta evidencia explícita si no hay lockfile.
+3. **`inference_contract`**: existe un contrato explícito de entrada/salida de inferencia (schema,
+   tipos, rangos esperados), no implícito en el código.
+4. **`inference_tests`**: hay tests reales que ejercitan la inferencia contra ese contrato.
+5. **`trazabilidad_fuerte`**: se puede reconstruir, de forma auditable, qué versión de datos +
+   código + parámetros produjo el artefacto candidato a producción.
+
+Además, `production_readiness` exige (sin ser parte de esta lista de capabilities, ver
+`readiness.py`): `risk_level` clasificado, las fases CRISP-DM hasta `production_readiness` en
+estado `cerrada`, y los 3 checks reinterpretados de `mlops foundations`
+(`reproducibilidad`/`versionado`/`artifacts` en `PASS` estricto; `lineage` preserva su severidad
+tal cual).
+
+## 3. Cómo registrar evidencia real
+
+Cada capability (salvo `environment_reproducible` con lockfile) se satisface registrando al menos
+un `artifact_evidence` válido:
+
+```
+ds_guard mlops evidence add --tier production_readiness --capability <capability> \
+  --artifact <ruta-relativa-al-artefacto-real> --reason <por-qué-esto-es-evidencia-suficiente>
+```
+
+- `--artifact` debe ser un archivo real, dentro del repo, que efectivamente demuestre la
+  capability (el contrato mismo, el archivo de tests, el script de empaquetado) — nunca un
+  placeholder vacío creado solo para pasar el check.
+- La evidencia se invalida sola si el archivo referenciado cambia (el hash registrado deja de
+  coincidir) o desaparece — hay que volver a registrarla después de cambios sustantivos.
+- `ds_guard project readiness --target production_candidate` muestra el estado completo de la
+  matriz (qué falta, qué ya tiene evidencia válida) sin mutar nada — es la forma de chequear avance
+  antes de intentar `promote`.
+
+## 4. Quién hace qué
+
+- **Registra evidencia**: el Lead, corriendo `mlops evidence add` con los valores ya aprobados —
+  mismo patrón de ejecución mecánica que el decision ledger (`decision-ledger.md` §4).
+- **Decide si algo cuenta como evidencia suficiente**: el usuario, de forma explícita — el Lead no
+  inventa qué archivo alcanza, propone y espera aprobación (`CLAUDE.md` §3).
+- **Promueve**: `ds_guard project promote --target production_candidate --reason <texto>`, gateado
+  por la matriz completa — atómico, no promueve si hay algún `FAIL`.

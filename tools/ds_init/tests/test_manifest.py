@@ -11,6 +11,7 @@ from tools.ds_init.manifest import (
     GENERADO,
     MERGE,
     MANIFEST,
+    ORDEN_STAGES,
     PERFILES,
     PLANTILLA,
     TRATAMIENTOS_VALIDOS,
@@ -18,8 +19,11 @@ from tools.ds_init.manifest import (
     EntradaManifiesto,
     PerfilDesconocidoError,
     manifest_para_perfil,
+    manifest_para_perfil_y_stage,
     resolver_dir_perfil,
 )
+
+PERFIL = "python-jupyter-data"
 
 
 class TestFormaManifiesto(unittest.TestCase):
@@ -113,6 +117,114 @@ class TestResolverDirPerfil(unittest.TestCase):
         # El mensaje debe ser explícito, no un FileNotFoundError críptico.
         self.assertIn("perfil-inexistente", str(ctx.exception))
         self.assertNotIsInstance(ctx.exception, FileNotFoundError)
+
+
+class TestBundlesProgressivos(unittest.TestCase):
+    """Tests de Change 7 v0.3 (`20260915-progressive-capability-installation-
+    and-scaffold`): `stage_minimo` + `manifest_para_perfil_y_stage`. Corre
+    contra los datos fijos del propio paquete (R14, no lee este repo a nivel
+    de contenido de archivos)."""
+
+    AGENTES = (
+        ".claude/agents/python-data-engineer.md",
+        ".claude/agents/data-science-reviewer.md",
+        ".claude/agents/metodologo.md",
+        ".claude/agents/notebook-runner.md",
+    )
+    DECISION_LEDGER = ".claude/skills/lead-data-scientist/decision-ledger.md"
+    PRODUCTION_READINESS = ".claude/skills/lead-data-scientist/production-readiness.md"
+    OPERATIONS = ".claude/skills/lead-data-scientist/operations.md"
+
+    def _destinos(self, stage: str) -> set:
+        return {e.destino for e in manifest_para_perfil_y_stage(PERFIL, stage)}
+
+    def test_orden_stages_es_el_esperado(self):
+        self.assertEqual(ORDEN_STAGES, ("discovery", "experiment", "production_candidate", "production"))
+
+    def test_discovery_no_incluye_agentes_ni_decision_ledger(self):
+        destinos = self._destinos("discovery")
+        for agente in self.AGENTES:
+            self.assertNotIn(agente, destinos)
+        self.assertNotIn(self.DECISION_LEDGER, destinos)
+        self.assertNotIn(self.PRODUCTION_READINESS, destinos)
+        self.assertNotIn(self.OPERATIONS, destinos)
+
+    def test_experiment_es_discovery_union_experiment(self):
+        discovery = self._destinos("discovery")
+        experiment = self._destinos("experiment")
+        entradas_experiment = {
+            e.destino for e in MANIFEST if e.stage_minimo == "experiment"
+        }
+        self.assertEqual(experiment, discovery | entradas_experiment)
+        for agente in self.AGENTES:
+            self.assertIn(agente, experiment)
+        self.assertIn(self.DECISION_LEDGER, experiment)
+        self.assertNotIn(self.PRODUCTION_READINESS, experiment)
+        self.assertNotIn(self.OPERATIONS, experiment)
+
+    def test_production_candidate_es_experiment_mas_production_readiness(self):
+        experiment = self._destinos("experiment")
+        candidate = self._destinos("production_candidate")
+        self.assertEqual(candidate, experiment | {self.PRODUCTION_READINESS})
+        self.assertNotIn(self.OPERATIONS, candidate)
+
+    def test_production_es_production_candidate_mas_operations(self):
+        candidate = self._destinos("production_candidate")
+        production = self._destinos("production")
+        self.assertEqual(production, candidate | {self.OPERATIONS})
+
+    def test_los_4_bundles_son_estrictamente_monotonicos_crecientes(self):
+        discovery = self._destinos("discovery")
+        experiment = self._destinos("experiment")
+        candidate = self._destinos("production_candidate")
+        production = self._destinos("production")
+
+        self.assertTrue(discovery <= experiment)
+        self.assertTrue(experiment <= candidate)
+        self.assertTrue(candidate <= production)
+        self.assertLess(len(discovery), len(experiment))
+        self.assertLess(len(experiment), len(candidate))
+        self.assertLess(len(candidate), len(production))
+
+    def test_ningun_stage_minimo_ambiguo_por_destino(self):
+        vistos = {}
+        for entrada in MANIFEST:
+            self.assertNotIn(
+                entrada.destino,
+                vistos,
+                f"destino {entrada.destino!r} duplicado en MANIFEST (ya visto con "
+                f"stage_minimo={vistos.get(entrada.destino)!r})",
+            )
+            vistos[entrada.destino] = entrada.stage_minimo
+
+    def test_manifest_para_perfil_sin_stage_sigue_devolviendo_set_completo(self):
+        entradas = manifest_para_perfil(PERFIL)
+        self.assertEqual(len(entradas), len(MANIFEST))
+        self.assertEqual({e.destino for e in entradas}, {e.destino for e in MANIFEST})
+
+    def test_manifest_para_perfil_y_stage_stage_invalido_levanta_value_error(self):
+        with self.assertRaises(ValueError):
+            manifest_para_perfil_y_stage(PERFIL, "stage-inexistente")
+
+    def test_entrada_stage_minimo_invalido_levanta_value_error(self):
+        with self.assertRaises(ValueError):
+            EntradaManifiesto(
+                fuente="algo.md",
+                tratamiento=VERBATIM,
+                destino="algo.md",
+                stage_minimo="stage-inexistente",
+            )
+
+    def test_entrada_sin_stage_minimo_explicito_default_discovery(self):
+        entrada = EntradaManifiesto(fuente="algo.md", tratamiento=VERBATIM, destino="algo-nueva.md")
+        self.assertEqual(entrada.stage_minimo, "discovery")
+
+    def test_production_readiness_y_operations_son_plantilla(self):
+        mapa = {e.destino: e for e in MANIFEST}
+        self.assertEqual(mapa[self.PRODUCTION_READINESS].tratamiento, PLANTILLA)
+        self.assertEqual(mapa[self.OPERATIONS].tratamiento, PLANTILLA)
+        self.assertEqual(mapa[self.PRODUCTION_READINESS].stage_minimo, "production_candidate")
+        self.assertEqual(mapa[self.OPERATIONS].stage_minimo, "production")
 
 
 if __name__ == "__main__":

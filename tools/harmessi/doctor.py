@@ -30,9 +30,11 @@ from typing import Callable, Optional
 
 from tools import launcher_common
 from tools.ds_init import control as control_mod
+from tools.ds_init import legacy as legacy_mod
 from tools.ds_init import manifest as manifest_mod
 from tools.ds_init.version import HARNESS_VERSION
 from tools.dsguard import checks
+from tools.dsguard import maturity
 from tools.dsguard import pathguard
 
 NIVEL_OK = "OK"
@@ -381,8 +383,18 @@ def _check_archivos_administrados(destino: Path, control_data: Optional[dict]) -
             )
         ]
     perfil = control_data.get("perfil")
+    installation_stage = control_data.get("installation_stage")
     try:
-        entradas = manifest_mod.manifest_para_perfil(perfil)
+        if installation_stage is not None:
+            # Change 7 v0.3 (R10 de spec.md): consciente de `installation_stage`
+            # -- un archivo de un stage superior al instalado NUNCA se
+            # reporta como faltante (ni FAIL ni WARN).
+            entradas = manifest_mod.manifest_para_perfil_y_stage(perfil, installation_stage)
+        else:
+            # Legacy (sin `installation_stage` en control.json): comportamiento
+            # EXACTO actual -- 0 cambio de UX/severidad para instalaciones
+            # legacy, incluido este propio repositorio (R10/design.md §8).
+            entradas = manifest_mod.manifest_para_perfil(perfil)
     except manifest_mod.PerfilDesconocidoError as exc:
         return [
             checks.CheckResult(checks.STATUS_FAIL, "HARMESSI-ARCHIVOS-ESPERADOS", str(exc))
@@ -718,6 +730,119 @@ def _check_coherencia_version(control_data: Optional[dict]) -> list:
     ]
 
 
+def _check_installation_stage(destino: Path, control_data: Optional[dict]) -> list:
+    """`HARMESSI-INSTALLATION-STAGE` (R11 de `spec.md`, Change 7 v0.3): solo
+    lectura, nunca muta `.harmessi/project.json` ni `.ds_init/control.json`.
+    Compara `project_stage` (madurez alcanzada, `maturity.py`) contra
+    `installation_stage` (capacidades físicas instaladas, `control.json`) --
+    ejes ortogonales que nunca se confunden entre sí (R9). Nunca `ERROR`/
+    `FAIL` bajo ningún escenario (regla explícita del usuario, §18): sin
+    datos suficientes -> `N/A`; `project_stage` más avanzado -> `WARN`
+    accionable; `installation_stage` más avanzado o igual -> `PASS`."""
+    codigo = "HARMESSI-INSTALLATION-STAGE"
+    try:
+        return _check_installation_stage_interno(destino, control_data, codigo)
+    except Exception as exc:  # noqa: BLE001 - garantia dura: este check nunca puede dar ERROR
+        # Blindaje explicito (hallazgo de revision, Change 7 v0.3): ademas de
+        # `MaturityEstadoError` (la excepcion de dominio esperada de
+        # `maturity.leer_estado`, ya manejada abajo), este check puede
+        # toparse con un `OSError`/`UnicodeDecodeError` de bajo nivel -- p.
+        # ej. una condicion de carrera TOCTOU entre el `.exists()` de abajo y
+        # el `open()` interno de `leer_estado`. Sin este manejo, esa
+        # excepcion escaparia hasta `checks.ejecutar_checks`, que la
+        # convertiria en `FAIL`/`technical_error` (mapeado a `ERROR` por
+        # Doctor) -- prohibido explicitamente para este check bajo cualquier
+        # escenario (R11 de `spec.md`).
+        return [
+            checks.CheckResult(
+                checks.STATUS_NA,
+                codigo,
+                f"No se pudo comparar project_stage vs installation_stage por un error "
+                f"inesperado (nunca se trata como fallo bloqueante en este check): {exc!r}",
+            )
+        ]
+
+
+def _check_installation_stage_interno(destino: Path, control_data: Optional[dict], codigo: str) -> list:
+    ruta_project = maturity.state_path(destino)
+    if not ruta_project.exists():
+        return [
+            checks.CheckResult(
+                checks.STATUS_NA,
+                codigo,
+                f"No existe {ruta_project}: no se puede comparar project_stage vs "
+                "installation_stage (proyecto sin 'ds_guard project init' todavía).",
+            )
+        ]
+    try:
+        estado_proyecto = maturity.leer_estado(ruta_project)
+    except maturity.MaturityEstadoError as exc:
+        return [
+            checks.CheckResult(
+                checks.STATUS_NA,
+                codigo,
+                f"{ruta_project} existe pero no es válido, no se puede comparar: {exc}",
+            )
+        ]
+    project_stage = estado_proyecto.get("project_stage")
+
+    if control_data is None:
+        return [
+            checks.CheckResult(
+                checks.STATUS_NA,
+                codigo,
+                "No hay control.json legible: no se puede determinar installation_stage.",
+            )
+        ]
+
+    perfil = control_data.get("perfil")
+    installation_stage = control_data.get("installation_stage")
+    if installation_stage is None:
+        try:
+            # Solo para MOSTRAR -- la inferencia nunca se persiste desde
+            # Doctor (R6/R11 de spec.md).
+            installation_stage = legacy_mod.inferir_installation_stage(destino, perfil)
+        except manifest_mod.PerfilDesconocidoError as exc:
+            return [
+                checks.CheckResult(
+                    checks.STATUS_NA,
+                    codigo,
+                    f"No se pudo inferir installation_stage (perfil desconocido): {exc}",
+                )
+            ]
+
+    try:
+        indice_project = manifest_mod.ORDEN_STAGES.index(project_stage)
+        indice_instalacion = manifest_mod.ORDEN_STAGES.index(installation_stage)
+    except ValueError:
+        return [
+            checks.CheckResult(
+                checks.STATUS_NA,
+                codigo,
+                f"stage(s) no reconocido(s) en {manifest_mod.ORDEN_STAGES}: "
+                f"project_stage={project_stage!r}, installation_stage={installation_stage!r}",
+            )
+        ]
+
+    if indice_project > indice_instalacion:
+        return [
+            checks.CheckResult(
+                checks.STATUS_WARN,
+                codigo,
+                f"project_stage ({project_stage!r}) más avanzado que installation_stage "
+                f"({installation_stage!r}): capabilities físicas pendientes de sync -- correr "
+                f"'python -m tools.ds_init sync --stage {project_stage} --execute'.",
+            )
+        ]
+    return [
+        checks.CheckResult(
+            checks.STATUS_PASS,
+            codigo,
+            f"installation_stage ({installation_stage!r}) cubre project_stage ({project_stage!r}).",
+        )
+    ]
+
+
 # --- RUNTIME -------------------------------------------------------------------
 
 
@@ -932,6 +1057,9 @@ def ejecutar(destino) -> tuple:
     resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-GUARDRAILS-JSON", _check_guardrails_json, destino)
     resultados += _ejecutar_check(
         SECCION_HARMESSI, "HARMESSI-VERSION", _check_coherencia_version, control_data
+    )
+    resultados += _ejecutar_check(
+        SECCION_HARMESSI, "HARMESSI-INSTALLATION-STAGE", _check_installation_stage, destino, control_data
     )
 
     resultados += _ejecutar_check(SECCION_RUNTIME, "RUNTIME-LAUNCHER", _check_launchers_existen, destino)

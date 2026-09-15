@@ -1,0 +1,75 @@
+# Operations — referencia
+
+Se lee bajo demanda, cuando un proyecto se acerca a `project_stage: production` o el Lead necesita
+saber qué evidencia real hace falta para que `ds_guard project promote --target production` no
+bloquee. Nunca se carga por defecto.
+
+## 1. Qué es y qué no es
+
+`operations` es el tier final de la matriz de readiness (`tools/dsguard/readiness.py`) — el
+conjunto de capacidades operativas que la matriz exige, con evidencia real, antes de que un
+proyecto pueda promoverse de `production_candidate` a `production`.
+
+Este documento **no satisface ningún gate por sí mismo**: instalarlo no cuenta como evidencia, no
+mueve `project_stage`, y no integra ninguna herramienta real de deployment/CI-CD/monitoring/cloud.
+Es únicamente una guía de qué registrar y cómo — la evidencia real vive donde corresponde (pipeline
+real del proyecto, `mlops evidence add`), nunca acá.
+
+## 2. Las 7 capabilities de `operations`
+
+Catálogo exacto (`tools/dsguard/lifecycle.py`, `MLOPS_CAPACIDADES["operations"]`):
+
+1. **`deployment`**: existe un mecanismo real y documentado de despliegue del artefacto a
+   producción (no un paso manual improvisado cada vez).
+2. **`cicd`**: hay integración/entrega continua real ejercitando el proyecto (build, tests,
+   empaquetado automatizados).
+3. **`monitoring`**: el sistema en producción se observa de forma real (métricas, logs, salud del
+   servicio).
+4. **`rollback`**: existe un mecanismo probado para revertir un despliegue problemático.
+5. **`drift`**: hay detección real de drift de datos/modelo en producción.
+6. **`alerts`**: existen alertas configuradas ante condiciones anómalas (fallas, drift, degradación
+   de métricas).
+7. **`retraining`**: existe un proceso definido (aunque sea semi-manual) para reentrenar y
+   re-promover el modelo cuando corresponda.
+
+Además, `operations` exige (sin ser parte de esta lista de capabilities, ver `readiness.py`): la
+fase CRISP-DM `deployment` en estado `cerrada` y la fase `monitoring` al menos `en_progreso`, sobre
+la base ya exigida por `production_readiness` (heredada, no se repite).
+
+## 3. Cómo registrar evidencia real
+
+Cada capability se satisface registrando al menos un `artifact_evidence` válido:
+
+```
+ds_guard mlops evidence add --tier operations --capability <capability> \
+  --artifact <ruta-relativa-al-artefacto-real> --reason <por-qué-esto-es-evidencia-suficiente>
+```
+
+- `--artifact` debe ser un archivo real, dentro del repo, que efectivamente demuestre la
+  capability (config real de CI/CD, documentación del runbook de rollback, dashboard/config de
+  monitoring versionado) — nunca un placeholder vacío creado solo para pasar el check.
+- La evidencia se invalida sola si el archivo referenciado cambia (el hash registrado deja de
+  coincidir) o desaparece — hay que volver a registrarla después de cambios sustantivos.
+- `ds_guard project readiness --target production` muestra el estado completo de la matriz (qué
+  falta, qué ya tiene evidencia válida) sin mutar nada — es la forma de chequear avance antes de
+  intentar `promote`.
+
+## 4. Quién hace qué
+
+- **Registra evidencia**: el Lead, corriendo `mlops evidence add` con los valores ya aprobados —
+  mismo patrón de ejecución mecánica que el decision ledger (`decision-ledger.md` §4).
+- **Decide si algo cuenta como evidencia suficiente**: el usuario, de forma explícita — el Lead no
+  inventa qué archivo alcanza, propone y espera aprobación (`CLAUDE.md` §3).
+- **Promueve**: `ds_guard project promote --target production --reason <texto>`, gateado por la
+  matriz completa (heredando todo lo de `production_readiness`) — atómico, no promueve si hay algún
+  `FAIL`.
+
+## 5. Instalación física vs madurez alcanzada
+
+Tener este documento instalado (`installation_stage: production`, vía `ds_init sync --stage
+production`) significa que el proyecto tiene disponible la *referencia* de qué evidencia
+registrar — no que ya la registró, ni que `project_stage` ya es `production`. Esos son ejes
+independientes: `installation_stage` describe capacidades físicas instaladas, `project_stage`
+describe madurez real alcanzada. Ver `harmessi doctor` (`HARMESSI-INSTALLATION-STAGE`) para
+detectar cuándo conviene correr `ds_init sync` porque `project_stage` avanzó más que las
+capacidades físicas instaladas.

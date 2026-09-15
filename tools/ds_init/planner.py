@@ -11,7 +11,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from .manifest import GENERADO, MERGE, PLANTILLA, VERBATIM, manifest_para_perfil
+from .manifest import (
+    GENERADO,
+    MERGE,
+    PLANTILLA,
+    VERBATIM,
+    manifest_para_perfil,
+    manifest_para_perfil_y_stage,
+)
 from .preflight import detectar_colisiones
 
 ACCION_CREAR = "crear"
@@ -59,14 +66,22 @@ def _accion_para_entrada(entrada, colisiones: set, integrar_claude_md: bool) -> 
     raise ValueError(f"tratamiento sin acción definida: {entrada.tratamiento!r}")
 
 
-def construir_plan(perfil: str, destino: Path, config: dict) -> list:
-    """Combina `manifest_para_perfil(perfil)` + `detectar_colisiones` y arma
-    la lista de `AccionPlan` (R3, R10).
+def construir_plan(perfil: str, destino: Path, config: dict, stage: str = None) -> list:
+    """Combina `manifest_para_perfil(perfil)` (o `manifest_para_perfil_y_stage`
+    si se pasa `stage`) + `detectar_colisiones` y arma la lista de
+    `AccionPlan` (R3, R10, R4 de Change 7 v0.3).
 
     `config` acepta la clave opcional `integrar_claude` (bool, default
     `False`) — corresponde al flag `--integrar-claude` de la CLI.
-    """
-    entradas = manifest_para_perfil(perfil)
+
+    `stage` (opcional, uno de `manifest.ORDEN_STAGES`): si es `None`
+    (default), usa `manifest_para_perfil(perfil)` — comportamiento actual,
+    sin cambios, para cualquier caller que no pase este parámetro. Si se
+    pasa, usa `manifest_para_perfil_y_stage(perfil, stage)` en su lugar."""
+    if stage is None:
+        entradas = manifest_para_perfil(perfil)
+    else:
+        entradas = manifest_para_perfil_y_stage(perfil, stage)
     destinos = [entrada.destino for entrada in entradas]
     colisiones = set(detectar_colisiones(destinos, Path(destino)))
     integrar_claude_md = bool(config.get("integrar_claude", False))

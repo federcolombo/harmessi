@@ -115,6 +115,76 @@ class TestInstalacionExitosa(unittest.TestCase):
         self.assertTrue((self.repo / ".ds_init" / "control.json").exists())
 
 
+class TestInstalacionConStage(unittest.TestCase):
+    """Tests de Change 7 v0.3 (R4 de `spec.md`): `writer.instalar` lee
+    `config.get('stage')` con el mismo criterio que `construir_plan`, para
+    que `entradas`/`entradas_por_destino` queden consistentes con el `plan`
+    recibido."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_stage_discovery_no_instala_agentes_ni_decision_ledger(self):
+        config = _config_base(self.repo)
+        config["stage"] = "discovery"
+        plan = construir_plan(PERFIL, self.repo, config, stage="discovery")
+
+        resultado = writer.instalar(plan, self.repo, config)
+
+        for ruta in (
+            ".claude/agents/python-data-engineer.md",
+            ".claude/agents/data-science-reviewer.md",
+            ".claude/agents/metodologo.md",
+            ".claude/agents/notebook-runner.md",
+            ".claude/skills/lead-data-scientist/decision-ledger.md",
+            ".claude/skills/lead-data-scientist/production-readiness.md",
+            ".claude/skills/lead-data-scientist/operations.md",
+        ):
+            self.assertFalse((self.repo / ruta).exists(), f"{ruta} no debería instalarse en discovery")
+            self.assertNotIn(ruta, resultado.aplicados)
+
+        # Archivo de discovery sí presente.
+        self.assertTrue((self.repo / "tools" / "ds_guard.py").exists())
+
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertEqual(control["installation_stage"], "discovery")
+
+    def test_stage_experiment_instala_agentes_pero_no_production_docs(self):
+        config = _config_base(self.repo)
+        config["stage"] = "experiment"
+        plan = construir_plan(PERFIL, self.repo, config, stage="experiment")
+
+        resultado = writer.instalar(plan, self.repo, config)
+
+        self.assertTrue((self.repo / ".claude" / "agents" / "python-data-engineer.md").exists())
+        self.assertTrue(
+            (self.repo / ".claude" / "skills" / "lead-data-scientist" / "decision-ledger.md").exists()
+        )
+        self.assertFalse(
+            (self.repo / ".claude" / "skills" / "lead-data-scientist" / "production-readiness.md").exists()
+        )
+        self.assertFalse(
+            (self.repo / ".claude" / "skills" / "lead-data-scientist" / "operations.md").exists()
+        )
+
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertEqual(control["installation_stage"], "experiment")
+
+    def test_sin_stage_en_config_control_json_no_tiene_installation_stage(self):
+        """R14: comportamiento actual intacto para cualquier caller que no
+        pase 'stage' en config (p. ej. un test/caller legacy)."""
+        config = _config_base(self.repo)
+        plan = construir_plan(PERFIL, self.repo, config)
+
+        writer.instalar(plan, self.repo, config)
+
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertNotIn("installation_stage", control)
+
+
 class TestColisionOmiteSinSobrescribir(unittest.TestCase):
     def setUp(self):
         self.repo = _crear_repo_git_temporal()

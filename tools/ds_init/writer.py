@@ -50,6 +50,7 @@ from .manifest import (
     PLANTILLA,
     VERBATIM,
     manifest_para_perfil,
+    manifest_para_perfil_y_stage,
     raiz_repo_origen,
 )
 from .planner import ACCION_MERGE, ACCION_OMITIR_EXISTENTE
@@ -351,7 +352,11 @@ def instalar(plan: list, destino, config: dict) -> ResultadoInstalacion:
     if not perfil:
         raise ValueError("config['perfil'] es obligatorio para writer.instalar()")
 
-    entradas = manifest_para_perfil(perfil)
+    stage = config.get("stage")
+    if stage is None:
+        entradas = manifest_para_perfil(perfil)
+    else:
+        entradas = manifest_para_perfil_y_stage(perfil, stage)
     entradas_por_destino = {entrada.destino: entrada for entrada in entradas}
     placeholders = dict(config.get("placeholders", {}))
 
@@ -422,7 +427,9 @@ def instalar(plan: list, destino, config: dict) -> ResultadoInstalacion:
         )
         _escribir_journal(journal_path, entradas_journal)
 
-        control_mod.generar_control(destino, perfil, config, archivos_aplicados)
+        control_mod.generar_control(
+            destino, perfil, config, archivos_aplicados, installation_stage=stage
+        )
     except Exception as exc:
         fallos_rollback = _revertir_journal(entradas_journal, destino, staging)
         remanente = _rmtree_seguro(staging)

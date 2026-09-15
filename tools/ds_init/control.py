@@ -39,6 +39,7 @@ def generar_control(
     config: dict,
     archivos_aplicados: list,
     fecha_utc: Optional[str] = None,
+    installation_stage: Optional[str] = None,
 ) -> dict:
     """Arma el archivo de control de una instalación exitosa y lo escribe en
     `<destino>/.ds_init/control.json` (creando el directorio `.ds_init/` si
@@ -62,6 +63,11 @@ def generar_control(
       `datetime.now(timezone.utc)` como hasta ahora — comportamiento sin
       cambios para quien no pase este parámetro (p. ej. `writer.py`, que
       sigue llamando posicionalmente con 4 argumentos).
+    - `installation_stage`: opcional (Change 7 v0.3, R5 de `spec.md`). Si no
+      es `None`, se agrega la clave `"installation_stage"` al dict resultante.
+      Si es `None` (default), la clave se OMITE por completo del dict — forma
+      legacy preservada byte a byte para cualquier caller que no pase este
+      parámetro.
     """
     destino = Path(destino)
 
@@ -89,6 +95,8 @@ def generar_control(
         },
         "archivos": archivos,
     }
+    if installation_stage is not None:
+        control["installation_stage"] = installation_stage
 
     dir_control = destino / DIR_CONTROL
     dir_control.mkdir(parents=True, exist_ok=True)
@@ -100,12 +108,20 @@ def generar_control(
     return control
 
 
-def regenerar_control(destino, control_previo: dict, *, perfil: Optional[str] = None) -> dict:
+def regenerar_control(
+    destino,
+    control_previo: dict,
+    *,
+    perfil: Optional[str] = None,
+    stage: Optional[str] = None,
+    installation_stage: Optional[str] = None,
+) -> dict:
     """Recalcula y reescribe `<destino>/.ds_init/control.json` a partir de un
     `control_previo` ya existente, para recalibrar `harness_version` y
     `archivos` cuando quedaron desactualizados respecto del manifiesto
     vigente (p. ej. tras agregar archivos administrados por el harness
-    directamente al repo sin pasar por una reinstalación).
+    directamente al repo sin pasar por una reinstalación, o tras un `sync`
+    de `ds_init` que amplió el bundle instalado, Change 7 v0.3).
 
     No reinstala nada: asume que los archivos administrados ya existen en
     `destino`, y solo recalcula sus hashes reales.
@@ -116,6 +132,14 @@ def regenerar_control(destino, control_previo: dict, *, perfil: Optional[str] = 
       `perfil` explícito), `configuracion` y `fecha_utc`.
     - `perfil` (solo keyword): perfil a usar para recalcular el manifiesto.
       Si no se pasa, se usa `control_previo["perfil"]`.
+    - `stage` (solo keyword, opcional, uno de `manifest.ORDEN_STAGES`): si se
+      pasa, `archivos` se recalcula vía `manifest_para_perfil_y_stage(perfil,
+      stage)` en vez de `manifest_para_perfil(perfil)` — R5 de `spec.md`.
+    - `installation_stage` (solo keyword, opcional): si se pasa, se usa tal
+      cual como el nuevo `installation_stage` del control regenerado. Si es
+      `None` (default), se preserva `control_previo.get("installation_stage")`
+      — nunca se borra un valor existente por el solo hecho de omitir este
+      parámetro.
 
     Comportamiento:
     - `configuracion` se preserva exactamente igual a la de `control_previo`
@@ -126,10 +150,10 @@ def regenerar_control(destino, control_previo: dict, *, perfil: Optional[str] = 
     - `harness_version` se actualiza al valor vigente de `HARNESS_VERSION`
       (no el de `control_previo`), porque `generar_control` siempre lo
       estampa así.
-    - `archivos` se reconstruye EXCLUSIVAMENTE a partir de
-      `manifest_para_perfil(perfil_efectivo)` vigente (con hashes reales
-      leídos de `destino`) — nunca es una unión con
-      `control_previo["archivos"]`. Cualquier entrada de
+    - `archivos` se reconstruye EXCLUSIVAMENTE a partir del manifiesto
+      vigente (`manifest_para_perfil`/`manifest_para_perfil_y_stage` según
+      corresponda, con hashes reales leídos de `destino`) — nunca es una
+      unión con `control_previo["archivos"]`. Cualquier entrada de
       `control_previo["archivos"]` cuya ruta ya no esté en el manifiesto
       vigente queda ausente del resultado, sin lógica extra: simplemente no
       se itera sobre `control_previo["archivos"]`.
@@ -139,15 +163,22 @@ def regenerar_control(destino, control_previo: dict, *, perfil: Optional[str] = 
     - No introduce escritura atómica nueva: reutiliza el mismo patrón
       no-atómico de `generar_control` (escritura directa con `open`/`write`).
     """
-    from .manifest import manifest_para_perfil
+    from .manifest import manifest_para_perfil, manifest_para_perfil_y_stage
 
     perfil_efectivo = perfil or control_previo["perfil"]
 
+    if stage is None:
+        entradas = manifest_para_perfil(perfil_efectivo)
+    else:
+        entradas = manifest_para_perfil_y_stage(perfil_efectivo, stage)
+
     archivos_aplicados = [
-        entrada.destino
-        for entrada in manifest_para_perfil(perfil_efectivo)
-        if entrada.destino != ".ds_init/control.json"
+        entrada.destino for entrada in entradas if entrada.destino != ".ds_init/control.json"
     ]
+
+    installation_stage_efectivo = (
+        installation_stage if installation_stage is not None else control_previo.get("installation_stage")
+    )
 
     return generar_control(
         destino,
@@ -155,4 +186,5 @@ def regenerar_control(destino, control_previo: dict, *, perfil: Optional[str] = 
         control_previo["configuracion"],
         archivos_aplicados,
         fecha_utc=control_previo.get("fecha_utc"),
+        installation_stage=installation_stage_efectivo,
     )

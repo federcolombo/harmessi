@@ -28,6 +28,15 @@ MERGE = "MERGE"
 
 TRATAMIENTOS_VALIDOS = (VERBATIM, PLANTILLA, GENERADO, MERGE)
 
+# Vocabulario de bundles/stages de instalación progresiva (Change 7 v0.3:
+# 20260915-progressive-capability-installation-and-scaffold). Acumulativo:
+# cada stage incluye todo lo de los stages anteriores más sus propias
+# entradas nuevas (`spec.md` R1). Eje ortogonal a `PROJECT_STAGES` de
+# `tools/dsguard/maturity.py` (`installation_stage` describe qué está
+# físicamente instalado; `project_stage` describe madurez alcanzada -- nunca
+# se confunden ni se escriben implícitamente entre sí).
+ORDEN_STAGES = ("discovery", "experiment", "production_candidate", "production")
+
 # Mapeo explícito entre el identificador público de perfil (el que se escribe
 # en `--perfil` / el default de la CLI, con guiones, R2) y el nombre real del
 # directorio del perfil bajo `profiles/` (con guion bajo — no se renombra).
@@ -68,6 +77,10 @@ class EntradaManifiesto:
     - `destino`: ruta relativa a la raíz del repo instalado (destino).
     - `perfiles`: perfiles a los que aplica esta entrada (por defecto, todos
       los perfiles declarados en `profile.json` la incluyen si no se filtra).
+    - `stage_minimo`: bundle/stage de instalación progresiva mínimo que
+      incluye esta entrada (uno de `ORDEN_STAGES`, default `"discovery"` --
+      compatible hacia atrás: cualquier construcción existente sin este kwarg
+      sigue funcionando igual, clasificada `discovery`, R3 de `spec.md`).
     """
 
     fuente: Optional[str]
@@ -75,6 +88,7 @@ class EntradaManifiesto:
     destino: str
     descripcion: str = ""
     perfiles: tuple = field(default_factory=tuple)
+    stage_minimo: str = "discovery"
 
     def __post_init__(self) -> None:
         if self.tratamiento not in TRATAMIENTOS_VALIDOS:
@@ -85,6 +99,11 @@ class EntradaManifiesto:
             raise ValueError(
                 f"entrada {self.destino!r} con tratamiento {self.tratamiento!r} "
                 "requiere 'fuente'"
+            )
+        if self.stage_minimo not in ORDEN_STAGES:
+            raise ValueError(
+                f"stage_minimo inválido {self.stage_minimo!r} para destino {self.destino!r} "
+                f"(válidos: {ORDEN_STAGES})"
             )
 
 
@@ -110,24 +129,28 @@ MANIFEST: tuple = (
         tratamiento=PLANTILLA,
         destino=".claude/agents/python-data-engineer.md",
         descripcion="Subagente de implementación (único con permiso de escritura)",
+        stage_minimo="experiment",
     ),
     EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/agent_data_science_reviewer.md.tmpl",
         tratamiento=PLANTILLA,
         destino=".claude/agents/data-science-reviewer.md",
         descripcion="Subagente de revisión, solo lectura",
+        stage_minimo="experiment",
     ),
     EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/agent_metodologo.md.tmpl",
         tratamiento=PLANTILLA,
         destino=".claude/agents/metodologo.md",
         descripcion="Subagente de diseño experimental/metodología, solo lectura",
+        stage_minimo="experiment",
     ),
     EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/agent_notebook_runner.md.tmpl",
         tratamiento=PLANTILLA,
         destino=".claude/agents/notebook-runner.md",
         descripcion="Subagente de ejecución controlada de notebooks",
+        stage_minimo="experiment",
     ),
     EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/SKILL_lead_data_scientist.md.tmpl",
@@ -158,6 +181,7 @@ MANIFEST: tuple = (
         tratamiento=PLANTILLA,
         destino=".claude/skills/lead-data-scientist/decision-ledger.md",
         descripcion="Referencia del decision ledger del proyecto (Bloque 5)",
+        stage_minimo="experiment",
     ),
     EntradaManifiesto(
         fuente=".claude/skills/lead-data-scientist/templates/proposal.md",
@@ -423,6 +447,20 @@ MANIFEST: tuple = (
         destino=".claude/skills/lead-data-scientist/templates/eda.md",
     ),
     EntradaManifiesto(
+        fuente=f"{_dir_templates('python_jupyter_data')}/production-readiness.md.tmpl",
+        tratamiento=PLANTILLA,
+        destino=".claude/skills/lead-data-scientist/production-readiness.md",
+        descripcion="Referencia de los gates de production_readiness y mlops evidence add (Change 7 v0.3)",
+        stage_minimo="production_candidate",
+    ),
+    EntradaManifiesto(
+        fuente=f"{_dir_templates('python_jupyter_data')}/operations.md.tmpl",
+        tratamiento=PLANTILLA,
+        destino=".claude/skills/lead-data-scientist/operations.md",
+        descripcion="Referencia de los gates de operations y mlops evidence add (Change 7 v0.3)",
+        stage_minimo="production",
+    ),
+    EntradaManifiesto(
         fuente=".claude/settings.json",
         tratamiento=MERGE,
         destino=".claude/settings.json",
@@ -504,3 +542,25 @@ def manifest_para_perfil(perfil: str) -> list:
 
     destinos_explicitos = set(config.get("destinos", []))
     return [entrada for entrada in MANIFEST if entrada.destino in destinos_explicitos]
+
+
+def manifest_para_perfil_y_stage(perfil: str, stage: str) -> list:
+    """Como `manifest_para_perfil(perfil)`, pero además filtra por bundle de
+    instalación progresiva (R3 de `spec.md`, Change 7 v0.3): primero filtra
+    por perfil (reusa `manifest_para_perfil`, sin duplicar esa lógica),
+    después conserva solo las entradas cuyo `stage_minimo` sea `stage` o uno
+    de los stages anteriores en `ORDEN_STAGES` (acumulativo — `experiment`
+    incluye `discovery`, `production_candidate` incluye `experiment`, etc.).
+
+    `manifest_para_perfil` (sin stage) NO se modifica ni se llama distinto por
+    esta función existir: sigue devolviendo siempre el set completo para
+    cualquier caller que no pase stage (R3)."""
+    if stage not in ORDEN_STAGES:
+        raise ValueError(f"stage inválido: {stage!r} (válidos: {ORDEN_STAGES})")
+    limite = ORDEN_STAGES.index(stage)
+    entradas = manifest_para_perfil(perfil)
+    return [
+        entrada
+        for entrada in entradas
+        if ORDEN_STAGES.index(entrada.stage_minimo) <= limite
+    ]

@@ -216,5 +216,73 @@ class TestRegenerarControl(unittest.TestCase):
         self.assertNotIn("archivo-obsoleto-inventado.md", rutas_obtenidas)
 
 
+class TestInstallationStageOpcional(unittest.TestCase):
+    """Tests de Change 7 v0.3 (R5 de `spec.md`): `installation_stage` opcional
+    y aditivo en `generar_control`/`regenerar_control`, forma legacy
+    preservada byte a byte cuando no se pasa."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+        self.config = _config_base(self.repo)
+        plan = construir_plan(PERFIL, self.repo, self.config)
+        self.resultado = writer.instalar(plan, self.repo, self.config)
+        self.ruta_control = self.repo / ".ds_init" / "control.json"
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_generar_control_sin_installation_stage_omite_la_clave(self):
+        control = control_mod.generar_control(self.repo, PERFIL, self.config, self.resultado.aplicados)
+        self.assertNotIn("installation_stage", control)
+
+    def test_generar_control_con_installation_stage_agrega_la_clave(self):
+        control = control_mod.generar_control(
+            self.repo, PERFIL, self.config, self.resultado.aplicados, installation_stage="experiment"
+        )
+        self.assertEqual(control["installation_stage"], "experiment")
+
+    def test_regenerar_control_sin_installation_stage_preserva_el_previo(self):
+        control_previo = json.loads(self.ruta_control.read_text(encoding="utf-8"))
+        control_previo["installation_stage"] = "production_candidate"
+        self.ruta_control.write_text(
+            json.dumps(control_previo, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+
+        control_nuevo = control_mod.regenerar_control(self.repo, control_previo)
+        self.assertEqual(control_nuevo["installation_stage"], "production_candidate")
+
+    def test_regenerar_control_con_installation_stage_explicito_lo_usa(self):
+        control_previo = json.loads(self.ruta_control.read_text(encoding="utf-8"))
+
+        control_nuevo = control_mod.regenerar_control(
+            self.repo, control_previo, installation_stage="production"
+        )
+        self.assertEqual(control_nuevo["installation_stage"], "production")
+
+    def test_regenerar_control_sin_installation_stage_previo_ni_nuevo_omite_la_clave(self):
+        control_previo = json.loads(self.ruta_control.read_text(encoding="utf-8"))
+        self.assertNotIn("installation_stage", control_previo)
+
+        control_nuevo = control_mod.regenerar_control(self.repo, control_previo)
+        self.assertNotIn("installation_stage", control_nuevo)
+
+    def test_regenerar_control_con_stage_filtra_archivos_por_bundle(self):
+        from tools.ds_init.manifest import manifest_para_perfil_y_stage
+
+        control_previo = json.loads(self.ruta_control.read_text(encoding="utf-8"))
+
+        control_nuevo = control_mod.regenerar_control(
+            self.repo, control_previo, stage="discovery", installation_stage="discovery"
+        )
+
+        rutas_esperadas = {
+            e.destino
+            for e in manifest_para_perfil_y_stage(PERFIL, "discovery")
+            if e.destino != ".ds_init/control.json"
+        }
+        rutas_obtenidas = {entrada["ruta"] for entrada in control_nuevo["archivos"]}
+        self.assertEqual(rutas_obtenidas, rutas_esperadas)
+
+
 if __name__ == "__main__":
     unittest.main()

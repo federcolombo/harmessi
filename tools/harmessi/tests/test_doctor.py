@@ -15,10 +15,13 @@ from pathlib import Path
 from unittest.mock import patch
 
 from tools import launcher_common
+from tools.ds_init import legacy as legacy_mod
 from tools.ds_init import writer as ds_init_writer
+from tools.ds_init.manifest import ORDEN_STAGES
 from tools.ds_init.planner import construir_plan
 from tools.ds_init.version import HARNESS_VERSION
 from tools.dsguard import checks
+from tools.dsguard import maturity
 from tools.harmessi import doctor as doctor_mod
 
 PERFIL = "python-jupyter-data"
@@ -76,6 +79,22 @@ def _config_base(destino: Path, nombre: str = "proyecto-de-prueba") -> dict:
 def _instalar_harness_real(destino: Path):
     config = _config_base(destino)
     plan = construir_plan(PERFIL, destino, config)
+    return ds_init_writer.instalar(plan, destino, config)
+
+
+def _instalar_harness_real_con_stage(destino: Path, stage: str):
+    """Como `_instalar_harness_real`, pero pasando `stage` explícito (Change
+    7 v0.3) -- usado para ejercitar el camino stage-aware de Doctor. Nota:
+    escribir directamente con `writer.instalar(..., stage=...)` (en vez de
+    pasar por `cli.py sync`) es una simplificación deliberada de fixture:
+    la restricción de `--stage production_candidate/production` rechazado en
+    una instalación NUEVA vive en `cli.py` (capa de UX), no en
+    `writer.instalar`/`construir_plan` -- a ese nivel cualquier stage de
+    `ORDEN_STAGES` es válido (`design.md` no distingue "install" de "sync" a
+    nivel de escritura, solo a nivel de CLI)."""
+    config = _config_base(destino)
+    config["stage"] = stage
+    plan = construir_plan(PERFIL, destino, config, stage=stage)
     return ds_init_writer.instalar(plan, destino, config)
 
 
@@ -527,14 +546,268 @@ class TestRetrofitChecksEngine(unittest.TestCase):
 
     def test_formatear_sin_resultados_na_no_agrega_segmento(self):
         _instalar_harness_real(self.repo)
+        # Change 7 v0.3 agregó `HARMESSI-INSTALLATION-STAGE`, que da N/A si
+        # falta `.harmessi/project.json` -- para seguir ejercitando el caso
+        # "cero N/A" que este test verifica, hace falta que ese check
+        # resuelva a PASS (project_stage <= installation_stage instalado),
+        # no que falte el archivo de madurez.
+        maturity.project_init(self.repo, stage="experiment")
         resultados, _ = doctor_mod.ejecutar(self.repo)
-        # Caso real actual: ningún check emite N/A.
         self.assertEqual(_niveles(resultados) & {"N/A"}, set())
         texto = doctor_mod.formatear(resultados)
         self.assertNotIn("[N/A]", texto)
         ultima_linea = texto.splitlines()[-1]
         self.assertTrue(ultima_linea.startswith("Resumen: "))
         self.assertEqual(ultima_linea.count("["), 3)  # solo [OK], [WARN], [ERROR]
+
+
+class TestArchivosAdministradosStageAware(unittest.TestCase):
+    """Tests de Change 7 v0.3 (R10 de `spec.md`): `_check_archivos_administrados`
+    usa `manifest_para_perfil_y_stage` cuando `control_data` tiene
+    `installation_stage`; sin esa clave (legacy), preserva el comportamiento
+    actual EXACTO -- ya cubierto por `TestChecksHarmessiInstalacionReal`
+    (que instala vía `_instalar_harness_real`, sin `stage` en `config`, y por
+    lo tanto sin `installation_stage` en `control.json` -- el mismo camino
+    legacy que hoy)."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_stage_discovery_no_reclama_agentes_ni_docs_production(self):
+        _instalar_harness_real_con_stage(self.repo, "discovery")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertEqual(control_data.get("installation_stage"), "discovery")
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+
+    def test_stage_experiment_no_reclama_production_candidate_ni_production(self):
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertEqual(control_data.get("installation_stage"), "experiment")
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+
+        # Confirmación directa: los docs de production_candidate/production
+        # ni siquiera existen en el destino (nunca se instalaron en
+        # 'experiment'), y sin embargo el check da PASS -- nunca se reclaman.
+        self.assertFalse(
+            (self.repo / ".claude" / "skills" / "lead-data-scientist" / "production-readiness.md").exists()
+        )
+        self.assertFalse(
+            (self.repo / ".claude" / "skills" / "lead-data-scientist" / "operations.md").exists()
+        )
+
+    def test_stage_experiment_si_falta_agente_de_su_propio_bundle_sigue_reportando(self):
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        (self.repo / ".claude" / "agents" / "notebook-runner.md").unlink()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
+
+    def test_stage_production_candidate_exige_set_acumulado_completo(self):
+        _instalar_harness_real_con_stage(self.repo, "production_candidate")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertEqual(control_data.get("installation_stage"), "production_candidate")
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+        self.assertTrue(
+            (self.repo / ".claude" / "skills" / "lead-data-scientist" / "production-readiness.md").exists()
+        )
+        self.assertFalse(
+            (self.repo / ".claude" / "skills" / "lead-data-scientist" / "operations.md").exists()
+        )
+
+        (self.repo / ".claude" / "skills" / "lead-data-scientist" / "production-readiness.md").unlink()
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertIn(checks.STATUS_WARN, _statuses(resultados))
+
+    def test_stage_production_exige_operations_tambien(self):
+        _instalar_harness_real_con_stage(self.repo, "production")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertEqual(control_data.get("installation_stage"), "production")
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+        self.assertTrue(
+            (self.repo / ".claude" / "skills" / "lead-data-scientist" / "operations.md").exists()
+        )
+
+    def test_legacy_sin_installation_stage_se_comporta_exactamente_igual_que_hoy(self):
+        """0 diff respecto del comportamiento anterior a este change: sin
+        `installation_stage`, usa `manifest_para_perfil(perfil)` completo --
+        un archivo de 'production_candidate'/'production' (que ni siquiera
+        existe en una instalación legacy) se reporta como WARN faltante,
+        exactamente como cualquier otro archivo administrado faltante."""
+        _instalar_harness_real(self.repo)
+        # `_instalar_harness_real` usa `construir_plan(..., stage=None)`, que
+        # devuelve el manifiesto COMPLETO (R3: `manifest_para_perfil` no se
+        # filtra nunca) -- eso incluye los 2 documentos nuevos de este mismo
+        # change, algo que una instalación legacy REAL (anterior a que esas
+        # entradas existieran en el manifiesto) nunca pudo tener. Se borran
+        # acá para simular fielmente ese escenario legacy real.
+        (self.repo / ".claude" / "skills" / "lead-data-scientist" / "production-readiness.md").unlink()
+        (self.repo / ".claude" / "skills" / "lead-data-scientist" / "operations.md").unlink()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertNotIn("installation_stage", control_data)
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        codigos_faltantes = {r.subject for r in resultados if r.status == checks.STATUS_WARN}
+        self.assertIn(".claude/skills/lead-data-scientist/production-readiness.md", codigos_faltantes)
+        self.assertIn(".claude/skills/lead-data-scientist/operations.md", codigos_faltantes)
+        self.assertNotIn(checks.STATUS_FAIL, _statuses(resultados))
+
+
+class TestCheckInstallationStage(unittest.TestCase):
+    """Tests de Change 7 v0.3 (R11 de `spec.md`): `HARMESSI-INSTALLATION-STAGE`,
+    solo lectura, nunca `ERROR`/`FAIL`."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_na_sin_project_json(self):
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+        self.assertEqual(resultados[0].status, checks.STATUS_NA)
+
+    def test_na_sin_control_data(self):
+        maturity.project_init(self.repo, stage="experiment")
+
+        resultados = doctor_mod._check_installation_stage(self.repo, None)
+        self.assertEqual(resultados[0].status, checks.STATUS_NA)
+
+    def test_na_con_project_json_corrupto(self):
+        maturity.project_init(self.repo, stage="experiment")
+        maturity.state_path(self.repo).write_text("{ esto rompe el json", encoding="utf-8")
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+        self.assertEqual(resultados[0].status, checks.STATUS_NA)
+
+    def test_pass_si_stages_iguales(self):
+        maturity.project_init(self.repo, stage="experiment")
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_warn_si_project_stage_mas_avanzado(self):
+        estado, _ = maturity.project_init(self.repo, stage="experiment")
+        maturity.calibrar(self.repo, "production_candidate", "avance de prueba")
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
+        self.assertIn("sync", resultados[0].message.lower())
+        self.assertIn("production_candidate", resultados[0].message)
+
+    def test_pass_si_installation_stage_mas_avanzado_nunca_error(self):
+        maturity.project_init(self.repo, stage="discovery")
+        _instalar_harness_real_con_stage(self.repo, "production")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_usa_inferencia_legacy_solo_para_mostrar_sin_persistir(self):
+        maturity.project_init(self.repo, stage="experiment")
+        _instalar_harness_real(self.repo)  # legacy: sin 'stage' en config.
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertNotIn("installation_stage", control_data)
+
+        ruta_control = self.repo / ".ds_init" / "control.json"
+        bytes_control_antes = ruta_control.read_bytes()
+
+        resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+        # Legacy con los 5 archivos de 'experiment' presentes -> se infiere
+        # 'production' (R6) -- 'production' >= 'experiment' -> PASS.
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+        # Nunca persiste la inferencia ni muta control.json/project.json.
+        self.assertEqual(ruta_control.read_bytes(), bytes_control_antes)
+        control_releido = json.loads(ruta_control.read_text(encoding="utf-8"))
+        self.assertNotIn("installation_stage", control_releido)
+
+    def test_nunca_error_ante_excepcion_inesperada_no_de_dominio(self):
+        """Hallazgo de revisión, Change 7 v0.3: `maturity.leer_estado` puede
+        levantar algo distinto de `MaturityEstadoError` (p. ej. una carrera
+        TOCTOU real, o cualquier fallo de bajo nivel) -- este check tiene
+        prohibido, bajo cualquier escenario, dejar escapar eso como
+        `ERROR`/`FAIL` (R11 de spec.md). Se simula con un `OSError` genérico,
+        no capturado por el `except maturity.MaturityEstadoError` interno."""
+        maturity.project_init(self.repo, stage="experiment")
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        with patch.object(maturity, "leer_estado", side_effect=OSError("disco no disponible")):
+            resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+
+        self.assertEqual(resultados[0].status, checks.STATUS_NA)
+        self.assertNotEqual(resultados[0].status, checks.STATUS_FAIL)
+
+    def test_doctor_ejecutar_nunca_muta_project_json_ni_control_json(self):
+        maturity.project_init(self.repo, stage="experiment")
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+
+        ruta_project = maturity.state_path(self.repo)
+        ruta_control = self.repo / ".ds_init" / "control.json"
+        bytes_project_antes = ruta_project.read_bytes()
+        bytes_control_antes = ruta_control.read_bytes()
+
+        doctor_mod.ejecutar(self.repo)
+
+        self.assertEqual(ruta_project.read_bytes(), bytes_project_antes)
+        self.assertEqual(ruta_control.read_bytes(), bytes_control_antes)
+
+    def test_wireado_en_ejecutar_bajo_seccion_harmessi(self):
+        maturity.project_init(self.repo, stage="experiment")
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+
+        resultados, _ = doctor_mod.ejecutar(self.repo)
+        encontrado = [r for r in resultados if r.codigo == "HARMESSI-INSTALLATION-STAGE"]
+        self.assertEqual(len(encontrado), 1)
+        self.assertEqual(encontrado[0].seccion, doctor_mod.SECCION_HARMESSI)
+        self.assertEqual(encontrado[0].nivel, doctor_mod.NIVEL_OK)
+
+
+class TestDoctorRegresionEsteRepositorio(unittest.TestCase):
+    """R14/AC de `spec.md`: `harmessi doctor` corrido sobre ESTE repositorio
+    (instalación legacy real, sin `installation_stage`) produce
+    `HARMESSI-ARCHIVOS-ESPERADOS` con el mismo criterio completo que antes de
+    este change -- el único drift esperado son los 2 archivos nuevos del
+    propio manifiesto de Change 7 (`production-readiness.md`/`operations.md`,
+    reportados como WARN por faltantes, nunca ERROR, ya que no son
+    `_RUTAS_CRITICAS`)."""
+
+    def test_este_repo_no_tiene_installation_stage_en_su_control_json(self):
+        raiz = Path(__file__).resolve().parents[3]
+        control_data, resultados = doctor_mod._leer_control_json(raiz)
+        self.assertIsNotNone(control_data)
+        self.assertNotIn("installation_stage", control_data)
+
+    def test_este_repo_archivos_administrados_sin_fail_inesperado(self):
+        raiz = Path(__file__).resolve().parents[3]
+        control_data, _ = doctor_mod._leer_control_json(raiz)
+        resultados = doctor_mod._check_archivos_administrados(raiz, control_data)
+        # Ningún FAIL: todos los archivos _RUTAS_CRITICAS de este propio repo
+        # (ya instalados) siguen presentes: el único drift posible son WARN
+        # de los 2 docs nuevos de Change 7, que todavía no están instalados
+        # físicamente en este propio checkout (no son críticos).
+        self.assertNotIn(checks.STATUS_FAIL, _statuses(resultados))
 
 
 if __name__ == "__main__":
