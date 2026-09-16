@@ -34,7 +34,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from . import checks, lifecycle, maturity, mlops_evidence, mlops_foundations, readiness
+from . import checks, lifecycle, maturity, mlops_evidence, mlops_foundations, readiness, scientific_validity
 
 # --- next_target (R3) -- funcion pura, nunca persistida -----------------------
 
@@ -407,6 +407,13 @@ def _seccion_readiness(repo_root: Path, project_stage: Optional[str]) -> dict:
     }
 
 
+def _seccion_science(repo_root: Path) -> dict:
+    """Reusa `scientific_validity.evaluar_scientific_checks` tal cual, sin
+    reinterpretar severidad (mismo criterio que `_seccion_mlops_foundations`)."""
+    resultados = scientific_validity.evaluar_scientific_checks(repo_root)
+    return {"checks": [r.to_dict() for r in resultados]}
+
+
 def _seccion_harness(repo_root: Path) -> dict:
     """`disponible: bool` solo si `tools.harmessi.doctor` puede importarse Y
     `doctor.ejecutar(repo_root)` corre sin excepcion (R11). Nunca copia
@@ -491,6 +498,7 @@ def evaluar_status(repo_root) -> dict:
     lifecycle_sec = _envolver("lifecycle", _seccion_lifecycle, repo_root)
     mlops = _envolver("mlops", _seccion_mlops, repo_root, project_stage)
     readiness_sec = _envolver("readiness", _seccion_readiness, repo_root, project_stage)
+    science = _envolver("science", _seccion_science, repo_root)
     harness = _envolver("harness", _seccion_harness, repo_root)
 
     return {
@@ -500,6 +508,7 @@ def evaluar_status(repo_root) -> dict:
         "lifecycle": lifecycle_sec,
         "mlops": mlops,
         "readiness": readiness_sec,
+        "science": science,
         "harness": harness,
     }
 
@@ -582,6 +591,14 @@ def formatear_texto(status: dict, verbose: bool = False) -> str:
         lineas.append("  Warnings:")
         for r in warnings_list:
             lineas.append(f"    [{r['status']}] {r['code']}: {r['message']}")
+
+    science = status.get("science", {})
+    lineas.append("Scientific Validity:")
+    if "checks" in science:
+        for r in science["checks"]:
+            lineas.append(f"    [{r['status']}] {r['code']}: {r['message']}")
+    else:
+        lineas.append(f"  no disponible -- {science.get('mensaje')}")
 
     harness = status.get("harness", {})
     if harness.get("disponible"):

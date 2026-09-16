@@ -577,6 +577,31 @@ class TestFormatearTexto(_BaseRepoGit):
         self.assertGreaterEqual(len(detallado), len(compacto))
 
 
+# --- science (v0.4 Change 0: 20260916-kdd-enforceable-checks) ------------------
+
+class TestSeccionScience(_BaseRepoGit):
+    def test_science_presente_con_checks_lista(self):
+        resultado = status.evaluar_status(self.repo)
+        self.assertIn("science", resultado)
+        self.assertIn("checks", resultado["science"])
+        self.assertIsInstance(resultado["science"]["checks"], list)
+
+    def test_science_presente_con_policy_declarada(self):
+        policy_dir = self.repo / ".harmessi"
+        policy_dir.mkdir(parents=True, exist_ok=True)
+        (policy_dir / "scientific-policy.json").write_text(
+            json.dumps({"schema_version": 1}), encoding="utf-8"
+        )
+        resultado = status.evaluar_status(self.repo)
+        self.assertIn("checks", resultado["science"])
+        self.assertIsInstance(resultado["science"]["checks"], list)
+
+    def test_formatear_texto_incluye_scientific_validity(self):
+        resultado = status.evaluar_status(self.repo)
+        texto = status.formatear_texto(resultado)
+        self.assertIn("Scientific Validity:", texto)
+
+
 # --- CLI: no colision / regresion (R1, AC "CLI / no colisión") ------------------
 
 class _BaseCliRepo(unittest.TestCase):

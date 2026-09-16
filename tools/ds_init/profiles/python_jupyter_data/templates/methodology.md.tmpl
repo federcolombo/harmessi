@@ -293,7 +293,7 @@ trabajo ya existente (SDD, sesiones, delegación):
 
 ## 23. Acciones prohibidas del Lead
 
-Lista explícita, verbatim del brief — ninguna de estas 15 acciones es aceptable bajo ninguna
+Lista explícita, verbatim del brief — ninguna de estas 17 acciones es aceptable bajo ninguna
 circunstancia, sin excepción implícita:
 
 1. No editar `project_stage` manualmente.
@@ -314,3 +314,35 @@ circunstancia, sin excepción implícita:
     concreto).
 14. No delegarle escritura al `data-science-reviewer` (es de solo lectura, siempre).
 15. No permitir dos writers concurrentes sobre el mismo cambio.
+16. No inventar un PASS de scientific validity que el engine no reportó.
+17. No tratar un N/A de scientific validity como evidencia de que la regla no aplica al proyecto
+    real, sin verificar antes si lo que falta es declarar la política.
+
+## 24. Scientific validity checks
+
+`ds_guard science status` (y `--json`) da los checks científicos deterministas: cutoff temporal,
+protección/uso de holdout, target-leakage, forbidden-features, split temporal, y baseline. Todos
+se definen vía `.harmessi/scientific-policy.json` (opcional, declarativo) — nunca inferidos por
+heurística.
+
+- PASS/WARN/FAIL/N-A vienen del binario (`tools/dsguard/scientific_validity.py`) — el Lead nunca
+  inventa un PASS ni reinterpreta un FAIL/WARN (mismo criterio que §5 de readiness).
+- N/A significa que la regla no es evaluable según lo declarado (sección ausente o
+  `declared`/`required` != true en la policy) — no "no aplica al proyecto real". Si el proyecto
+  tiene un cutoff/holdout/target real pero la policy no lo declara, el N/A es señal de que falta
+  declarar la política, no evidencia de que no corresponde.
+- Leakage semántico (una columna que "parece" leakage sin estar en `forbidden_features`
+  declaradas) sigue exigiendo juicio del Lead/`metodologo` — el binario solo detecta
+  target-en-features, forbidden-features explícitas y split temporal inválido, nunca
+  correlaciones ni heurísticas de nombre de columna.
+- `SCI-BASELINE` en PASS nunca implica calidad del baseline — solo confirma que existe un
+  artifact de evidencia no vacío (y, si se declaró hash, que no cambió). La razonabilidad del
+  baseline elegido sigue siendo evaluación semántica del Lead/metodólogo.
+- Antes de afirmar validez científica de un cambio, el Lead consulta `ds_guard science status` —
+  nunca lo calcula a mano ni lo asume de memoria.
+- `science status` es estrictamente de solo lectura — nunca escribe `.harmessi/
+  scientific-policy.json`; ese archivo se declara/edita explícitamente (mismo criterio editorial
+  que `guardrails.json`), nunca se genera automáticamente por observar.
+- No wireado a `readiness`/`promote` todavía (decisión explícita de v0.4 Change 0, ver
+  `design.md` del change) — un PASS/FAIL de scientific validity no bloquea ni habilita una
+  promoción por sí solo en esta versión.

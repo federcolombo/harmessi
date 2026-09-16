@@ -44,6 +44,7 @@ from dsguard import (  # noqa: E402
     notebooks,
     readiness,
     repo,
+    scientific_validity,
     sdd,
     status,
 )
@@ -705,6 +706,27 @@ def cmd_notebook_diff(args: argparse.Namespace) -> int:
             )
 
     return exit_code
+
+
+# --- science (v0.4 Change 0: 20260916-kdd-enforceable-checks) ----------------
+
+def cmd_science_status(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    resultados = scientific_validity.evaluar_scientific_checks(repo_root)
+    if args.json:
+        print(json.dumps({"resultados": [r.to_dict() for r in resultados]}, ensure_ascii=False))
+    else:
+        print("Scientific Validity\n")
+        for r in resultados:
+            print(f"{r.status:<6} {r.code}: {r.message}")
+        conteos = checks.contar_por_status(resultados)
+        print(f"\nResumen: {conteos[checks.STATUS_PASS]} PASS, {conteos[checks.STATUS_WARN]} WARN, "
+              f"{conteos[checks.STATUS_FAIL]} FAIL, {conteos[checks.STATUS_NA]} N/A")
+    return checks.exit_code(resultados)
 
 
 # --- archive --------------------------------------------------------------
@@ -1501,6 +1523,12 @@ def construir_parser() -> argparse.ArgumentParser:
     p_mlops_evidence_add.add_argument("--reason", required=True)
     p_mlops_evidence_add.add_argument("--json", action="store_true")
     p_mlops_evidence_add.set_defaults(func=cmd_mlops_evidence_add)
+
+    p_science = subparsers.add_parser("science", help="Scientific validity checks (cutoff/holdout/leakage/baseline), solo lectura.")
+    science_sub = p_science.add_subparsers(dest="subcomando", required=True)
+    p_science_status = science_sub.add_parser("status", help="Evalúa los scientific validity checks (.harmessi/scientific-policy.json opcional).")
+    p_science_status.add_argument("--json", action="store_true")
+    p_science_status.set_defaults(func=cmd_science_status)
 
     p_archive = subparsers.add_parser(
         "archive", help="Archiva un cambio cerrado de openspec/changes/ a openspec/archive/ (git mv)."

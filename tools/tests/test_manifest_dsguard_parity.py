@@ -180,5 +180,19 @@ class TestParidadManifestStatusExplicita(unittest.TestCase):
         self.assertIn("tools/dsguard/status.py", destinos_verbatim)
 
 
+class TestParidadManifestScientificValidityExplicita(unittest.TestCase):
+    """Regresión de `20260916-kdd-enforceable-checks` (v0.4 Change 0): mismo
+    criterio que las clases hermanas de arriba -- nombre hardcodeado, no
+    dependiente de qué importe `ds_guard.py` a nivel de módulo, para que
+    `scientific_validity.py` siga cubierto por el manifiesto de todos modos
+    (lo usa `ds_guard science status`)."""
+
+    def test_scientific_validity_py_tiene_entrada_verbatim_en_manifest(self):
+        destinos_verbatim = {
+            entrada.destino for entrada in MANIFEST if entrada.tratamiento == VERBATIM
+        }
+        self.assertIn("tools/dsguard/scientific_validity.py", destinos_verbatim)
+
+
 if __name__ == "__main__":
     unittest.main()

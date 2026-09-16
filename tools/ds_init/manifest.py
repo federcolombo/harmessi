@@ -305,6 +305,12 @@ MANIFEST: tuple = (
         ),
     ),
     EntradaManifiesto(
+        fuente="tools/dsguard/scientific_validity.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/scientific_validity.py",
+        descripcion="Scientific validity checks (cutoff/holdout/leakage/baseline) sobre .harmessi/scientific-policy.json opcional, vía ds_guard science status (v0.4 Change 0)",
+    ),
+    EntradaManifiesto(
         fuente="tools/dsguard/notebooks.py",
         tratamiento=VERBATIM,
         destino="tools/dsguard/notebooks.py",
