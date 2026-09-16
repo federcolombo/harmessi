@@ -305,6 +305,12 @@ MANIFEST: tuple = (
         ),
     ),
     EntradaManifiesto(
+        fuente="tools/dsguard/scope.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/scope.py",
+        descripcion="Alcance de un Change SDD: working tree + diff desde baseline vs. rutas_autorizadas (Change 2 v0.4)",
+    ),
+    EntradaManifiesto(
         fuente="tools/dsguard/scientific_validity.py",
         tratamiento=VERBATIM,
         destino="tools/dsguard/scientific_validity.py",

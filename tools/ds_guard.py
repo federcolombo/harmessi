@@ -45,6 +45,7 @@ from dsguard import (  # noqa: E402
     readiness,
     repo,
     scientific_validity,
+    scope,
     sdd,
     status,
 )
@@ -189,13 +190,20 @@ def cmd_validate(args: argparse.Namespace) -> int:
     estado, err = sdd.read_estado(tasks_path)
     findings += err
 
-    rutas_autorizadas = control.get("alcance", {}).get("rutas_autorizadas", [])
-    for r in repo.files_out_of_scope(repo_root, rutas_autorizadas):
-        findings.append(core.Finding("ALCANCE-RUTA", f"Archivo fuera de alcance: {r}", r))
+    sesion_activa = sdd._sesion_activa(control)
+
+    # scope.evaluar_alcance se evalúa UNA sola vez por invocación: si --gate cierre va a
+    # correr gate_cierre (que ya lo incluye internamente), no se duplica acá; en cualquier
+    # otro caso (sin --gate, --gate implementacion, o --gate cierre que no llega a correr
+    # gate_cierre por SESION-AUSENTE) se evalúa acá directamente, para no perder cobertura.
+    gate_cierre_va_a_correr = args.gate == "cierre" and (
+        sesion_activa is not None or estado == "cerrada"
+    )
+    if not gate_cierre_va_a_correr:
+        findings += scope.evaluar_alcance(repo_root, control)
+
     for linea in repo.diff_check(repo_root):
         findings.append(core.Finding("ALCANCE-WHITESPACE", linea))
-
-    sesion_activa = sdd._sesion_activa(control)
 
     if args.gate:
         # Excepción (spec requisito 8): un cambio ya cerrado puede validar el
