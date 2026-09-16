@@ -57,7 +57,7 @@ engine: `1` si hay algún `FAIL`, `0` si no — `WARN`/`N/A` nunca afectan el ex
 **Doctor (retrofit):**
 - `doctor.ejecutar(destino)` sigue devolviendo `(list[ResultadoCheck], exit_code)` — mismo tipo,
   mismos campos (`nivel/seccion/codigo/mensaje/ubicacion`) que antes del retrofit.
-- Sobre este mismo repo (`C:\Datos\UNCO-Intelligence\harmessi`), después del retrofit: mismos
+- Sobre este mismo repo (checkout local de Harmessi), después del retrofit: mismos
   códigos de check, mismos mensajes, mismo agrupamiento CORE/HARMESSI/RUNTIME, mismo orden,
   mismo exit code, y el mismo conteo **27 [OK], 3 [WARN], 0 [ERROR]** que reportó el usuario tras
   Change 3 (verificable corriendo `harmessi doctor` real antes/después del retrofit y comparando

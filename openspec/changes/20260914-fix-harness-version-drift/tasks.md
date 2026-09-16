@@ -5,7 +5,7 @@ estado: cerrada
 ## Invocaciones planificadas
 <!-- rol, momento del ciclo, y qué produce cada una -->
 - Python Data Engineer, al cerrar implementación: aplicar `regenerar_control()` una
-  vez sobre `C:\Datos\UNCO-Intelligence\harmessi` para corregir su
+  vez sobre `este mismo repo (checkout local de Harmessi)` para corregir su
   `.ds_init/control.json` real. Produce: `control.json` actualizado con
   `harness_version` y `archivos` vigentes.
 - Python Data Engineer, al cerrar implementación: correr
@@ -25,7 +25,7 @@ estado: cerrada
     - [x] no conserva entradas obsoletas que ya no estén en el manifest (test con una
           entrada ficticia obsoleta en `control_previo["archivos"]`)
 - [x] Invocación planificada: aplicar `regenerar_control()` una vez sobre
-      `C:\Datos\UNCO-Intelligence\harmessi` para corregir su `.ds_init/control.json`
+      `este mismo repo (checkout local de Harmessi)` para corregir su `.ds_init/control.json`
       real.
 - [x] Invocación planificada: correr
       `python -m pytest tools/ds_init/tests/test_control_file.py` y

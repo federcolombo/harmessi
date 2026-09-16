@@ -20,12 +20,32 @@ science project.
 - **A governed workflow** — a `lead-data-scientist` orchestrator skill that
   drives a lightweight SDD loop (proposal → spec → design → tasks →
   verification) instead of ad hoc prompting.
-- **KDD project lifecycle** — a separate, persisted state
-  (`openspec/kdd/state.json`) tracking which Data Science lifecycle stage
-  (Problem Understanding → ... → Monitoring) the project is in, kept distinct
-  from SDD's per-change state: a change can declare which stage(s) it
-  belongs to, and closing it appends evidence to that stage without ever
-  auto-advancing it — advancing a stage stays an explicit, approved action.
+- **A governed project lifecycle (CRISP-DM + KDD + MLOps)** — a single,
+  persisted state (`openspec/lifecycle/state.json`) with CRISP-DM as the
+  project's methodological backbone (8 phases, Business Understanding →
+  Monitoring), KDD as the subordinate technical process within the relevant
+  phases (5 canonical steps: selection, preprocessing, transformation,
+  data_mining, interpretation_evaluation), and MLOps as three tiers of
+  progressive capabilities (foundations, production_readiness, operations).
+  A change can declare which phase(s)/step(s) it belongs to; closing it
+  appends evidence without ever auto-advancing anything — advancing a phase
+  stays an explicit, approved action. Kept distinct from SDD's per-change
+  state. A pre-lifecycle 10-stage KDD state (legacy) is still readable and
+  migrated via an explicit `ds_guard lifecycle migrate`, never silently.
+- **Project maturity, readiness, and progressive installation** —
+  `project_stage` (`discovery`/`experiment`/`production_candidate`/
+  `production`, in `.harmessi/project.json`) and `risk_level` track *achieved
+  maturity*, kept strictly orthogonal to `installation_stage` (which
+  `.ds_init/control.json` and `ds_init sync --stage <stage>` track instead —
+  *installed capabilities*, never a proxy for maturity). `ds_guard project
+  readiness --target <stage>` evaluates the full deterministic gate matrix
+  for the next stage (PASS/WARN/FAIL/N-A, with technical errors always
+  surfaced, never hidden); `ds_guard project promote <stage> --reason
+  <text>` only ever advances one sequential stage at a time, gated by that
+  same evaluation, atomically. `ds_guard status` (no `--change-id`)
+  consolidates all of the above — maturity, lifecycle, MLOps, readiness,
+  installation alignment, and a harness-integrity summary — into one
+  read-only view.
 - **Reproducible validation (`dsguard`)** — deterministic, reproducible
   SHA-256 hashing of approved artifacts (`sha256/lf/v1`, LF-normalized) and an
   append-only `control.json` approval ledger, so an approval can never
@@ -101,8 +121,29 @@ python -m tools.ds_init --destino /path/to/your/project --nombre my-project --ex
 
 ## Commands
 
-Harmessi ships three CLIs today: the installer, a read-only health check, and
-a deterministic dataset profiler.
+Harmessi ships four CLIs: the installer, the deterministic SDD/maturity/
+lifecycle/MLOps verifier, a read-only health check, and a deterministic
+dataset profiler.
+
+### `ds_guard`
+
+```
+python -m tools.ds_guard <group> <command> [options]
+```
+
+The main day-to-day CLI once a project is installed: SDD (`init`, `status
+--change-id`, `validate`, `approve`, `transition`, `session ...`,
+`notebook-diff`, `archive`), lifecycle (`lifecycle migrate`), project
+maturity (`project init|calibrate|set-risk|status|readiness|promote`),
+MLOps (`mlops status|record|evidence add`), the decision ledger (`decision
+add|supersede|revoke|list|show`), bounded remediation (`remediation
+resolve|extend`), and the unified project view (`status`, with no
+`--change-id`, `--json`/`--verbose` optional). All state it manages lives in
+plain JSON (`.harmessi/project.json`, `openspec/lifecycle/state.json`,
+`openspec/changes/*/control.json`, `openspec/decisions/ledger.jsonl`) — no
+hidden state, no separate database. Full command-by-command reference lives
+in the installed `.claude/skills/lead-data-scientist/verificador.md`/
+`methodology.md` (read by the Lead orchestrator, not duplicated here).
 
 ### `harmessi doctor`
 
@@ -146,41 +187,63 @@ its computation.
 ### `ds_init` (the installer)
 
 ```
-usage: python -m tools.ds_init [-h] --destino DESTINO --nombre NOMBRE
+usage: python -m tools.ds_init [-h] --destino DESTINO [--nombre NOMBRE]
                                [--notebooks-dir NOTEBOOKS_DIR]
                                [--venv-dir VENV_DIR] [--integrar-claude]
+                               [--stage {discovery,experiment,production_candidate,production}]
                                [--dry-run | --execute]
+                               [{install,sync}]
 
-Inicializador del harness de agentes/tooling para proyectos de ciencia de
-datos (perfil python-jupyter-data).
+Inicializador/sincronizador del harness de agentes/tooling para proyectos de
+ciencia de datos (perfil python-jupyter-data).
+
+positional arguments:
+  {install,sync}        'install' (default, instala un destino nuevo) o
+                        'sync' (amplia un destino ya instalado hasta un
+                        --stage objetivo mayor).
 
 options:
   -h, --help            show this help message and exit
   --destino DESTINO     Repo local destino (debe existir, ser Git, working
                         tree limpio).
-  --nombre NOMBRE       Nombre del proyecto, usado en placeholders de
-                        plantillas.
+  --nombre NOMBRE       Nombre del proyecto (obligatorio para 'install';
+                        ignorado para 'sync', que lo reconstruye desde
+                        control.json).
   --notebooks-dir NOTEBOOKS_DIR
                         Directorio de notebooks del proyecto destino (default:
-                        notebooks).
+                        notebooks, solo 'install').
   --venv-dir VENV_DIR   Directorio del entorno virtual del proyecto destino
-                        (default: .venv).
+                        (default: .venv, solo 'install').
   --integrar-claude     Integra un bloque delimitado en un CLAUDE.md ya
-                        existente (R9).
+                        existente (R9, solo 'install').
+  --stage {discovery,experiment,production_candidate,production}
+                        Bundle de instalacion progresiva objetivo. Para
+                        'install': solo discovery|experiment (default
+                        experiment). Para 'sync': cualquiera de los 4
+                        (obligatorio).
   --dry-run             Informa el plan, no escribe nada (comportamiento por
                         defecto).
   --execute             Ejecuta la escritura real, tras preflight exitoso.
 ```
 
-`--dry-run` is the default: it always runs preflight checks and prints the
-full installation plan without writing anything. Only `--execute` writes to
-disk, and it does so atomically — a staged tree is validated in full (JSON
-parses, no unresolved template placeholders, no forbidden strings) before
-anything is moved into place. Any exception raised while applying the staged
-tree or generating `.ds_init/control.json` rolls back everything already
-applied, restoring the destination to its pre-`--execute` state; a rollback
-failure on one individual entry doesn't stop the rest from being reverted,
-and any entry that still couldn't be restored is named in the error message.
+`install` (the default action) sets up a new destination — `discovery` is a
+deliberately light bundle (viability/exploration tooling only); `experiment`
+(the default) adds the full DS agent stack. `sync` extends an
+*already-installed* destination up to a higher `--stage`, adding only the
+files missing for that stage — idempotent, never overwrites an existing
+file, never deletes anything, and rejects a `--stage` lower than what's
+already installed as a no-op rather than silently doing nothing.
+
+`--dry-run` is the default for both actions: it always runs preflight checks
+and prints the full plan without writing anything. Only `--execute` writes
+to disk, and it does so atomically — a staged tree is validated in full
+(JSON parses, no unresolved template placeholders, no forbidden strings)
+before anything is moved into place. Any exception raised while applying the
+staged tree or generating `.ds_init/control.json` rolls back everything
+already applied, restoring the destination to its pre-`--execute` state; a
+rollback failure on one individual entry doesn't stop the rest from being
+reverted, and any entry that still couldn't be restored is named in the
+error message.
 
 This guarantee covers exceptions handled within the same process — it does
 not cover the process itself being killed or the machine losing power
