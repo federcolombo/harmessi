@@ -729,6 +729,56 @@ def cmd_science_status(args: argparse.Namespace) -> int:
     return checks.exit_code(resultados)
 
 
+# --- impact scan (v0.4 Change 1: 20260916-impact-preflight) ----------------
+
+def _importar_dsimpact():
+    """Import perezoso opcional de `tools.dsimpact` -- mismo patrón que
+    `dsguard.status._importar_doctor`: prueba ambas formas de import, nunca
+    un import a nivel de archivo (ver `design.md` §4 del change: `dsimpact`
+    se instala solo desde `stage_minimo="experiment"`, pero `ds_guard.py` se
+    instala siempre desde discovery). Nunca deja escapar una excepción."""
+    try:
+        from dsimpact import scan as dsimpact_scan  # type: ignore
+        return dsimpact_scan
+    except Exception:  # noqa: BLE001 - degradación con gracia, nunca excepción cruda
+        pass
+    try:
+        from tools.dsimpact import scan as dsimpact_scan  # type: ignore
+        return dsimpact_scan
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def cmd_impact_scan(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    dsimpact_scan = _importar_dsimpact()
+    if dsimpact_scan is None:
+        print(
+            "impact preflight no está instalado en este stage -- correr "
+            "'ds_init sync --stage experiment --execute' (tools/dsimpact/ requiere stage experiment).",
+            file=sys.stderr,
+        )
+        return 3
+    try:
+        resultado = dsimpact_scan.ejecutar_scan(repo_root, args.since, args.staged)
+    except Exception as e:  # noqa: BLE001 - GitSourceError u otro, nunca traceback crudo
+        print(str(e), file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps(resultado, indent=2, ensure_ascii=False))
+    else:
+        try:
+            from dsimpact import cli as dsimpact_cli  # type: ignore
+        except Exception:  # noqa: BLE001
+            from tools.dsimpact import cli as dsimpact_cli  # type: ignore
+        print(dsimpact_cli.formatear_texto(resultado))
+    return 0
+
+
 # --- archive --------------------------------------------------------------
 
 def cmd_archive(args: argparse.Namespace) -> int:
@@ -1529,6 +1579,19 @@ def construir_parser() -> argparse.ArgumentParser:
     p_science_status = science_sub.add_parser("status", help="Evalúa los scientific validity checks (.harmessi/scientific-policy.json opcional).")
     p_science_status.add_argument("--json", action="store_true")
     p_science_status.set_defaults(func=cmd_science_status)
+
+    p_impact = subparsers.add_parser(
+        "impact", help="Impact Preflight estático (tools/dsimpact), solo lectura."
+    )
+    impact_sub = p_impact.add_subparsers(dest="subcomando", required=True)
+    p_impact_scan = impact_sub.add_parser(
+        "scan", help="Escanea un diff de Git y reporta consumidores potencialmente afectados."
+    )
+    grupo_impact = p_impact_scan.add_mutually_exclusive_group(required=True)
+    grupo_impact.add_argument("--since", default=None)
+    grupo_impact.add_argument("--staged", action="store_true")
+    p_impact_scan.add_argument("--json", action="store_true")
+    p_impact_scan.set_defaults(func=cmd_impact_scan)
 
     p_archive = subparsers.add_parser(
         "archive", help="Archiva un cambio cerrado de openspec/changes/ a openspec/archive/ (git mv)."

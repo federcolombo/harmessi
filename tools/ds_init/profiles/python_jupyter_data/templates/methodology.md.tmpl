@@ -346,3 +346,24 @@ heurística.
 - No wireado a `readiness`/`promote` todavía (decisión explícita de v0.4 Change 0, ver
   `design.md` del change) — un PASS/FAIL de scientific validity no bloquea ni habilita una
   promoción por sí solo en esta versión.
+
+## 25. Impact Preflight
+
+`ds_guard impact scan --since <REF>` (o `--staged`) detecta ESTÁTICAMENTE qué archivos/símbolos/
+contratos podrían consumir lo que cambió — nunca ejecuta nada (ni notebooks, ni tests), nunca
+afirma que algo "está roto". El resultado siempre se expresa como "potentially affected".
+
+- Cuándo correrlo: antes de ejecutar tests/notebooks tras cambiar un contrato/schema, una feature
+  list, una función reutilizada, un validator/config central, o cuando aparece un fallo que sugiere
+  consumidores relacionados. NUNCA obligatorio para un cambio trivial.
+- El Lead corre `ds_guard impact scan` él mismo (síncrono, sin delegar un subagente solo para
+  eso) — mismo criterio que correr `ds_profile`/`git diff` directamente, ya establecido en
+  `eda.md`.
+- Cómo interpretarlo: cada finding es evidencia estructural (import/símbolo/string/assert/test/
+  config/path), NO un veredicto — el Lead decide si el impacto es semánticamente real, agrupa
+  correcciones justificadas, y recién después corre tests/notebooks. Un match no es un bug.
+- Límites conocidos: solo estático (no resuelve imports dinámicos, reflection, ni aliasing
+  complejo tipo `import x as y`); YAML/TOML se buscan como texto plano, no con parser real; falsos
+  positivos razonables son preferibles a inventar certeza.
+- Requiere `stage_minimo="experiment"` instalado (`tools/dsimpact/`) — si no está disponible, el
+  comando indica correr `ds_init sync --stage experiment --execute`.
