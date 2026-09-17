@@ -39,6 +39,15 @@ otros la lógica de decisión vive mezclada con la lectura de stdin en el mismo 
 | `tools/launcher_common.py` | **Mixto, ver §2.3** — la mayoría de sus funciones (`resolver_venv_dir`, `ruta_interprete_venv`, `resolver_repo_root`) son utilidades neutras de resolución de venv/repo Git, usadas también por `tools/harmessi/doctor.py` (core, diagnóstico) — pero también contiene `lanzar_hook`, que sí es específica de Claude Code |
 | `tools/ds_guard.py`, `tools/ds_profile/cli.py`, `tools/dsimpact/cli.py`, `tools/harmessi/cli.py` | CLIs `argparse` — portables: cualquier orquestador que pueda invocar un proceso puede usarlos, no conocen el protocolo de hooks |
 | `tools/ds_init/*` | Instalador/scaffolding — su propia lógica (planner, writer, templating, control.json) es agnóstica; el *contenido* que instala está hoy pensado para Claude Code, pero el instalador mismo no se invoca como hook ni depende del protocolo de hooks |
+| `tools/providers/core.py` | Contrato neutral de invocación multi-proveedor (v0.5 Change 0) — "adapter" en el sentido de patrón de diseño (adapter de proveedor de IA), no confundir con la acepción "Adapter" de §2.2 (protocolo `PreToolUse` de Claude Code); este módulo es core porque no conoce ningún protocolo específico de invocador, es un contrato neutral que las 4 implementaciones concretas satisfacen |
+
+Las 4 implementaciones concretas del contrato de `tools/providers/core.py` —
+`tools/providers/claude_code.py`, `codex.py`, `gemini.py`, `grok.py` (v0.5 Change 0) — no están
+listadas en la tabla de arriba: cada una sí conoce el vocabulario de flags y el formato de salida
+de la CLI de un proveedor específico (`claude`, `codex`, `gemini`, `grok`), así que son la capa fina
+que traduce ese conocimiento específico hacia/desde el contrato neutral de `core.py` — misma lógica
+de separación que el resto de este documento, aplicada a un invocador nuevo en vez de a un hook de
+Claude Code.
 
 ### 2.2 Adapter (protocolo `PreToolUse` de Claude Code)
 
