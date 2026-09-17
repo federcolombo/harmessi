@@ -97,6 +97,13 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
 4. `dsguard` nunca importa `ds_profile` ni `dsimpact` (documentado explícitamente ya en Change 1/2
    para evitar romper instalaciones en `discovery`, donde esos paquetes opcionales pueden no
    existir).
+5. Dirección de dependencia entre los paquetes nuevos de v0.5 (`tools/providers`,
+   `tools/harmessi_bench`, `tools/routing`, `tools/fallback`): `harmessi_bench` → `providers` (vía
+   `runner.py`, no desde `core.py`); `fallback` → `providers` (vía `core.py`); `routing` y
+   `fallback` nunca importan `harmessi_bench` (separación decidir/reintentar vs medir calidad, ver
+   `design.md` de Change 3); ningún paquete nuevo de v0.5 importa `dsguard`/`ds_profile`/`dsimpact`
+   ni viceversa (familias independientes). Verificado por
+   `tools/tests/test_v05_core_neutrality.py`.
 
 Estas reglas ya se cumplen hoy (verificado, ver `tools/tests/test_architecture_boundaries.py`,
 Change 3) — este documento las hace explícitas, no las introduce de cero.

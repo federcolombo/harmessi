@@ -1,5 +1,5 @@
 {
-  "harness_version": "0.4.0",
+  "harness_version": "0.5.0",
   "perfil": "python-jupyter-data",
   "fecha_utc": "2026-09-09T18:08:09Z",
   "configuracion": {
@@ -131,7 +131,7 @@
     },
     {
       "ruta": "tools/dsguard/scope.py",
-      "sha256": "2d41b017e4c3bc8002013a07935c67213f495c5c19922d2974b45b08cd572776"
+      "sha256": "01293ab32586bbd493abfe41e4f1d454d0534e2c935771956c57c561eb1340f0"
     },
     {
       "ruta": "tools/dsguard/scientific_validity.py",
@@ -139,7 +139,7 @@
     },
     {
       "ruta": "tools/dsguard/efficiency.py",
-      "sha256": "648a2fb3fa856622f1731c4f1070f70964027e3d09e37e9d1b6ec494075c1d83"
+      "sha256": "b950f70972137eb5fa164701f79a1109a19313ec08081f2b9326bc55ddb0a784"
     },
     {
       "ruta": "tools/dsguard/notebooks.py",
@@ -251,43 +251,43 @@
     },
     {
       "ruta": "tools/dsimpact/__init__.py",
-      "sha256": "e69ed74fe426073ac503df03706af001289d76228e70bc44d19784ab2b2c3672"
+      "sha256": "782e1e606c380e825daf1d9aa5d121dbd7ddbaa32631cc74ea83d9dd7de2e795"
     },
     {
       "ruta": "tools/dsimpact/__main__.py",
-      "sha256": "0cadb8276bf19062a30275937d7ca2e822cdc6f703de5f843f79f07262b0281b"
+      "sha256": "afc3053c8f120e9350a9d0c94b7772eb97428c80252aeba48daddf6e98a33dbc"
     },
     {
       "ruta": "tools/dsimpact/cli.py",
-      "sha256": "539c562f1235b46103338d9cb18f4e462c4e05b68663212c4bbb92bba17a1afd"
+      "sha256": "12e2de0c606486786b090bf3f64a7dfc9387bddf22dbac973e82526756ed4e92"
     },
     {
       "ruta": "tools/dsimpact/git_source.py",
-      "sha256": "9d91989ea12ebe98a5f4c4384cb9d0b20c84b4af7efff58960cc85894742d3eb"
+      "sha256": "1edad921b25782f3ed09cb5672b09d83cca9b0f5ef53c794b3053919ce415a77"
     },
     {
       "ruta": "tools/dsimpact/py_changes.py",
-      "sha256": "3109bb20136ab731cd0bcd4b6e9f92bbb573675059c3f26946da3745014de1c5"
+      "sha256": "0bcb3840169f1aa5723a3344be0579b89d30883ee79fe62ccabf4dc55322cd37"
     },
     {
       "ruta": "tools/dsimpact/consumers_py.py",
-      "sha256": "85bf6737e86fb05a587150f1a4390f2e098e9fc67e4d27f54c3b456093558f80"
+      "sha256": "e67b27e92d5215737e6462817abb6abd5dbc19ad820378c26e12764267a3dfdb"
     },
     {
       "ruta": "tools/dsimpact/consumers_text.py",
-      "sha256": "f66c29d0ece90a1a699289c7c2971b163d25775f9e98b7b4ade2c4d055e00600"
+      "sha256": "d07e04110e632942a566f2c5f8c8f9475e25f6ea6bf5fdc331103db6f8e0a25d"
     },
     {
       "ruta": "tools/dsimpact/notebooks_source.py",
-      "sha256": "4ac65ec6b902fa6d933008da10ab4b7af0251051cdcc01ce1822a9373008d6e5"
+      "sha256": "dd8f9a9b4d00d16733505158674a50a23a1e954abb7ed32f299186204d53ee33"
     },
     {
       "ruta": "tools/dsimpact/generic_filter.py",
-      "sha256": "1676f57f35360004132e58e6d0ff1798ece96127678fa82164afb2f4f34cabcf"
+      "sha256": "9a36d9185b19211d38b88f809d5ae76da4d2f9f5d0da5347e037fccce5ee241c"
     },
     {
       "ruta": "tools/dsimpact/scan.py",
-      "sha256": "5fd9b73bb405924ca1328e7a4db038263999260e601d07c5395c68ed147593de"
+      "sha256": "720b05740fafa60f6f27a18dedf79977b8f0714cbdeabc3b553fff945748406f"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/eda.md",

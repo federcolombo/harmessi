@@ -452,6 +452,15 @@ def main(argv: list = None) -> int:
                 )
                 return 1
 
+            aviso_no_registrados = None
+            if no_registrados:
+                aviso_no_registrados = (
+                    f"la cadena declarada por routing incluia {no_registrados!r} que no estan "
+                    "registrados en PROVIDER_REGISTRY y fueron saltados ANTES de invocar -- el "
+                    "primer 'intento primario' en 'handoffs' de abajo puede no coincidir con el "
+                    "provider_id primario que declaraba la politica de routing"
+                )
+
             request = InvocationRequest(
                 prompt=args.prompt, role=args.role, model=args.model, effort=args.effort
             )
@@ -460,8 +469,12 @@ def main(argv: list = None) -> int:
             if args.json:
                 salida = dataclasses.asdict(outcome)
                 salida["no_registrados"] = no_registrados
+                if aviso_no_registrados is not None:
+                    salida["aviso"] = aviso_no_registrados
                 print(json.dumps(salida, ensure_ascii=False, indent=2))
             else:
+                if aviso_no_registrados is not None:
+                    print(f"[AVISO] {aviso_no_registrados}")
                 texto = _formatear_fallback_outcome_texto(outcome)
                 if no_registrados:
                     texto += f"\n(no registrados, saltados: {no_registrados})"

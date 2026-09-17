@@ -40,6 +40,14 @@ ARCHIVOS_SIN_HARMESSI_BENCH = (
     "tools/fallback/core.py",
 )
 
+# Simétrico al anterior, dirección inversa: `harmessi_bench` (medir calidad)
+# tampoco debe depender de `routing`/`fallback` (decidir/reintentar) -- misma
+# separación de responsabilidades, ver design.md de Change 3.
+ARCHIVOS_HARMESSI_BENCH_SIN_ROUTING_NI_FALLBACK = (
+    "tools/harmessi_bench/core.py",
+    "tools/harmessi_bench/runner.py",
+)
+
 
 def _imports_nivel_modulo(ruta_absoluta: Path) -> list:
     """Todos los `import x`/`from x import y` de nivel superior (arbol.body,
@@ -153,6 +161,24 @@ class TestRoutingYFallbackNoImportanHarmessiBench(unittest.TestCase):
             "routing/core.py o fallback/core.py importando tools.harmessi_bench -- "
             "prohibido: 'decidir/reintentar' (routing/fallback) debe permanecer separado de "
             f"'medir calidad' (harmessi_bench), ver design.md de Change 3: {violaciones}",
+        )
+
+
+class TestHarmessiBenchNoImportaRoutingNiFallback(unittest.TestCase):
+    def test_harmessi_bench_no_importa_routing_ni_fallback(self):
+        violaciones = []
+        for ruta_relativa in ARCHIVOS_HARMESSI_BENCH_SIN_ROUTING_NI_FALLBACK:
+            ruta_absoluta = REPO_ORIGEN / ruta_relativa
+            for nombre_importado in _imports_nivel_modulo(ruta_absoluta):
+                componente_final = nombre_importado.rsplit(".", 1)[-1]
+                if componente_final in ("routing", "fallback"):
+                    violaciones.append(f"{ruta_relativa} importa '{nombre_importado}'")
+        self.assertEqual(
+            violaciones,
+            [],
+            "harmessi_bench/core.py o runner.py importando tools.routing/tools.fallback -- "
+            "prohibido: 'medir calidad' (harmessi_bench) debe permanecer separado de "
+            f"'decidir/reintentar' (routing/fallback), ver design.md de Change 3: {violaciones}",
         )
 
 
