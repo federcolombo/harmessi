@@ -39,6 +39,19 @@ otros la lógica de decisión vive mezclada con la lectura de stdin en el mismo 
 | `tools/launcher_common.py` | **Mixto, ver §2.3** — la mayoría de sus funciones (`resolver_venv_dir`, `ruta_interprete_venv`, `resolver_repo_root`) son utilidades neutras de resolución de venv/repo Git, usadas también por `tools/harmessi/doctor.py` (core, diagnóstico) — pero también contiene `lanzar_hook`, que sí es específica de Claude Code |
 | `tools/ds_guard.py`, `tools/ds_profile/cli.py`, `tools/dsimpact/cli.py`, `tools/harmessi/cli.py` | CLIs `argparse` — portables: cualquier orquestador que pueda invocar un proceso puede usarlos, no conocen el protocolo de hooks |
 | `tools/ds_init/*` | Instalador/scaffolding — su propia lógica (planner, writer, templating, control.json) es agnóstica; el *contenido* que instala está hoy pensado para Claude Code, pero el instalador mismo no se invoca como hook ni depende del protocolo de hooks |
+| `tools/providers/core.py` | Contrato neutral de invocación multi-proveedor (v0.5 Change 0) — "adapter" en el sentido de patrón de diseño (adapter de proveedor de IA), no confundir con la acepción "Adapter" de §2.2 (protocolo `PreToolUse` de Claude Code); este módulo es core porque no conoce ningún protocolo específico de invocador, es un contrato neutral que las 4 implementaciones concretas satisfacen |
+| `tools/harmessi_bench/core.py` | Tipos neutrales y scoring determinista del framework de evals (v0.5 Change 1) — no importa `tools.providers` ni ningún proveedor concreto; `runner.py` (no listado acá, mismo criterio que las 4 implementaciones de adapters de Change 0) es quien invoca un target reusando el contrato de `tools/providers/core.py` y `storage.py` quien persiste resultados en `.harmessi/evals/<run_id>/result.json` (mismo patrón de `ds_profile` → `.harmessi/profiles/`); no conoce protocolo de hooks, es core. |
+| `tools/routing/core.py` | Resolución determinista de routing provider/model/effort por rol+tarea (v0.5 Change 2; extendido de forma aditiva con `fallback_chain` en v0.5 Change 3) -- puramente declarativo (lee una `RoutingPolicy` ya construida, nunca infiere ni mide nada); no importa `tools.providers` ni ningún proveedor concreto, es core. `policy.py` (no listado acá, mismo criterio que Change 0/1) carga la política opcional desde `.harmessi/routing.json` (ausente = sin política declarada, nunca heurística) y valida su forma. |
+| `tools/fallback/core.py` | Motor de fallback técnico entre proveedores (v0.5 Change 3) -- decide reintentar SOLO cuando `InvocationResult.availability_error` es elegible (`quota`/`unavailable`/`unauthenticated`, ver `classify_availability_error` de Change 0); nunca por error semántico/de código, hallazgo de reviewer, test fallido o mala calidad de output (esas señales ni siquiera se importan acá) -- es core, no conoce protocolo de hooks. |
+| `tools/fallback/handoff.py` | Contexto de handoff a nivel SDD (v0.5 Change 3) -- contexto mínimo suficiente para continuar un Change entre sesiones/proveedores sin reiniciar trabajo ni duplicar auditorías (`completed`/`pending`/`prior_findings`); persistido en `.harmessi/handoffs/<id>/handoff.json`, mismo patrón que `.harmessi/evals/`. |
+
+Las 4 implementaciones concretas del contrato de `tools/providers/core.py` —
+`tools/providers/claude_code.py`, `codex.py`, `gemini.py`, `grok.py` (v0.5 Change 0) — no están
+listadas en la tabla de arriba: cada una sí conoce el vocabulario de flags y el formato de salida
+de la CLI de un proveedor específico (`claude`, `codex`, `gemini`, `grok`), así que son la capa fina
+que traduce ese conocimiento específico hacia/desde el contrato neutral de `core.py` — misma lógica
+de separación que el resto de este documento, aplicada a un invocador nuevo en vez de a un hook de
+Claude Code.
 
 ### 2.2 Adapter (protocolo `PreToolUse` de Claude Code)
 
@@ -84,6 +97,13 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
 4. `dsguard` nunca importa `ds_profile` ni `dsimpact` (documentado explícitamente ya en Change 1/2
    para evitar romper instalaciones en `discovery`, donde esos paquetes opcionales pueden no
    existir).
+5. Dirección de dependencia entre los paquetes nuevos de v0.5 (`tools/providers`,
+   `tools/harmessi_bench`, `tools/routing`, `tools/fallback`): `harmessi_bench` → `providers` (vía
+   `runner.py`, no desde `core.py`); `fallback` → `providers` (vía `core.py`); `routing` y
+   `fallback` nunca importan `harmessi_bench` (separación decidir/reintentar vs medir calidad, ver
+   `design.md` de Change 3); ningún paquete nuevo de v0.5 importa `dsguard`/`ds_profile`/`dsimpact`
+   ni viceversa (familias independientes). Verificado por
+   `tools/tests/test_v05_core_neutrality.py`.
 
 Estas reglas ya se cumplen hoy (verificado, ver `tools/tests/test_architecture_boundaries.py`,
 Change 3) — este documento las hace explícitas, no las introduce de cero.

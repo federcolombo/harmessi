@@ -65,7 +65,7 @@ Si el usuario define otra política de commits para una versión concreta, esa i
 ## Versiones
 
 - `v0.3.0`: publicada.
-- `v0.4`: activa — calidad científica + impacto + aislamiento + portabilidad + eficiencia.
-- `v0.5`: planificada — evals, reporting, ML quality/data contracts y multi-provider.
+- `v0.4.0`: publicada.
+- `v0.5`: activa — evals, reporting, ML quality/data contracts y multi-provider.
 - `v0.6+`: provisional — governance avanzada.
 - `v1.0`: estabilización pública y contratos estables.

@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "change_id": "20260917-fallback-and-handoffs",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-17T16:08:57Z",
+  "baseline": {
+    "commit": "af8df4f0c3942cd4894e19e3a0f78a1926631d76",
+    "rama": "v0.5-dev",
+    "capturado_utc": "2026-09-17T16:08:57Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260917-fallback-and-handoffs/proposal.md",
+      "openspec/changes/20260917-fallback-and-handoffs/tasks.md",
+      "openspec/changes/20260917-fallback-and-handoffs/spec.md",
+      "openspec/changes/20260917-fallback-and-handoffs/design.md",
+      "openspec/changes/20260917-fallback-and-handoffs/control.json",
+      "ARCHITECTURE.md",
+      "tools/harmessi/cli.py",
+      "tools/harmessi/tests/test_fallback_cli.py",
+      "tools/routing/core.py",
+      "tools/routing/policy.py",
+      "tools/routing/examples/policy.example.json",
+      "tools/routing/tests/test_core.py",
+      "tools/routing/tests/test_policy.py",
+      "tools/fallback/__init__.py",
+      "tools/fallback/core.py",
+      "tools/fallback/handoff.py",
+      "tools/fallback/tests/__init__.py",
+      "tools/fallback/tests/test_core.py",
+      "tools/fallback/tests/test_handoff.py",
+      "openspec/changes/20260917-fallback-and-handoffs/verification.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f5058ed6e82469638c00f4171d69a2b097d734aca64b74b473cecf4e2744b52f",
+      "registrado_utc": "2026-09-17T16:35:59Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Change 3 - fallback-and-handoffs (docs/roadmap/v0.5.md)",
+      "cita": "Ejecuta autonomamente toda Harmessi v0.5 siguiendo docs/roadmap/v0.5.md ... Change 3 - fallback-and-handoffs ... No pidas confirmacion humana entre pasos normales (instruccion explicita del usuario, 2026-09-17, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "2b12ea91e1bd6eea1f991fdd68e991574109267cd3ad8802e3e066d73115b963",
+      "registrado_utc": "2026-09-17T16:36:00Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Change 3 - fallback-and-handoffs (docs/roadmap/v0.5.md)",
+      "cita": "Ejecuta autonomamente toda Harmessi v0.5 siguiendo docs/roadmap/v0.5.md ... Change 3 - fallback-and-handoffs ... No pidas confirmacion humana entre pasos normales (instruccion explicita del usuario, 2026-09-17, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "0d0ffbb9d35630c801faa08cf178a840547251cb09ff8ce73a095f37d7165617",
+      "registrado_utc": "2026-09-17T16:36:01Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Change 3 - fallback-and-handoffs (docs/roadmap/v0.5.md)",
+      "cita": "Ejecuta autonomamente toda Harmessi v0.5 siguiendo docs/roadmap/v0.5.md ... Change 3 - fallback-and-handoffs ... No pidas confirmacion humana entre pasos normales (instruccion explicita del usuario, 2026-09-17, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "7871f1561e4b30cae4fea12188618399ce71f4c944d859dedf45021583e2b5b3",
+      "registrado_utc": "2026-09-17T16:36:01Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Change 3 - fallback-and-handoffs (docs/roadmap/v0.5.md)",
+      "cita": "Ejecuta autonomamente toda Harmessi v0.5 siguiendo docs/roadmap/v0.5.md ... Change 3 - fallback-and-handoffs ... No pidas confirmacion humana entre pasos normales (instruccion explicita del usuario, 2026-09-17, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-17T16:36:03Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-17T16:36:04Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-17T16:36:04Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-17T16:38:04Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-17T16:36:02Z",
+      "cierre_utc": "2026-09-17T16:38:04Z",
+      "modo": "alto_riesgo_tecnico",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-17T18:06:02Z",
+      "minutos_consumidos": 2.033333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-17T16:36:46Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

@@ -280,6 +280,69 @@ a specific message, but it does not repair or resume the interrupted
 installation automatically — recovering from that state (inspecting and,
 once safe, deleting the leftover staging directory) is a manual step.
 
+### `harmessi providers`
+
+```
+python -m tools.harmessi providers list [--json]
+```
+
+Clean detection of the 4 provider adapters (Claude Code, Codex CLI, Gemini
+CLI, Grok CLI) via `tools/providers/`. Only Claude Code CLI has been verified
+against a real binary during Harmessi's own development — the other 3
+degrade to "not available" without attempting to install anything or
+fabricate a signal. `--json` reports, per provider, `available`,
+`authenticated` (always `null` today — no cheap way to check it without a
+real session), `version`, and declared capabilities. Run it from a Harmessi
+source checkout, the same way as `harmessi doctor`.
+
+### `harmessi routing`
+
+```
+python -m tools.harmessi routing show|resolve --role <r> [--task-type <t>] [--policy <path>] [--check-availability] [--json]
+```
+
+Declarative, deterministic resolution of provider/model/effort by role +
+task type from an optional policy file (default `.harmessi/routing.json`;
+its absence means no policy declared, never an inferred one). `show` prints
+the loaded policy (or says explicitly that none is declared); `resolve`
+returns a `RoutingDecision` for a given `--role`/`--task-type`, optionally
+checking real availability via `tools.providers.list_providers()` with
+`--check-availability`. Routing never infers or optimizes automatically —
+`provider_available` is informational only, it never changes the resolved
+`provider_id`.
+
+### `harmessi fallback`
+
+```
+python -m tools.harmessi fallback resolve-chain|invoke --role <r> [--task-type <t>] [--policy <path>] [--prompt <p>] [--model <m>] [--effort <e>] [--json]
+```
+
+A technical fallback engine: `resolve-chain` reports the candidate provider
+chain (`provider_id` + `fallback_chain`) for a role/task and each member's
+real availability, without invoking anything; `invoke` actually runs it,
+trying the next provider in the chain only when the previous one is
+genuinely unavailable (quota, not installed, unreachable) — it never retries
+on a semantic error, a code error, or a disagreement of any kind. Each
+attempt is recorded as a `HandoffRecord` in the result, including the ones
+that failed, so a fallback never hides the original error.
+
+### `harmessi-bench`
+
+```
+python -m tools.harmessi_bench.cli run --scenarios <path> --provider <p> [--model <m>] [--effort <e>] --run-id <id> [--json]
+python -m tools.harmessi_bench.cli compare --baseline <run_id> --candidate <run_id> [--json]
+```
+
+A separate CLI, not a subcommand of `harmessi` — invoked as
+`python -m tools.harmessi_bench.cli`, with no `__main__.py` of its own yet.
+An evals framework, deliberately kept apart from the deterministic unit test
+suites: `run` executes a set of reproducible scenarios against a real
+provider (via the same `tools/providers` adapters) and scores each one with
+a deterministic scorer (`contains`/`regex`/`exact` — no LLM-as-judge),
+saving the result to `.harmessi/evals/<run_id>/result.json`; `compare`
+diffs two saved runs and reports regressions/improvements. Scoring is a
+surface-level text proxy, not a measure of semantic quality.
+
 ### Platform compatibility
 
 Harmessi runs on Windows, Linux, and macOS. Everything under `tools/`
