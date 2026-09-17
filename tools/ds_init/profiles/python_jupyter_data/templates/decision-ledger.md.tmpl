@@ -64,6 +64,11 @@ es de proyecto, no de cambio.
   su estado derivado pasa a `superseded`.
 - **`decision revoke --referencia <id> --motivo <texto> --usuario <u> --fecha <f>`**: revoca una
   decisión existente (sin `--cita`, sin `--tipo`). Misma validación de referencia que `supersede`.
+
+En los tres comandos anteriores, `--usuario` es siempre un nombre humano (p. ej. `Federico
+Colombo`), nunca un email u otro dato de contacto personal -- `ds_guard` lo hace cumplir
+técnicamente (`tools/dsguard/core.py::validar_usuario_sin_email`,
+`openspec/changes/20260917-remove-personal-email/`).
 - **`decision list [--tipo <tipo>] [--estado activa|superseded|revocada] [--change-id <id>]
   [--json]`**: lista decisiones (`registrar`/`supersede`, nunca `revocar`) con su estado derivado,
   filtradas por los parámetros dados.

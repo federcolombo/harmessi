@@ -239,6 +239,10 @@ def cmd_approve(args: argparse.Namespace) -> int:
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         return 3
+    error_usuario = core.validar_usuario_sin_email(args.usuario)
+    if error_usuario:
+        print(error_usuario, file=sys.stderr)
+        return 2
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     for artefacto in args.artefacto:
@@ -483,6 +487,10 @@ def cmd_remediation_extend(args: argparse.Namespace) -> int:
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         return 3
+    error_usuario = core.validar_usuario_sin_email(args.usuario)
+    if error_usuario:
+        print(error_usuario, file=sys.stderr)
+        return 2
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     ok, findings, ventana = sdd.remediation_extend(
@@ -508,6 +516,10 @@ def cmd_decision_add(args: argparse.Namespace) -> int:
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         return 3
+    error_usuario = core.validar_usuario_sin_email(args.usuario)
+    if error_usuario:
+        print(error_usuario, file=sys.stderr)
+        return 2
 
     ok, findings = decision.decision_add(
         repo_root,
@@ -539,6 +551,10 @@ def cmd_decision_supersede(args: argparse.Namespace) -> int:
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         return 3
+    error_usuario = core.validar_usuario_sin_email(args.usuario)
+    if error_usuario:
+        print(error_usuario, file=sys.stderr)
+        return 2
 
     ok, findings = decision.decision_supersede(
         repo_root,
@@ -576,6 +592,10 @@ def cmd_decision_revoke(args: argparse.Namespace) -> int:
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         return 3
+    error_usuario = core.validar_usuario_sin_email(args.usuario)
+    if error_usuario:
+        print(error_usuario, file=sys.stderr)
+        return 2
 
     ok, findings = decision.decision_revoke(
         repo_root, args.referencia, args.motivo, args.usuario, args.fecha

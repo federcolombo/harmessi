@@ -179,3 +179,22 @@ def formatear_findings_json(findings: list, exit_code: int) -> str:
         "exit_code": exit_code,
     }
     return json.dumps(payload, indent=2, ensure_ascii=False)
+
+
+# --- Validación de identidad humana -------------------------------------------
+
+def validar_usuario_sin_email(usuario: str) -> Optional[str]:
+    """Heurística simple: un campo `usuario` de aprobación/decisión/remediación
+    debe ser un nombre humano, nunca un email u otro dato de contacto personal
+    (ver `openspec/changes/20260917-remove-personal-email/`). Devuelve un
+    mensaje de error si `usuario` contiene `@` (señal suficiente de forma de
+    email para este propósito, sin necesidad de un parser de email completo),
+    o `None` si es válido. No valida vacío -- esa es otra responsabilidad, ya
+    exigida por los `required=True` de argparse y por los chequeos de campos
+    obligatorios existentes (p. ej. `decision._campos_vacios`)."""
+    if "@" in usuario:
+        return (
+            f"'--usuario' no debe contener un email ni otro dato de contacto personal "
+            f"(recibido: {usuario!r}) -- usá solo un nombre, p. ej. 'Federico Colombo'"
+        )
+    return None

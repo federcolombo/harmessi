@@ -133,7 +133,10 @@ referencia a la versión de los artefactos aprobada. Si el usuario responde "sí
 inequívocamente a la versión presentada inmediatamente antes en el chat, esa referencia cubre el
 requisito — no hace falta pedirle que repita alcance y artefactos: el Lead completa esos datos a
 partir del contexto inmediato y los deja explícitos en el prompt de delegación. Cuando el mensaje
-del usuario ya es descriptivo por sí mismo, se cita literal.
+del usuario ya es descriptivo por sí mismo, se cita literal. `usuario` es siempre un nombre humano
+(p. ej. `Federico Colombo`), nunca un email u otro dato de contacto personal -- `ds_guard` lo hace
+cumplir técnicamente (`tools/dsguard/core.py::validar_usuario_sin_email`,
+`openspec/changes/20260917-remove-personal-email/`).
 
 ## 8. Invocaciones planificadas vs. reintentos vs. rondas de revisión
 
