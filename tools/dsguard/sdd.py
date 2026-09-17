@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 from . import repo as repo_mod
+from . import scope
 from .core import Finding, ahora_utc, escribir_control, hash_lf_v1, minutos_restantes, parsear_utc
 
 # --- Estados y transiciones ----------------------------------------------------
@@ -316,9 +317,7 @@ def gate_cierre(control: dict, tasks_path: Path, sesion_activa: Optional[dict], 
                 )
             )
 
-    rutas_autorizadas = control.get("alcance", {}).get("rutas_autorizadas", [])
-    for ruta in repo_mod.files_out_of_scope(repo_root, rutas_autorizadas):
-        findings.append(Finding("ALCANCE-RUTA", f"Archivo fuera de alcance: {ruta}", ruta))
+    findings += scope.evaluar_alcance(repo_root, control)
 
     return findings
 

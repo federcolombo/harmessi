@@ -173,7 +173,9 @@ comportamiento observable, mismo nivel que el resto de esta sección.
 
 ## 3. Códigos de hallazgo
 
-- **`ALCANCE-RUTA`**: archivo sucio fuera de `alcance.rutas_autorizadas`.
+- **`ALCANCE-RUTA`**: archivo fuera de `alcance.rutas_autorizadas` -- cubre tanto el working tree
+  actual como el diff completo desde `control["baseline"]["commit"]` (Change 2 v0.4: detecta
+  también cambios fuera de scope ya commiteados dentro del Change, no solo archivos sucios).
 - **`ALCANCE-WHITESPACE`**: línea no vacía de `git diff --check` (whitespace o conflicto sin
   resolver).
 - **`ALCANCE-TREE-SUCIO`**: working tree no limpio cuando `archive` lo requiere.
