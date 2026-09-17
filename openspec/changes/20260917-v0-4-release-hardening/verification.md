@@ -15,8 +15,9 @@ independientes (nunca mocks para lo que exige evidencia real).
   working tree para `AGD`/`UNCO-Intelligence`/`Model-churn` (case-insensitive) → 3 resultados, los 3
   son el propio texto de instrucciones de búsqueda de este change y del hardening de v0.3 (mencionan
   el patrón a buscar, no una fuga real — mismo criterio ya aplicado por el hardening de v0.3).
-  `grep` para rutas `C:\Users\fcolombo`/`C:\Datos` y para `federcolombo@gmail.com` → 0 resultados en
-  todo el repo. Cero hallazgos nuevos.
+  `grep` para rutas `C:\Users\fcolombo`/`C:\Datos` y para el email personal del autor (mismo patrón
+  de contacto personal ya usado en el sweep de Change 5 de v0.4) → 0 resultados en todo el repo.
+  Cero hallazgos nuevos.
 - **R4 (regresión completa final, 5 suites)**:
   - `tools/tests`: 625 passed, 2 skipped.
   - `tools/harmessi/tests`: 82 passed (0 failures — ver "Diferencias contra la spec" abajo, el único
