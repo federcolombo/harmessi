@@ -145,6 +145,32 @@ hidden state, no separate database. Full command-by-command reference lives
 in the installed `.claude/skills/lead-data-scientist/verificador.md`/
 `methodology.md` (read by the Lead orchestrator, not duplicated here).
 
+`ds_guard` also groups two deterministic checks added in v0.4: `science
+status`/`science status --json` (`tools/dsguard/scientific_validity.py`) runs
+scientific validity checks (temporal cutoff, holdout, direct leakage,
+baseline) declared via an optional `.harmessi/scientific-policy.json` — never
+inferred by heuristic; `efficiency report --change-id <id> [--json]`
+(`tools/dsguard/efficiency.py`) re-evaluates a change's already-recorded
+sessions/remediations against its own declared budget, adding signal without
+gating anything. Separately, `ALCANCE-RUTA` (the scope check in
+`validate`/`gate_cierre`) now covers the full diff since
+`control["baseline"]["commit"]`, not just the current working tree, so an
+out-of-scope file that was already committed is still caught even if the
+working tree is clean again.
+
+### `ds_guard impact scan`
+
+```
+python -m tools.ds_guard impact scan --since <ref>|--staged [--json]
+```
+
+A static impact preflight (`tools/dsimpact/`, a separate package installed
+from the `experiment` stage onward): it detects which files/symbols/contracts
+a diff might affect, always reporting them as "potentially affected", never
+as "broken". On a `discovery` installation, where `tools/dsimpact/` isn't
+present, it degrades gracefully — exit code `3` and a clear message instead
+of a traceback.
+
 ### `harmessi doctor`
 
 ```

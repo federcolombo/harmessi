@@ -793,11 +793,17 @@ class TestDoctorRegresionEsteRepositorio(unittest.TestCase):
     reportados como WARN por faltantes, nunca ERROR, ya que no son
     `_RUTAS_CRITICAS`)."""
 
-    def test_este_repo_no_tiene_installation_stage_en_su_control_json(self):
+    def test_este_repo_tiene_installation_stage_valido_en_su_control_json(self):
+        """Desde Change 7 v0.3 (progressive capability installation), 'installation_stage' es
+        un campo legítimo y esperado de control.json -- este test reemplaza al anterior
+        (`test_este_repo_no_tiene_installation_stage_en_su_control_json`), que asumía la
+        ausencia del campo porque predataba ese Change. Diagnosticado como test desactualizado,
+        no como bug real, durante Change 5 v0.4 (release hardening)."""
         raiz = Path(__file__).resolve().parents[3]
         control_data, resultados = doctor_mod._leer_control_json(raiz)
         self.assertIsNotNone(control_data)
-        self.assertNotIn("installation_stage", control_data)
+        self.assertIn("installation_stage", control_data)
+        self.assertIn(control_data["installation_stage"], ORDEN_STAGES)
 
     def test_este_repo_archivos_administrados_sin_fail_inesperado(self):
         raiz = Path(__file__).resolve().parents[3]

@@ -1,5 +1,5 @@
 {
-  "harness_version": "0.3.0",
+  "harness_version": "0.4.0",
   "perfil": "python-jupyter-data",
   "fecha_utc": "2026-09-09T18:08:09Z",
   "configuracion": {
@@ -35,7 +35,7 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/verificador.md",
-      "sha256": "532efdd948f2e5a1f776c6a2882177687fdd2fad4fd1d806244d2a42e310eef4"
+      "sha256": "912efeffb8dc6d77d049cfb465c328b67d59db68c5b01f369acf84d8eb922feb"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/kdd.md",
@@ -47,7 +47,7 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/methodology.md",
-      "sha256": "5494e28fb2f723571560d90b03224cdd7800d90a214da668b6cec5026ee89367"
+      "sha256": "bd068a20f45011e3f23db01be61bb6b81b467119d38a21731f809a11c4be7faa"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/templates/proposal.md",
@@ -71,7 +71,7 @@
     },
     {
       "ruta": "tools/ds_guard.py",
-      "sha256": "fce6940a157b6735da9d8c1e61985d5547fd89a7dc83851a55272e696b722780"
+      "sha256": "a7a8c100664fc0f663196b278653bf15ac32b1280d521e23ebf9c7a07a1c6ef2"
     },
     {
       "ruta": "tools/dsguard/__init__.py",
@@ -87,7 +87,7 @@
     },
     {
       "ruta": "tools/dsguard/sdd.py",
-      "sha256": "f2fedab1aac149f17253d016402644c0397ffaa26bcf6eb507e905203bff6def"
+      "sha256": "2afd9bf8087e3bc95167447df7be910bfa5d7ecef3d2d26575333ea41c27d883"
     },
     {
       "ruta": "tools/dsguard/decision.py",
@@ -127,7 +127,19 @@
     },
     {
       "ruta": "tools/dsguard/status.py",
-      "sha256": "441bb5307c86c18d08b36891d3eec3b8b5fa5ab01a39eb80e23f0f11d3aaffa0"
+      "sha256": "a96068f7c8e019d21c1f9abb19165c523b8f31e75c0627f37c9c6c257ac2cf95"
+    },
+    {
+      "ruta": "tools/dsguard/scope.py",
+      "sha256": "2d41b017e4c3bc8002013a07935c67213f495c5c19922d2974b45b08cd572776"
+    },
+    {
+      "ruta": "tools/dsguard/scientific_validity.py",
+      "sha256": "9254d22a462a56d191d13f3daf5b2551898679a663e6acd3e45ae29d33351e3e"
+    },
+    {
+      "ruta": "tools/dsguard/efficiency.py",
+      "sha256": "648a2fb3fa856622f1731c4f1070f70964027e3d09e37e9d1b6ec494075c1d83"
     },
     {
       "ruta": "tools/dsguard/notebooks.py",
@@ -236,6 +248,46 @@
     {
       "ruta": "tools/ds_profile/report.py",
       "sha256": "ef9ce898deaea98cb61f1d3b868efc8e6d00d0134fd0318ae4797014d7152769"
+    },
+    {
+      "ruta": "tools/dsimpact/__init__.py",
+      "sha256": "e69ed74fe426073ac503df03706af001289d76228e70bc44d19784ab2b2c3672"
+    },
+    {
+      "ruta": "tools/dsimpact/__main__.py",
+      "sha256": "0cadb8276bf19062a30275937d7ca2e822cdc6f703de5f843f79f07262b0281b"
+    },
+    {
+      "ruta": "tools/dsimpact/cli.py",
+      "sha256": "539c562f1235b46103338d9cb18f4e462c4e05b68663212c4bbb92bba17a1afd"
+    },
+    {
+      "ruta": "tools/dsimpact/git_source.py",
+      "sha256": "9d91989ea12ebe98a5f4c4384cb9d0b20c84b4af7efff58960cc85894742d3eb"
+    },
+    {
+      "ruta": "tools/dsimpact/py_changes.py",
+      "sha256": "3109bb20136ab731cd0bcd4b6e9f92bbb573675059c3f26946da3745014de1c5"
+    },
+    {
+      "ruta": "tools/dsimpact/consumers_py.py",
+      "sha256": "85bf6737e86fb05a587150f1a4390f2e098e9fc67e4d27f54c3b456093558f80"
+    },
+    {
+      "ruta": "tools/dsimpact/consumers_text.py",
+      "sha256": "f66c29d0ece90a1a699289c7c2971b163d25775f9e98b7b4ade2c4d055e00600"
+    },
+    {
+      "ruta": "tools/dsimpact/notebooks_source.py",
+      "sha256": "4ac65ec6b902fa6d933008da10ab4b7af0251051cdcc01ce1822a9373008d6e5"
+    },
+    {
+      "ruta": "tools/dsimpact/generic_filter.py",
+      "sha256": "1676f57f35360004132e58e6d0ff1798ece96127678fa82164afb2f4f34cabcf"
+    },
+    {
+      "ruta": "tools/dsimpact/scan.py",
+      "sha256": "5fd9b73bb405924ca1328e7a4db038263999260e601d07c5395c68ed147593de"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/eda.md",
