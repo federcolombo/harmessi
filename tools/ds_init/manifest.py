@@ -317,6 +317,12 @@ MANIFEST: tuple = (
         descripcion="Scientific validity checks (cutoff/holdout/leakage/baseline) sobre .harmessi/scientific-policy.json opcional, vía ds_guard science status (v0.4 Change 0)",
     ),
     EntradaManifiesto(
+        fuente="tools/dsguard/efficiency.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/efficiency.py",
+        descripcion="Observabilidad de eficiencia de agentes: reevalúa sesiones/remediaciones de un Change contra su propio presupuesto declarado, vía ds_guard efficiency report (v0.4 Change 4)",
+    ),
+    EntradaManifiesto(
         fuente="tools/dsguard/notebooks.py",
         tratamiento=VERBATIM,
         destino="tools/dsguard/notebooks.py",

@@ -35,6 +35,7 @@ from dsguard import (  # noqa: E402
     checks,
     core,
     decision,
+    efficiency,
     kdd,
     kdd_compat,
     lifecycle,
@@ -729,6 +730,27 @@ def cmd_science_status(args: argparse.Namespace) -> int:
         print(json.dumps({"resultados": [r.to_dict() for r in resultados]}, ensure_ascii=False))
     else:
         print("Scientific Validity\n")
+        for r in resultados:
+            print(f"{r.status:<6} {r.code}: {r.message}")
+        conteos = checks.contar_por_status(resultados)
+        print(f"\nResumen: {conteos[checks.STATUS_PASS]} PASS, {conteos[checks.STATUS_WARN]} WARN, "
+              f"{conteos[checks.STATUS_FAIL]} FAIL, {conteos[checks.STATUS_NA]} N/A")
+    return checks.exit_code(resultados)
+
+
+# --- efficiency (v0.4 Change 4: 20260916-agent-efficiency-and-token-governance) --
+
+def cmd_efficiency_report(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    resultados = efficiency.evaluar_eficiencia_change(repo_root, args.change_id)
+    if args.json:
+        print(json.dumps({"resultados": [r.to_dict() for r in resultados]}, ensure_ascii=False))
+    else:
+        print(f"Agent Efficiency Report -- {args.change_id}\n")
         for r in resultados:
             print(f"{r.status:<6} {r.code}: {r.message}")
         conteos = checks.contar_por_status(resultados)
@@ -1587,6 +1609,17 @@ def construir_parser() -> argparse.ArgumentParser:
     p_science_status = science_sub.add_parser("status", help="Evalúa los scientific validity checks (.harmessi/scientific-policy.json opcional).")
     p_science_status.add_argument("--json", action="store_true")
     p_science_status.set_defaults(func=cmd_science_status)
+
+    p_efficiency = subparsers.add_parser(
+        "efficiency", help="Reporte de eficiencia de agentes por Change (solo lectura)."
+    )
+    efficiency_sub = p_efficiency.add_subparsers(dest="subcomando", required=True)
+    p_efficiency_report = efficiency_sub.add_parser(
+        "report", help="Reevalúa sesiones/remediaciones de un Change contra su propio presupuesto declarado."
+    )
+    p_efficiency_report.add_argument("--change-id", required=True)
+    p_efficiency_report.add_argument("--json", action="store_true")
+    p_efficiency_report.set_defaults(func=cmd_efficiency_report)
 
     p_impact = subparsers.add_parser(
         "impact", help="Impact Preflight estático (tools/dsimpact), solo lectura."

@@ -367,3 +367,22 @@ afirma que algo "está roto". El resultado siempre se expresa como "potentially 
   positivos razonables son preferibles a inventar certeza.
 - Requiere `stage_minimo="experiment"` instalado (`tools/dsimpact/`) — si no está disponible, el
   comando indica correr `ds_init sync --stage experiment --execute`.
+
+## 26. Agent efficiency reporting
+
+`ds_guard efficiency report --change-id <id>` reevalúa las sesiones y remediaciones YA
+REGISTRADAS de un Change (activo o archivado) contra su propio presupuesto declarado — agrega
+señales que ya existen en `control.json`, nunca inventa datos nuevos ni un mecanismo de captura
+adicional.
+
+- PASS/WARN/N-A/FAIL vienen del binario — el Lead nunca inventa un PASS ni reinterpreta un WARN.
+- Nunca es un gate: no se enchufa a `validate`/`readiness`/`promote`. Un WARN no bloquea nada, es
+  información para que el Lead decida si vale la pena ajustar cómo está trabajando (menos rondas
+  de revisión, remediaciones más efectivas, etc.).
+- `EFICIENCIA-REMEDIACION-REPETIDA` es una señal TEXTUAL (misma `causa` declarada dos veces
+  literalmente, comparación exacta) — no prueba que el reintento fue inútil, solo que vale la pena
+  que el Lead lo revise.
+- No cubre agentes lanzados/duración/task-id todavía (esa captura automática no existe hoy, ver
+  deuda del change) — solo sesiones/remediaciones ya registradas explícitamente por el Lead.
+- Cuándo correrlo: al cerrar un change, o si el Lead sospecha que una sesión se volvió ineficiente
+  — nunca obligatorio.
