@@ -1,0 +1,30 @@
+{
+  "_nota": "Ejemplo ilustrativo de una RoutingPolicy (v0.5 Change 2, provider-routing). No es la politica real de este repo -- este repo no declara ninguna politica de routing propia (.harmessi/routing.json no existe aca). Ver tools/routing/policy.py::load_policy.",
+  "rules": [
+    {
+      "role": "writer",
+      "task_type": "*",
+      "provider_id": "claude_code",
+      "model": null,
+      "effort": "high",
+      "reason": "unico provider con CLI disponible y autenticada en este entorno (ver tools/providers, Change 0)"
+    },
+    {
+      "role": "reviewer",
+      "task_type": "*",
+      "provider_id": "claude_code",
+      "model": null,
+      "effort": "high",
+      "reason": "sin una segunda familia de modelo disponible en este entorno todavia -- ver docs/roadmap/v0.5.md Change 2 y verification.md de este Change: la ausencia no se convierte en una falsa garantia de diversidad de revision"
+    },
+    {
+      "role": "metodologo",
+      "task_type": "revision_metodologica",
+      "provider_id": "claude_code",
+      "model": null,
+      "effort": "max",
+      "reason": "tareas metodologicas usan el effort mas alto disponible"
+    }
+  ],
+  "default": null
+}
