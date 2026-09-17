@@ -31,7 +31,7 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/sdd.md",
-      "sha256": "6c05fe73c7dfe88a47eb064ee89e86fa860b0ad8ebdcfaeb55422b31b9d0b67c"
+      "sha256": "93fdc2d672413cc274b1f874ceef4a9b3154c1af43de95f58c8748e6c9d53d8a"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/verificador.md",
@@ -43,7 +43,7 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/decision-ledger.md",
-      "sha256": "551aee8e5b01deea3a7f185125e6e02b35777c613926a46ce97f5e6ad4e102ab"
+      "sha256": "3f5e05f7511550d9bd7f1bf2ffdf9ff5046c3ac1e345b99d26cb6580d6fcd168"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/methodology.md",
@@ -71,7 +71,7 @@
     },
     {
       "ruta": "tools/ds_guard.py",
-      "sha256": "a7a8c100664fc0f663196b278653bf15ac32b1280d521e23ebf9c7a07a1c6ef2"
+      "sha256": "50946c0004e71ca1983962f8db02a034ef7714346118bb5591c1b76c81d8fa5e"
     },
     {
       "ruta": "tools/dsguard/__init__.py",
@@ -79,7 +79,7 @@
     },
     {
       "ruta": "tools/dsguard/core.py",
-      "sha256": "6ea6ddb0edbbbe3dfd007c12f5e18d97028c1c7afc7980d16299ea103175c673"
+      "sha256": "4855c90a46b97b57ef615fadb386177ec3f079c07de6b1c000103b1d208b5697"
     },
     {
       "ruta": "tools/dsguard/repo.py",
