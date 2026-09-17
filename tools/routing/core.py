@@ -26,7 +26,12 @@ class RoutingRule:
     de tarea) le corresponde qué `provider_id`/`model`/`effort`. `reason`
     es obligatorio (sin default): es el campo de trazabilidad, cita
     evidencia si corresponde (p. ej. "harmessi-bench run X: 3/3 vs 1/3"),
-    nunca vacío (ver validación en `policy.py::load_policy`)."""
+    nunca vacío (ver validación en `policy.py::load_policy`). `fallback_chain`
+    (v0.5 Change 3, `fallback-and-handoffs`, extensión aditiva): lista de
+    `provider_id` a intentar en orden si el proveedor principal falla por una
+    razón elegible para fallback (ver
+    `tools.fallback.core.is_fallback_eligible`); vacía por default -- sin
+    fallback configurado es una configuración legítima, no un error."""
 
     role: str
     provider_id: str
@@ -34,6 +39,7 @@ class RoutingRule:
     task_type: str = "*"
     model: Optional[str] = None
     effort: Optional[str] = None
+    fallback_chain: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -51,7 +57,10 @@ class RoutingDecision:
     """Resultado de `resolve()`. `rule_source` es uno de
     `"regla_explicita"`, `"default"`, `"sin_regla"`. `provider_available`
     es `None` si no se pasó `available_providers` a `resolve()`, o
-    `True`/`False` si sí se pasó y la decisión tiene `provider_id`."""
+    `True`/`False` si sí se pasó y la decisión tiene `provider_id`.
+    `fallback_chain` (v0.5 Change 3, `fallback-and-handoffs`, extensión
+    aditiva): copia de la `fallback_chain` de la regla ganadora, o `[]` si
+    no hubo regla ganadora (`matched=False`)."""
 
     role: str
     task_type: str
@@ -62,6 +71,7 @@ class RoutingDecision:
     rule_source: str
     reason: str
     provider_available: Optional[bool] = None
+    fallback_chain: List[str] = field(default_factory=list)
 
 
 def resolve(
@@ -144,6 +154,7 @@ def resolve(
         reason=regla_ganadora.reason,
         provider_available=None,
     )
+    decision.fallback_chain = list(regla_ganadora.fallback_chain)
 
     if available_providers is not None and decision.provider_id is not None:
         decision.provider_available = decision.provider_id in available_providers

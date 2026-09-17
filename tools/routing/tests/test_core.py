@@ -98,6 +98,27 @@ class TestResolve(unittest.TestCase):
         self.assertEqual(decision.provider_id, "claude_code")
         self.assertEqual(decision.reason, "primera declarada")
 
+    def test_regla_con_fallback_chain_se_propaga_en_decision(self):
+        regla = RoutingRule(
+            role="writer",
+            provider_id="claude_code",
+            reason="con fallback",
+            fallback_chain=["codex", "gemini"],
+        )
+        policy = RoutingPolicy(rules=[regla])
+
+        decision = resolve(policy, role="writer", task_type="cualquiera")
+
+        self.assertEqual(decision.fallback_chain, ["codex", "gemini"])
+
+    def test_regla_sin_fallback_chain_explicito_decision_lista_vacia(self):
+        regla = RoutingRule(role="writer", provider_id="claude_code", reason="sin fallback")
+        policy = RoutingPolicy(rules=[regla])
+
+        decision = resolve(policy, role="writer", task_type="cualquiera")
+
+        self.assertEqual(decision.fallback_chain, [])
+
 
 if __name__ == "__main__":
     unittest.main()

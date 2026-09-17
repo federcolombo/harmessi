@@ -93,6 +93,51 @@ class TestLoadPolicy(unittest.TestCase):
         self.assertIn("default", mensaje)
         self.assertNotIsInstance(contexto.exception, AttributeError)
 
+    def test_regla_con_fallback_chain_se_carga(self):
+        import tempfile
+
+        contenido = {
+            "rules": [
+                {
+                    "role": "writer",
+                    "provider_id": "claude_code",
+                    "reason": "ok",
+                    "fallback_chain": ["codex"],
+                }
+            ],
+            "default": None,
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            ruta = Path(tmp) / "routing.json"
+            ruta.write_text(json.dumps(contenido), encoding="utf-8")
+
+            policy = load_policy(ruta)
+
+        self.assertEqual(policy.rules[0].fallback_chain, ["codex"])
+
+    def test_fallback_chain_no_lista_levanta_value_error(self):
+        import tempfile
+
+        contenido = {
+            "rules": [
+                {
+                    "role": "writer",
+                    "provider_id": "claude_code",
+                    "reason": "ok",
+                    "fallback_chain": "no_es_lista",
+                }
+            ],
+            "default": None,
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            ruta = Path(tmp) / "routing.json"
+            ruta.write_text(json.dumps(contenido), encoding="utf-8")
+
+            with self.assertRaises(ValueError) as contexto:
+                load_policy(ruta)
+
+        self.assertIn("fallback_chain", str(contexto.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

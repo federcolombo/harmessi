@@ -1,5 +1,5 @@
 {
-  "_nota": "Ejemplo ilustrativo de una RoutingPolicy (v0.5 Change 2, provider-routing). No es la politica real de este repo -- este repo no declara ninguna politica de routing propia (.harmessi/routing.json no existe aca). Ver tools/routing/policy.py::load_policy.",
+  "_nota": "Ejemplo ilustrativo de una RoutingPolicy (v0.5 Change 2, provider-routing; campo fallback_chain agregado de forma aditiva en v0.5 Change 3, fallback-and-handoffs). No es la politica real de este repo -- este repo no declara ninguna politica de routing propia (.harmessi/routing.json no existe aca). Ver tools/routing/policy.py::load_policy y tools/fallback/core.py para como se usa fallback_chain.",
   "rules": [
     {
       "role": "writer",
@@ -7,7 +7,8 @@
       "provider_id": "claude_code",
       "model": null,
       "effort": "high",
-      "reason": "unico provider con CLI disponible y autenticada en este entorno (ver tools/providers, Change 0)"
+      "reason": "unico provider con CLI disponible y autenticada en este entorno (ver tools/providers, Change 0)",
+      "fallback_chain": ["codex"]
     },
     {
       "role": "reviewer",

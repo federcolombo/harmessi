@@ -42,6 +42,14 @@ def _construir_regla(crudo: dict, etiqueta: str) -> RoutingRule:
             f"regla {etiqueta} de routing.json le faltan campos requeridos "
             f"(no vacíos): {faltantes!r}"
         )
+
+    fallback_chain = crudo.get("fallback_chain", [])
+    if not isinstance(fallback_chain, list):
+        raise ValueError(
+            f"regla {etiqueta} de routing.json: 'fallback_chain' debe ser una "
+            f"lista, no {type(fallback_chain).__name__}"
+        )
+
     return RoutingRule(
         role=crudo["role"],
         provider_id=crudo["provider_id"],
@@ -49,6 +57,7 @@ def _construir_regla(crudo: dict, etiqueta: str) -> RoutingRule:
         task_type=crudo.get("task_type", "*"),
         model=crudo.get("model"),
         effort=crudo.get("effort"),
+        fallback_chain=fallback_chain,
     )
 
 
