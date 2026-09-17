@@ -1,0 +1,26 @@
+{
+  "_nota": "Set de ejemplo demostrativo del framework, no una suite real de evaluación de Harmessi.",
+  "escenarios": [
+    {
+      "scenario_id": "responde-ok",
+      "prompt": "Respondé unicamente con la palabra OK.",
+      "category": "instruccion-formato",
+      "tags": ["demo"],
+      "expected": {"tipo": "exact", "valor": "OK"}
+    },
+    {
+      "scenario_id": "suma-simple",
+      "prompt": "Cuanto es 2+2? Respondé solo con el numero.",
+      "category": "razonamiento-basico",
+      "tags": ["demo"],
+      "expected": {"tipo": "contains", "valores": ["4"]}
+    },
+    {
+      "scenario_id": "formato-lista",
+      "prompt": "Listame 2 colores primarios, uno por linea, sin numerar.",
+      "category": "instruccion-formato",
+      "tags": ["demo"],
+      "expected": {"tipo": "regex", "patron": "(?i)(rojo|azul|amarillo)"}
+    }
+  ]
+}
