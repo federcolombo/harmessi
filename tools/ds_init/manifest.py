@@ -540,6 +540,18 @@ MANIFEST: tuple = (
         stage_minimo="experiment",
     ),
     EntradaManifiesto(
+        fuente="tools/reporting/__init__.py",
+        tratamiento=VERBATIM,
+        destino="tools/reporting/__init__.py",
+        descripcion="Paquete de reporting gobernado (v0.6), sin logica",
+    ),
+    EntradaManifiesto(
+        fuente="tools/reporting/core.py",
+        tratamiento=VERBATIM,
+        destino="tools/reporting/core.py",
+        descripcion="Contratos neutrales de reporting (Report/Chapter/Table/Figure/Insight), solo stdlib",
+    ),
+    EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/eda.md.tmpl",
         tratamiento=PLANTILLA,
         destino=".claude/skills/lead-data-scientist/eda.md",
