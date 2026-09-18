@@ -33,6 +33,7 @@ from tools.reporting.core import (
     ReportingContractError,
     TableArtifact,
     canonical_json,
+    es_id_valido,
 )
 
 # ---------------------------------------------------------------------------
@@ -242,6 +243,14 @@ class TestIds(unittest.TestCase):
                     _capitulo(chapter_id=valor)
                 with self.assertRaises(ReportingContractError):
                     _reporte(report_id=valor)
+
+    def test_es_id_valido_coincide_con_el_contrato(self):
+        for valor in _IDS_VALIDOS:
+            with self.subTest(valido=valor):
+                self.assertIs(es_id_valido(valor), True)
+        for valor in tuple(_IDS_INVALIDOS) + (".", "con", "a:b", "x\n", None, 5):
+            with self.subTest(invalido=valor):
+                self.assertIs(es_id_valido(valor), False)
 
     def test_backing_table_id_y_evidence_refs_validan_id(self):
         for valor in ("A", "a.b", 5, ""):

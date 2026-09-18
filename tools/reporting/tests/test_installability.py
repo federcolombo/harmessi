@@ -16,7 +16,13 @@ from tools.ds_init.manifest import (
 
 REPO_ORIGEN = Path(__file__).resolve().parents[3]
 PERFIL = "python-jupyter-data"
-RUTAS_REPORTING = ("tools/reporting/__init__.py", "tools/reporting/core.py")
+RUTAS_REPORTING = (
+    "tools/reporting/__init__.py",
+    "tools/reporting/core.py",
+    "tools/reporting/governance.py",
+    "tools/reporting/cli.py",
+    "tools/reporting/__main__.py",
+)
 
 
 class TestInstalabilidadReporting(unittest.TestCase):
@@ -40,6 +46,15 @@ class TestInstalabilidadReporting(unittest.TestCase):
         destinos = {e.destino for e in manifest_para_perfil_y_stage(PERFIL, "discovery")}
         for ruta in RUTAS_REPORTING:
             self.assertIn(ruta, destinos)
+
+    def test_entradas_de_governance_y_cli_van_tras_core_en_orden(self):
+        destinos = [e.destino for e in MANIFEST]
+        indice_core = destinos.index("tools/reporting/core.py")
+        previo = indice_core
+        for ruta in RUTAS_REPORTING[2:]:
+            indice = destinos.index(ruta)
+            self.assertGreater(indice, previo, ruta)
+            previo = indice
 
     def test_los_tests_de_reporting_no_van_al_manifest(self):
         for entrada in MANIFEST:

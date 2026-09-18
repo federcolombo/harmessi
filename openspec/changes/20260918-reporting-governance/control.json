@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "change_id": "20260918-reporting-governance",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-18T17:07:16Z",
+  "baseline": {
+    "commit": "21ed68599653368b42f3b4f0eb692d34e9dd8a62",
+    "rama": "v0.6-dev",
+    "capturado_utc": "2026-09-18T17:07:16Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260918-reporting-governance/proposal.md",
+      "openspec/changes/20260918-reporting-governance/tasks.md",
+      "openspec/changes/20260918-reporting-governance/spec.md",
+      "openspec/changes/20260918-reporting-governance/design.md",
+      "openspec/changes/20260918-reporting-governance/control.json",
+      "openspec/changes/20260918-reporting-governance/verification.md",
+      "tools/reporting/governance.py",
+      "tools/reporting/cli.py",
+      "tools/reporting/__main__.py",
+      "tools/reporting/tests/test_governance.py",
+      "tools/reporting/tests/test_cli.py",
+      "tools/reporting/core.py",
+      "tools/reporting/tests/test_core.py",
+      "tools/reporting/tests/test_installability.py",
+      "tools/ds_init/manifest.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.6.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "734059062e5c8b8984390f0495795ae7eddcd094b47e2e8f5ab2d76ad9e1525b",
+      "registrado_utc": "2026-09-18T17:26:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 1 - reporting-governance (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "413f9af60b6c91b1c8d416325661d486ff8ca690216f3b03e793fdf46331af4a",
+      "registrado_utc": "2026-09-18T17:26:15Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 1 - reporting-governance (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "dc725f695b262595615ef6c4e09eb9804016b3a58585fce90b102499b1bb95f2",
+      "registrado_utc": "2026-09-18T17:26:16Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 1 - reporting-governance (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "da8a647a5ba8c8f23fe2536fc440006269fc32480b4672d280115a0063e6ae8c",
+      "registrado_utc": "2026-09-18T17:26:17Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 1 - reporting-governance (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "abb71b064f6f0d987b62a9399f97467e707f5fb53b90a9315030c2431dc17e8a",
+      "registrado_utc": "2026-09-18T18:05:08Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 1 - reporting-governance (enmiendas post-review)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md). Re-aprobación por enmiendas del ciclo reviewer 1/2."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "bedbbeb7d9dbd2329f5410e6a3b7e872ee573ea236d38e7030738b23a3a589ee",
+      "registrado_utc": "2026-09-18T18:05:09Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 1 - reporting-governance (enmiendas post-review)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md). Re-aprobación por enmiendas del ciclo reviewer 1/2."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-18T17:26:19Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-18T17:26:20Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-18T18:05:10Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-18T18:07:09Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-18T17:26:18Z",
+      "cierre_utc": "2026-09-18T18:05:12Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 6,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-19T01:26:18Z",
+      "minutos_consumidos": 38.9,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-18T18:01:54Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-18T17:41:19Z"
+        },
+        "metodologo": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-18T17:57:44Z"
+        }
+      },
+      "tareas": [],
+      "roles": [
+        "python-data-engineer"
+      ],
+      "reintentos": 1,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-09-18T18:07:08Z",
+      "cierre_utc": "2026-09-18T18:07:10Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 60,
+        "max_tareas": 6,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-18T19:07:08Z",
+      "minutos_consumidos": 0.03333333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {},
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "remediaciones": [
+    {
+      "remediation_id": "r1",
+      "finding_id": "rev1-c1",
+      "origen": "python-data-engineer",
+      "tipo": "bug",
+      "estado": "abierta",
+      "creado_utc": "2026-09-18T17:50:46Z",
+      "ventanas": [
+        {
+          "ventana": 1,
+          "max_intentos": 2,
+          "autorizado_por": null,
+          "fecha_autorizacion": null,
+          "motivo": null,
+          "intentos": [
+            {
+              "attempt": 1,
+              "causa": "Reviewer: ancestro/glob en aislamiento, mojibake CLI, holdout ausente=PASS, tests de bypass, ids",
+              "cambio_aplicado": "Fixes ciclo 1/2 (governance + CLI en paralelo)",
+              "resultado": "pendiente de re-tests",
+              "session_id": "s1",
+              "utc": "2026-09-18T17:50:46Z"
+            }
+          ]
+        }
+      ],
+      "resuelto_utc": null,
+      "resultado_final": null
+    }
+  ]
+}

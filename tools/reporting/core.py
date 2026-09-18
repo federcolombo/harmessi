@@ -104,6 +104,12 @@ def _validar_id(valor: Any, campo: str) -> str:
     return valor
 
 
+def es_id_valido(valor: Any) -> bool:
+    """`True` sii `valor` cumple exactamente las reglas de ids de este módulo
+    (`_PATRON_ID` + nombres reservados de Windows). Nunca lanza."""
+    return isinstance(valor, str) and _PATRON_ID.fullmatch(valor) is not None and valor not in _IDS_RESERVADOS
+
+
 def _exigir_str(valor: Any, campo: str) -> str:
     """Exige `str`; devuelve el mismo valor."""
     if not isinstance(valor, str):

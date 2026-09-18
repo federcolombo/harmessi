@@ -552,6 +552,24 @@ MANIFEST: tuple = (
         descripcion="Contratos neutrales de reporting (Report/Chapter/Table/Figure/Insight), solo stdlib",
     ),
     EntradaManifiesto(
+        fuente="tools/reporting/governance.py",
+        tratamiento=VERBATIM,
+        destino="tools/reporting/governance.py",
+        descripcion="Governance de reportes (policy, destino, aislamiento, holdout, cutoff), output guard solo lectura",
+    ),
+    EntradaManifiesto(
+        fuente="tools/reporting/cli.py",
+        tratamiento=VERBATIM,
+        destino="tools/reporting/cli.py",
+        descripcion="CLI de reporting gobernado (check-inputs, check-destination), solo lectura",
+    ),
+    EntradaManifiesto(
+        fuente="tools/reporting/__main__.py",
+        tratamiento=VERBATIM,
+        destino="tools/reporting/__main__.py",
+        descripcion="Punto de entrada python -m tools.reporting",
+    ),
+    EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/eda.md.tmpl",
         tratamiento=PLANTILLA,
         destino=".claude/skills/lead-data-scientist/eda.md",

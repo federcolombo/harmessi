@@ -67,6 +67,8 @@ MODULOS_CORE = (
     "tools/ds_profile/schema.py",
     "tools/ds_profile/holdout_guard.py",
     "tools/reporting/core.py",
+    "tools/reporting/governance.py",
+    "tools/reporting/cli.py",
     "tools/nbrunner/core.py",
     "tools/nbrunner/execute.py",
     "tools/nbrunner/fsdiff.py",
