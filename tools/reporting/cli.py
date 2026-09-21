@@ -4,6 +4,14 @@
 Subcomandos (solo lectura: esta CLI no escribe nada en disco):
     check-inputs       aislamiento de inputs de un flujo (`check_flow_inputs`)
     check-destination  destino de un reporte (`evaluate_destination`)
+    validate           puerta completa sobre un directorio de reporte persistido
+                       (`validation.validate_report_dir`; v0.6 Change 3)
+
+`check-inputs` suma el aislamiento por hash (`REPORT-ISOLATION-HASH`, Change 3)
+SOLO cuando el índice exploratory tiene entradas, falló, quedó truncado o hay
+manifests exploratory ilegibles: sin ello su salida es la de siempre. La ausencia
+de una línea `REPORT-ISOLATION-HASH` significa "no había manifests exploratory
+indexados", NO que el chequeo no corrió.
 
 Exit codes:
     0 sin FAIL
@@ -16,8 +24,7 @@ con `--json`, un objeto con claves ordenadas `allowed`, `counts` y `results`.
 Los mensajes de error de uso/entorno van a stderr. Las rutas relativas se
 resuelven contra `--repo-root` (default: el cwd), como `pathguard`.
 
-Los Changes 3 y 4 agregan `validate` y `render` registrando su subparser en
-`_construir_parser`.
+El Change 4 agrega `render` registrando su subparser en `_construir_parser`.
 """
 from __future__ import annotations
 
@@ -29,7 +36,9 @@ import sys
 from pathlib import Path
 
 from . import core as reporting_core
+from . import evidence
 from . import governance
+from . import validation
 
 _checks = governance.checks
 
@@ -69,6 +78,15 @@ def _construir_parser() -> argparse.ArgumentParser:
     )
     _agregar_comunes(p_dest)
     p_dest.set_defaults(func=cmd_check_destination)
+
+    ayuda_validate = (
+        "Valida un directorio de reporte persistido (manifest, integridad de artefactos, fuentes, "
+        "contenido, governance y aislamiento por hash). Solo lectura."
+    )
+    p_validate = subparsers.add_parser("validate", help=ayuda_validate, description=ayuda_validate)
+    p_validate.add_argument("--dir", required=True, dest="report_dir")
+    _agregar_comunes(p_validate)
+    p_validate.set_defaults(func=cmd_validate)
 
     return parser
 
@@ -116,7 +134,23 @@ def cmd_check_inputs(args: argparse.Namespace) -> int:
         print(error, file=sys.stderr)
         return 3
     resultados = governance.check_flow_inputs(repo_root, args.flow_scope, args.inputs)
+    # Aditivo (Change 3): el chequeo por hash solo se agrega si hay artefactos
+    # exploratory indexados o el índice falló (fail-closed); si no hay nada contra
+    # qué comparar, la salida previa no cambia.
+    estado = evidence.exploratory_index_status(repo_root)  # una sola indexación
+    if estado.index or estado.error is not None or estado.truncated or estado.unreadable_manifests > 0:
+        resultados = resultados + evidence.check_inputs_hash_isolation(
+            repo_root, args.flow_scope, args.inputs, index=estado
+        )
     return _emitir(resultados, args.como_json)
+
+
+def cmd_validate(args: argparse.Namespace) -> int:
+    repo_root, error = _resolver_repo_root(args)
+    if error is not None:
+        print(error, file=sys.stderr)
+        return 3
+    return _emitir(validation.validate_report_dir(repo_root, args.report_dir), args.como_json)
 
 
 def cmd_check_destination(args: argparse.Namespace) -> int:

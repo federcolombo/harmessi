@@ -1,6 +1,6 @@
 """Instalabilidad de `tools/reporting` (v0.6 Changes 0-2, R13/R20): el manifest del
-inicializador incluye las 9 rutas de `RUTAS_REPORTING` (paquete, core, governance,
-cli, `__main__`, profiles y examples) como VERBATIM en `discovery`.
+inicializador incluye las 11 rutas de `RUTAS_REPORTING` (paquete, core, governance,
+cli, `__main__`, profiles, examples, evidence y validation) como VERBATIM en `discovery`.
 Los tests de `tools/reporting/tests/` NO se instalan (no están en `MANIFEST`).
 """
 from __future__ import annotations
@@ -27,6 +27,8 @@ RUTAS_REPORTING = (
     "tools/reporting/profiles/eda.py",
     "tools/reporting/examples/__init__.py",
     "tools/reporting/examples/eda_generic.py",
+    "tools/reporting/evidence.py",
+    "tools/reporting/validation.py",
 )
 
 
@@ -60,6 +62,23 @@ class TestInstalabilidadReporting(unittest.TestCase):
             indice = destinos.index(ruta)
             self.assertGreater(indice, previo, ruta)
             previo = indice
+
+    def test_evidence_y_validation_van_tras_eda_generic(self):
+        destinos = [e.destino for e in MANIFEST]
+        indice_ejemplo = destinos.index("tools/reporting/examples/eda_generic.py")
+        indice_evidence = destinos.index("tools/reporting/evidence.py")
+        indice_validation = destinos.index("tools/reporting/validation.py")
+        self.assertGreater(indice_evidence, indice_ejemplo)
+        self.assertGreater(indice_validation, indice_evidence)
+
+    def test_evidence_y_validation_son_verbatim_discovery_fuente_igual_destino(self):
+        for ruta in ("tools/reporting/evidence.py", "tools/reporting/validation.py"):
+            with self.subTest(ruta=ruta):
+                entradas = [e for e in MANIFEST if e.destino == ruta]
+                self.assertEqual(len(entradas), 1)
+                self.assertEqual(entradas[0].fuente, entradas[0].destino)
+                self.assertEqual(entradas[0].tratamiento, VERBATIM)
+                self.assertEqual(entradas[0].stage_minimo, "discovery")
 
     def test_los_tests_de_reporting_no_van_al_manifest(self):
         for entrada in MANIFEST:

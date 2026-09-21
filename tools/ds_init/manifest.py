@@ -594,6 +594,18 @@ MANIFEST: tuple = (
         descripcion="Ejemplo generico y sintetico de reporte EDA (solo stdlib, determinista)",
     ),
     EntradaManifiesto(
+        fuente="tools/reporting/evidence.py",
+        tratamiento=VERBATIM,
+        destino="tools/reporting/evidence.py",
+        descripcion="Evidencia de reportes (fuentes, manifest, escritura/lectura de directorio de reporte, aislamiento por hash)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/reporting/validation.py",
+        tratamiento=VERBATIM,
+        destino="tools/reporting/validation.py",
+        descripcion="Validador de reportes (figuras, insights, manifest y puerta completa sobre un directorio), solo lectura",
+    ),
+    EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/eda.md.tmpl",
         tratamiento=PLANTILLA,
         destino=".claude/skills/lead-data-scientist/eda.md",
