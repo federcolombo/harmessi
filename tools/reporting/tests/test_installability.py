@@ -1,5 +1,6 @@
-"""Instalabilidad de `tools/reporting` (v0.6 Change 0, R13): el manifest del
-inicializador incluye `__init__.py` y `core.py` como VERBATIM en `discovery`.
+"""Instalabilidad de `tools/reporting` (v0.6 Changes 0-2, R13/R20): el manifest del
+inicializador incluye las 9 rutas de `RUTAS_REPORTING` (paquete, core, governance,
+cli, `__main__`, profiles y examples) como VERBATIM en `discovery`.
 Los tests de `tools/reporting/tests/` NO se instalan (no están en `MANIFEST`).
 """
 from __future__ import annotations
@@ -22,6 +23,10 @@ RUTAS_REPORTING = (
     "tools/reporting/governance.py",
     "tools/reporting/cli.py",
     "tools/reporting/__main__.py",
+    "tools/reporting/profiles/__init__.py",
+    "tools/reporting/profiles/eda.py",
+    "tools/reporting/examples/__init__.py",
+    "tools/reporting/examples/eda_generic.py",
 )
 
 
@@ -42,7 +47,7 @@ class TestInstalabilidadReporting(unittest.TestCase):
         for ruta in RUTAS_REPORTING:
             self.assertTrue((REPO_ORIGEN / ruta).is_file(), ruta)
 
-    def test_stage_discovery_incluye_ambos_destinos(self):
+    def test_stage_discovery_incluye_todas_las_rutas_de_reporting(self):
         destinos = {e.destino for e in manifest_para_perfil_y_stage(PERFIL, "discovery")}
         for ruta in RUTAS_REPORTING:
             self.assertIn(ruta, destinos)

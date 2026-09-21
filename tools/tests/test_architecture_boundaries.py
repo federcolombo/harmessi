@@ -69,6 +69,8 @@ MODULOS_CORE = (
     "tools/reporting/core.py",
     "tools/reporting/governance.py",
     "tools/reporting/cli.py",
+    "tools/reporting/profiles/eda.py",
+    "tools/reporting/examples/eda_generic.py",
     "tools/nbrunner/core.py",
     "tools/nbrunner/execute.py",
     "tools/nbrunner/fsdiff.py",
