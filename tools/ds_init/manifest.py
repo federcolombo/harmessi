@@ -561,7 +561,7 @@ MANIFEST: tuple = (
         fuente="tools/reporting/cli.py",
         tratamiento=VERBATIM,
         destino="tools/reporting/cli.py",
-        descripcion="CLI de reporting gobernado (check-inputs, check-destination), solo lectura",
+        descripcion="CLI de reporting gobernado (check-inputs, check-destination, validate: solo lectura; render: escribe report.html de forma atomica, --check no escribe)",
     ),
     EntradaManifiesto(
         fuente="tools/reporting/__main__.py",
@@ -609,7 +609,7 @@ MANIFEST: tuple = (
         fuente="tools/reporting/style.py",
         tratamiento=VERBATIM,
         destino="tools/reporting/style.py",
-        descripcion="Design system de reportes (estilo visual/editorial, locale, overrides del proyecto), stdlib",
+        descripcion="Design system de reportes (estilo visual/editorial, locale, overrides del proyecto); solo stdlib mas dsguard.checks y reporting.evidence (carga gobernada de archivos)",
     ),
     EntradaManifiesto(
         fuente="tools/reporting/plotly_backend.py",

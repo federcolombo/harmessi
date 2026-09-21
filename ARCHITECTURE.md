@@ -45,12 +45,12 @@ otros la lógica de decisión vive mezclada con la lectura de stdin en el mismo 
 | `tools/fallback/core.py` | Motor de fallback técnico entre proveedores (v0.5 Change 3) -- decide reintentar SOLO cuando `InvocationResult.availability_error` es elegible (`quota`/`unavailable`/`unauthenticated`, ver `classify_availability_error` de Change 0); nunca por error semántico/de código, hallazgo de reviewer, test fallido o mala calidad de output (esas señales ni siquiera se importan acá) -- es core, no conoce protocolo de hooks. |
 | `tools/reporting/core.py` | Contratos neutrales de reporting gobernado (v0.6 Change 0: `Report`/`Chapter`/`TableArtifact`/`FigureArtifact`/`FigureSpec`/`Insight`, serialización determinista y hash de contenido) -- solo stdlib; no importa Plotly, HTML, pandas, numpy, `dsguard`, `ds_profile` ni ningún hermano de `tools/reporting`, ni conoce un dominio (p. ej. EDA) o backend gráfico concreto; valida solo estructura (la completitud semántica/evidencial es de un Change posterior); no conoce protocolo de hooks, es core. |
 | `tools/reporting/governance.py` | Output guard declarativo de reportes (v0.6 Change 1) -- solo lectura: compone `dsguard` (`checks`, `pathguard`, `repo`, `scientific_validity`, `core`) y `reporting.core` con policy opcional `.harmessi/reporting-policy.json` (destino por scope, aislamiento exploratorio, holdout, cutoff); todo resultado es un `dsguard.checks.CheckResult` (sin engine propio) y solo evalúa rutas, nunca abre datos; importa `dsguard` (dirección permitida por la regla 6) pero no `ds_profile`; no conoce protocolo de hooks (usa `pathguard.evaluar_tool_call` como función, no lee stdin), es core. |
-| `tools/reporting/cli.py` | CLI `argparse` de reporting gobernado (v0.6 Change 1: `check-inputs`, `check-destination`; Change 3: `validate` y `REPORT-ISOLATION-HASH` aditivo en `check-inputs`; `python -m tools.reporting`) -- portable, solo lectura, exit codes 0/1/2/3 y salida `--json` opcional; no conoce el protocolo de hooks ni lee stdin. |
+| `tools/reporting/cli.py` | CLI `argparse` de reporting gobernado (v0.6 Change 1: `check-inputs`, `check-destination`; Change 3: `validate` y `REPORT-ISOLATION-HASH` aditivo en `check-inputs`; `python -m tools.reporting`) -- Change 4: `render` (escribe `report.html` de forma atómica; con `--check` no escribe); `check-inputs`, `check-destination` y `validate` son de solo lectura -- portable, exit codes 0/1/2/3 y salida `--json` opcional; no conoce el protocolo de hooks ni lee stdin. |
 | `tools/reporting/profiles/eda.py` | Profile EDA sobre el core de reporting (v0.6 Change 2) -- catálogo de bloques, declaración de aplicabilidad en `Report.metadata["eda"]`, autoderivación estructural y validador `EDA-*` que devuelve `dsguard.checks.CheckResult`; importa `reporting.core` y `dsguard.checks` (dirección permitida por la regla 6), pero no `governance`, pandas ni backends gráficos; verifica estructura y aplicabilidad explícita, no adecuación metodológica; solo lectura y determinista, es core, no conoce protocolo de hooks. |
 | `tools/reporting/examples/eda_generic.py` | Ejemplo genérico de reporte EDA (v0.6 Change 2) -- datos 100% sintéticos con `random.Random(RANDOM_STATE)` y estadísticas con stdlib; construye un `Report` con el profile `eda` que pasa `validate_eda_report` sin FAIL y es determinista; sin pandas, sin datos reales, es core. |
 | `tools/reporting/evidence.py` | Evidencia de reportes (v0.6 Change 3) -- descripción de fuentes con hash, construcción del manifest, escritura atómica y lectura del directorio de reporte, e índice de artefactos exploratory para el aislamiento por hash (`REPORT-ISOLATION-HASH`); importa `reporting.governance`, `dsguard` (dirección permitida por la regla 6) y, de `ds_profile`, SOLO `fingerprint`; no decide permisos de escritura (eso es del guard de governance/publish), no conoce protocolo de hooks ni lee stdin, es core. |
 | `tools/reporting/validation.py` | Validador de reportes (v0.6 Change 3) -- reglas de figuras, insights y manifest, y puerta completa `validate_report_dir` sobre un directorio persistido (integridad, fuentes, contenido, governance, aislamiento); importa `reporting.profiles.eda`, `reporting.evidence` y `reporting.governance`, todo resultado es un `dsguard.checks.CheckResult`; solo lectura y determinista, verifica estructura y evidencia, no adecuación metodológica; es core, no conoce protocolo de hooks. |
-| `tools/reporting/style.py` | Design system de reportes (v0.6 Change 4) -- contratos `Style`/`VisualStyle`/`EditorialStyle` (dataclasses frozen), `default_style()` genérico, presets de locale como data, overrides opcionales `.harmessi/report-style.json` (esquema estricto, lectura vía `evidence.read_allowed`) y `check_style` (contraste/paleta); solo stdlib y `reporting.evidence`/`dsguard.checks`, desacoplado del renderer (no importa `render_html` ni `plotly_backend`); es core, no conoce protocolo de hooks. |
+| `tools/reporting/style.py` | Design system de reportes (v0.6 Change 4) -- contratos `Style`/`VisualStyle`/`EditorialStyle` (dataclasses frozen), `default_style()` genérico, presets de locale como data, overrides opcionales `.harmessi/report-style.json` (esquema estricto, lectura vía `evidence.read_allowed`) y `check_style` (contraste/paleta); importa solo stdlib, `dsguard.checks` y `reporting.evidence` (`read_allowed`, para la carga gobernada de overrides; no importa `reporting.core`), desacoplado del renderer (no importa `render_html` ni `plotly_backend`); es core, no conoce protocolo de hooks. |
 | `tools/reporting/plotly_backend.py` | Backend opcional de figuras (v0.6 Change 4) -- `build_figure` arma a mano un dict JSON-puro tipo Plotly desde `FigureSpec` + tabla, sin mutar los artefactos; NO importa `plotly` a nivel de módulo (solo `find_plotly_bundle` intenta un import perezoso para localizar `plotly.js`, sin declarar dependencia); es core, no conoce protocolo de hooks. |
 | `tools/reporting/render_html.py` | Renderer HTML (v0.6 Change 4) -- `render_report_html` compone `report.html` con funciones puras sobre stdlib (`html.escape` en todo texto de usuario); determinista (mismo input, mismos bytes) y offline (solo CSS/JS inline); sin pandas ni red; es core, no conoce protocolo de hooks. |
 | `tools/reporting/publish.py` | Publicación de reportes (v0.6 Change 4) -- `publish` orquesta governance → validation → evidence → render y escribe el directorio del reporte más `report.html`; importa solo `reporting.*` y `dsguard.*` vía los módulos existentes; única puerta de escritura del reporte completo; es core, no conoce protocolo de hooks. |
@@ -122,7 +122,8 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
    `routing`, `fallback` y `harmessi_bench` no importan `reporting`. Verificado por
    `tools/tests/test_v06_core_neutrality.py`.
    Dirección de dependencias del Change 4: `style`, `plotly_backend`, `render_html` y `publish`
-   dependen del core, `governance`, `evidence` y `validation`; el core (`core.py`,
+   dependen del core, `governance`, `evidence` y `validation` (`style` solo de `dsguard.checks` y
+   `evidence`, para la carga gobernada de overrides); el core (`core.py`,
    `governance.py`, `evidence.py`, `validation.py`, `profiles/`) NO conoce style, render ni
    backend. `report.html` es un artefacto derivado y reproducible, fuera del manifest (su
    integridad se verifica re-renderizando con `render --check`); el escape de todo texto de
@@ -163,3 +164,43 @@ Change 3) — este documento las hace explícitas, no las introduce de cero.
 Ninguno de estos 5 puntos se resuelve en Change 3 — quedan como deuda explícita para cuando exista
 una necesidad real de un adapter nuevo (fuera de alcance de v0.4, ver `docs/roadmap/v0.5.md` y
 posteriores).
+
+### 4.1 Deuda registrada de v0.6 (no implementada)
+
+Declarada tras el hardening de v0.6; ninguno de estos puntos se resuelve en v0.6:
+
+1. **Registro de profiles**: `validation.py` importa `profiles.eda` de forma directa; un profile
+   nuevo exige tocar `validation`. Falta un registro/lookup por nombre de profile.
+2. **Enforcement de lectura vía hook**: ver §5 (hueco de aislamiento exploratory↔model_valid).
+3. **Verificación con `plotly.js` real**: el bundle real nunca se ejecutó; `Plotly.react` en
+   `beforeprint` es asíncrono y no está verificado; `render --check` depende del bundle
+   disponible en ese momento (proyecto o plotly instalado), no del que usó `publish`.
+4. **Subcomando `publish` en el CLI**: hoy `publish` es solo API Python.
+5. **`sys.path.insert` y estilo de imports**: los módulos de `reporting` usan
+   `sys.path.insert(0, tools_dir)` + `from dsguard import ...` (identidad dual de módulo frente a
+   `tools.dsguard`); unificar el estilo de imports del paquete es trabajo futuro.
+6. **Registro único de códigos/constantes**: hay constantes duplicadas (p. ej.
+   `REPORT-RENDER-PLOTLY-UNAVAILABLE`, `REPORT-STYLE-INVALID` en `cli.py` y `publish.py`;
+   `report.html` en `cli.py` y `core.REPORT_FILENAME`); hoy solo un test afirma su igualdad.
+7. **Carga de archivos en `style.py`**: separar la carga/lectura gobernada de overrides de los
+   dataclasses puros del design system.
+8. **Textos en español del profile EDA** (`_RAZON_SIN_TARGET`, preguntas de `BLOCK_CATALOG`,
+   `_RAZONES_TRIVIALES`) frente al tema por defecto `en`: mover a data por locale.
+9. **Alcance acotado de los tests de neutralidad**: `PAQUETES_SIN_REPORTING` omite `tools/ds_init`,
+   `tools/nbrunner` y los `tools/*.py` de nivel superior.
+10. **README** sin documentar `python -m tools.reporting`.
+11. **`.gitattributes -text` para `reports/**`**: con `core.autocrlf` los bytes de los artefactos
+    pueden cambiar y romper los hashes del manifest.
+12. **Ancla externa del hash del manifest**: el manifest se autodescribe; un atacante con escritura
+    puede regenerarlo coherente. Falta un ancla externa (p. ej. hash registrado fuera del directorio).
+
+## 5. Límites del aislamiento exploratory↔model_valid (v0.6)
+
+El aislamiento es mecánico en `publish`, `validate` y `check-inputs`/`check-destination`:
+escritura controlada por destino de scope; lectura controlada por path, por manifest ancestro y
+por hash de una copia byte-idéntica de un artefacto exploratory.
+
+Límite real: un notebook o script de modelado que LEA `reports/exploratory/**` sin declarar sus
+inputs al binario NO es interceptado. El hook de `pathguard` no puede llamar a `reporting`
+(`dsguard` no importa `reporting`, regla 6). Cerrar ese hueco (p. ej. una regla de guardrails/hook
+para agentes de modelado) es deuda de v0.7+.

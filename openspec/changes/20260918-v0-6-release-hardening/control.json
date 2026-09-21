@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "change_id": "20260918-v0-6-release-hardening",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-21T15:30:24Z",
+  "baseline": {
+    "commit": "13c8fe2395b3060fea0d81a7360e6085b9adab50",
+    "rama": "v0.6-dev",
+    "capturado_utc": "2026-09-21T15:30:24Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260918-v0-6-release-hardening/proposal.md",
+      "openspec/changes/20260918-v0-6-release-hardening/tasks.md",
+      "openspec/changes/20260918-v0-6-release-hardening/spec.md",
+      "openspec/changes/20260918-v0-6-release-hardening/design.md",
+      "openspec/changes/20260918-v0-6-release-hardening/control.json",
+      "openspec/changes/20260918-v0-6-release-hardening/verification.md",
+      "tools/ds_init/version.py",
+      "CITATION.cff",
+      ".ds_init/control.json",
+      "docs/roadmap/v0.6.md",
+      "tools/reporting/**",
+      "ARCHITECTURE.md",
+      "tools/ds_init/manifest.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/tests/test_v06_core_neutrality.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "0f12fb2e1e28c1ee7fcb90984e94b0195cbd56784cf00c0391c12015ef458863",
+      "registrado_utc": "2026-09-21T15:33:33Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-21",
+      "alcance_aprobado": "Change 5 - v0.6-release-hardening (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "963aa8121a9e81b4899acee42bcc03ce90fd50fb9a17a45aa5cc95a579abb717",
+      "registrado_utc": "2026-09-21T15:33:34Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-21",
+      "alcance_aprobado": "Change 5 - v0.6-release-hardening (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "7375b32fe417ee57406a93ec1d5de144533ba9eedd38411d7efa032f9c1541ca",
+      "registrado_utc": "2026-09-21T15:33:35Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-21",
+      "alcance_aprobado": "Change 5 - v0.6-release-hardening (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ad465e7252514bd42e91fd94a467872c0cbc89e40de1ab1d244f6a65b6d221e0",
+      "registrado_utc": "2026-09-21T15:33:36Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-21",
+      "alcance_aprobado": "Change 5 - v0.6-release-hardening (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-21T15:33:38Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-21T15:33:39Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-21T16:12:31Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-21T16:12:33Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-21T15:33:37Z",
+      "cierre_utc": "2026-09-21T16:12:34Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 720,
+        "max_tareas": 6,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-22T03:33:37Z",
+      "minutos_consumidos": 38.95,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-21T15:34:58Z"
+        }
+      },
+      "tareas": [],
+      "roles": [
+        "python-data-engineer"
+      ],
+      "reintentos": 1,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "remediaciones": [
+    {
+      "remediation_id": "r1",
+      "finding_id": "rev1-c5",
+      "origen": "python-data-engineer",
+      "tipo": "bug",
+      "estado": "abierta",
+      "creado_utc": "2026-09-21T15:42:46Z",
+      "ventanas": [
+        {
+          "ventana": 1,
+          "max_intentos": 2,
+          "autorizado_por": null,
+          "fecha_autorizacion": null,
+          "motivo": null,
+          "intentos": [
+            {
+              "attempt": 1,
+              "causa": "Reviewer transversal: sobreafirmaciones en ARCHITECTURE y manifest y roadmap, import dsguard inconsistente en cli, test de imports de validation y profiles, deuda no declarada",
+              "cambio_aplicado": "Fixes acotados de hardening ciclo 1 de 2, sin features",
+              "resultado": "pendiente de re-tests",
+              "session_id": "s1",
+              "utc": "2026-09-21T15:42:46Z"
+            }
+          ]
+        }
+      ],
+      "resuelto_utc": null,
+      "resultado_final": null
+    }
+  ]
+}

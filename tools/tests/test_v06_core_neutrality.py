@@ -188,6 +188,75 @@ class TestNingunPaqueteImportaReporting(unittest.TestCase):
         )
 
 
+# Change 5 (F5): el "core" de validación/profiles no conoce la capa de presentación ni el CLI.
+MODULOS_DE_PRESENTACION = {"style", "render_html", "plotly_backend", "publish", "cli"}
+
+
+def _importa_presentacion(ruta_absoluta: Path) -> list:
+    """Imports (`ast.walk`, incluidos los anidados) que apuntan a style, render_html,
+    plotly_backend, publish o cli, con cualquier estilo (`from . import style`,
+    `from .style import x`, `from tools.reporting import cli`, `import tools.reporting.publish`)."""
+    encontrados = []
+    for nodo in ast.walk(_parsear(ruta_absoluta)):
+        if isinstance(nodo, ast.Import):
+            for alias in nodo.names:
+                if MODULOS_DE_PRESENTACION & set(alias.name.split(".")):
+                    encontrados.append(f"import {alias.name}")
+        elif isinstance(nodo, ast.ImportFrom):
+            partes = set(nodo.module.split(".")) if nodo.module else set()
+            nombres = {alias.name for alias in nodo.names}
+            if MODULOS_DE_PRESENTACION & (partes | nombres):
+                encontrados.append(f"from {'.' * nodo.level}{nodo.module or ''} import {', '.join(sorted(nombres))}")
+    return encontrados
+
+
+class TestValidacionYProfilesNoConocenPresentacion(unittest.TestCase):
+    def _archivos(self) -> list:
+        archivos = [REPO_ORIGEN / "tools/reporting/validation.py"]
+        archivos += sorted((REPO_ORIGEN / "tools/reporting/profiles").glob("*.py"))
+        return archivos
+
+    def test_hay_archivos_que_escanear(self):
+        archivos = self._archivos()
+        self.assertGreaterEqual(len(archivos), 3)  # validation + __init__ + eda
+        for ruta in archivos:
+            self.assertTrue(ruta.is_file(), ruta)
+
+    def test_validation_y_profiles_no_importan_style_render_backend_publish_ni_cli(self):
+        violaciones = []
+        for ruta in self._archivos():
+            for referencia in _importa_presentacion(ruta):
+                violaciones.append(f"{ruta.relative_to(REPO_ORIGEN).as_posix()}: {referencia}")
+        self.assertEqual(
+            violaciones,
+            [],
+            "validation/profiles no deben conocer style, render_html, plotly_backend, publish ni cli "
+            f"(ARCHITECTURE.md regla 6): {violaciones}",
+        )
+
+    def test_el_detector_encuentra_una_violacion_real(self):
+        estilos = (
+            "from . import style\n",
+            "from .style import default_style\n",
+            "from .render_html import render_report_html\n",
+            "from tools.reporting import cli\n",
+            "import tools.reporting.publish\n",
+            "def f():\n    from .. import plotly_backend\n",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            for i, codigo in enumerate(estilos):
+                ruta = Path(tmp) / f"v{i}.py"
+                ruta.write_text(codigo, encoding="utf-8")
+                self.assertTrue(_importa_presentacion(ruta), f"no detectó: {codigo!r}")
+            limpio = Path(tmp) / "limpio.py"
+            limpio.write_text(
+                "import json\nfrom . import core as reporting_core\nfrom . import evidence\n"
+                "from .profiles import eda\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(_importa_presentacion(limpio), [])
+
+
 class TestSanityDeLosDetectores(unittest.TestCase):
     """Los escáneres detectan violaciones reales (no pasan en vacío)."""
 

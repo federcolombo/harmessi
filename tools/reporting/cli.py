@@ -47,15 +47,19 @@ import re
 import sys
 from pathlib import Path
 
-from tools.dsguard import core as dsguard_core
+_TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
 
-from . import core as reporting_core
-from . import evidence
-from . import governance
-from . import plotly_backend
-from . import render_html
-from . import style as reporting_style
-from . import validation
+from dsguard import core as dsguard_core  # noqa: E402
+
+from . import core as reporting_core  # noqa: E402
+from . import evidence  # noqa: E402
+from . import governance  # noqa: E402
+from . import plotly_backend  # noqa: E402
+from . import render_html  # noqa: E402
+from . import style as reporting_style  # noqa: E402
+from . import validation  # noqa: E402
 
 _checks = governance.checks
 
