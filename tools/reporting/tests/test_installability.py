@@ -29,7 +29,12 @@ RUTAS_REPORTING = (
     "tools/reporting/examples/eda_generic.py",
     "tools/reporting/evidence.py",
     "tools/reporting/validation.py",
+    "tools/reporting/style.py",
+    "tools/reporting/plotly_backend.py",
+    "tools/reporting/render_html.py",
+    "tools/reporting/publish.py",
 )
+RUTAS_CHANGE_4 = RUTAS_REPORTING[-4:]
 
 
 class TestInstalabilidadReporting(unittest.TestCase):
@@ -79,6 +84,29 @@ class TestInstalabilidadReporting(unittest.TestCase):
                 self.assertEqual(entradas[0].fuente, entradas[0].destino)
                 self.assertEqual(entradas[0].tratamiento, VERBATIM)
                 self.assertEqual(entradas[0].stage_minimo, "discovery")
+
+    def test_change_4_entradas_verbatim_discovery_fuente_igual_destino(self):
+        for ruta in RUTAS_CHANGE_4:
+            with self.subTest(ruta=ruta):
+                entradas = [e for e in MANIFEST if e.destino == ruta]
+                self.assertEqual(len(entradas), 1)
+                self.assertEqual(entradas[0].fuente, entradas[0].destino)
+                self.assertEqual(entradas[0].tratamiento, VERBATIM)
+                self.assertEqual(entradas[0].stage_minimo, "discovery")
+                self.assertTrue((REPO_ORIGEN / ruta).is_file(), ruta)
+
+    def test_change_4_van_tras_validation_y_en_orden(self):
+        destinos = [e.destino for e in MANIFEST]
+        previo = destinos.index("tools/reporting/validation.py")
+        for ruta in RUTAS_CHANGE_4:
+            indice = destinos.index(ruta)
+            self.assertGreater(indice, previo, ruta)
+            previo = indice
+
+    def test_change_4_presentes_en_stage_discovery(self):
+        destinos = {e.destino for e in manifest_para_perfil_y_stage(PERFIL, "discovery")}
+        for ruta in RUTAS_CHANGE_4:
+            self.assertIn(ruta, destinos)
 
     def test_los_tests_de_reporting_no_van_al_manifest(self):
         for entrada in MANIFEST:

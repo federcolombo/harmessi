@@ -1,11 +1,14 @@
 """CLI de reporting gobernado: `python -m tools.reporting <subcomando> ...`
 (v0.6 Change 1, `20260918-reporting-governance`, spec R18).
 
-Subcomandos (solo lectura: esta CLI no escribe nada en disco):
+Subcomandos (solo `render` escribe, y solo `report.html`; el resto es solo lectura):
     check-inputs       aislamiento de inputs de un flujo (`check_flow_inputs`)
     check-destination  destino de un reporte (`evaluate_destination`)
     validate           puerta completa sobre un directorio de reporte persistido
                        (`validation.validate_report_dir`; v0.6 Change 3)
+    render             renderiza `report.html` (derivado, fuera del manifest) de un
+                       directorio ya validado; `--check` compara sin escribir
+                       (v0.6 Change 4)
 
 `check-inputs` suma el aislamiento por hash (`REPORT-ISOLATION-HASH`, Change 3)
 SOLO cuando el índice exploratory tiene entradas, falló, quedó truncado o hay
@@ -24,7 +27,16 @@ con `--json`, un objeto con claves ordenadas `allowed`, `counts` y `results`.
 Los mensajes de error de uso/entorno van a stderr. Las rutas relativas se
 resuelven contra `--repo-root` (default: el cwd), como `pathguard`.
 
-El Change 4 agrega `render` registrando su subparser en `_construir_parser`.
+`render` no usa `publish`: rehúsa (exit 1, nada escrito) si `validate_report_dir` da algún FAIL,
+un `--style` inválido (`REPORT-STYLE-INVALID`) o una lectura/render fallidos
+(`REPORT-RENDER-FAILED`). Sin bundle de plotly.js emite WARN `REPORT-RENDER-PLOTLY-UNAVAILABLE`
+(exit 0) y el HTML degrada cada figura a un aviso con su tabla de respaldo.
+
+Límite inherente de `render --check`: compara contra un render fresco hecho con el bundle
+disponible AHORA (el de `chart.plotly_js_file` del proyecto o el paquete `plotly` instalado).
+Si `publish` recibió un `plotly_bundle=` explícito, o cambió el entorno (plotly instalado o
+desinstalado, otro bundle), `--check` puede informar "difiere" aunque el reporte no haya
+cambiado. Los mensajes de error no incluyen rutas absolutas (`_sanear`).
 """
 from __future__ import annotations
 
@@ -35,12 +47,24 @@ import re
 import sys
 from pathlib import Path
 
+from tools.dsguard import core as dsguard_core
+
 from . import core as reporting_core
 from . import evidence
 from . import governance
+from . import plotly_backend
+from . import render_html
+from . import style as reporting_style
 from . import validation
 
 _checks = governance.checks
+
+REPORT_HTML_FILENAME = "report.html"
+CODE_RENDER = "REPORT-RENDER"
+CODE_RENDER_CHECK = "REPORT-RENDER-CHECK"
+CODE_RENDER_FAILED = "REPORT-RENDER-FAILED"
+CODE_RENDER_PLOTLY_UNAVAILABLE = "REPORT-RENDER-PLOTLY-UNAVAILABLE"
+CODE_STYLE_INVALID = "REPORT-STYLE-INVALID"
 
 
 def _agregar_comunes(parser: argparse.ArgumentParser) -> None:
@@ -87,6 +111,32 @@ def _construir_parser() -> argparse.ArgumentParser:
     p_validate.add_argument("--dir", required=True, dest="report_dir")
     _agregar_comunes(p_validate)
     p_validate.set_defaults(func=cmd_validate)
+
+    ayuda_render = (
+        "Renderiza `report.html` (autocontenido, determinista) desde un directorio de reporte "
+        "persistido y validado (0 FAIL). Escribe SOLO report.html, de forma atómica. "
+        "Con --check no escribe: compara el report.html existente con un render fresco."
+    )
+    p_render = subparsers.add_parser("render", help=ayuda_render, description=ayuda_render)
+    p_render.add_argument("--dir", required=True, dest="report_dir")
+    p_render.add_argument(
+        "--style", default=None, dest="style_path",
+        help="Ruta (dentro del repo) a un JSON de estilo; default: .harmessi/report-style.json o el estilo por defecto.",
+    )
+    p_render.add_argument(
+        "--include-sensitive", action="store_true", dest="include_sensitive",
+        help="Incluye tablas/figuras sensibles en el HTML (por defecto se omiten con un placeholder).",
+    )
+    p_render.add_argument(
+        "--check", action="store_true", dest="check",
+        help=(
+            "No escribe: exit 1 si report.html falta o difiere de un render fresco hecho con el "
+            "bundle de plotly.js disponible AHORA (si publish usó otro bundle o cambió el entorno, "
+            "puede dar 'difiere')."
+        ),
+    )
+    _agregar_comunes(p_render)
+    p_render.set_defaults(func=cmd_render)
 
     return parser
 
@@ -151,6 +201,126 @@ def cmd_validate(args: argparse.Namespace) -> int:
         print(error, file=sys.stderr)
         return 3
     return _emitir(validation.validate_report_dir(repo_root, args.report_dir), args.como_json)
+
+
+def _cargar_style(repo_root: Path, ruta):
+    """`Style` del render: `--style RUTA` vía `style.load_style_file` (ruta dentro del repo,
+    `read_allowed` antes de leer) o `load_style(repo_root)`. `StyleError` ante cualquier
+    problema. Una ruta absoluta DENTRO del repo se relativiza; fuera del repo se pasa tal
+    cual y `load_style_file` la rechaza."""
+    if ruta is None:
+        return reporting_style.load_style(repo_root)
+    candidata = Path(ruta)
+    if candidata.is_absolute():
+        try:
+            candidata = candidata.resolve().relative_to(repo_root)
+        except (ValueError, OSError):
+            pass
+    # `--style` explícito: un archivo inexistente es error (no cae al default).
+    return reporting_style.load_style_file(repo_root, candidata, missing_ok=False)
+
+
+_RUTA_ABSOLUTA = re.compile(r"""[A-Za-z]:[\\/][^\s'"]*|(?<![\w.])/[^\s'"]+""")
+
+
+def _sanear(texto, *rutas) -> str:
+    """Quita rutas absolutas de un mensaje (las rutas dadas y cualquier ruta estilo
+    Windows/POSIX) para no filtrar el filesystem local en la salida."""
+    limpio = str(texto)
+    for ruta in rutas:
+        for variante in {str(ruta), Path(ruta).as_posix()}:
+            if variante:
+                limpio = limpio.replace(variante, "<ruta>")
+    return _RUTA_ABSOLUTA.sub("<ruta>", limpio)
+
+
+def _fallo_render(mensaje: str, detalle=None):
+    return _checks.CheckResult(
+        status=_checks.STATUS_FAIL, code=CODE_RENDER_FAILED, message=mensaje, detail=detalle,
+        subject=REPORT_HTML_FILENAME,
+    )
+
+
+def cmd_render(args: argparse.Namespace) -> int:
+    repo_root, error = _resolver_repo_root(args)
+    if error is not None:
+        print(error, file=sys.stderr)
+        return 3
+    # 1. Puerta de validación: con algún FAIL se rehúsa (nada se escribe).
+    resultados = list(validation.validate_report_dir(repo_root, args.report_dir))
+    if _checks.exit_code(resultados) != 0:
+        return _emitir(resultados, args.como_json)
+    crudo = Path(args.report_dir)
+    out_dir = (crudo if crudo.is_absolute() else repo_root / crudo).resolve()
+    # 2. Carga verificada (una sola lectura de cada archivo) y estilo.
+    try:
+        files, manifest = evidence.read_report_dir(out_dir, repo_root=repo_root)
+        reporte = evidence.report_from_bytes(files, manifest)
+    except evidence.EvidenceError as exc:
+        detalle = f"{type(exc).__name__}: {_sanear(exc, out_dir, repo_root)}"
+        return _emitir(resultados + [_fallo_render("no se pudo cargar el reporte verificado", detalle)], args.como_json)
+    try:
+        estilo = _cargar_style(repo_root, args.style_path)
+    except reporting_style.StyleError as exc:
+        resultados.append(_checks.CheckResult(
+            status=_checks.STATUS_FAIL, code=CODE_STYLE_INVALID,
+            message=_sanear(exc, repo_root) or "estilo inválido",
+        ))
+        return _emitir(resultados, args.como_json)
+    # 3. Bundle de plotly.js: sin bundle se degrada de forma visible (nunca silencioso).
+    motivos: list = []
+    bundle = plotly_backend.find_plotly_bundle(estilo, repo_root, motivos)
+    if bundle is None:
+        resultados.append(_checks.CheckResult(
+            status=_checks.STATUS_WARN, code=CODE_RENDER_PLOTLY_UNAVAILABLE,
+            message="bundle de plotly.js no disponible: las figuras se reemplazan por un aviso y su tabla de respaldo",
+            detail="; ".join(motivos) if motivos else None,
+        ))
+    # 4. Render puro y determinista.
+    try:
+        html_fresco = render_html.render_report_html(
+            reporte, manifest, estilo, plotly_bundle=bundle, include_sensitive=args.include_sensitive
+        )
+    except Exception as exc:  # noqa: BLE001 -- el render no debería lanzar; si lo hace, se rehúsa
+        return _emitir(resultados + [_fallo_render("el render falló", type(exc).__name__)], args.como_json)
+    destino = out_dir / REPORT_HTML_FILENAME
+    fresco_bytes = html_fresco.encode("utf-8")
+    # 5a. --check: compara sin escribir.
+    if args.check:
+        actual = None
+        if destino.is_file():
+            permitido, _motivo = evidence.read_allowed(repo_root, destino)
+            if permitido:
+                try:
+                    actual = destino.read_bytes()
+                except OSError:
+                    actual = None
+        if actual is None:
+            resultados.append(_checks.CheckResult(
+                status=_checks.STATUS_FAIL, code=CODE_RENDER_CHECK, subject=REPORT_HTML_FILENAME,
+                message="report.html falta o no se pudo leer",
+            ))
+        elif actual != fresco_bytes:
+            resultados.append(_checks.CheckResult(
+                status=_checks.STATUS_FAIL, code=CODE_RENDER_CHECK, subject=REPORT_HTML_FILENAME,
+                message="report.html difiere de un render fresco del reporte validado",
+            ))
+        else:
+            resultados.append(_checks.CheckResult(
+                status=_checks.STATUS_PASS, code=CODE_RENDER_CHECK, subject=REPORT_HTML_FILENAME,
+                message="report.html coincide con un render fresco",
+            ))
+        return _emitir(resultados, args.como_json)
+    # 5b. Escritura atómica de SOLO report.html.
+    try:
+        dsguard_core.escribir_texto_atomico(destino, html_fresco)
+    except OSError as exc:
+        return _emitir(resultados + [_fallo_render("no se pudo escribir report.html", type(exc).__name__)], args.como_json)
+    resultados.append(_checks.CheckResult(
+        status=_checks.STATUS_PASS, code=CODE_RENDER, subject=REPORT_HTML_FILENAME,
+        message=f"report.html escrito ({len(fresco_bytes)} bytes)",
+    ))
+    return _emitir(resultados, args.como_json)
 
 
 def cmd_check_destination(args: argparse.Namespace) -> int:

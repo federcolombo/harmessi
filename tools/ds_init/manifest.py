@@ -606,6 +606,30 @@ MANIFEST: tuple = (
         descripcion="Validador de reportes (figuras, insights, manifest y puerta completa sobre un directorio), solo lectura",
     ),
     EntradaManifiesto(
+        fuente="tools/reporting/style.py",
+        tratamiento=VERBATIM,
+        destino="tools/reporting/style.py",
+        descripcion="Design system de reportes (estilo visual/editorial, locale, overrides del proyecto), stdlib",
+    ),
+    EntradaManifiesto(
+        fuente="tools/reporting/plotly_backend.py",
+        tratamiento=VERBATIM,
+        destino="tools/reporting/plotly_backend.py",
+        descripcion="Backend opcional de figuras (dict tipo plotly sin importar plotly a nivel de modulo)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/reporting/render_html.py",
+        tratamiento=VERBATIM,
+        destino="tools/reporting/render_html.py",
+        descripcion="Renderer HTML determinista y offline de reportes (stdlib html)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/reporting/publish.py",
+        tratamiento=VERBATIM,
+        destino="tools/reporting/publish.py",
+        descripcion="Publicacion de reportes: governance, validacion, evidencia y render HTML",
+    ),
+    EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/eda.md.tmpl",
         tratamiento=PLANTILLA,
         destino=".claude/skills/lead-data-scientist/eda.md",

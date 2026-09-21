@@ -50,6 +50,10 @@ otros la lógica de decisión vive mezclada con la lectura de stdin en el mismo 
 | `tools/reporting/examples/eda_generic.py` | Ejemplo genérico de reporte EDA (v0.6 Change 2) -- datos 100% sintéticos con `random.Random(RANDOM_STATE)` y estadísticas con stdlib; construye un `Report` con el profile `eda` que pasa `validate_eda_report` sin FAIL y es determinista; sin pandas, sin datos reales, es core. |
 | `tools/reporting/evidence.py` | Evidencia de reportes (v0.6 Change 3) -- descripción de fuentes con hash, construcción del manifest, escritura atómica y lectura del directorio de reporte, e índice de artefactos exploratory para el aislamiento por hash (`REPORT-ISOLATION-HASH`); importa `reporting.governance`, `dsguard` (dirección permitida por la regla 6) y, de `ds_profile`, SOLO `fingerprint`; no decide permisos de escritura (eso es del guard de governance/publish), no conoce protocolo de hooks ni lee stdin, es core. |
 | `tools/reporting/validation.py` | Validador de reportes (v0.6 Change 3) -- reglas de figuras, insights y manifest, y puerta completa `validate_report_dir` sobre un directorio persistido (integridad, fuentes, contenido, governance, aislamiento); importa `reporting.profiles.eda`, `reporting.evidence` y `reporting.governance`, todo resultado es un `dsguard.checks.CheckResult`; solo lectura y determinista, verifica estructura y evidencia, no adecuación metodológica; es core, no conoce protocolo de hooks. |
+| `tools/reporting/style.py` | Design system de reportes (v0.6 Change 4) -- contratos `Style`/`VisualStyle`/`EditorialStyle` (dataclasses frozen), `default_style()` genérico, presets de locale como data, overrides opcionales `.harmessi/report-style.json` (esquema estricto, lectura vía `evidence.read_allowed`) y `check_style` (contraste/paleta); solo stdlib y `reporting.evidence`/`dsguard.checks`, desacoplado del renderer (no importa `render_html` ni `plotly_backend`); es core, no conoce protocolo de hooks. |
+| `tools/reporting/plotly_backend.py` | Backend opcional de figuras (v0.6 Change 4) -- `build_figure` arma a mano un dict JSON-puro tipo Plotly desde `FigureSpec` + tabla, sin mutar los artefactos; NO importa `plotly` a nivel de módulo (solo `find_plotly_bundle` intenta un import perezoso para localizar `plotly.js`, sin declarar dependencia); es core, no conoce protocolo de hooks. |
+| `tools/reporting/render_html.py` | Renderer HTML (v0.6 Change 4) -- `render_report_html` compone `report.html` con funciones puras sobre stdlib (`html.escape` en todo texto de usuario); determinista (mismo input, mismos bytes) y offline (solo CSS/JS inline); sin pandas ni red; es core, no conoce protocolo de hooks. |
+| `tools/reporting/publish.py` | Publicación de reportes (v0.6 Change 4) -- `publish` orquesta governance → validation → evidence → render y escribe el directorio del reporte más `report.html`; importa solo `reporting.*` y `dsguard.*` vía los módulos existentes; única puerta de escritura del reporte completo; es core, no conoce protocolo de hooks. |
 | `tools/fallback/handoff.py` | Contexto de handoff a nivel SDD (v0.5 Change 3) -- contexto mínimo suficiente para continuar un Change entre sesiones/proveedores sin reiniciar trabajo ni duplicar auditorías (`completed`/`pending`/`prior_findings`); persistido en `.harmessi/handoffs/<id>/handoff.json`, mismo patrón que `.harmessi/evals/`. |
 
 Las 4 implementaciones concretas del contrato de `tools/providers/core.py` —
@@ -117,6 +121,12 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
    pero nunca al revés: `dsguard`, `ds_profile`, `dsimpact`, `providers`,
    `routing`, `fallback` y `harmessi_bench` no importan `reporting`. Verificado por
    `tools/tests/test_v06_core_neutrality.py`.
+   Dirección de dependencias del Change 4: `style`, `plotly_backend`, `render_html` y `publish`
+   dependen del core, `governance`, `evidence` y `validation`; el core (`core.py`,
+   `governance.py`, `evidence.py`, `validation.py`, `profiles/`) NO conoce style, render ni
+   backend. `report.html` es un artefacto derivado y reproducible, fuera del manifest (su
+   integridad se verifica re-renderizando con `render --check`); el escape de todo texto de
+   usuario ocurre en `render_html`, nunca en el core.
 
 Estas reglas ya se cumplen hoy (verificado, ver `tools/tests/test_architecture_boundaries.py`,
 Change 3) — este documento las hace explícitas, no las introduce de cero.
