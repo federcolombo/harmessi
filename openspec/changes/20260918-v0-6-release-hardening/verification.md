@@ -113,7 +113,9 @@ reales involucrados.
 ## Diferencias contra la spec
 
 - R13 se cumplió solo parcialmente: offline y dark/print verificados con bundle FALSO; el
-  `plotly.js` REAL no se ejecutó (ver Limitaciones). Es la única diferencia.
+  `plotly.js` REAL no se ejecutó (ver Limitaciones). Es la única diferencia. — SUPERADO por el
+  Addendum (2026-09-21): verificado con plotly.js v4.1.1 real en Edge/Chrome 153; persisten solo
+  otros navegadores/SO/versiones.
 - R15 se ejecutó solo en Windows.
 - R20: el reporte del reviewer fue parcial (ver arriba).
 
@@ -122,7 +124,9 @@ reales involucrados.
 - El `plotly.js` REAL nunca se ejecutó: el render de figuras, el intercambio de payloads
   screen/print con `Plotly.react` en `beforeprint` (asíncrono), `matchMedia('print')` y el offline
   con el bundle real están verificados solo por lectura y con un bundle FALSO. Ninguna dependencia
-  fue instalada, por restricción vigente del usuario.
+  fue instalada, por restricción vigente del usuario. — SUPERADO por el Addendum (2026-09-21):
+  verificado con plotly.js v4.1.1 real en Edge/Chrome 153; persisten solo otros
+  navegadores/SO/versiones.
 - POSIX/macOS y CI multi-SO NO verificados; `git core.autocrlf` puede alterar bytes de
   `reports/**`.
 - Reviewer de la misma familia de modelo y reporte parcial (R-g no revisado, R-f superficial).
@@ -138,7 +142,8 @@ reales involucrados.
 
 Deuda para v0.7+:
 1. Verificación con `plotly.js` real (render, `Plotly.react` en `beforeprint`, `matchMedia`,
-   offline).
+   offline). — SUPERADO por el Addendum (2026-09-21): verificado con plotly.js v4.1.1 real en
+   Edge/Chrome 153; persisten solo otros navegadores/SO/versiones.
 2. Enforcement de lectura vía hook (F1).
 3. Subcomando `publish` en el CLI (hoy solo API).
 4. Registro de profiles.
@@ -152,11 +157,72 @@ Deuda para v0.7+:
 12. CI multi-SO/POSIX.
 13. Alcance acotado de los tests de neutralidad.
 
+## Addendum — verificación con plotly.js real (2026-09-21)
+
+El usuario eligió la opción B (2026-09-21): un `plotly.min.js` aportado como asset temporal de
+verificación vía `visual.chart.plotly_js_file`. Evidencia real:
+
+- **Asset**: plotly.js v4.1.1 (licencia MIT, cabecera del archivo), obtenido de DOS canales
+  oficiales independientes (`cdn.plot.ly` y el paquete npm `plotly.js-dist-min` vía jsDelivr) con
+  bytes IDÉNTICOS: 4.815.814 bytes, sha256
+  `3b6e15d45dbb7fca5bd2094291e961ddc5472cd887009e6009a56dab668d721f`. Usado SOLO como asset
+  temporal, dentro de un proyecto scratch (nunca en el repo) como `vendor/plotly.min.js`,
+  configurado con `visual.chart.plotly_js_file` en `.harmessi/report-style.json`; ELIMINADO al
+  terminar junto con las copias derivadas que lo embebían. Sin `pip install` (`pip list` sin
+  cambios: 7 paquetes; `import plotly` sigue dando `ModuleNotFoundError`); requirements,
+  pyproject, manifest e instalación de Harmessi sin cambios; repo con `git status` limpio y
+  ningún archivo `.js` en el repo.
+- **Publicación con el bundle real** (proyecto instalado con el código final, EDA genérico):
+  `written`/`html_written` True, bundle usado True, 0 FAIL (WARN esperados:
+  `EDA-EXPLORATORY-TARGET-USE`, `REPORT-PROVENANCE`, `REPORT-SCI-CUTOFF` por la policy del
+  scratch); HTML de 4.860.864 bytes; bundle embebido UNA vez y completo; 0 atributos
+  `src`/`href`; sin `@import`/`url(http`; `validate` exit 0; `render --check` exit 0; 4 figuras
+  con contenedor `.plot`.
+- **Navegador REAL headless ya instalado** (sin instalar nada): Edge 153.0.4234.48 y Chrome
+  153.0.8010.48, vía Chrome DevTools Protocol con un cliente WebSocket mínimo en stdlib (scripts
+  temporales fuera del repo). 20/20 verificaciones en CADA navegador: documento cargado; Plotly
+  4.1.1 cargado; las 4 figuras dibujadas (`.js-plotly-plot`=4, svg=12, trazas>0); payload SCREEN
+  aplicado (`paper_bgcolor #0f172a`); payloads screen y print distintos (`#0f172a` vs `#ffffff`);
+  ningún aviso "figura no renderizada" visible; fondo de página oscuro `rgb(15, 23, 42)` en
+  pantalla; `beforeprint` => `Plotly.react` con payload PRINT (`#ffffff`) y `afterprint` => vuelve
+  a SCREEN; `matchMedia('print')` emulado => payload PRINT y fondo de página claro
+  `rgb(255, 255, 255)` por `@media print`; luminancia media de capturas 37,5 en pantalla vs 243,8
+  en impresión; `Page.printToPDF` genera un PDF válido (204.207 bytes); 1 solo request de red (el
+  propio documento `file:`), 0 externos; 0 errores de consola y 0 excepciones JS.
+- **Pipeline REAL de impresión**: durante `Page.printToPDF` el navegador disparó `beforeprint` y
+  `afterprint` de verdad. Probe de tiempos (Edge): en el instante en que retorna el listener de
+  `beforeprint` (medidas `sync` y `microtask`) las figuras ya tienen `paper_bgcolor #ffffff` y el
+  fondo SVG realmente pintado `rgb(255, 255, 255)`; tras `afterprint` vuelven a `#0f172a`. La
+  variante de impresión queda aplicada antes del layout de impresión (no se observó carrera con el
+  `Plotly.react` asíncrono). Resuelve la reserva del reviewer del Change 4.
+- **Los 6 tipos de gráfico con el Plotly real** (reporte sintético de 8 figuras: barras con
+  colores semánticos de riesgo y denominador, barras horizontales con etiquetas largas sin
+  truncar, top-N con tabla completa, línea, dispersión por categoría, histograma, cajas, mapa de
+  calor): las 8 dibujadas, 0 warnings/errores de consola, 0 excepciones JS, 0 requests no locales.
+- **Sin bundle en navegador real**: 0 gráficos, 4 avisos visibles ("not rendered"), 4/4 tablas de
+  respaldo abiertas, 0 errores JS, plotly `undefined`; en CLI/publish: WARN
+  `REPORT-RENDER-PLOTLY-UNAVAILABLE`, HTML de 24.547 bytes. La única URL no-`file:` observada fue
+  un recurso interno del propio Edge (`edge://resources/js/edge-error-reporting.js`), no del
+  reporte.
+- **Observaciones honestas**: un primer intento del probe de impresión falló con "Printing is not
+  available" (transitorio de headless; el reintento con `Page.bringToFront` funcionó); capturas y
+  PDF de evidencia quedaron FUERA del repo, en el scratchpad de la sesión, sin versionar.
+- **Límites que persisten (no bloquean)**: solo motores Chromium (Edge/Chrome 153) en Windows;
+  Firefox/Safari y otros SO sin verificar; una sola versión de plotly.js (4.1.1); el diálogo de
+  impresión interactivo del usuario no se ejercitó (sí `Page.printToPDF`); las deudas v0.7+ ya
+  listadas siguen vigentes (incluido el límite de aislamiento en lectura).
+
+Este addendum supera lo declarado antes sobre `plotly.js` real en Diferencias, Limitaciones y
+Pendientes (punto 1 de deuda), que reflejaban el estado al momento del cierre inicial.
+
 ## Resultado final
 
-**`NOT READY FOR v0.6.0 RELEASE`**
+**`READY FOR v0.6.0 RELEASE`**
 
-Razón concreta: el ÚNICO requisito del gate que no se pudo verificar es "HTML offline + dark en
+El veredicto previo del cierre era `NOT READY FOR v0.6.0 RELEASE` por un único motivo, que se
+levantó con el addendum de arriba. Las razones originales y el gate verde siguen valiendo.
+
+Razón del veredicto previo: el ÚNICO requisito del gate que no se pudo verificar es "HTML offline + dark en
 pantalla / light en impresión" CON EL BACKEND GRÁFICO REAL. Plotly es el único backend requerido
 de v0.6 y su `plotly.js` nunca se ejecutó (solo un bundle falso), porque el usuario prohibió
 instalar Plotly o cualquier dependencia sin recibir antes 5 puntos (por qué es necesaria, si puede
@@ -167,7 +233,8 @@ Todo lo demás del gate está verde con evidencia real: regresión 10/10, scratc
 27/27, aislamiento/model_valid/holdout, figura-tabla, reproducibilidad, override de tema,
 privacidad, backward compat, versión, manifest parity y Doctor sin ERROR.
 
-Qué lo pasaría a READY: que el usuario decida una de
+Cómo se levantó: el usuario eligió la opción B (2026-09-21). Opciones que se le habían
+presentado:
 - (A) permitir instalar `plotly` SOLO en el `.venv` de desarrollo (opcional, no declarado como
   dependencia) para verificar con el bundle real y un navegador headless;
 - (B) aportar un `plotly.min.js` vendorizado por el proyecto vía `chart.plotly_js_file`;

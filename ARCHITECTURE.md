@@ -172,9 +172,11 @@ Declarada tras el hardening de v0.6; ninguno de estos puntos se resuelve en v0.6
 1. **Registro de profiles**: `validation.py` importa `profiles.eda` de forma directa; un profile
    nuevo exige tocar `validation`. Falta un registro/lookup por nombre de profile.
 2. **Enforcement de lectura vía hook**: ver §5 (hueco de aislamiento exploratory↔model_valid).
-3. **Verificación con `plotly.js` real**: el bundle real nunca se ejecutó; `Plotly.react` en
-   `beforeprint` es asíncrono y no está verificado; `render --check` depende del bundle
-   disponible en ese momento (proyecto o plotly instalado), no del que usó `publish`.
+3. **Verificación con `plotly.js` real**: verificado en el hardening de v0.6 (Edge/Chrome 153,
+   plotly.js v4.1.1, incluido `Plotly.react` en `beforeprint` real). Persiste solo la
+   verificación en otros navegadores/SO y con otras versiones de plotly.js; `render --check`
+   depende del bundle disponible en ese momento (proyecto o plotly instalado), no del que usó
+   `publish`.
 4. **Subcomando `publish` en el CLI**: hoy `publish` es solo API Python.
 5. **`sys.path.insert` y estilo de imports**: los módulos de `reporting` usan
    `sys.path.insert(0, tools_dir)` + `from dsguard import ...` (identidad dual de módulo frente a
