@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "change_id": "20260918-report-evidence-and-validation",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-21T13:20:41Z",
+  "baseline": {
+    "commit": "ab98c581be1ecf9b9b59c4cab855286e1010530d",
+    "rama": "v0.6-dev",
+    "capturado_utc": "2026-09-21T13:20:41Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260918-report-evidence-and-validation/proposal.md",
+      "openspec/changes/20260918-report-evidence-and-validation/tasks.md",
+      "openspec/changes/20260918-report-evidence-and-validation/spec.md",
+      "openspec/changes/20260918-report-evidence-and-validation/design.md",
+      "openspec/changes/20260918-report-evidence-and-validation/control.json",
+      "openspec/changes/20260918-report-evidence-and-validation/verification.md",
+      "tools/reporting/evidence.py",
+      "tools/reporting/validation.py",
+      "tools/reporting/cli.py",
+      "tools/reporting/tests/test_evidence.py",
+      "tools/reporting/tests/test_validation.py",
+      "tools/reporting/tests/test_cli_validate.py",
+      "tools/reporting/tests/test_installability.py",
+      "tools/ds_init/manifest.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.6.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e5f0c42a43e9b04314e0f535a7836e19fa6293cd6d37004f799619d21a7d8acd",
+      "registrado_utc": "2026-09-21T13:24:50Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 3 - report-evidence-and-validation (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "bb8358da821c9fb44facda77588e362af14f0a129eea117905b367e49b968e20",
+      "registrado_utc": "2026-09-21T13:24:51Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 3 - report-evidence-and-validation (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f873efe9641d2903a5d8dc998edcf892562bd2c0d44a4c4d51ecc254971bea4b",
+      "registrado_utc": "2026-09-21T13:24:52Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 3 - report-evidence-and-validation (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "8d918ee75b27026ace2fb21cfeb32161eeb210b300cec0a27ef7d2e8c8bfdfa9",
+      "registrado_utc": "2026-09-21T13:24:53Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 3 - report-evidence-and-validation (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f690076828ef29492a801d15a0428dcdbf560802c7cd07c8bc016883f3ad02e8",
+      "registrado_utc": "2026-09-21T14:23:53Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 3 - report-evidence-and-validation (enmiendas post-review)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md). Re-aprobación por enmiendas de los ciclos reviewer 1/2 y 2/2."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "79d1794831a8bfbf0928e02d76dc8d0452264376e6fc60ef98a84be2182303a8",
+      "registrado_utc": "2026-09-21T14:23:54Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 3 - report-evidence-and-validation (enmiendas post-review)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md). Re-aprobación por enmiendas de los ciclos reviewer 1/2 y 2/2."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-21T13:24:54Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-21T13:24:55Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-21T14:23:55Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-21T14:23:56Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-21T13:24:54Z",
+      "cierre_utc": "2026-09-21T14:23:57Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 720,
+        "max_tareas": 6,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-22T01:24:54Z",
+      "minutos_consumidos": 59.05,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-21T13:42:19Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-21T14:15:34Z"
+        }
+      },
+      "tareas": [],
+      "roles": [
+        "python-data-engineer"
+      ],
+      "reintentos": 1,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "remediaciones": [
+    {
+      "remediation_id": "r1",
+      "finding_id": "rev1-c3",
+      "origen": "python-data-engineer",
+      "tipo": "bug",
+      "estado": "abierta",
+      "creado_utc": "2026-09-21T13:54:44Z",
+      "ventanas": [
+        {
+          "ventana": 1,
+          "max_intentos": 2,
+          "autorizado_por": null,
+          "fecha_autorizacion": null,
+          "motivo": null,
+          "intentos": [
+            {
+              "attempt": 1,
+              "causa": "Reviewer bloqueante: el binario abre y hashea fuentes e inputs antes de evaluar acceso holdout o secreto; lecturas sin contencion ni verificacion single-read",
+              "cambio_aplicado": "Fixes ciclo 1 de 2 en tres tandas, evidence luego validation y cli",
+              "resultado": "pendiente de re-tests",
+              "session_id": "s1",
+              "utc": "2026-09-21T13:54:44Z"
+            }
+          ]
+        }
+      ],
+      "resuelto_utc": null,
+      "resultado_final": null
+    }
+  ]
+}

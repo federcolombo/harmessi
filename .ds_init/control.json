@@ -1,5 +1,5 @@
 {
-  "harness_version": "0.5.0",
+  "harness_version": "0.6.0",
   "perfil": "python-jupyter-data",
   "fecha_utc": "2026-09-09T18:08:09Z",
   "configuracion": {
@@ -288,6 +288,66 @@
     {
       "ruta": "tools/dsimpact/scan.py",
       "sha256": "720b05740fafa60f6f27a18dedf79977b8f0714cbdeabc3b553fff945748406f"
+    },
+    {
+      "ruta": "tools/reporting/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ruta": "tools/reporting/core.py",
+      "sha256": "afa02a26898c3decf6488c55a7334f4d72bbe166a482cc1f927f9d725005a40b"
+    },
+    {
+      "ruta": "tools/reporting/governance.py",
+      "sha256": "9d841df9f675b14f92b50a6beecef1403eae14678925e8382fefcdfcb00edacd"
+    },
+    {
+      "ruta": "tools/reporting/cli.py",
+      "sha256": "d82fc790c7840187d48210a50d4bdc6227fab3925189dd9d752cd285ce8c2e88"
+    },
+    {
+      "ruta": "tools/reporting/__main__.py",
+      "sha256": "4532b99842d04899bffcdea81941d88c3ac380d36581f7d41a06b4a0a633b89a"
+    },
+    {
+      "ruta": "tools/reporting/profiles/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ruta": "tools/reporting/profiles/eda.py",
+      "sha256": "fa33b1100eb22c63df909eee4be24c7813530170982a74c07af3745fe4565bbc"
+    },
+    {
+      "ruta": "tools/reporting/examples/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "ruta": "tools/reporting/examples/eda_generic.py",
+      "sha256": "07763c75c84cdad265832d1ba12c11170c02dc3cb39f326e1bd77c8244686450"
+    },
+    {
+      "ruta": "tools/reporting/evidence.py",
+      "sha256": "0fd1b06ef15599c5d919538d9c0b4bd202174dbf1b81096437be005f96e9beeb"
+    },
+    {
+      "ruta": "tools/reporting/validation.py",
+      "sha256": "7f1479dd0b641032abf77b00cfd56b1cd298183d7c3c7590532a00d4de622bde"
+    },
+    {
+      "ruta": "tools/reporting/style.py",
+      "sha256": "b38ae8214d900b17d9d3695a145b126b5db5ce9e1e87bbc15cd106678b9bd81e"
+    },
+    {
+      "ruta": "tools/reporting/plotly_backend.py",
+      "sha256": "8339e91dcfff2882ea85d14c79430cad216f37684271eb6130ef55bbbeaa6113"
+    },
+    {
+      "ruta": "tools/reporting/render_html.py",
+      "sha256": "7014a476b16b3a6b90f1b31cc2379d6547d5e0526b33749a929ae52b103c91e2"
+    },
+    {
+      "ruta": "tools/reporting/publish.py",
+      "sha256": "9524ebc63f35e7dcc27236ce5b64a3e97c3d138e2fd7765d9d10e91c67fdce5a"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/eda.md",
