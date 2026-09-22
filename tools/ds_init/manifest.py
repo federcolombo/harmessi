@@ -642,6 +642,24 @@ MANIFEST: tuple = (
         descripcion="Contratos neutrales de datos (DataContract/ContractField/Constraint/BusinessRule/ContractVersion/CompatibilityPolicy), solo stdlib (v0.7 Change 0)",
     ),
     EntradaManifiesto(
+        fuente="tools/modelquality/__init__.py",
+        tratamiento=VERBATIM,
+        destino="tools/modelquality/__init__.py",
+        descripcion="Paquete de politicas de calidad de modelo (v0.7 Change 2), sin logica",
+    ),
+    EntradaManifiesto(
+        fuente="tools/modelquality/core.py",
+        tratamiento=VERBATIM,
+        destino="tools/modelquality/core.py",
+        descripcion="Politicas neutrales de calidad de modelo (ModelQualityPolicy/MetricRequirement/EvaluationContext/ObservedMetric/BaselineReference), solo stdlib (v0.7 Change 2)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/modelquality/validation.py",
+        tratamiento=VERBATIM,
+        destino="tools/modelquality/validation.py",
+        descripcion="Evaluacion determinista de ModelQualityPolicy contra metricas ya reportadas, codigos QUALITY-*, produce dsguard.checks.CheckResult (v0.7 Change 2)",
+    ),
+    EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/eda.md.tmpl",
         tratamiento=PLANTILLA,
         destino=".claude/skills/lead-data-scientist/eda.md",

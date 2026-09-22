@@ -79,6 +79,8 @@ MODULOS_CORE = (
     "tools/reporting/publish.py",
     "tools/datacontracts/core.py",
     "tools/datacontracts/validation.py",
+    "tools/modelquality/core.py",
+    "tools/modelquality/validation.py",
     "tools/nbrunner/core.py",
     "tools/nbrunner/execute.py",
     "tools/nbrunner/fsdiff.py",
