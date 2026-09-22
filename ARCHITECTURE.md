@@ -55,6 +55,7 @@ otros la lógica de decisión vive mezclada con la lectura de stdin en el mismo 
 | `tools/reporting/render_html.py` | Renderer HTML (v0.6 Change 4) -- `render_report_html` compone `report.html` con funciones puras sobre stdlib (`html.escape` en todo texto de usuario); determinista (mismo input, mismos bytes) y offline (solo CSS/JS inline); sin pandas ni red; es core, no conoce protocolo de hooks. |
 | `tools/reporting/publish.py` | Publicación de reportes (v0.6 Change 4) -- `publish` orquesta governance → validation → evidence → render y escribe el directorio del reporte más `report.html`; importa solo `reporting.*` y `dsguard.*` vía los módulos existentes; única puerta de escritura del reporte completo; es core, no conoce protocolo de hooks. |
 | `tools/datacontracts/core.py` | Contratos neutrales de datos (v0.7 Change 0: `DataContract`/`ContractField`/`Constraint`/`BusinessRule`/`ContractVersion`/`CompatibilityPolicy`, serialización determinista y hash de contenido) -- solo stdlib; no observa ni evalúa ningún dato, no importa `ds_profile`, `dsguard` ni ningún hermano; separa estructura (schema), calidad esperada (expectations con severidad declarada) y reglas de negocio (solo declarables, nunca evaluadas); no conoce protocolo de hooks, es core. |
+| `tools/datacontracts/validation.py` | Evaluación de `DataContract` contra evidencia real (v0.7 Change 1: `validate_contract`/`validate_contract_against_profile_file`, códigos `CONTRACT-*`, produce `dsguard.checks.CheckResult`) -- importa `dsguard.checks` (dirección permitida por la regla 7) y, de `ds_profile`, SOLO `holdout_guard.verificar_permitido` (nunca `ds_profile.report`, `.column_stats`, `.fingerprint` ni ningún otro símbolo: no observa datos, solo reusa el guard de lectura de holdout); consume `profile.json` como `dict` ya cargado, nunca recalcula estadísticas ni reabre el dataset original; vocabulario `PASS`/`WARN`/`FAIL`/`N/A`, nunca `PASS` por falta de evidencia; no conoce protocolo de hooks, es core. |
 | `tools/fallback/handoff.py` | Contexto de handoff a nivel SDD (v0.5 Change 3) -- contexto mínimo suficiente para continuar un Change entre sesiones/proveedores sin reiniciar trabajo ni duplicar auditorías (`completed`/`pending`/`prior_findings`); persistido en `.harmessi/handoffs/<id>/handoff.json`, mismo patrón que `.harmessi/evals/`. |
 
 Las 4 implementaciones concretas del contrato de `tools/providers/core.py` —
@@ -138,6 +139,15 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
    `docs/roadmap/v0.7.md`); pero nunca al revés: `dsguard`, `ds_profile`, `dsimpact`,
    `reporting`, `providers`, `routing`, `fallback` y `harmessi_bench` no importan
    `tools/datacontracts`. Verificado por `tools/tests/test_v07_core_neutrality.py`.
+
+   Change 1 (`data-contract-validation`) ejercita esta cláusula de extensión aditiva de forma
+   concreta y acotada: `tools/datacontracts/validation.py` importa únicamente
+   `ds_profile.holdout_guard.verificar_permitido` (un solo símbolo, de un solo módulo, que decide
+   permiso de lectura de una ruta -- no observa ni agrega datos) para no replicar la lógica de
+   guard de holdout, siguiendo la instrucción explícita del roadmap ("se reutiliza el guard
+   existente, no se replica"). No importa ningún otro símbolo de `ds_profile` (`report`,
+   `column_stats`, `fingerprint`, `sampling`, `quality_flags`, `schema`, `io_readers` quedan
+   fuera). Verificado por `tools/tests/test_v07_validation_neutrality.py`.
 
 Estas reglas ya se cumplen hoy (verificado, ver `tools/tests/test_architecture_boundaries.py`,
 Change 3) — este documento las hace explícitas, no las introduce de cero.
