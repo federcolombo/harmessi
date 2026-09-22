@@ -660,6 +660,24 @@ MANIFEST: tuple = (
         descripcion="Evaluacion determinista de ModelQualityPolicy contra metricas ya reportadas, codigos QUALITY-*, produce dsguard.checks.CheckResult (v0.7 Change 2)",
     ),
     EntradaManifiesto(
+        fuente="tools/qualityevidence/__init__.py",
+        tratamiento=VERBATIM,
+        destino="tools/qualityevidence/__init__.py",
+        descripcion="Paquete de evidencia de calidad de datos/modelo y drift (v0.7 Change 3), sin logica",
+    ),
+    EntradaManifiesto(
+        fuente="tools/qualityevidence/core.py",
+        tratamiento=VERBATIM,
+        destino="tools/qualityevidence/core.py",
+        descripcion="Tipos neutrales de evidencia de calidad (QualityEvidenceManifest/DriftEvidence/EvidenceSource/DeclarationRef/ScopeWindow), solo stdlib (v0.7 Change 3)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/qualityevidence/evidence.py",
+        tratamiento=VERBATIM,
+        destino="tools/qualityevidence/evidence.py",
+        descripcion="Persistencia de evidencia de calidad (.harmessi/quality/) y computo de drift (absolute_diff/relative_diff), codigos QUALITYEVIDENCE-* (v0.7 Change 3)",
+    ),
+    EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/eda.md.tmpl",
         tratamiento=PLANTILLA,
         destino=".claude/skills/lead-data-scientist/eda.md",

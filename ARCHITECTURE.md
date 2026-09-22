@@ -59,6 +59,8 @@ otros la lógica de decisión vive mezclada con la lectura de stdin en el mismo 
 | `tools/fallback/handoff.py` | Contexto de handoff a nivel SDD (v0.5 Change 3) -- contexto mínimo suficiente para continuar un Change entre sesiones/proveedores sin reiniciar trabajo ni duplicar auditorías (`completed`/`pending`/`prior_findings`); persistido en `.harmessi/handoffs/<id>/handoff.json`, mismo patrón que `.harmessi/evals/`. |
 | `tools/modelquality/core.py` | Políticas de calidad de modelo neutrales (v0.7 Change 2: `ModelQualityPolicy`/`MetricRequirement`/`EvaluationContext`/`ObservedMetric`/`BaselineReference`, serialización determinista y hash de contenido de `ModelQualityPolicy`) -- solo stdlib; no entrena modelos, no calcula ninguna métrica, no observa ningún dato; familia independiente de `tools/datacontracts`, sin tipos compartidos; no conoce protocolo de hooks, es core. |
 | `tools/modelquality/validation.py` | Evaluación de `ModelQualityPolicy` contra métricas ya reportadas (v0.7 Change 2: `evaluate_policy`, códigos `QUALITY-*`, produce `dsguard.checks.CheckResult`) -- importa `dsguard.checks` y `tools.modelquality.core` (sibling); sin ninguna superficie de I/O ni de lectura de archivo; nunca recalcula ni verifica que el valor reportado sea numéricamente correcto (decisión 1 del roadmap); vocabulario `PASS`/`WARN`/`FAIL`/`N/A`, nunca `PASS` por falta de evidencia; no conoce protocolo de hooks, es core. |
+| `tools/qualityevidence/core.py` | Tipos neutrales de evidencia de calidad (v0.7 Change 3: `QualityEvidenceManifest`/`DriftEvidence`/`EvidenceSource`/`DeclarationRef`/`ScopeWindow`, serialización determinista y hash de contenido que excluye `generated_at`) -- solo stdlib; no calcula nada desde datos crudos, no observa ningún dataset; familia independiente de `tools.datacontracts`/`tools.modelquality`/`tools.reporting`, sin tipos compartidos; no conoce protocolo de hooks, es core. |
+| `tools/qualityevidence/evidence.py` | Persistencia de evidencia de calidad y cómputo de drift (v0.7 Change 3: construcción/escritura atómica/lectura verificada de `QualityEvidenceManifest` bajo `.harmessi/quality/`, `build_drift_evidence`/`drift_from_profiles` con `DRIFT_COMPARISON_MODES` acotado a diferencia absoluta/relativa, `resolve_evidence_ref` como convención opcional sobre `ObservedMetric.evidence_ref`/`BaselineReference.evidence_ref` de Change 2, sin modificarlo) -- importa `dsguard.checks` y `ds_profile.holdout_guard.verificar_permitido` (único símbolo); reimplementa localmente hash sha256 chunked/JSON canónico/escritura atómica (mismo criterio que `tools/dsguard/mlops_evidence.py`); nunca lee un `profile.json` sin el guard; nunca `PASS`/`FAIL` de drift sin threshold declarado (`N/A` "evidencia registrada sin veredicto"); no conoce protocolo de hooks, es core. |
 
 Las 4 implementaciones concretas del contrato de `tools/providers/core.py` —
 `tools/providers/claude_code.py`, `codex.py`, `gemini.py`, `grok.py` (v0.5 Change 0) — no están
@@ -162,6 +164,25 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
    `dsguard`, `ds_profile`, `dsimpact`, `reporting`, `tools.datacontracts`, `providers`, `routing`,
    `fallback` y `harmessi_bench` no importan `tools/modelquality`. Verificado por
    `tools/tests/test_v07_modelquality_neutrality.py`.
+
+9. Familia `tools/qualityevidence` (v0.7 Change 3): `core.py` es solo-stdlib y no importa
+   hermanos ni ningún paquete existente (ni `tools.datacontracts`, ni `tools.modelquality`, ni
+   `tools.reporting`: ver `design.md` del Change, decisiones 1-2). `evidence.py` importa
+   `dsguard.checks` (para envolver `list[CheckResult]` ya producidos por el llamador) y
+   `ds_profile.holdout_guard.verificar_permitido` (único símbolo, mismo criterio que la regla 7
+   aplicó a `tools/datacontracts/validation.py`, para leer `profile.json` en `DriftEvidence`);
+   reimplementa localmente sus propias primitivas de hash sha256 chunked, JSON canónico y
+   escritura atómica (mismo criterio que `tools/dsguard/mlops_evidence.py`, sin importar
+   `ds_profile.fingerprint` ni `tools.reporting.evidence`). `tools.qualityevidence` NO importa
+   `tools.datacontracts` ni `tools.modelquality` en ninguna dirección (el llamador extrae
+   `contract_id`/`policy_id`/`version`/`content_sha256()` como valores planos antes de invocar
+   `evidence.py`) y NO importa `tools.reporting` en ninguna dirección (la integración con
+   Reporting v0.6 ocurre exclusivamente porque `reporting.evidence.describe_source` puede hashear
+   cualquier archivo del repo, incluido un manifest de `qualityevidence`, sin que ninguno de los
+   dos paquetes importe al otro). Nunca al revés: `dsguard`, `ds_profile`, `dsimpact`, `reporting`,
+   `tools.datacontracts`, `tools.modelquality`, `providers`, `routing`, `fallback` y
+   `harmessi_bench` no importan `tools.qualityevidence`. Verificado por
+   `tools/tests/test_v07_qualityevidence_neutrality.py`.
 
 Estas reglas ya se cumplen hoy (verificado, ver `tools/tests/test_architecture_boundaries.py`,
 Change 3) — este documento las hace explícitas, no las introduce de cero.

@@ -81,6 +81,8 @@ MODULOS_CORE = (
     "tools/datacontracts/validation.py",
     "tools/modelquality/core.py",
     "tools/modelquality/validation.py",
+    "tools/qualityevidence/core.py",
+    "tools/qualityevidence/evidence.py",
     "tools/nbrunner/core.py",
     "tools/nbrunner/execute.py",
     "tools/nbrunner/fsdiff.py",
