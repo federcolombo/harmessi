@@ -630,6 +630,18 @@ MANIFEST: tuple = (
         descripcion="Publicacion de reportes: governance, validacion, evidencia y render HTML",
     ),
     EntradaManifiesto(
+        fuente="tools/datacontracts/__init__.py",
+        tratamiento=VERBATIM,
+        destino="tools/datacontracts/__init__.py",
+        descripcion="Paquete de contratos de datos (v0.7), sin logica",
+    ),
+    EntradaManifiesto(
+        fuente="tools/datacontracts/core.py",
+        tratamiento=VERBATIM,
+        destino="tools/datacontracts/core.py",
+        descripcion="Contratos neutrales de datos (DataContract/ContractField/Constraint/BusinessRule/ContractVersion/CompatibilityPolicy), solo stdlib (v0.7 Change 0)",
+    ),
+    EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/eda.md.tmpl",
         tratamiento=PLANTILLA,
         destino=".claude/skills/lead-data-scientist/eda.md",

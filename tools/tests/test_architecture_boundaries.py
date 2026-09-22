@@ -77,6 +77,7 @@ MODULOS_CORE = (
     "tools/reporting/plotly_backend.py",
     "tools/reporting/render_html.py",
     "tools/reporting/publish.py",
+    "tools/datacontracts/core.py",
     "tools/nbrunner/core.py",
     "tools/nbrunner/execute.py",
     "tools/nbrunner/fsdiff.py",
