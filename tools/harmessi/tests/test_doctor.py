@@ -233,12 +233,14 @@ class TestChecksHarmessiInstalacionReal(unittest.TestCase):
         self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
 
     def test_agents_ok(self):
-        resultados = doctor_mod._check_agents(self.repo)
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_agents(self.repo, control_data)
         self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
 
     def test_agents_error_si_falta(self):
         (self.repo / ".claude" / "agents" / "notebook-runner.md").unlink()
-        resultados = doctor_mod._check_agents(self.repo)
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_agents(self.repo, control_data)
         self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
 
     def test_skill_ok(self):
@@ -662,6 +664,86 @@ class TestArchivosAdministradosStageAware(unittest.TestCase):
         self.assertIn(".claude/skills/lead-data-scientist/production-readiness.md", codigos_faltantes)
         self.assertIn(".claude/skills/lead-data-scientist/operations.md", codigos_faltantes)
         self.assertNotIn(checks.STATUS_FAIL, _statuses(resultados))
+
+
+class TestAgentsStageAware(unittest.TestCase):
+    """Tests de 20260925-doctor-stage-awareness (R1-R6 de `spec.md`):
+    `_check_agents` es consciente de `installation_stage` -- ningún agente
+    aplica al stage `discovery` (`stage_minimo="experiment"` en
+    `tools/ds_init/manifest.py` para los 4), por lo que un scratch install en
+    `discovery` no debe reportar ningún `HARMESSI-AGENTE-FALTANTE`, mientras
+    que un agente ausente en un stage donde sí aplica (p. ej. `experiment`)
+    debe seguir dando `FAIL`."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_stage_discovery_no_reporta_ningun_resultado_de_agentes(self):
+        """R2: en 'discovery' ningún agente aplica -- `_check_agents` no debe
+        devolver ningún `CheckResult` cuyo `subject` sea la ruta de alguno de
+        los 4 agentes (ni PASS, ni FAIL, ni WARN)."""
+        _instalar_harness_real_con_stage(self.repo, "discovery")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertEqual(control_data.get("installation_stage"), "discovery")
+
+        resultados = doctor_mod._check_agents(self.repo, control_data)
+        self.assertEqual(resultados, [])
+
+    def test_stage_experiment_agente_borrado_sigue_dando_fail(self):
+        """R3: en 'experiment' los 4 agentes sí aplican -- si falta uno en
+        disco, sigue reportándose `FAIL HARMESSI-AGENTE-FALTANTE`."""
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        (self.repo / ".claude" / "agents" / "notebook-runner.md").unlink()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertEqual(control_data.get("installation_stage"), "experiment")
+
+        resultados = doctor_mod._check_agents(self.repo, control_data)
+        faltantes = [r for r in resultados if r.code == "HARMESSI-AGENTE-FALTANTE"]
+        self.assertEqual(len(faltantes), 1)
+        self.assertEqual(faltantes[0].status, checks.STATUS_FAIL)
+        self.assertEqual(faltantes[0].subject, ".claude/agents/notebook-runner.md")
+
+    def test_legacy_control_data_none_reproduce_comportamiento_actual(self):
+        """R5(a): sin `control.json` legible (`control_data is None`), se
+        siguen considerando esperados los 4 agentes -- comportamiento legacy
+        idéntico al anterior a este Change."""
+        _instalar_harness_real(self.repo)
+        resultados = doctor_mod._check_agents(self.repo, None)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+        self.assertEqual(len(resultados), len(doctor_mod._AGENTES_ESPERADOS))
+
+    def test_legacy_sin_installation_stage_reproduce_comportamiento_actual(self):
+        """R5(b): `control_data` sin clave `installation_stage` (legacy) --
+        se siguen considerando esperados los 4 agentes, sin cambio de
+        comportamiento."""
+        _instalar_harness_real(self.repo)
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertNotIn("installation_stage", control_data)
+
+        resultados = doctor_mod._check_agents(self.repo, control_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+        self.assertEqual(len(resultados), len(doctor_mod._AGENTES_ESPERADOS))
+
+    def test_smoke_ejecutar_sobre_scratch_discovery_da_cero_error(self):
+        """R2, a nivel integración: `doctor_mod.ejecutar` sobre un scratch
+        install real en 'discovery' da 0 `[ERROR]` -- reproduce el escenario
+        exacto que originó este Change (hallazgo del hardening de v0.7). El
+        scratch install no crea `.venv` (eso queda para el usuario, ver
+        `test_instalacion_sin_venv_tiene_solo_el_gap_de_interprete`) -- se
+        replica el mismo mecanismo que ya usa
+        `test_instalacion_completa_con_venv_da_exit_0` para llegar a 0 ERROR
+        real: un intérprete falso (`_crear_interprete_falso`) más un mock de
+        `subprocess.run` que simula RUNTIME-INTERPRETE en OK, dejando pasar
+        las llamadas a `git` sin tocar."""
+        _instalar_harness_real_con_stage(self.repo, "discovery")
+        _crear_interprete_falso(self.repo)
+        with patch("tools.harmessi.doctor.subprocess.run", side_effect=_mock_solo_interprete(0, "")):
+            resultados, _codigo = doctor_mod.ejecutar(self.repo)
+        codigos_error = [r.codigo for r in resultados if r.nivel == doctor_mod.NIVEL_ERROR]
+        self.assertEqual(codigos_error, [])
 
 
 class TestCheckInstallationStage(unittest.TestCase):
