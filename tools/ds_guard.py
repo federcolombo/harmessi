@@ -91,23 +91,96 @@ def _imprimir_findings(findings: list, exit_code: int, como_json: bool) -> None:
 
 # --- status -----------------------------------------------------------------
 
+def _resumen_quality_evidence(repo_root: Path) -> dict:
+    """Resumen de solo lectura de `.harmessi/quality/` (v0.7 Change 4:
+    20260922-quality-integration-and-cli, R15 de spec.md): NUNCA vive en
+    `tools/dsguard/status.py` (ver `design.md` decisión 4 del Change -- ese
+    módulo está dentro del perímetro de neutralidad v0.7). Import perezoso de
+    `tools.qualityevidence.evidence` DENTRO de esta función, mismo criterio
+    que `_importar_dsimpact`. Un manifest corrupto/con hash inconsistente se
+    reporta como entrada individual, nunca aborta el resumen completo. Nunca
+    lanza una excepción no controlada."""
+    qe_core = _importar_perezoso("qualityevidence", "core")
+    qe_evidence = _importar_perezoso("qualityevidence", "evidence")
+    if qe_core is None or qe_evidence is None:
+        return {"disponible": False, "mensaje": "tools.qualityevidence no disponible en este stage"}
+
+    directorio = Path(repo_root) / ".harmessi" / "quality"
+    if not directorio.is_dir():
+        return {"disponible": False, "mensaje": "sin evidencia de calidad todavía"}
+
+    try:
+        ids_evidencia = sorted(p.name for p in directorio.iterdir() if p.is_dir())
+    except OSError:
+        return {"disponible": False, "mensaje": "sin evidencia de calidad todavía"}
+
+    entradas: list = []
+    conteos = {"PASS": 0, "WARN": 0, "FAIL": 0, "N/A": 0}
+    technical_errors = 0
+    generated_at_mas_reciente = None
+    for evidence_id in ids_evidencia:
+        try:
+            manifest = qe_evidence.read_manifest(repo_root, evidence_id)
+        except qe_core.QualityEvidenceError as exc:
+            entradas.append({"evidence_id": evidence_id, "valido": False, "motivo": str(exc)})
+            continue
+        except Exception as exc:  # noqa: BLE001 - nunca aborta el resumen completo
+            entradas.append({"evidence_id": evidence_id, "valido": False, "motivo": str(exc)})
+            continue
+        for r in manifest.check_results:
+            conteos[r["status"]] = conteos.get(r["status"], 0) + 1
+        technical_errors += len(manifest.technical_errors)
+        entradas.append({"evidence_id": evidence_id, "valido": True, "generated_at": manifest.generated_at})
+        if generated_at_mas_reciente is None or manifest.generated_at > generated_at_mas_reciente:
+            generated_at_mas_reciente = manifest.generated_at
+
+    return {
+        "disponible": True,
+        "entradas": entradas,
+        "conteos": conteos,
+        "technical_errors": technical_errors,
+        "generated_at_mas_reciente": generated_at_mas_reciente,
+    }
+
+
 def cmd_status_unificado(args: argparse.Namespace) -> int:
     """Rama nueva de `status` (sin `--change-id`, Change 8 v0.3:
     20260915-unified-status-surface): status unificado de proyecto, de solo
     lectura, vía `dsguard.status.evaluar_status`. Exit code 0 siempre (es
     informativo, nunca "falla" por contenido -- mismo criterio que `project
     status`/`mlops status`), salvo error de entorno real (p. ej. no estar en
-    un repo Git, que sigue devolviendo 3, igual que la rama SDD)."""
+    un repo Git, que sigue devolviendo 3, igual que la rama SDD).
+
+    Extensión aditiva v0.7 Change 4 (`quality_evidence`, R15 de spec.md):
+    calculada DESPUÉS de `status.evaluar_status`, sin modificarlo, agregada
+    como clave nueva al final -- nunca reemplaza ni reordena las 8 claves
+    existentes (R16: `evaluar_status` es idéntica antes y después de este
+    Change)."""
     try:
         repo_root = _repo_root()
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         return 3
     resultado = status.evaluar_status(repo_root)
+    quality_evidence = _resumen_quality_evidence(repo_root)
     if args.json:
-        print(json.dumps(status.formatear_json(resultado), indent=2, ensure_ascii=False))
+        payload = status.formatear_json(resultado)
+        payload["quality_evidence"] = quality_evidence
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
         print(status.formatear_texto(resultado, verbose=args.verbose))
+        print()
+        print("Quality evidence (v0.7, informativo):")
+        if not quality_evidence.get("disponible"):
+            print(f"  {quality_evidence.get('mensaje')}")
+        else:
+            conteos = quality_evidence["conteos"]
+            print(
+                f"  {conteos['PASS']} PASS, {conteos['WARN']} WARN, {conteos['FAIL']} FAIL, "
+                f"{conteos['N/A']} N/A (technical_errors={quality_evidence['technical_errors']})"
+            )
+            if quality_evidence.get("generated_at_mas_reciente"):
+                print(f"  más reciente: {quality_evidence['generated_at_mas_reciente']}")
     return 0
 
 
@@ -826,6 +899,525 @@ def cmd_impact_scan(args: argparse.Namespace) -> int:
         except Exception:  # noqa: BLE001
             from tools.dsimpact import cli as dsimpact_cli  # type: ignore
         print(dsimpact_cli.formatear_texto(resultado))
+    return 0
+
+
+# --- contract / quality (v0.7 Change 4: 20260922-quality-integration-and-cli) --
+#
+# Subcomandos delgados: cada `cmd_*` parsea argumentos, carga JSON de disco,
+# llama UNA función pública del paquete correspondiente (`tools.datacontracts`,
+# `tools.modelquality`, `tools.qualityevidence`, `tools.dsimpact`), y formatea
+# la salida -- CERO lógica de dominio acá (R3 de spec.md). Import perezoso
+# opcional dentro de cada función, mismo patrón EXACTO que `_importar_dsimpact`
+# (dos formas de import, nunca deja escapar una excepción, degradación con
+# exit code 3 si el paquete no está instalado en el stage actual).
+#
+# STOP explícito (ver tasks.md de ese Change): ningún resultado de
+# `contract`/`quality` condiciona `project readiness`/`project promote`, el
+# exit code de `status`, ni el lifecycle, bajo ninguna circunstancia.
+
+def _importar_perezoso(paquete: str, modulo: str):
+    """Import perezoso opcional de `<paquete>.<modulo>` (si `tools/` ya está
+    en `sys.path[0]`, como ocurre al invocar este archivo directamente) o
+    `tools.<paquete>.<modulo>` (invocación como `python -m tools.ds_guard`) --
+    mismo patrón de dos formas que `_importar_dsimpact`. Nunca deja escapar
+    una excepción: `None` si ninguna de las dos formas importa."""
+    try:
+        return __import__(f"{paquete}.{modulo}", fromlist=[modulo])
+    except Exception:  # noqa: BLE001 - degradación con gracia, nunca excepción cruda
+        pass
+    try:
+        return __import__(f"tools.{paquete}.{modulo}", fromlist=[modulo])
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _mensaje_paquete_no_instalado(paquete: str, stage_minimo: str) -> str:
+    return (
+        f"{paquete} no está instalado en este stage -- correr "
+        f"'ds_init sync --stage {stage_minimo} --execute' (tools/{paquete}/ requiere stage {stage_minimo})."
+    )
+
+
+def _cargar_json(ruta_str: str):
+    """`(datos, error_mensaje)`. `error_mensaje` no es `None` si el archivo no
+    existe, no es legible, o no es JSON válido -- nunca lanza."""
+    ruta = Path(ruta_str)
+    try:
+        texto = ruta.read_text(encoding="utf-8")
+    except OSError as exc:
+        return None, f"No se pudo leer {ruta_str}: {type(exc).__name__}"
+    try:
+        return json.loads(texto), None
+    except json.JSONDecodeError as exc:
+        return None, f"{ruta_str} no contiene JSON válido: {exc}"
+
+
+def _imprimir_check_results(resultados: list, como_json: bool, titulo: str) -> None:
+    if como_json:
+        print(json.dumps({"resultados": [r.to_dict() for r in resultados]}, ensure_ascii=False))
+        return
+    print(f"{titulo}\n")
+    for r in resultados:
+        subject = f" [{r.subject}]" if r.subject else ""
+        print(f"{r.status:<6} {r.code}{subject}: {r.message}")
+    conteos = checks.contar_por_status(resultados)
+    print(
+        f"\nResumen: {conteos[checks.STATUS_PASS]} PASS, {conteos[checks.STATUS_WARN]} WARN, "
+        f"{conteos[checks.STATUS_FAIL]} FAIL, {conteos[checks.STATUS_NA]} N/A"
+    )
+
+
+def _registrar_evidencia_calidad(
+    repo_root: Path,
+    *,
+    subject_kind: str,
+    declaration_kind: str,
+    declaration_id: str,
+    declaration_version,
+    content_sha256: str,
+    fuente_path: str,
+    fuente_role: str,
+    resultados: list,
+):
+    """`(evidence_id, error_mensaje)`. Import perezoso de
+    `tools.qualityevidence.{core,evidence}`; `error_mensaje` no es `None` si
+    el paquete no está instalado o la escritura falla -- nunca lanza."""
+    qe_core = _importar_perezoso("qualityevidence", "core")
+    qe_evidence = _importar_perezoso("qualityevidence", "evidence")
+    if qe_core is None or qe_evidence is None:
+        return None, _mensaje_paquete_no_instalado("qualityevidence", "experiment")
+    try:
+        fuente = qe_evidence.describe_source_file(repo_root, fuente_path, role=fuente_role)
+        declaracion = qe_core.DeclarationRef(
+            declaration_kind=declaration_kind,
+            declaration_id=declaration_id,
+            version=declaration_version,
+            content_sha256=content_sha256,
+        )
+        manifest = qe_evidence.build_manifest(
+            subject_kind=subject_kind, declaration=declaracion, source=fuente, results=resultados
+        )
+        qe_evidence.write_manifest(repo_root, manifest)
+        return manifest.evidence_id, None
+    except qe_core.QualityEvidenceError as exc:
+        return None, str(exc)
+
+
+# --- contract validate ------------------------------------------------------
+
+def cmd_contract_validate(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    dc_core = _importar_perezoso("datacontracts", "core")
+    dc_validation = _importar_perezoso("datacontracts", "validation")
+    if dc_core is None or dc_validation is None:
+        print(_mensaje_paquete_no_instalado("datacontracts", "discovery"), file=sys.stderr)
+        return 3
+
+    datos_contrato, error = _cargar_json(args.contract)
+    if error is not None:
+        print(error, file=sys.stderr)
+        return 2
+    try:
+        contrato = dc_core.DataContract.from_dict(datos_contrato)
+    except dc_core.DataContractError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    resultados = dc_validation.validate_contract_against_profile_file(contrato, Path(args.profile), repo_root)
+
+    evidence_id = None
+    if args.record_evidence:
+        evidence_id, error_evidencia = _registrar_evidencia_calidad(
+            repo_root,
+            subject_kind="data_contract_evaluation",
+            declaration_kind="data_contract",
+            declaration_id=contrato.contract_id,
+            declaration_version=contrato.version.version,
+            content_sha256=contrato.content_sha256(),
+            fuente_path=args.profile,
+            fuente_role="profile",
+            resultados=resultados,
+        )
+        if error_evidencia is not None:
+            print(f"No se pudo registrar evidencia: {error_evidencia}", file=sys.stderr)
+
+    if args.json:
+        payload = {"resultados": [r.to_dict() for r in resultados]}
+        if evidence_id is not None:
+            payload["evidence_id"] = evidence_id
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        _imprimir_check_results(resultados, False, f"Contract validate: {args.contract}")
+        if evidence_id is not None:
+            print(f"\nEvidencia registrada: {evidence_id}")
+    return checks.exit_code(resultados)
+
+
+# --- contract diff -----------------------------------------------------------
+
+def cmd_contract_diff(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()  # noqa: F841 - solo para validar que estamos en un repo (consistencia con el resto de subcomandos)
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    dc_core = _importar_perezoso("datacontracts", "core")
+    dc_evolution = _importar_perezoso("datacontracts", "evolution")
+    if dc_core is None or dc_evolution is None:
+        print(_mensaje_paquete_no_instalado("datacontracts", "discovery"), file=sys.stderr)
+        return 3
+
+    datos_old, error = _cargar_json(args.old)
+    if error is not None:
+        print(error, file=sys.stderr)
+        return 2
+    datos_new, error = _cargar_json(args.new)
+    if error is not None:
+        print(error, file=sys.stderr)
+        return 2
+    try:
+        old = dc_core.DataContract.from_dict(datos_old)
+        new = dc_core.DataContract.from_dict(datos_new)
+    except dc_core.DataContractError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    policy = None
+    if args.policy:
+        datos_policy, error = _cargar_json(args.policy)
+        if error is not None:
+            print(error, file=sys.stderr)
+            return 2
+        try:
+            policy = dc_core.CompatibilityPolicy.from_dict(datos_policy)
+        except dc_core.DataContractError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+
+    resultados = dc_evolution.classify_contract_change(old, new, policy)
+
+    if args.json:
+        print(json.dumps({"resultados": [r.to_dict() for r in resultados]}, ensure_ascii=False))
+    else:
+        print(f"Contract diff: {args.old} -> {args.new}")
+        if old.contract_id != new.contract_id:
+            print(
+                f"  ADVERTENCIA: contract_id distinto ({old.contract_id!r} -> {new.contract_id!r}); "
+                "se compara la estructura, no la identidad."
+            )
+        print()
+        for r in resultados:
+            print(f"{r.status:<6} {r.code} [{r.subject}]: {r.message}")
+        por_codigo: dict = {}
+        for r in resultados:
+            por_codigo[r.code] = por_codigo.get(r.code, 0) + 1
+        print("\nResumen por categoría:")
+        if not por_codigo:
+            print("  (sin cambios detectados)")
+        for codigo, cantidad in sorted(por_codigo.items()):
+            print(f"  {codigo}: {cantidad}")
+    return 0
+
+
+# --- contract impact -----------------------------------------------------------
+
+_EXTENSIONES_IMPACT_TEXTO_PLANO = (".yaml", ".yml", ".toml", ".md")
+
+
+def cmd_contract_impact(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    dc_core = _importar_perezoso("datacontracts", "core")
+    git_source = _importar_perezoso("dsimpact", "git_source")
+    consumers_py = _importar_perezoso("dsimpact", "consumers_py")
+    consumers_text = _importar_perezoso("dsimpact", "consumers_text")
+    notebooks_source = _importar_perezoso("dsimpact", "notebooks_source")
+    if None in (dc_core, git_source, consumers_py, consumers_text, notebooks_source):
+        print(_mensaje_paquete_no_instalado("dsimpact", "experiment"), file=sys.stderr)
+        return 3
+
+    datos_contrato, error = _cargar_json(args.contract)
+    if error is not None:
+        print(error, file=sys.stderr)
+        return 2
+    try:
+        contrato = dc_core.DataContract.from_dict(datos_contrato)
+    except dc_core.DataContractError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    if args.fields:
+        nombres_campo = set(args.fields.split(","))
+    else:
+        nombres_campo = {campo.name for campo in contrato.fields}
+    targets = {contrato.contract_id} | nombres_campo
+
+    try:
+        ruta_contrato_relativa = Path(args.contract).resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        ruta_contrato_relativa = None
+
+    try:
+        candidatos = git_source.listar_consumidores_candidatos(repo_root)
+    except git_source.GitSourceError as exc:
+        print(str(exc), file=sys.stderr)
+        return 3
+
+    findings: list = []
+    for candidato in candidatos:
+        if candidato == ruta_contrato_relativa:
+            continue
+        ruta_abs = repo_root / candidato
+        if not ruta_abs.exists():
+            continue
+        try:
+            texto = ruta_abs.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+
+        if candidato.endswith(".py"):
+            for m in consumers_py.buscar_en_texto_python(texto, set(), targets):
+                findings.append(
+                    {
+                        "changed_item": m["changed_item"],
+                        "consumer": candidato,
+                        "evidence_type": "CONTRACT_REFERENCE",
+                        "location": f"{candidato}:{m['linea']}",
+                        "evidence": m["fragmento"],
+                    }
+                )
+        elif candidato.endswith(".ipynb"):
+            celdas, error_parseo = notebooks_source.celdas_codigo(texto, candidato)
+            if error_parseo:
+                continue
+            for indice, texto_celda in celdas:
+                for m in consumers_py.buscar_en_texto_python(texto_celda, set(), targets):
+                    findings.append(
+                        {
+                            "changed_item": m["changed_item"],
+                            "consumer": candidato,
+                            "evidence_type": "CONTRACT_REFERENCE",
+                            "location": f"{candidato}#cell:{indice}:{m['linea']}",
+                            "evidence": m["fragmento"],
+                        }
+                    )
+        elif candidato.endswith(".json"):
+            for m in consumers_text.buscar_en_json(texto, targets):
+                findings.append(
+                    {
+                        "changed_item": m["changed_item"],
+                        "consumer": candidato,
+                        "evidence_type": "CONTRACT_REFERENCE",
+                        "location": candidato,
+                        "evidence": m["fragmento"],
+                    }
+                )
+        elif candidato.endswith(_EXTENSIONES_IMPACT_TEXTO_PLANO):
+            for m in consumers_text.buscar_en_texto_plano(texto, targets):
+                findings.append(
+                    {
+                        "changed_item": m["changed_item"],
+                        "consumer": candidato,
+                        "evidence_type": "CONTRACT_REFERENCE",
+                        "location": f"{candidato}:{m['linea']}",
+                        "evidence": m["fragmento"],
+                    }
+                )
+
+    consumidores_unicos = sorted({f["consumer"] for f in findings})
+    resultado = {
+        "contract_id": contrato.contract_id,
+        "targets": sorted(targets),
+        "findings": findings,
+        "summary": {"consumers": len(consumidores_unicos), "findings": len(findings)},
+    }
+
+    if args.json:
+        print(json.dumps(resultado, indent=2, ensure_ascii=False))
+    else:
+        print(f"Contract impact: {args.contract} (contract_id={contrato.contract_id})")
+        print(f"  targets: {', '.join(sorted(targets))}")
+        print()
+        print("Potentially affected consumers:")
+        if not findings:
+            print("  (ningún consumidor potencial detectado)")
+        else:
+            por_consumer: dict = {}
+            for f in findings:
+                por_consumer.setdefault(f["consumer"], []).append(f)
+            for consumer in sorted(por_consumer):
+                print(f"  {consumer}")
+                for f in por_consumer[consumer]:
+                    print(f"    [{f['evidence_type']}] '{f['changed_item']}' (location={f['location']})")
+        print(
+            f"\nSummary: {resultado['summary']['consumers']} potentially affected consumers "
+            f"({resultado['summary']['findings']} findings)"
+        )
+    return 0
+
+
+# --- quality evaluate ---------------------------------------------------------
+
+def cmd_quality_evaluate(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    mq_core = _importar_perezoso("modelquality", "core")
+    mq_validation = _importar_perezoso("modelquality", "validation")
+    if mq_core is None or mq_validation is None:
+        print(_mensaje_paquete_no_instalado("modelquality", "discovery"), file=sys.stderr)
+        return 3
+
+    datos_policy, error = _cargar_json(args.policy)
+    if error is not None:
+        print(error, file=sys.stderr)
+        return 2
+    datos_metricas, error = _cargar_json(args.metrics)
+    if error is not None:
+        print(error, file=sys.stderr)
+        return 2
+    if not isinstance(datos_metricas, list):
+        print(f"{args.metrics}: se esperaba una lista de métricas observadas", file=sys.stderr)
+        return 2
+
+    datos_baselines = []
+    if args.baselines:
+        datos_baselines, error = _cargar_json(args.baselines)
+        if error is not None:
+            print(error, file=sys.stderr)
+            return 2
+        if not isinstance(datos_baselines, list):
+            print(f"{args.baselines}: se esperaba una lista de baselines", file=sys.stderr)
+            return 2
+
+    try:
+        policy = mq_core.ModelQualityPolicy.from_dict(datos_policy)
+        observed_metrics = [mq_core.ObservedMetric.from_dict(m) for m in datos_metricas]
+        baselines = [mq_core.BaselineReference.from_dict(b) for b in datos_baselines]
+    except mq_core.ModelQualityError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    resultados = mq_validation.evaluate_policy(policy, observed_metrics, baselines)
+
+    evidence_id = None
+    if args.record_evidence:
+        evidence_id, error_evidencia = _registrar_evidencia_calidad(
+            repo_root,
+            subject_kind="model_quality_evaluation",
+            declaration_kind="model_quality_policy",
+            declaration_id=policy.policy_id,
+            declaration_version=None,
+            content_sha256=policy.content_sha256(),
+            fuente_path=args.metrics,
+            fuente_role="metrics",
+            resultados=resultados,
+        )
+        if error_evidencia is not None:
+            print(f"No se pudo registrar evidencia: {error_evidencia}", file=sys.stderr)
+
+    if args.json:
+        payload = {"resultados": [r.to_dict() for r in resultados]}
+        if evidence_id is not None:
+            payload["evidence_id"] = evidence_id
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        _imprimir_check_results(resultados, False, f"Quality evaluate: {args.policy}")
+        if evidence_id is not None:
+            print(f"\nEvidencia registrada: {evidence_id}")
+    return checks.exit_code(resultados)
+
+
+# --- quality evidence show ----------------------------------------------------
+
+def cmd_quality_evidence_show(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    qe_core = _importar_perezoso("qualityevidence", "core")
+    qe_evidence = _importar_perezoso("qualityevidence", "evidence")
+    if qe_core is None or qe_evidence is None:
+        print(_mensaje_paquete_no_instalado("qualityevidence", "experiment"), file=sys.stderr)
+        return 3
+
+    try:
+        manifest = qe_evidence.read_manifest(repo_root, args.evidence_id)
+    except qe_core.QualityEvidenceError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    if args.json:
+        print(json.dumps(manifest.to_dict(), indent=2, ensure_ascii=False))
+    else:
+        print(f"Quality evidence: {manifest.evidence_id}")
+        print(f"  subject_kind: {manifest.subject_kind}")
+        print(
+            f"  declaration: {manifest.declaration.declaration_kind}={manifest.declaration.declaration_id} "
+            f"(version={manifest.declaration.version})"
+        )
+        print(f"  generated_at: {manifest.generated_at}")
+        conteos: dict = {}
+        for r in manifest.check_results:
+            conteos[r["status"]] = conteos.get(r["status"], 0) + 1
+        print(
+            f"  check_results: {conteos.get('PASS', 0)} PASS, {conteos.get('WARN', 0)} WARN, "
+            f"{conteos.get('FAIL', 0)} FAIL, {conteos.get('N/A', 0)} N/A"
+        )
+        print(f"  technical_errors: {len(manifest.technical_errors)}")
+    return 0
+
+
+# --- quality drift -------------------------------------------------------------
+
+def cmd_quality_drift(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    qe_core = _importar_perezoso("qualityevidence", "core")
+    qe_evidence = _importar_perezoso("qualityevidence", "evidence")
+    if qe_core is None or qe_evidence is None:
+        print(_mensaje_paquete_no_instalado("qualityevidence", "experiment"), file=sys.stderr)
+        return 3
+
+    try:
+        drift = qe_evidence.drift_from_profiles(
+            repo_root,
+            metric_name=args.metric,
+            baseline_profile_path=args.baseline_profile,
+            current_profile_path=args.current_profile,
+            field=args.field,
+            column=args.column,
+            comparison_mode=args.mode,
+            threshold=args.threshold,
+            baseline_label=args.baseline_label,
+            current_label=args.current_label,
+        )
+    except qe_core.QualityEvidenceError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    if args.json:
+        print(json.dumps(drift.to_dict(), indent=2, ensure_ascii=False))
+    else:
+        print(f"Quality drift: {drift.metric_name}")
+        print(f"  baseline_value: {drift.baseline_value!r} ({drift.baseline_label})")
+        print(f"  current_value: {drift.current_value!r} ({drift.current_label})")
+        print(f"  observed_difference: {drift.observed_difference!r} ({drift.comparison_mode})")
+        print(f"  result: {drift.result_status} -- {drift.result_message}")
     return 0
 
 
@@ -1653,6 +2245,93 @@ def construir_parser() -> argparse.ArgumentParser:
     grupo_impact.add_argument("--staged", action="store_true")
     p_impact_scan.add_argument("--json", action="store_true")
     p_impact_scan.set_defaults(func=cmd_impact_scan)
+
+    p_contract = subparsers.add_parser(
+        "contract",
+        help="Contratos de datos (tools/datacontracts, v0.7 Change 4): validate/diff/impact, solo lectura.",
+    )
+    contract_sub = p_contract.add_subparsers(dest="subcomando", required=True)
+
+    p_contract_validate = contract_sub.add_parser(
+        "validate", help="Valida un DataContract contra evidencia real (profile.json)."
+    )
+    p_contract_validate.add_argument("--contract", required=True)
+    p_contract_validate.add_argument("--profile", required=True)
+    p_contract_validate.add_argument("--record-evidence", action="store_true", dest="record_evidence")
+    p_contract_validate.add_argument("--json", action="store_true")
+    p_contract_validate.set_defaults(func=cmd_contract_validate)
+
+    p_contract_diff = contract_sub.add_parser(
+        "diff", help="Clasifica el cambio de compatibilidad entre dos versiones de un DataContract."
+    )
+    p_contract_diff.add_argument("--old", required=True)
+    p_contract_diff.add_argument("--new", required=True)
+    p_contract_diff.add_argument("--policy", default=None)
+    p_contract_diff.add_argument("--json", action="store_true")
+    p_contract_diff.set_defaults(func=cmd_contract_diff)
+
+    p_contract_impact = contract_sub.add_parser(
+        "impact",
+        help=(
+            "Impact preflight de un contrato (composición de tools/dsimpact), solo lectura. "
+            "--since/--staged son aceptados por el parser pero no tienen efecto observable en "
+            "este Change (reservados para un futuro Change que compare dos versiones vía Git)."
+        ),
+    )
+    p_contract_impact.add_argument("--contract", required=True)
+    grupo_contract_impact = p_contract_impact.add_mutually_exclusive_group()
+    grupo_contract_impact.add_argument("--since", default=None)
+    grupo_contract_impact.add_argument("--staged", action="store_true")
+    p_contract_impact.add_argument("--fields", default=None, help="Lista separada por comas; default: todos los fields del contrato.")
+    p_contract_impact.add_argument("--json", action="store_true")
+    p_contract_impact.set_defaults(func=cmd_contract_impact)
+
+    p_quality = subparsers.add_parser(
+        "quality",
+        help="Calidad de modelo y evidencia (tools/modelquality, tools/qualityevidence, v0.7 Change 4).",
+    )
+    quality_sub = p_quality.add_subparsers(dest="subcomando", required=True)
+
+    p_quality_evaluate = quality_sub.add_parser(
+        "evaluate", help="Evalúa una ModelQualityPolicy contra métricas ya observadas."
+    )
+    p_quality_evaluate.add_argument("--policy", required=True)
+    p_quality_evaluate.add_argument("--metrics", required=True)
+    p_quality_evaluate.add_argument("--baselines", default=None)
+    p_quality_evaluate.add_argument("--record-evidence", action="store_true", dest="record_evidence")
+    p_quality_evaluate.add_argument("--json", action="store_true")
+    p_quality_evaluate.set_defaults(func=cmd_quality_evaluate)
+
+    p_quality_evidence = quality_sub.add_parser(
+        "evidence", help="Evidencia de calidad persistida (.harmessi/quality/<evidence_id>/manifest.json)."
+    )
+    quality_evidence_sub = p_quality_evidence.add_subparsers(dest="subcomando_evidence", required=True)
+    p_quality_evidence_show = quality_evidence_sub.add_parser("show", help="Muestra un manifest de evidencia ya persistido.")
+    p_quality_evidence_show.add_argument("--evidence-id", required=True, dest="evidence_id")
+    p_quality_evidence_show.add_argument("--json", action="store_true")
+    p_quality_evidence_show.set_defaults(func=cmd_quality_evidence_show)
+
+    p_quality_drift = quality_sub.add_parser(
+        "drift", help="Calcula drift entre dos profile.json (solo lectura, nunca escribe evidencia)."
+    )
+    p_quality_drift.add_argument("--baseline-profile", required=True, dest="baseline_profile")
+    p_quality_drift.add_argument("--current-profile", required=True, dest="current_profile")
+    p_quality_drift.add_argument("--metric", required=True)
+    p_quality_drift.add_argument("--field", required=True)
+    p_quality_drift.add_argument(
+        "--column",
+        default=None,
+        help=(
+            "Nombre de columna (requerido por drift_from_profiles para field != 'filas': "
+            "nulls_count/unique_count/min/max)."
+        ),
+    )
+    p_quality_drift.add_argument("--mode", required=True, choices=["absolute_diff", "relative_diff"])
+    p_quality_drift.add_argument("--threshold", type=float, default=None)
+    p_quality_drift.add_argument("--baseline-label", default="baseline", dest="baseline_label")
+    p_quality_drift.add_argument("--current-label", default="current", dest="current_label")
+    p_quality_drift.add_argument("--json", action="store_true")
+    p_quality_drift.set_defaults(func=cmd_quality_drift)
 
     p_archive = subparsers.add_parser(
         "archive", help="Archiva un cambio cerrado de openspec/changes/ a openspec/archive/ (git mv)."

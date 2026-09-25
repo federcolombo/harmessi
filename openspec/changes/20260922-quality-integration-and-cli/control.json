@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "change_id": "20260922-quality-integration-and-cli",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-22T17:28:20Z",
+  "baseline": {
+    "commit": "c44eef03e152f9b03513c6359ee3ce1e247a05bc",
+    "rama": "v0.7-dev",
+    "capturado_utc": "2026-09-22T17:28:20Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260922-quality-integration-and-cli/proposal.md",
+      "openspec/changes/20260922-quality-integration-and-cli/tasks.md",
+      "openspec/changes/20260922-quality-integration-and-cli/spec.md",
+      "openspec/changes/20260922-quality-integration-and-cli/design.md",
+      "openspec/changes/20260922-quality-integration-and-cli/control.json",
+      "openspec/changes/20260922-quality-integration-and-cli/verification.md",
+      "tools/datacontracts/evolution.py",
+      "tools/datacontracts/tests/test_evolution.py",
+      "tools/ds_guard.py",
+      "tools/tests/test_ds_guard_contract_quality_cli.py",
+      "tools/tests/test_v07_readiness_promote_status_no_alteration.py",
+      "tools/tests/test_v07_evolution_neutrality.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/ds_init/manifest.py",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.7.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a63ccd5807b014cc999c222f2cfdb6e3d7f83b85a276ec881a98293f086c5972",
+      "registrado_utc": "2026-09-22T17:41:35Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 4 - quality-integration-and-cli (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 4 -- quality-integration-and-cli ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md). Decision 5 del roadmap confirmada y no reabrible: v0.7 NO modifica readiness/promotion gates; tests obligatorios de no-alteracion incluidos en este Change. Host de CLI confirmado: tools/ds_guard.py, subcomandos contract/quality."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "3179202e045b851b5a15d774584980ad5ac976bde901c594cc0bee371cc06a67",
+      "registrado_utc": "2026-09-22T17:41:36Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 4 - quality-integration-and-cli (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 4 -- quality-integration-and-cli ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md). Decision 5 del roadmap confirmada y no reabrible: v0.7 NO modifica readiness/promotion gates; tests obligatorios de no-alteracion incluidos en este Change. Host de CLI confirmado: tools/ds_guard.py, subcomandos contract/quality."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "91e952372dcefcf6855d6d270f10e7e380e62e3970e5c411ee260421306d609d",
+      "registrado_utc": "2026-09-22T17:41:37Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 4 - quality-integration-and-cli (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 4 -- quality-integration-and-cli ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md). Decision 5 del roadmap confirmada y no reabrible: v0.7 NO modifica readiness/promotion gates; tests obligatorios de no-alteracion incluidos en este Change. Host de CLI confirmado: tools/ds_guard.py, subcomandos contract/quality."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e90004af537ad806b3df1152a8e649bfac01fb7bb2da9f4548f8a8e25b271c64",
+      "registrado_utc": "2026-09-22T17:41:38Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 4 - quality-integration-and-cli (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 4 -- quality-integration-and-cli ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md). Decision 5 del roadmap confirmada y no reabrible: v0.7 NO modifica readiness/promotion gates; tests obligatorios de no-alteracion incluidos en este Change. Host de CLI confirmado: tools/ds_guard.py, subcomandos contract/quality."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-22T17:41:39Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-22T17:41:41Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-25T14:26:46Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion",
+      "reconciliado": true
+    },
+    {
+      "utc": "2026-09-25T14:27:00Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-22T17:41:40Z",
+      "cierre_utc": "2026-09-22T18:50:37Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 8,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-23T01:41:40Z",
+      "minutos_consumidos": 68.95,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-22T17:42:11Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-22T18:36:04Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-09-25T14:12:47Z",
+      "cierre_utc": "2026-09-25T14:27:01Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 8,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-25T22:12:47Z",
+      "minutos_consumidos": 14.233333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-25T14:25:23Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

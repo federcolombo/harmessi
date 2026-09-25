@@ -79,6 +79,7 @@ MODULOS_CORE = (
     "tools/reporting/publish.py",
     "tools/datacontracts/core.py",
     "tools/datacontracts/validation.py",
+    "tools/datacontracts/evolution.py",
     "tools/modelquality/core.py",
     "tools/modelquality/validation.py",
     "tools/qualityevidence/core.py",

@@ -56,6 +56,7 @@ otros la lógica de decisión vive mezclada con la lectura de stdin en el mismo 
 | `tools/reporting/publish.py` | Publicación de reportes (v0.6 Change 4) -- `publish` orquesta governance → validation → evidence → render y escribe el directorio del reporte más `report.html`; importa solo `reporting.*` y `dsguard.*` vía los módulos existentes; única puerta de escritura del reporte completo; es core, no conoce protocolo de hooks. |
 | `tools/datacontracts/core.py` | Contratos neutrales de datos (v0.7 Change 0: `DataContract`/`ContractField`/`Constraint`/`BusinessRule`/`ContractVersion`/`CompatibilityPolicy`, serialización determinista y hash de contenido) -- solo stdlib; no observa ni evalúa ningún dato, no importa `ds_profile`, `dsguard` ni ningún hermano; separa estructura (schema), calidad esperada (expectations con severidad declarada) y reglas de negocio (solo declarables, nunca evaluadas); no conoce protocolo de hooks, es core. |
 | `tools/datacontracts/validation.py` | Evaluación de `DataContract` contra evidencia real (v0.7 Change 1: `validate_contract`/`validate_contract_against_profile_file`, códigos `CONTRACT-*`, produce `dsguard.checks.CheckResult`) -- importa `dsguard.checks` (dirección permitida por la regla 7) y, de `ds_profile`, SOLO `holdout_guard.verificar_permitido` (nunca `ds_profile.report`, `.column_stats`, `.fingerprint` ni ningún otro símbolo: no observa datos, solo reusa el guard de lectura de holdout); consume `profile.json` como `dict` ya cargado, nunca recalcula estadísticas ni reabre el dataset original; vocabulario `PASS`/`WARN`/`FAIL`/`N/A`, nunca `PASS` por falta de evidencia; no conoce protocolo de hooks, es core. |
+| `tools/datacontracts/evolution.py` | Clasificación determinista de compatibilidad entre dos versiones de un `DataContract` (v0.7 Change 4: `classify_contract_change`, códigos `CONTRACT-EVOLUTION-*`, produce `dsguard.checks.CheckResult`) -- importa únicamente `dsguard.checks` y el sibling `tools.datacontracts.core`; sin `policy` todo `status` es `N/A` (clasificado, nunca evaluado), con `policy` mapea `CompatibilityPolicy.COMPAT_ACTIONS`; pura, sin I/O, sin leer `profile.json` ni ningún archivo; único agregado a un paquete de un Change anterior, excepción prevista por el propio Change 0; no conoce protocolo de hooks, es core. |
 | `tools/fallback/handoff.py` | Contexto de handoff a nivel SDD (v0.5 Change 3) -- contexto mínimo suficiente para continuar un Change entre sesiones/proveedores sin reiniciar trabajo ni duplicar auditorías (`completed`/`pending`/`prior_findings`); persistido en `.harmessi/handoffs/<id>/handoff.json`, mismo patrón que `.harmessi/evals/`. |
 | `tools/modelquality/core.py` | Políticas de calidad de modelo neutrales (v0.7 Change 2: `ModelQualityPolicy`/`MetricRequirement`/`EvaluationContext`/`ObservedMetric`/`BaselineReference`, serialización determinista y hash de contenido de `ModelQualityPolicy`) -- solo stdlib; no entrena modelos, no calcula ninguna métrica, no observa ningún dato; familia independiente de `tools/datacontracts`, sin tipos compartidos; no conoce protocolo de hooks, es core. |
 | `tools/modelquality/validation.py` | Evaluación de `ModelQualityPolicy` contra métricas ya reportadas (v0.7 Change 2: `evaluate_policy`, códigos `QUALITY-*`, produce `dsguard.checks.CheckResult`) -- importa `dsguard.checks` y `tools.modelquality.core` (sibling); sin ninguna superficie de I/O ni de lectura de archivo; nunca recalcula ni verifica que el valor reportado sea numéricamente correcto (decisión 1 del roadmap); vocabulario `PASS`/`WARN`/`FAIL`/`N/A`, nunca `PASS` por falta de evidencia; no conoce protocolo de hooks, es core. |
@@ -152,6 +153,18 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
    existente, no se replica"). No importa ningún otro símbolo de `ds_profile` (`report`,
    `column_stats`, `fingerprint`, `sampling`, `quality_flags`, `schema`, `io_readers` quedan
    fuera). Verificado por `tools/tests/test_v07_validation_neutrality.py`.
+
+   Change 4 (`quality-integration-and-cli`) agrega la única extensión aditiva dentro del propio
+   paquete: `tools/datacontracts/evolution.py` importa únicamente `dsguard.checks` y el sibling
+   `tools.datacontracts.core` (nunca `ds_profile`, `dsimpact`, `tools.modelquality`,
+   `tools.qualityevidence`, `tools.reporting`, pandas ni numpy) -- pura, sin I/O, sin leer
+   `profile.json` ni ningún archivo (a diferencia de `validation.py`, que sí lee evidencia). Los 6
+   subcomandos `contract`/`quality` de ese mismo Change viven en `tools/ds_guard.py` (adapter
+   top-level, fuera de esta familia y fuera del perímetro de neutralidad v0.7), que compone
+   `tools.datacontracts.{core,validation,evolution}` junto con `tools.modelquality`,
+   `tools.qualityevidence` y `tools.dsimpact` -- nunca al revés, y ningún paquete de esta lista
+   importa a otro directamente entre sí. Verificado por
+   `tools/tests/test_v07_evolution_neutrality.py`.
 
 8. Familia `tools/modelquality` (v0.7 Change 2): `core.py` es solo-stdlib y no importa hermanos
    ni ningún paquete existente, incluido `tools.datacontracts` (familia independiente, sin tipos

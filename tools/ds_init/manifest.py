@@ -642,6 +642,13 @@ MANIFEST: tuple = (
         descripcion="Contratos neutrales de datos (DataContract/ContractField/Constraint/BusinessRule/ContractVersion/CompatibilityPolicy), solo stdlib (v0.7 Change 0)",
     ),
     EntradaManifiesto(
+        fuente="tools/datacontracts/evolution.py",
+        tratamiento=VERBATIM,
+        destino="tools/datacontracts/evolution.py",
+        descripcion="Clasificacion deterministica de compatibilidad entre dos versiones de un DataContract (classify_contract_change), codigos CONTRACT-EVOLUTION-*, produce dsguard.checks.CheckResult (v0.7 Change 4)",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
         fuente="tools/modelquality/__init__.py",
         tratamiento=VERBATIM,
         destino="tools/modelquality/__init__.py",
