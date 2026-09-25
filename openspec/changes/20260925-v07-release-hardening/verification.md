@@ -209,3 +209,79 @@ sigue pendiente de aprobación humana final. La alineación de versión canónic
 (`tools/ds_init/version.py`, `CITATION.cff`) y la regeneración de `.ds_init/control.json`
 (invocación 7 de `tasks.md`) están **fuera de esta invocación**, condicionadas a autorización
 explícita posterior del usuario, tal como quedó definido en `tasks.md`.
+
+---
+
+## Addendum — Alineación de versión y cierre del release-blocker de Doctor (post-cierre)
+
+**Este addendum SUPERSEDE el veredicto original de este documento** (`READY FOR v0.7.0 RELEASE`,
+sección "Resultado final" de arriba, emitido antes de esta addenda). El contenido original NO se
+borra ni se reescribe: queda como evidencia histórica real de lo que efectivamente ocurrió en el
+cierre del Change 5.
+
+### Por qué el veredicto original quedó superseded
+
+Tras el cierre de este Change (commit `eb7819433e7ac2f6b16cfbc2125f4c9563c0be5d`), el Lead releyó
+de forma más estricta el texto YA APROBADO de R16/R21 de `spec.md` y determinó que ese texto exige
+**literalmente 0 ERROR de `harmessi doctor` en AMBOS scratch installs** (`experiment` y
+`discovery`), sin excepción implícita. El veredicto original de esta sección declaraba READY pese a
+que el scratch `discovery` daba **4 ERROR** `HARMESSI-AGENTE-FALTANTE` (documentados como
+"limitación preexistente, no bloqueante" en la sección (d) de arriba). El usuario, al ser
+consultado, **no aceptó una excepción** a R16/R21 y autorizó en cambio un Change correctivo
+separado para eliminar el ERROR de raíz. En consecuencia, el veredicto original de este documento
+no debió declararse READY mientras ese gate no se cumpliera de forma literal, y queda marcado como
+superseded por lo que sigue.
+
+### Change correctivo que resolvió el release-blocker
+
+`20260925-doctor-stage-awareness` (commit `d240d58`) — ya implementado, revisado y **CERRADO**, con
+su propio `verification.md` (no repetido aquí en extenso). Resumen: hizo
+`tools/harmessi/doctor.py::_check_agents` consciente de `installation_stage`, siguiendo el mismo
+patrón ya usado por `HARMESSI-ARCHIVOS-ESPERADOS`, de modo que el stage `discovery` deje de esperar
+los 4 archivos de agente que ese stage legítimamente no instala. Verificado de forma aislada con
+`pytest tools/harmessi -q`: **99 passed**.
+
+### Evidencia nueva de esta ronda (post-fix, estado FINAL de v0.7)
+
+- `tools/ds_init/version.py` → `HARNESS_VERSION = "0.7.0"`.
+- `CITATION.cff` → `version: 0.7.0`, `date-released: "2026-09-25"`.
+- `.ds_init/control.json` regenerado con `control.regenerar_control(..., stage="experiment")`
+  **dos veces**: una antes del fix de doctor (89→99 entradas), y una segunda DESPUÉS del fix (mismo
+  conteo, 99 entradas, pero hashes de `tools/harmessi/doctor.py` y
+  `tools/harmessi/tests/test_doctor.py` recalculados sobre el contenido POST-fix — nunca se
+  reutilizaron hashes pre-fix).
+- `check_manifest_parity`: OK.
+- `harmessi doctor` sobre este repo (estado final, post-fix, post-regeneración): **27 OK, 1 WARN**
+  (working tree con cambios sin confirmar, esperado), **0 ERROR, 1 N/A** (antes de regenerar
+  `control.json` había 14 WARN de drift/versión; desaparecieron al regenerar).
+- Scratch install fresco `experiment` (repo git temporal + `.venv --without-pip`, estado FINAL
+  post-fix): `harmessi doctor --destino` → **27 OK, 1 WARN, 0 ERROR, 1 N/A**.
+- Scratch install fresco `discovery` (mismo criterio, estado FINAL post-fix): `harmessi doctor
+  --destino` → **23 OK, 1 WARN, 0 ERROR, 1 N/A** (antes del fix: 4 ERROR
+  `HARMESSI-AGENTE-FALTANTE`; el gate R16/R21 ahora se cumple **literalmente**, sin excepción, en
+  ambos stages).
+- `tools/ds_init/tests/test_control_file.py` + `test_manifest.py` +
+  `tools/tests/test_manifest_dsguard_parity.py`: **56 passed, 0 failed** (corridos tras la segunda
+  regeneración de `control.json`).
+- `git diff --check`: limpio.
+- Privacy sweep sobre el diff de la alineación de versión (`.ds_init/control.json`, `CITATION.cff`,
+  `tools/ds_init/version.py`): sin hallazgos (los únicos matches son las URLs públicas ya existentes
+  del repo en `CITATION.cff`, no nuevas).
+- No se repitió `pytest tools -q` completo en esta ronda: el fix de Doctor ya se verificó de forma
+  aislada (`pytest tools/harmessi -q`: 99 passed) en su propio Change, y la regeneración de
+  `control.json`/alineación de versión no toca ningún código ejecutable de las features de v0.7
+  (Data Contracts, Model Quality, Quality Evidence) — mismo criterio de "no repetir la regresión
+  completa salvo que cambie código fuera de Doctor/installer" ya aplicado en la ronda anterior.
+
+### Veredicto final actualizado
+
+**`READY FOR v0.7.0 RELEASE`**
+
+Este es el veredicto **VIGENTE** de v0.7 en su conjunto, y reemplaza al veredicto original de la
+sección "Resultado final" de arriba. A diferencia de aquel, este veredicto se emite con R16/R21
+cumplidos **literalmente** en ambos scratch installs (`experiment` y `discovery`), **sin ninguna
+excepción implícita ni explícita**: 0 ERROR en ambos, confirmado en la corrida final post-fix
+documentada arriba.
+
+**Aclaración explícita (se mantiene, no se elimina)**: este veredicto **NO autoriza** push, merge,
+tag ni release por sí solo — sigue pendiente de aprobación humana final.
