@@ -642,6 +642,13 @@ MANIFEST: tuple = (
         descripcion="Contratos neutrales de datos (DataContract/ContractField/Constraint/BusinessRule/ContractVersion/CompatibilityPolicy), solo stdlib (v0.7 Change 0)",
     ),
     EntradaManifiesto(
+        fuente="tools/datacontracts/validation.py",
+        tratamiento=VERBATIM,
+        destino="tools/datacontracts/validation.py",
+        descripcion="Evaluacion deterministica de un DataContract contra un profile de ds_profile (validate_contract/validate_contract_against_profile_file), codigos CONTRACT-*, produce dsguard.checks.CheckResult (v0.7 Change 1)",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
         fuente="tools/datacontracts/evolution.py",
         tratamiento=VERBATIM,
         destino="tools/datacontracts/evolution.py",

@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "change_id": "20260925-v07-release-hardening",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-25T14:28:05Z",
+  "baseline": {
+    "commit": "4be6387ce1295007f3565347a6be0bce955605ca",
+    "rama": "v0.7-dev",
+    "capturado_utc": "2026-09-25T14:28:05Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260925-v07-release-hardening/proposal.md",
+      "openspec/changes/20260925-v07-release-hardening/tasks.md",
+      "openspec/changes/20260925-v07-release-hardening/spec.md",
+      "openspec/changes/20260925-v07-release-hardening/design.md",
+      "openspec/changes/20260925-v07-release-hardening/control.json",
+      "openspec/changes/20260925-v07-release-hardening/verification.md",
+      "tools/tests/test_v07_release_hardening_smoke.py",
+      "docs/roadmap/v0.7.md",
+      "tools/ds_init/manifest.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "65b4b5f2892275dbd82e9daa95cbfcfa96b497675a193465125b51387ebab104",
+      "registrado_utc": "2026-09-25T14:37:02Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-25",
+      "alcance_aprobado": "Change 5 - v0.7-release-hardening (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 5 -- v0.7-release-hardening ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-25, bajo el Contrato de autonomia de docs/roadmap/README.md). Sin features nuevas; regresion completa pytest tools -q reservada para este Change; veredicto final READY/NOT READY FOR v0.7.0 RELEASE. Baseline confirmado v0.6.0 (f585a45); rango de sweep de privacidad 37fc3e3..HEAD confirmado."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "971964cd4296bab9fc89e3f89f8f3ebcb0c28ee97bed84e380a46c729843ded1",
+      "registrado_utc": "2026-09-25T14:37:03Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-25",
+      "alcance_aprobado": "Change 5 - v0.7-release-hardening (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 5 -- v0.7-release-hardening ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-25, bajo el Contrato de autonomia de docs/roadmap/README.md). Sin features nuevas; regresion completa pytest tools -q reservada para este Change; veredicto final READY/NOT READY FOR v0.7.0 RELEASE. Baseline confirmado v0.6.0 (f585a45); rango de sweep de privacidad 37fc3e3..HEAD confirmado."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "0bdb81686f5bc5767183ddc3435aaab5a190775c9659712305f05c555624d869",
+      "registrado_utc": "2026-09-25T14:37:04Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-25",
+      "alcance_aprobado": "Change 5 - v0.7-release-hardening (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 5 -- v0.7-release-hardening ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-25, bajo el Contrato de autonomia de docs/roadmap/README.md). Sin features nuevas; regresion completa pytest tools -q reservada para este Change; veredicto final READY/NOT READY FOR v0.7.0 RELEASE. Baseline confirmado v0.6.0 (f585a45); rango de sweep de privacidad 37fc3e3..HEAD confirmado."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "3e233ba9c7ec08b8019bb2cfc54826ac932fefaef1055ce816f51b66740e5280",
+      "registrado_utc": "2026-09-25T14:37:05Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-25",
+      "alcance_aprobado": "Change 5 - v0.7-release-hardening (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 5 -- v0.7-release-hardening ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-25, bajo el Contrato de autonomia de docs/roadmap/README.md). Sin features nuevas; regresion completa pytest tools -q reservada para este Change; veredicto final READY/NOT READY FOR v0.7.0 RELEASE. Baseline confirmado v0.6.0 (f585a45); rango de sweep de privacidad 37fc3e3..HEAD confirmado."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-25T14:37:06Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-25T14:37:08Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-25T15:29:19Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion",
+      "reconciliado": true
+    },
+    {
+      "utc": "2026-09-25T15:29:34Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-25T14:37:07Z",
+      "cierre_utc": "2026-09-25T15:29:35Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 8,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-25T22:37:07Z",
+      "minutos_consumidos": 52.46666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-25T15:27:03Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-25T15:22:07Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}
