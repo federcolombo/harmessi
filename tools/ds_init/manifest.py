@@ -656,6 +656,27 @@ MANIFEST: tuple = (
         stage_minimo="discovery",
     ),
     EntradaManifiesto(
+        fuente="tools/autonomy/__init__.py",
+        tratamiento=VERBATIM,
+        destino="tools/autonomy/__init__.py",
+        descripcion="Paquete de contrato de autonomia (v0.8), sin logica",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
+        fuente="tools/autonomy/core.py",
+        tratamiento=VERBATIM,
+        destino="tools/autonomy/core.py",
+        descripcion="Contrato neutral de autonomia (modos autonomous/supervised, POLICY_TABLE/resolve_action, catalogos STOP/LIMIT, codigos AUTONOMY-*, roles, ApprovalRef/PolicyApproval, PreApprovedDecision), solo stdlib (v0.8 Change 0)",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
+        fuente="tools/autonomy/policy.py",
+        tratamiento=VERBATIM,
+        destino="tools/autonomy/policy.py",
+        descripcion="Politica de autonomia de guardrails.json (parse_autonomy_policy fail-closed, fuentes selladas, resolve_methodological_decision), solo stdlib y core; recibe guard_policy_version_max del llamador (v0.8 Change 0)",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
         fuente="tools/modelquality/__init__.py",
         tratamiento=VERBATIM,
         destino="tools/modelquality/__init__.py",

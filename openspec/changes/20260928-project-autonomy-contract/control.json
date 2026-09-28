@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "change_id": "20260928-project-autonomy-contract",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-28T15:15:22Z",
+  "baseline": {
+    "commit": "90accb3540cafa79d1e15df6143fba8a256e11ca",
+    "rama": "v0.8-dev",
+    "capturado_utc": "2026-09-28T15:15:22Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260928-project-autonomy-contract/proposal.md",
+      "openspec/changes/20260928-project-autonomy-contract/tasks.md",
+      "openspec/changes/20260928-project-autonomy-contract/spec.md",
+      "openspec/changes/20260928-project-autonomy-contract/design.md",
+      "openspec/changes/20260928-project-autonomy-contract/control.json",
+      "openspec/changes/20260928-project-autonomy-contract/verification.md",
+      "tools/autonomy/__init__.py",
+      "tools/autonomy/core.py",
+      "tools/autonomy/policy.py",
+      "tools/autonomy/tests/__init__.py",
+      "tools/autonomy/tests/test_core.py",
+      "tools/autonomy/tests/test_policy.py",
+      "tools/autonomy/tests/test_installability.py",
+      "tools/tests/test_v08_autonomy_neutrality.py",
+      "tools/tests/test_v08_writer_no_execution.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/ds_init/manifest.py",
+      "tools/dsguard/pathguard.py",
+      "tools/tests/test_pathguard.py",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.8.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "c3cd17a4971b172c2f2f6643c65f42dba043d2b26ddecfc7991d64739e7c2fdd",
+      "registrado_utc": "2026-09-28T16:57:12Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-28",
+      "alcance_aprobado": "Change 0 - project-autonomy-contract (docs/roadmap/v0.8.md), con decisiones A1 (ApprovalRef y vinculo al hash de la propuesta), A2 (role_responsibilities derivada) y A3 (namespace policy: reservado) y diferimientos a Change 3/4",
+      "cita": "Mensaje del autor (2026-09-28): 'Apruebo conceptualmente proposal.md, spec.md y design.md del Change 0 con las siguientes tres decisiones obligatorias ... registra ESTA respuesta como mi aprobacion humana explicita de proposal.md, spec.md y design.md ... continua autonomamente con la implementacion del Change 0'. Ajustes aplicados por el writer y verificados por el Lead contra docs/roadmap/v0.8.md sin nuevas decisiones materiales."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a41099c001e2135fa93d790d5331de5d8085d3d17090be6a17d8d34a1a849d33",
+      "registrado_utc": "2026-09-28T16:57:12Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-28",
+      "alcance_aprobado": "Change 0 - project-autonomy-contract (docs/roadmap/v0.8.md), con decisiones A1 (ApprovalRef y vinculo al hash de la propuesta), A2 (role_responsibilities derivada) y A3 (namespace policy: reservado) y diferimientos a Change 3/4",
+      "cita": "Mensaje del autor (2026-09-28): 'Apruebo conceptualmente proposal.md, spec.md y design.md del Change 0 con las siguientes tres decisiones obligatorias ... registra ESTA respuesta como mi aprobacion humana explicita de proposal.md, spec.md y design.md ... continua autonomamente con la implementacion del Change 0'. Ajustes aplicados por el writer y verificados por el Lead contra docs/roadmap/v0.8.md sin nuevas decisiones materiales."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "33927ebdefd6ee56808c46c579d4d6ad03d5a505ae120bf135de23b1e15f1603",
+      "registrado_utc": "2026-09-28T16:57:12Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-28",
+      "alcance_aprobado": "Change 0 - project-autonomy-contract (docs/roadmap/v0.8.md), con decisiones A1 (ApprovalRef y vinculo al hash de la propuesta), A2 (role_responsibilities derivada) y A3 (namespace policy: reservado) y diferimientos a Change 3/4",
+      "cita": "Mensaje del autor (2026-09-28): 'Apruebo conceptualmente proposal.md, spec.md y design.md del Change 0 con las siguientes tres decisiones obligatorias ... registra ESTA respuesta como mi aprobacion humana explicita de proposal.md, spec.md y design.md ... continua autonomamente con la implementacion del Change 0'. Ajustes aplicados por el writer y verificados por el Lead contra docs/roadmap/v0.8.md sin nuevas decisiones materiales."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-28T16:57:19Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-28T16:57:19Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-28T17:46:21Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion",
+      "reconciliado": true
+    },
+    {
+      "utc": "2026-09-28T17:46:22Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-28T15:15:23Z",
+      "cierre_utc": "2026-09-28T17:46:23Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 8,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-28T23:15:23Z",
+      "minutos_consumidos": 151.0,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-28T17:44:40Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-28T17:11:04Z"
+        }
+      },
+      "tareas": [],
+      "roles": [
+        "python-data-engineer"
+      ],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

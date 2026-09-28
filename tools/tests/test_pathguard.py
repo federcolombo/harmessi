@@ -159,6 +159,87 @@ class TestCargarConfig(unittest.TestCase):
             pathguard.cargar_config(self.repo)
 
 
+class TestVersionDeGuardrails(unittest.TestCase):
+    """v0.8 R12: `version` de guardrails.json, aditivo y fail-closed."""
+
+    def setUp(self):
+        self.repo = _crear_repo_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_policy_version_max_es_2(self):
+        self.assertEqual(pathguard.POLICY_VERSION_MAX, 2)
+
+    def test_version_ausente_carga(self):
+        _escribir_config(self.repo, {"holdouts": ["data/holdout/**"]})
+        self.assertEqual(pathguard.cargar_config(self.repo).holdouts, ("data/holdout/**",))
+
+    def test_versiones_soportadas_cargan(self):
+        for version in (1, 2):
+            with self.subTest(version=version):
+                _escribir_config(self.repo, {"version": version, "holdouts": ["data/holdout/**"]})
+                self.assertEqual(pathguard.cargar_config(self.repo).holdouts, ("data/holdout/**",))
+
+    def test_versiones_no_soportadas_levantan_error_config(self):
+        for version in (0, 3, "2", "1", True, 2.5, None, -1, []):
+            with self.subTest(version=version):
+                _escribir_config(self.repo, {"version": version})
+                with self.assertRaises(pathguard.ConfigGuardrailsError) as ctx:
+                    pathguard.cargar_config(self.repo)
+                self.assertIn("Harmessi", str(ctx.exception))
+
+    def test_guardrails_json_real_del_repo_carga(self):
+        repo_origen = Path(__file__).resolve().parents[2]
+        pathguard.cargar_config(repo_origen)
+
+    def _correr_hook(self, config: dict) -> tuple:
+        import io
+        import sys
+        from contextlib import redirect_stderr, redirect_stdout
+        from unittest.mock import patch
+
+        directorio_hook = str(Path(__file__).resolve().parents[1] / "dsguard")
+        sys.path.insert(0, directorio_hook)
+        try:
+            import hook_rutas
+        finally:
+            if directorio_hook in sys.path:
+                sys.path.remove(directorio_hook)
+
+        _escribir_config(self.repo, config)
+        payload = json.dumps({"tool_name": "Read", "tool_input": {"file_path": "README.md"}})
+        stdin_original = sys.stdin
+        sys.stdin = io.StringIO(payload)
+        stdout, stderr = io.StringIO(), io.StringIO()
+        try:
+            with patch.object(hook_rutas, "REPO_ROOT", self.repo), redirect_stdout(stdout), redirect_stderr(stderr):
+                codigo = hook_rutas.main()
+        finally:
+            sys.stdin = stdin_original
+        return codigo, stderr.getvalue()
+
+    def test_hook_deniega_ante_version_no_soportada(self):
+        codigo, stderr = self._correr_hook({"version": 3})
+        self.assertEqual(codigo, 2)
+        self.assertIn("version", stderr)
+        self.assertIn("3", stderr)
+        self.assertNotIn("Traceback", stderr)
+
+    def test_hook_permite_lectura_con_version_2(self):
+        codigo, stderr = self._correr_hook({"version": 2})
+        self.assertEqual(codigo, 0, stderr)
+
+    def test_doctor_reporta_error_ante_version_no_soportada(self):
+        from tools.dsguard import checks
+        from tools.harmessi import doctor as doctor_mod
+
+        _escribir_config(self.repo, {"version": 3})
+        resultados = doctor_mod._check_guardrails_json(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
+        self.assertIn("no soportada", resultados[0].message)
+
+
 class TestExcepcionVigente(unittest.TestCase):
     def test_sin_vencimiento_es_vigente(self):
         excepciones = ({"ruta": "data/holdout/x.parquet", "accion": "read"},)

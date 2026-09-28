@@ -81,6 +81,10 @@ SECRETOS_HARDCODEADOS: tuple = (
 # `nbrunner.manifest.RUTAS_PROHIBIDAS_SOLO_SALIDA`.
 DATA_RAW_DEFAULT: tuple = ("data/raw/**",)
 
+# Versión máxima del schema de `guardrails.json` que este Harmessi entiende
+# (v0.8, R12). `cargar_config` rechaza (fail-closed) una `version` mayor.
+POLICY_VERSION_MAX = 2
+
 
 class ConfigGuardrailsError(Exception):
     """`guardrails.json` existe pero está corrupto o mal formado.
@@ -131,6 +135,16 @@ def cargar_config(repo_root: Path) -> ConfigGuardrails:
 
     if not isinstance(datos, dict):
         raise ConfigGuardrailsError(f"{ruta_config} no contiene un objeto JSON")
+
+    # `version` ausente equivale a 1; presente debe ser int (bool excluido) en
+    # [1, POLICY_VERSION_MAX]. Fail-closed ante una versión que este Harmessi no entiende.
+    if "version" in datos:
+        version = datos["version"]
+        if isinstance(version, bool) or not isinstance(version, int) or not 1 <= version <= POLICY_VERSION_MAX:
+            raise ConfigGuardrailsError(
+                f"{ruta_config}: 'version' {version!r} no soportada (se admite un entero entre 1 y "
+                f"{POLICY_VERSION_MAX}); actualizá Harmessi para interpretar este guardrails.json"
+            )
 
     holdouts = _validar_lista_de_strings(datos.get("holdouts", []), "holdouts", ruta_config)
     data_raw = _validar_lista_de_strings(

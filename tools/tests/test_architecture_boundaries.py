@@ -80,6 +80,8 @@ MODULOS_CORE = (
     "tools/datacontracts/core.py",
     "tools/datacontracts/validation.py",
     "tools/datacontracts/evolution.py",
+    "tools/autonomy/core.py",
+    "tools/autonomy/policy.py",
     "tools/modelquality/core.py",
     "tools/modelquality/validation.py",
     "tools/qualityevidence/core.py",
