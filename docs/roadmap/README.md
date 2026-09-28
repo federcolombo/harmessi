@@ -68,7 +68,13 @@ Si el usuario define otra política de commits para una versión concreta, esa i
 - `v0.4.0`: publicada.
 - `v0.5.0`: publicada.
 - `v0.6.0`: publicada — Governed Reporting + EDA.
-- `v0.7`: activa/próxima — ML Quality & Data Contracts.
-- `v0.8`: planificada — Cards + Responsible AI / Model Risk.
-- `v0.9`: planificada — Integration & Stabilization.
+- `v0.7.0`: publicada — ML Quality & Data Contracts.
+- `v0.8`: alcance congelado (READY) — Autonomous Project Runtime (autonomía del harness instalado +
+  abstracción de fuentes de datos). Ver `v0.8.md`.
+- `v0.9`: planificada — Model/Data Cards + Responsible AI / Model Risk (antes v0.8).
+- `v0.10`: planificada — Integration & Stabilization (antes v0.9).
 - `v1.0`: Stable Public Contracts.
+
+Nota: el contrato de autonomía de arriba gobierna **cómo se desarrolla Harmessi**. La autonomía del
+harness **instalado en un proyecto** (modos `autonomous`/`supervised`) es un contrato distinto y se
+define en `v0.8.md`, Change 0.

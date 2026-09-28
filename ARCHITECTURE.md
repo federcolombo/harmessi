@@ -274,3 +274,62 @@ Límite real: un notebook o script de modelado que LEA `reports/exploratory/**` 
 inputs al binario NO es interceptado. El hook de `pathguard` no puede llamar a `reporting`
 (`dsguard` no importa `reporting`, regla 6). Cerrar ese hueco (p. ej. una regla de guardrails/hook
 para agentes de modelado) es deuda de v0.7+.
+
+## 6. Dirección arquitectónica planificada para v0.8 (NO implementada)
+
+Esta sección describe una dirección **futura** (`docs/roadmap/v0.8.md`, alcance congelado; las
+decisiones materiales M1-M6 fueron confirmadas por el autor). Nada de lo descrito acá existe todavía
+en el código; al implementarse, el inventario pasa a §2 y las reglas a §3.
+
+**Deuda que motiva la sección.** Hoy el único observador de datos, `tools/ds_profile`, está atado a
+archivos (`io_readers` solo CSV/Parquet, entrada por ruta, `profile.json` con `dataset_path`), y la
+validación de contratos (`tools/datacontracts/validation.py`) consume la forma exacta de
+`profile.json`. El guard de holdouts (`pathguard`/`guardrails.json`) es por ruta. No hay capa entre
+"dónde está el dato" y "qué observó Harmessi".
+
+**Capas previstas:**
+
+```
+fuente real  →  extensión del proyecto (adapter)  →  SourceObservation (neutral)  →  Harmessi
+                                                     (contratos / governance / evidence / reporting)
+```
+
+- El core operará solo sobre una observación neutral (solo-stdlib, sin paths, SQL ni DataFrames) y no
+  ramificará por CSV, Parquet, SQL, warehouse, API ni proveedor cloud.
+- `ds_profile` y `profile.json` v1 no cambian; se agrega un bridge `profile.json → SourceObservation`
+  que encapsula el vocabulario de tipos de `ds_profile` (M1).
+- **Un único motor de validación de contratos (M1):** `datacontracts.validation` evalúa sobre
+  `SourceObservation`; `validate_contract` y las APIs de v0.7 son wrappers con paridad exacta de
+  resultados y códigos `CONTRACT-*`. El evaluador nativo no lee archivos; el wrapper conserva las
+  verificaciones de acceso/holdout.
+- **Extensión (M6):** los adapters, sus dependencias y las credenciales son del proyecto. Se
+  registran en un archivo de proyecto **no administrado** y versionado en git, sin secretos, que
+  apunta a un `módulo:callable` resuelto por `importlib` y ejecutado en proceso en el `.venv` del
+  proyecto; por eso no entran en el cálculo de drift de `harmessi doctor`. Un error del adapter es
+  `technical_error`; el hash de su código forma parte de la procedencia; Doctor valida el registro
+  de forma estática y no importa código del proyecto. Un adapter por comando externo/stdout queda
+  compatible pero fuera de v0.8.
+- **Policy humana (M2):** `.claude/guardrails.json`, extendido de forma aditiva, es el máximo permiso
+  posible (modo de autonomía, límites agregados, fuentes selladas por `source_id`, permisos de
+  lectura/escritura de fuentes); el registro del proyecto solo puede restringirlo (efectivo =
+  policy ∩ registro). Hoy `pathguard.cargar_config` ignora las claves desconocidas y no valida
+  `version`; por eso se exige una versión reconocible de la policy y un comportamiento fail-closed
+  (un guard/runtime que no entienda una capacidad de seguridad requerida no habilita `autonomous` ni
+  gobierna fuentes selladas en silencio), detectado por Doctor, con upgrade previo del guard.
+- **Ejecución (M5):** solo las ejecuciones hechas por el runtime gobernado cuentan como evidencia de
+  ejecución y de cierre de un Change autónomo; el hook estricto global sobre el Bash del Lead queda
+  para v0.10 y reutilizará la misma función pura de evaluación (que vive en core, ver deuda 1 de §4).
+
+**Regla de dependencias prevista (a formalizar como regla 10 al implementarse):** el paquete de
+fuentes puede importar `dsguard.checks` y consumir `profile.json` como `dict`; `dsguard`, `ds_profile`,
+`dsimpact`, `reporting`, `providers`, `routing`, `fallback`, `harmessi_bench` y las familias de v0.7 no
+lo importan (excepción acotada: la evolución de `datacontracts` para evaluar sobre observaciones).
+
+**Vocabulario.** "Adapter" ya tiene dos acepciones en este documento (§2.2: hooks de Claude Code;
+`tools/providers`: proveedores de IA). El adapter de fuente sería una tercera; "provider" no debe
+usarse para fuentes de datos porque ya lo ocupa `tools/providers`.
+
+**Límite que se mantiene.** Harmessi no sandboxea código del proyecto: gobierna el acceso que media
+(adapter declarado, capacidades, fuente sellada por `source_id`, evidencia sin secretos) pero no
+intercepta un script que abre su propia conexión. Es el mismo tipo de límite que §5 y que el
+enforcement best-effort de `Bash`/`PowerShell`.
