@@ -495,9 +495,55 @@ def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
     return resultados
 
 
-def _check_agents(destino: Path) -> list:
+def _check_agents(destino: Path, control_data: Optional[dict]) -> list:
+    """Verifica que los agentes de `_AGENTES_ESPERADOS` que aplican al
+    `installation_stage` instalado estén presentes y con el frontmatter
+    esperado (Change 20260925-doctor-stage-awareness: consciente de stage,
+    mismo patrón que `_check_archivos_administrados`). La aplicabilidad de
+    cada agente a un stage se resuelve consultando la fuente de verdad
+    existente (`manifest_mod.manifest_para_perfil_y_stage`/
+    `manifest_para_perfil` sobre `tools.ds_init.manifest.MANIFEST`, donde
+    cada agente ya declara su `stage_minimo`) -- nunca una lista separada de
+    agentes-por-stage ni una condición hardcodeada sobre el nombre del stage.
+    Un agente que no aplica al stage instalado NO produce ningún
+    `CheckResult` (ni PASS, ni FAIL, ni WARN): mismo criterio que un archivo
+    administrado de un stage superior en `_check_archivos_administrados`,
+    donde esa ausencia esperada tampoco se reporta.
+
+    Comportamiento legacy preservado bit a bit (R5 de `spec.md`): si
+    `control_data` es `None`, o no tiene clave `installation_stage`, se
+    consideran esperados los 4 agentes de `_AGENTES_ESPERADOS`, exactamente
+    como antes de este Change."""
+    if control_data is None:
+        # Sin control.json legible no se puede determinar perfil/stage --
+        # comportamiento legacy: los 4 agentes se consideran esperados.
+        destinos_aplicables = {ruta_rel for _, ruta_rel in _AGENTES_ESPERADOS}
+    else:
+        perfil = control_data.get("perfil")
+        installation_stage = control_data.get("installation_stage")
+        try:
+            if installation_stage is not None:
+                # Consciente de stage: un agente de un stage superior al
+                # instalado no aplica.
+                entradas = manifest_mod.manifest_para_perfil_y_stage(perfil, installation_stage)
+            else:
+                # Legacy (sin installation_stage en control.json):
+                # comportamiento actual -- todo el manifest del perfil.
+                entradas = manifest_mod.manifest_para_perfil(perfil)
+        except manifest_mod.PerfilDesconocidoError:
+            # Perfil desconocido: no se puede filtrar por stage. Ya se
+            # reporta aparte en HARMESSI-ARCHIVOS-ESPERADOS -- acá se cae al
+            # comportamiento legacy (los 4 agentes esperados) para no dejar
+            # de detectar agentes realmente faltantes por un problema no
+            # relacionado con este check.
+            destinos_aplicables = {ruta_rel for _, ruta_rel in _AGENTES_ESPERADOS}
+        else:
+            destinos_aplicables = {entrada.destino for entrada in entradas}
+
     resultados = []
     for nombre, ruta_rel in _AGENTES_ESPERADOS:
+        if ruta_rel not in destinos_aplicables:
+            continue  # no aplica al stage instalado: ningún resultado (ni PASS/FAIL/WARN)
         ruta = destino / ruta_rel
         if not ruta.exists():
             resultados.append(
@@ -1044,7 +1090,7 @@ def ejecutar(destino) -> tuple:
         SECCION_HARMESSI, "HARMESSI-ARCHIVOS-ESPERADOS", _check_archivos_administrados, destino, control_data
     )
     resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-DRIFT", _check_hashes_drift, destino, control_data)
-    resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-AGENTE", _check_agents, destino)
+    resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-AGENTE", _check_agents, destino, control_data)
     resultados += _ejecutar_check(
         SECCION_HARMESSI, "HARMESSI-SKILL", _check_skill_lead_data_scientist, destino
     )
