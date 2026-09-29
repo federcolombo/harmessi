@@ -758,6 +758,18 @@ LEGACY_PROFILE = legacy_wording.LEGACY_PROFILE
 # --- Adaptador "bridge inverso" (R29-R31, Estrategia A) -----------------------------
 
 
+_TYPE_FAMILY_A_DTYPE_LEGACY = {
+    "string": "texto",
+    "integer": "entero",
+    "float": "flotante",
+    "boolean": "booleano",
+    "date": "fecha",
+    "datetime": "fecha",
+    "temporal": "fecha",
+    "unknown": "unknown",  # sentinel: nunca coincide con ningún dtype legacy real
+}
+
+
 def _observation_como_profile_like(observation: "datasources_core.SourceObservation") -> dict:
     """Reconstruye un dict con la MISMA FORMA que el `profile` legacy
     (`schema`/`columnas_detalle`/`sampling`/`filas`) a partir de una
@@ -766,17 +778,38 @@ def _observation_como_profile_like(observation: "datasources_core.SourceObservat
     tarea para la comparación con la Estrategia B). Es literalmente el
     "bridge inverso" de `datasources.profile_bridge.profile_to_observation`.
 
-    Fidelidad de `schema[name]`/`columnas_detalle[name]["dtype"]`: se usa
-    `FieldObservation.native_type` DIRECTO (el dtype legacy original,
-    verbatim, que el bridge ya preserva sin tocar) en vez de reconstruirlo a
-    partir de `type_family` (que perdería información: varios dtypes legacy
-    no reconocidos colapsan todos en `type_family="unknown"`). Esto es MÁS
-    fiel que la reconstrucción sugerida originalmente vía mapeo inverso de
-    `type_family`, y evita cualquier pérdida por esa vía. Si `native_type` es
-    `None` (campo sin detalle en el perfil original, o campo armado a mano
-    sin dtype) se usa el literal `"unknown"` como dtype reconstruido -- un
-    valor que nunca coincide con ningún dtype legacy real (`texto`/`entero`/
-    `flotante`/`booleano`/`fecha`), por lo que `_regla_type_mismatch` lo trata
+    Fidelidad de `schema[name]`/`columnas_detalle[name]["dtype"]`: el dtype
+    legacy reconstruido se deriva de `FieldObservation.type_family` --el
+    campo NEUTRAL, autoridad real de qué tipo declara el contrato y observa
+    la fuente-- vía `_TYPE_FAMILY_A_DTYPE_LEGACY`, la inversa EXACTA del
+    mapeo `_DTYPE_A_FAMILIA` de `datasources.profile_bridge`. `native_type`
+    YA NO se usa acá para reconstruir el dtype: es solo una etiqueta
+    informativa que `SourceObservation` preserva, potencialmente arbitraria
+    para observaciones que no vienen de `file_observer`/`profile_bridge` (p.
+    ej. una API que informe `native_type="int64"` en vez de un dtype legacy
+    de `ds_profile`) -- usarla acá rompía la evaluación de contratos con un
+    FAIL de tipo espurio aunque `type_family` coincidiera exactamente con lo
+    declarado por el contrato (bug corregido, ver test
+    `test_type_family_coincide_aunque_native_type_no_sea_legacy` en
+    `test_observation_native.py`). Es coherente además con que el CONTRATO
+    declara `type_family`, nunca un dtype nativo de una tecnología concreta.
+
+    Para observaciones que SÍ vienen del bridge (`profile_to_observation`) el
+    round-trip sigue siendo exacto: `_TYPE_FAMILY_A_DTYPE_LEGACY` es la
+    inversa biyectiva de `_DTYPE_A_FAMILIA` sobre los 5 dtypes legacy
+    (`texto`/`entero`/`flotante`/`booleano`/`fecha`); el único caso no
+    biunívoco es `fecha -> temporal` (el bridge pierde la distinción
+    date/datetime), pero eso ya era así en la versión anterior: el bridge
+    NUNCA produce `native_type="date"` ni `native_type="datetime"` para un
+    campo fecha, siempre el literal `"fecha"` (ver
+    `profile_bridge._construir_facets_campo`, que copia `detalle["dtype"]`
+    verbatim como `native_type`) -- así que mapear tanto `"date"` como
+    `"datetime"` a `"fecha"` no cambia ningún resultado del corpus dorado
+    v0.7, sea la fuente `native_type` o `type_family`. Si `campo.type_family`
+    no está en el mapeo (no debería poder construirse -- `core.py` ya valida
+    `type_family` contra `OBSERVED_TYPE_FAMILIES`) se usa el literal
+    `"unknown"` como dtype reconstruido -- un valor que nunca coincide con
+    ningún dtype legacy real, por lo que `_regla_type_mismatch` lo trata
     siempre como "no coincide con ninguna familia mapeada", igual que un
     dtype no reconocido en v0.7.
 
@@ -798,7 +831,7 @@ def _observation_como_profile_like(observation: "datasources_core.SourceObservat
     schema: dict = {}
     columnas_detalle: dict = {}
     for campo in observation.fields:
-        dtype_legacy = campo.native_type if campo.native_type is not None else "unknown"
+        dtype_legacy = _TYPE_FAMILY_A_DTYPE_LEGACY.get(campo.type_family, "unknown")
         schema[campo.name] = dtype_legacy
         detalle: dict = {"dtype": dtype_legacy, "top_valores": []}
         facets = campo.facets or {}

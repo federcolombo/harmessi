@@ -1004,9 +1004,248 @@ def _registrar_evidencia_calidad(
         return None, str(exc)
 
 
+# --- source (v0.8 Change 1 T6: 20260928-source-neutral-data-access) ---------
+#
+# `access_check` real (R24, D8): compone `dsguard.pathguard.cargar_config`
+# (fail-closed de versión) + `tools.autonomy.policy.parse_autonomy_policy` +
+# `effective_source_access`/`is_source_sealed`. `datasources` NO importa
+# `autonomy` ni `pathguard` (R25/D8); esta composición vive únicamente acá.
+# Reglas fijas (no negociables, ver tarea del Lead):
+#   - guardrails.json ilegible/corrupto (incl. versión no soportada) -> denegado;
+#   - clave "autonomy" presente en el guardrails.json crudo pero el paquete
+#     tools.autonomy no está instalado -> denegado (fail-closed: no se puede
+#     evaluar una policy que el runtime no entiende);
+#   - guardrails.json sin clave "autonomy" -> sin sellos, default read
+#     permitido / write denegado (mismo criterio que Change 0);
+#   - fuente sellada (`is_source_sealed`) -> siempre denegada, motivo con la
+#     palabra "sellad" (para que `runtime.observe_source` lo traduzca a
+#     SOURCE-SEALED en vez de SOURCE-ACCESS-DENIED);
+#   - "write" -> siempre denegado en v0.8 (vocabulario reservado);
+#   - cualquier error inesperado -> denegado (fail-closed), nunca lanza.
+
+def _access_check_real(repo_root: Path):
+    """Devuelve un callable `access_check(source_id, access_mode) ->
+    (permitido, motivo)` apto para `tools.datasources.runtime.observe_source`
+    (R24, D8)."""
+
+    def _check(source_id: str, access_mode: str) -> tuple:
+        try:
+            pathguard_mod = _importar_perezoso("dsguard", "pathguard")
+            if pathguard_mod is None:
+                return False, "tools.dsguard.pathguard no disponible: acceso denegado (fail-closed)"
+
+            try:
+                pathguard_mod.cargar_config(repo_root)
+            except pathguard_mod.ConfigGuardrailsError as exc:
+                return False, f"guardrails.json inválido o versión no soportada: {exc}"
+
+            ruta_config = Path(repo_root) / pathguard_mod.RUTA_CONFIG_RELATIVA
+            guardrails_dict: dict = {}
+            if ruta_config.exists():
+                try:
+                    guardrails_dict = json.loads(ruta_config.read_text(encoding="utf-8"))
+                except (OSError, ValueError) as exc:
+                    return False, f"guardrails.json ilegible: {type(exc).__name__}"
+                if not isinstance(guardrails_dict, dict):
+                    return False, "guardrails.json no contiene un objeto JSON: acceso denegado"
+
+            if access_mode == "write":
+                return False, "write no soportado (vocabulario reservado, v0.8)"
+
+            if "autonomy" not in guardrails_dict:
+                # Sin sellos declarados: comportamiento default (Change 0):
+                # read permitido, write denegado (ya cortado arriba).
+                return True, "permitido (sin policy de autonomy declarada)"
+
+            autonomy_mod = _importar_perezoso("autonomy", "policy")
+            if autonomy_mod is None:
+                return False, (
+                    "guardrails.json declara 'autonomy' pero tools.autonomy no está "
+                    "instalado en este stage: acceso denegado (fail-closed)"
+                )
+
+            policy, _hallazgos = autonomy_mod.parse_autonomy_policy(
+                guardrails_dict, pathguard_mod.POLICY_VERSION_MAX
+            )
+            if autonomy_mod.is_source_sealed(policy, source_id):
+                return False, f"fuente sellada por policy humana: {source_id!r}"
+
+            acceso = autonomy_mod.effective_source_access(policy, source_id, registry_access=None)
+            if access_mode == "read" and not acceso.read:
+                return False, f"lectura no permitida por policy de autonomy para {source_id!r}"
+            return True, "permitido"
+        except Exception as exc:  # noqa: BLE001 - fail-closed ante cualquier error inesperado
+            return False, f"error inesperado evaluando acceso ({type(exc).__name__}): acceso denegado"
+
+    return _check
+
+
+def cmd_source_list(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    ds_runtime = _importar_perezoso("datasources", "runtime")
+    if ds_runtime is None:
+        print(_mensaje_paquete_no_instalado("datasources", "discovery"), file=sys.stderr)
+        return 3
+
+    data, resultados = ds_runtime.load_registry(repo_root)
+    if data is None:
+        # SOURCE-REGISTRY-MISSING es WARN informativo (exit 0), cualquier otro
+        # (JSON ilegible/inválido) se imprime con su propio exit code.
+        if args.json:
+            print(json.dumps({"fuentes": [], "resultados": [r.to_dict() for r in resultados]}, ensure_ascii=False))
+        else:
+            for r in resultados:
+                print(f"{r.status:<6} {r.code}: {r.message}")
+        return checks.exit_code(resultados)
+
+    fuentes = data.get("sources", []) if isinstance(data.get("sources"), list) else []
+    filas = [
+        {
+            "source_id": f.get("source_id"),
+            "role": f.get("role"),
+            "observer": f.get("observer"),
+            "sensitivity": f.get("sensitivity"),
+            "access_mode": f.get("access_mode"),
+        }
+        for f in fuentes
+        if isinstance(f, dict)
+    ]
+    if args.json:
+        print(json.dumps({"fuentes": filas}, ensure_ascii=False))
+    else:
+        if not filas:
+            print("(registro sin fuentes)")
+        for fila in filas:
+            print(
+                f"{fila['source_id']:<24} role={fila['role']:<16} observer={fila['observer']:<40} "
+                f"sensitivity={fila['sensitivity']:<10} access_mode={fila['access_mode']}"
+            )
+    return 0
+
+
+def cmd_source_check(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    ds_runtime = _importar_perezoso("datasources", "runtime")
+    if ds_runtime is None:
+        print(_mensaje_paquete_no_instalado("datasources", "discovery"), file=sys.stderr)
+        return 3
+
+    resultados = ds_runtime.check_registry(repo_root)
+    _imprimir_check_results(resultados, args.json, "Source check")
+    return checks.exit_code(resultados)
+
+
+def cmd_source_observe(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    ds_runtime = _importar_perezoso("datasources", "runtime")
+    if ds_runtime is None:
+        print(_mensaje_paquete_no_instalado("datasources", "discovery"), file=sys.stderr)
+        return 3
+
+    request: dict = {"source_id": args.source_id}
+    if args.facet:
+        request["facets"] = list(args.facet)
+    if args.exactness is not None:
+        request["exactness"] = args.exactness
+    if args.as_of is not None:
+        request["as_of"] = args.as_of
+
+    observation, resultados = ds_runtime.observe_source(
+        repo_root, args.source_id, request, access_check=_access_check_real(repo_root)
+    )
+
+    observation_id = None
+    if observation is not None:
+        observation_id = f"{observation.source_id}__{observation.content_sha256()[:12]}"
+
+    if args.json:
+        payload = {"resultados": [r.to_dict() for r in resultados]}
+        if observation_id is not None:
+            payload["observation_id"] = observation_id
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        _imprimir_check_results(resultados, False, f"Source observe: {args.source_id}")
+        if observation_id is not None:
+            print(f"\nObservación persistida: {observation_id}")
+    return checks.exit_code(resultados)
+
+
+def _ruta_observacion_invalida(ruta_str: str) -> bool:
+    """`True` si `ruta_str` puede escapar del repo (componente `..`, ruta
+    absoluta): mismo criterio de validación mínima que `_change_id_invalido`
+    aplica para `change_id`."""
+    if ".." in Path(ruta_str).parts:
+        return True
+    if Path(ruta_str).is_absolute():
+        return True
+    return False
+
+
+def cmd_source_check_stale(args: argparse.Namespace) -> int:
+    if _ruta_observacion_invalida(args.observation):
+        print(
+            f"--observation inválida: {args.observation!r}. Debe ser una ruta repo-relativa sin '..'",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    ds_core = _importar_perezoso("datasources", "core")
+    ds_runtime = _importar_perezoso("datasources", "runtime")
+    if ds_core is None or ds_runtime is None:
+        print(_mensaje_paquete_no_instalado("datasources", "discovery"), file=sys.stderr)
+        return 3
+
+    datos_stored, error = _cargar_json(args.observation)
+    if error is not None:
+        print(error, file=sys.stderr)
+        return 2
+    try:
+        stored = ds_core.SourceObservation.from_dict(datos_stored)
+    except ds_core.SourceError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    fresh, resultados_observe = ds_runtime.observe_source(
+        repo_root,
+        stored.source_id,
+        {"source_id": stored.source_id, "facets": ["fingerprint"]},
+        access_check=_access_check_real(repo_root),
+    )
+    if fresh is None:
+        _imprimir_check_results(resultados_observe, args.json, "Source check-stale")
+        return checks.exit_code(resultados_observe)
+
+    resultado = ds_runtime.compare_fingerprint(stored, fresh)
+    resultados = resultados_observe + [resultado]
+    _imprimir_check_results(resultados, args.json, "Source check-stale")
+    return checks.exit_code(resultados)
+
+
 # --- contract validate ------------------------------------------------------
 
 def cmd_contract_validate(args: argparse.Namespace) -> int:
+    if bool(args.profile) == bool(args.observation):
+        print(
+            "contract validate requiere exactamente uno de --profile / --observation",
+            file=sys.stderr,
+        )
+        return 2
     try:
         repo_root = _repo_root()
     except RuntimeError as e:
@@ -1028,7 +1267,17 @@ def cmd_contract_validate(args: argparse.Namespace) -> int:
         print(str(exc), file=sys.stderr)
         return 2
 
-    resultados = dc_validation.validate_contract_against_profile_file(contrato, Path(args.profile), repo_root)
+    if args.observation:
+        resultados, error_obs = _validar_contrato_contra_observacion(dc_core, repo_root, contrato, args.observation)
+        if error_obs is not None:
+            print(error_obs, file=sys.stderr)
+            return 2
+        fuente_path = args.observation
+        fuente_role = "observation"
+    else:
+        resultados = dc_validation.validate_contract_against_profile_file(contrato, Path(args.profile), repo_root)
+        fuente_path = args.profile
+        fuente_role = "profile"
 
     evidence_id = None
     if args.record_evidence:
@@ -1039,8 +1288,8 @@ def cmd_contract_validate(args: argparse.Namespace) -> int:
             declaration_id=contrato.contract_id,
             declaration_version=contrato.version.version,
             content_sha256=contrato.content_sha256(),
-            fuente_path=args.profile,
-            fuente_role="profile",
+            fuente_path=fuente_path,
+            fuente_role=fuente_role,
             resultados=resultados,
         )
         if error_evidencia is not None:
@@ -1056,6 +1305,41 @@ def cmd_contract_validate(args: argparse.Namespace) -> int:
         if evidence_id is not None:
             print(f"\nEvidencia registrada: {evidence_id}")
     return checks.exit_code(resultados)
+
+
+def _validar_contrato_contra_observacion(dc_core, repo_root: Path, contrato, observation_path: str) -> tuple:
+    """`(resultados, error_mensaje)`. Réplica del nivel de guarda que
+    `validate_contract_against_profile_file` aplica sobre `--profile` (R37):
+    guard de holdout ANTES de abrir el archivo, vía el mismo
+    `ds_profile.holdout_guard.verificar_permitido` que usa `datacontracts`.
+    `error_mensaje` no es `None` ante cualquier fallo -- nunca lanza hacia el
+    llamador (la excepción, si ocurriera, no está contemplada porque todas
+    las ramas devuelven explícitamente)."""
+    ds_core = _importar_perezoso("datasources", "core")
+    dc_validation = _importar_perezoso("datacontracts", "validation")
+    if ds_core is None or dc_validation is None:
+        return [], _mensaje_paquete_no_instalado("datasources", "discovery")
+
+    try:
+        holdout_guard = _importar_perezoso("ds_profile", "holdout_guard")
+        if holdout_guard is None:
+            return [], "ds_profile.holdout_guard no disponible en este stage"
+        permitido, motivo = holdout_guard.verificar_permitido(Path(observation_path), Path(repo_root))
+        if not permitido:
+            return [], f"No se puede leer la observación: ruta denegada por el guard de holdout ({motivo})"
+    except Exception as exc:  # noqa: BLE001 - nunca escapa
+        return [], f"Error evaluando el guard de holdout: {type(exc).__name__}"
+
+    datos_obs, error = _cargar_json(observation_path)
+    if error is not None:
+        return [], error
+    try:
+        observation = ds_core.SourceObservation.from_dict(datos_obs)
+    except ds_core.SourceError as exc:
+        return [], str(exc)
+
+    resultados = dc_validation.validate_contract_observation(contrato, observation, wording=None)
+    return resultados, None
 
 
 # --- contract diff -----------------------------------------------------------
@@ -2253,10 +2537,16 @@ def construir_parser() -> argparse.ArgumentParser:
     contract_sub = p_contract.add_subparsers(dest="subcomando", required=True)
 
     p_contract_validate = contract_sub.add_parser(
-        "validate", help="Valida un DataContract contra evidencia real (profile.json)."
+        "validate",
+        help=(
+            "Valida un DataContract contra evidencia real: --profile (profile.json, v0.7) o "
+            "--observation (SourceObservation persistida, v0.8 Change 1), mutuamente excluyentes."
+        ),
     )
     p_contract_validate.add_argument("--contract", required=True)
-    p_contract_validate.add_argument("--profile", required=True)
+    grupo_contract_validate = p_contract_validate.add_mutually_exclusive_group(required=True)
+    grupo_contract_validate.add_argument("--profile", default=None)
+    grupo_contract_validate.add_argument("--observation", default=None)
     p_contract_validate.add_argument("--record-evidence", action="store_true", dest="record_evidence")
     p_contract_validate.add_argument("--json", action="store_true")
     p_contract_validate.set_defaults(func=cmd_contract_validate)
@@ -2285,6 +2575,45 @@ def construir_parser() -> argparse.ArgumentParser:
     p_contract_impact.add_argument("--fields", default=None, help="Lista separada por comas; default: todos los fields del contrato.")
     p_contract_impact.add_argument("--json", action="store_true")
     p_contract_impact.set_defaults(func=cmd_contract_impact)
+
+    p_source = subparsers.add_parser(
+        "source",
+        help=(
+            "Fuentes de datos neutrales (tools/datasources, v0.8 Change 1): list/check/observe/"
+            "check-stale. Best-effort en el escaneo de secretos/localizadores (R19); sin timeout "
+            "en proceso (R17): un observer colgado bloquea el proceso que lo invoca."
+        ),
+    )
+    source_sub = p_source.add_subparsers(dest="subcomando", required=True)
+
+    p_source_list = source_sub.add_parser("list", help="Lista las fuentes del registro (.harmessi/sources.json).")
+    p_source_list.add_argument("--json", action="store_true")
+    p_source_list.set_defaults(func=cmd_source_list)
+
+    p_source_check = source_sub.add_parser("check", help="Validación estática del registro (sin importar observers).")
+    p_source_check.add_argument("--json", action="store_true")
+    p_source_check.set_defaults(func=cmd_source_check)
+
+    p_source_observe = source_sub.add_parser(
+        "observe",
+        help=(
+            "Observa una fuente (access_check real + import del observer + persistencia). "
+            "Best-effort en el escaneo de secretos/localizadores (R19); sin timeout en proceso (R17)."
+        ),
+    )
+    p_source_observe.add_argument("--source-id", required=True, dest="source_id")
+    p_source_observe.add_argument("--facet", action="append", default=None)
+    p_source_observe.add_argument("--exactness", default=None, choices=["any", "exact"])
+    p_source_observe.add_argument("--as-of", default=None, dest="as_of")
+    p_source_observe.add_argument("--json", action="store_true")
+    p_source_observe.set_defaults(func=cmd_source_observe)
+
+    p_source_check_stale = source_sub.add_parser(
+        "check-stale", help="Compara una observación persistida contra una re-observación de fingerprint."
+    )
+    p_source_check_stale.add_argument("--observation", required=True)
+    p_source_check_stale.add_argument("--json", action="store_true")
+    p_source_check_stale.set_defaults(func=cmd_source_check_stale)
 
     p_quality = subparsers.add_parser(
         "quality",

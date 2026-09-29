@@ -214,5 +214,37 @@ class TestTypeFamilyUnknown(unittest.TestCase):
         self.assertEqual(mismatch[0].status, checks.STATUS_NA)
 
 
+class TestTypeFamilyEsLaAutoridadNoNativeType(unittest.TestCase):
+    """Bug real encontrado por el Lead vía el test de CLI del Change 1 de v0.8 (T6):
+    `_observation_como_profile_like` reconstruía `dtype_legacy` desde `native_type` en
+    vez de `type_family`, así que una observación NATIVA (no venida del bridge) con un
+    `native_type` no-legacy (p. ej. `"int64"` de una API) daba FAIL de tipo aunque
+    `type_family` coincidiera exactamente con lo declarado por el contrato. Corregido:
+    la reconstrucción deriva de `type_family` (el campo neutral, autoridad real)."""
+
+    def test_type_family_coincide_aunque_native_type_no_sea_legacy(self):
+        contrato = _contrato(fields=(_campo(name="id", type_family="integer", required=True, nullable=True),))
+        observacion = _observacion(
+            [_campo_obs("id", type_family="integer", native_type="int64", facets={})]
+        )
+        resultados = v.validate_contract_observation(contrato, observacion)
+        mismatch = _por_codigo(resultados, v.CODE_TYPE_MISMATCH)
+        self.assertEqual(len(mismatch), 1)
+        self.assertEqual(mismatch[0].status, checks.STATUS_PASS)
+
+    def test_type_family_no_coincide_sigue_dando_fail(self):
+        # Regression guard: el fix no vuelve la regla permisiva en general -- si el
+        # type_family de la observación realmente no coincide con el del contrato,
+        # sigue siendo FAIL, sin importar qué diga native_type.
+        contrato = _contrato(fields=(_campo(name="id", type_family="integer", required=True, nullable=True),))
+        observacion = _observacion(
+            [_campo_obs("id", type_family="string", native_type="int64", facets={})]
+        )
+        resultados = v.validate_contract_observation(contrato, observacion)
+        mismatch = _por_codigo(resultados, v.CODE_TYPE_MISMATCH)
+        self.assertEqual(len(mismatch), 1)
+        self.assertEqual(mismatch[0].status, checks.STATUS_FAIL)
+
+
 if __name__ == "__main__":
     unittest.main()
