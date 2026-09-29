@@ -1004,6 +1004,256 @@ def _registrar_evidencia_calidad(
         return None, str(exc)
 
 
+# --- exec (v0.8 Change 2 T6: 20260929-lead-execution-runtime) --------------
+#
+# Subcomandos `exec script|pytest|notebook`: componen `leadrun.core`/
+# `leadrun.allowlist`/`leadrun.runtime` (T1-T5, YA IMPLEMENTADOS) con la
+# aprobación (`execute_project_code` x modo, R12/R14 de spec.md). Mismo
+# patrón de composición que `_access_check_real` (Change 1 T6): imports
+# perezosos, fail-closed, nunca lanza.
+
+def _resolver_aprobacion_exec(repo_root: Path, control_data: dict, artefacto: str, hash_comando: str):
+    """Devuelve `(permitido, executed_by, mode, approval, motivo)` (R12/R14).
+
+    - `pathguard.cargar_config` inválido/versión no soportada -> denegado
+      (fail-closed, mismo criterio que `_access_check_real`).
+    - `autonomy` no declarada en el guardrails.json crudo -> modo efectivo
+      `"supervised"` (default).
+    - `autonomy` declarada pero `tools.autonomy` no instalado -> denegado
+      (fail-closed).
+    - `resolve_action("execute_project_code", modo)`: `autonomous` ejecuta
+      sin aprobación por corrida; `supervised` exige aprobación humana
+      vigente registrada en `control.json` (vía
+      `nbrunner.manifest.validar_aprobacion`, `modo="execute"` siempre).
+    - Nunca lanza (fail-closed ante cualquier error inesperado)."""
+    try:
+        pathguard_mod = _importar_perezoso("dsguard", "pathguard")
+        if pathguard_mod is None:
+            return False, None, "supervised", None, "tools.dsguard.pathguard no disponible: denegado (fail-closed)"
+
+        try:
+            pathguard_mod.cargar_config(repo_root)
+        except pathguard_mod.ConfigGuardrailsError as exc:
+            return False, None, "supervised", None, f"guardrails.json inválido o versión no soportada: {exc}"
+
+        ruta_config = Path(repo_root) / pathguard_mod.RUTA_CONFIG_RELATIVA
+        guardrails_dict: dict = {}
+        if ruta_config.exists():
+            try:
+                guardrails_dict = json.loads(ruta_config.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                return False, None, "supervised", None, f"guardrails.json ilegible: {type(exc).__name__}"
+            if not isinstance(guardrails_dict, dict):
+                return False, None, "supervised", None, "guardrails.json no contiene un objeto JSON: denegado"
+
+        if "autonomy" not in guardrails_dict:
+            modo = "supervised"
+        else:
+            autonomy_mod = _importar_perezoso("autonomy", "policy")
+            autonomy_core_mod = _importar_perezoso("autonomy", "core")
+            if autonomy_mod is None or autonomy_core_mod is None:
+                return False, None, "supervised", None, (
+                    "guardrails.json declara 'autonomy' pero tools.autonomy no está "
+                    "instalado en este stage: denegado (fail-closed)"
+                )
+            policy, _hallazgos = autonomy_mod.parse_autonomy_policy(
+                guardrails_dict, pathguard_mod.POLICY_VERSION_MAX
+            )
+            modo = policy.mode
+
+        autonomy_core_mod = _importar_perezoso("autonomy", "core")
+        if autonomy_core_mod is None:
+            return False, None, modo, None, "tools.autonomy.core no disponible: denegado (fail-closed)"
+
+        decision = autonomy_core_mod.resolve_action("execute_project_code", modo)
+
+        if decision.executor == "lead" and decision.approval == "none":
+            return True, "lead", modo, None, "autonomous: sin aprobación por corrida"
+
+        if decision.approval == "human":
+            nbrunner_manifest = _importar_perezoso("nbrunner", "manifest")
+            if nbrunner_manifest is None:
+                return False, None, modo, None, "tools.nbrunner.manifest no disponible: denegado (fail-closed)"
+            findings, estado = nbrunner_manifest.validar_aprobacion(
+                control_data or {}, artefacto, hash_comando, modo="execute"
+            )
+            if estado == "vigente":
+                return True, "human", modo, {"tipo": "human_manifest_aprobado"}, ""
+            return False, None, modo, None, f"aprobación {estado} para {artefacto!r}"
+
+        return False, None, modo, None, f"composición de aprobación no soportada: {decision!r}"
+    except Exception as exc:  # noqa: BLE001 - fail-closed ante cualquier error inesperado
+        return False, None, "supervised", None, f"error inesperado resolviendo aprobación ({type(exc).__name__}): denegado"
+
+
+def _leadrun_modulos():
+    """`(leadrun_core, leadrun_allowlist, leadrun_runtime)` o `(None, None,
+    None)` si el paquete no está instalado en este stage. Import perezoso,
+    mismo patrón que `_importar_perezoso` pero para los 3 módulos a la vez
+    (siempre se usan juntos en los subcomandos `exec`)."""
+    leadrun_core = _importar_perezoso("leadrun", "core")
+    leadrun_allowlist = _importar_perezoso("leadrun", "allowlist")
+    leadrun_runtime = _importar_perezoso("leadrun", "runtime")
+    if leadrun_core is None or leadrun_allowlist is None or leadrun_runtime is None:
+        return None, None, None
+    return leadrun_core, leadrun_allowlist, leadrun_runtime
+
+
+def _ejecutar_exec_comun(
+    args: argparse.Namespace,
+    repo_root: Path,
+    control: dict,
+    command_form: str,
+    argv: list,
+    artefacto: str,
+    hash_comando,
+) -> int:
+    """Pasos 4-9 comunes a `exec script|pytest|notebook` (ver encargo del
+    Lead): construye el `ExecutionRequest`, evalúa la allowlist (defensa en
+    profundidad #1: si rechaza, exit 2 SIN evaluar aprobación ni ejecutar),
+    resuelve la aprobación (`_resolver_aprobacion_exec`) y, si está
+    permitido, delega en `leadrun.runtime.ejecutar`."""
+    leadrun_core, leadrun_allowlist, leadrun_runtime = _leadrun_modulos()
+    if leadrun_core is None:
+        print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
+        return 3
+
+    scope = tuple(control.get("alcance", {}).get("rutas_autorizadas", []))
+
+    try:
+        request = leadrun_core.ExecutionRequest(
+            command_form=command_form,
+            interpreter=args.interpreter,
+            argv=tuple(argv),
+            scope=scope,
+            timeout_seconds=args.timeout,
+        )
+    except leadrun_core.ExecutionError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    permitido_forma, _forma, motivo_forma = leadrun_allowlist.evaluar_comando(
+        request.argv, request.scope, request.interpreter
+    )
+    if not permitido_forma:
+        print(f"Comando rechazado por la allowlist: {motivo_forma}", file=sys.stderr)
+        return 2
+
+    permitido_aprob, executed_by, modo, approval, motivo_aprob = _resolver_aprobacion_exec(
+        repo_root, control, artefacto, hash_comando
+    )
+    if not permitido_aprob:
+        print(f"Aprobación denegada: {motivo_aprob}", file=sys.stderr)
+        return 2
+
+    resultado = leadrun_runtime.ejecutar(request, repo_root, executed_by, modo, approval, control)
+
+    # `resultado["checks"]` son dicts (`CheckResult.to_dict()`); se
+    # reconstruyen como `CheckResult` para reusar `_imprimir_check_results`/
+    # `checks.exit_code` sin duplicar esa lógica de formateo/exit code.
+    resultados_check = [
+        checks.CheckResult(
+            status=d["status"],
+            code=d["code"],
+            message=d["message"],
+            detail=d.get("detail"),
+            subject=d.get("subject"),
+            kind=d.get("kind", checks.KIND_CHECK),
+        )
+        for d in resultado["checks"]
+    ]
+
+    if args.json:
+        payload = {"resultados": [r.to_dict() for r in resultados_check]}
+        if resultado.get("record") is not None:
+            payload["execution_id"] = resultado["record"]["execution_id"]
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        _imprimir_check_results(resultados_check, False, f"exec {command_form}")
+        if resultado.get("record") is not None:
+            print(f"\nexecution_id: {resultado['record']['execution_id']}")
+
+    return checks.exit_code(resultados_check)
+
+
+def cmd_exec_script(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    _change_dir_, _tasks_path, _control_path, control = _cargar_change(repo_root, args.change_id)
+
+    leadrun_core, _leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
+    if leadrun_core is None:
+        print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
+        return 3
+
+    args_extra = list(args.script_args or [])
+    if args_extra and args_extra[0] == "--":
+        args_extra = args_extra[1:]
+    argv = [args.interpreter, args.script, *args_extra]
+
+    artefacto = args.script
+    try:
+        hash_comando = core.hash_lf_v1(Path(repo_root) / args.script)
+    except (OSError, UnicodeDecodeError) as exc:
+        print(f"No se pudo calcular el hash del script {args.script!r}: {exc}", file=sys.stderr)
+        return 2
+
+    return _ejecutar_exec_comun(args, repo_root, control, "script", argv, artefacto, hash_comando)
+
+
+def cmd_exec_pytest(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    _change_dir_, _tasks_path, _control_path, control = _cargar_change(repo_root, args.change_id)
+
+    leadrun_core, _leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
+    if leadrun_core is None:
+        print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
+        return 3
+
+    flags_extra = list(args.pytest_args or [])
+    if flags_extra and flags_extra[0] == "--":
+        flags_extra = flags_extra[1:]
+    argv = [args.interpreter, "-m", "pytest", *args.paths, *flags_extra]
+
+    artefacto = "pytest:" + "|".join(args.paths)
+    hash_comando = leadrun_core.content_sha256(list(argv))
+
+    return _ejecutar_exec_comun(args, repo_root, control, "pytest", argv, artefacto, hash_comando)
+
+
+def cmd_exec_notebook(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    _change_dir_, _tasks_path, _control_path, control = _cargar_change(repo_root, args.change_id)
+
+    leadrun_core, _leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
+    if leadrun_core is None:
+        print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
+        return 3
+
+    modo_flag = "--execute" if args.execute else "--dry-run"
+    argv = [args.interpreter, "tools/notebook_runner.py", "run", "--manifest", args.manifest, modo_flag]
+
+    artefacto = args.manifest
+    try:
+        hash_comando = core.hash_lf_v1(Path(repo_root) / args.manifest)
+    except (OSError, UnicodeDecodeError) as exc:
+        print(f"No se pudo calcular el hash del manifest {args.manifest!r}: {exc}", file=sys.stderr)
+        return 2
+
+    return _ejecutar_exec_comun(args, repo_root, control, "notebook", argv, artefacto, hash_comando)
+
+
 # --- source (v0.8 Change 1 T6: 20260928-source-neutral-data-access) ---------
 #
 # `access_check` real (R24, D8): compone `dsguard.pathguard.cargar_config`
@@ -2575,6 +2825,44 @@ def construir_parser() -> argparse.ArgumentParser:
     p_contract_impact.add_argument("--fields", default=None, help="Lista separada por comas; default: todos los fields del contrato.")
     p_contract_impact.add_argument("--json", action="store_true")
     p_contract_impact.set_defaults(func=cmd_contract_impact)
+
+    p_exec = subparsers.add_parser(
+        "exec",
+        help=(
+            "Runtime de ejecución del Lead (tools/leadrun, v0.8 Change 2): script/pytest/notebook, "
+            "con la composición de aprobación execute_project_code x modo (autonomous/supervised)."
+        ),
+    )
+    exec_sub = p_exec.add_subparsers(dest="subcomando", required=True)
+
+    p_exec_script = exec_sub.add_parser("script", help="Ejecuta un script .py dentro del alcance autorizado del Change.")
+    p_exec_script.add_argument("--change-id", required=True, dest="change_id")
+    p_exec_script.add_argument("--interpreter", required=True)
+    p_exec_script.add_argument("--script", required=True)
+    p_exec_script.add_argument("--timeout", type=int, default=600)
+    p_exec_script.add_argument("--json", action="store_true")
+    p_exec_script.add_argument("script_args", nargs=argparse.REMAINDER, help="Argumentos del script, tras '--'.")
+    p_exec_script.set_defaults(func=cmd_exec_script)
+
+    p_exec_pytest = exec_sub.add_parser("pytest", help="Ejecuta pytest sobre rutas dentro del alcance autorizado del Change.")
+    p_exec_pytest.add_argument("--change-id", required=True, dest="change_id")
+    p_exec_pytest.add_argument("--interpreter", required=True)
+    p_exec_pytest.add_argument("--paths", required=True, nargs="+")
+    p_exec_pytest.add_argument("--timeout", type=int, default=600)
+    p_exec_pytest.add_argument("--json", action="store_true")
+    p_exec_pytest.add_argument("pytest_args", nargs=argparse.REMAINDER, help="Flags extra de pytest, tras '--'.")
+    p_exec_pytest.set_defaults(func=cmd_exec_pytest)
+
+    p_exec_notebook = exec_sub.add_parser("notebook", help="Ejecuta un notebook vía tools/notebook_runner.py, según un manifest.")
+    p_exec_notebook.add_argument("--change-id", required=True, dest="change_id")
+    p_exec_notebook.add_argument("--interpreter", required=True)
+    p_exec_notebook.add_argument("--manifest", required=True)
+    grupo_exec_notebook = p_exec_notebook.add_mutually_exclusive_group()
+    grupo_exec_notebook.add_argument("--dry-run", action="store_true", dest="dry_run")
+    grupo_exec_notebook.add_argument("--execute", action="store_true", dest="execute")
+    p_exec_notebook.add_argument("--timeout", type=int, default=600)
+    p_exec_notebook.add_argument("--json", action="store_true")
+    p_exec_notebook.set_defaults(func=cmd_exec_notebook)
 
     p_source = subparsers.add_parser(
         "source",

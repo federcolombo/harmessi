@@ -42,10 +42,10 @@ _TOOLS_DIR = Path(__file__).resolve().parents[1]
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
-from tools.nbrunner import core as nbcore  # noqa: E402
-from tools.nbrunner import fsdiff as nbfsdiff  # noqa: E402
-from tools.nbrunner import manifest as nbmanifest  # noqa: E402
-from tools import launcher_common  # noqa: E402
+from nbrunner import core as nbcore  # noqa: E402
+from nbrunner import fsdiff as nbfsdiff  # noqa: E402
+from nbrunner import manifest as nbmanifest  # noqa: E402
+import launcher_common  # noqa: E402
 
 from . import core as leadrun_core  # noqa: E402,F401 -- reexportado para catálogo de errores propio
 
@@ -198,14 +198,19 @@ def ejecutar_manifest(manifest_path, repo_root, control_data: dict, modo: str) -
         resultado["ejecutado"] = False
         return resultado
 
-    # `tools.nbrunner.execute` importa `nbformat`/`nbclient` a nivel de
-    # módulo (dependencias del stage `experiment`, no del core): import
-    # PEREZOSO acá, solo alcanzable en `modo == "execute"` sin Findings
-    # bloqueantes, para no requerirlas solo para validar un manifest en
-    # `--dry-run` -- mismo criterio que `ds_profile` en
-    # `tools/datasources/file_observer.py` (Change 1).
+    # `nbrunner.execute` importa `nbformat`/`nbclient` a nivel de módulo
+    # (dependencias del stage `experiment`, no del core): import PEREZOSO
+    # acá, solo alcanzable en `modo == "execute"` sin Findings bloqueantes,
+    # para no requerirlas solo para validar un manifest en `--dry-run` --
+    # mismo criterio que `ds_profile` en `tools/datasources/file_observer.py`
+    # (Change 1). Import BARE (no `tools.nbrunner`, ver imports de arriba):
+    # cuando este módulo se alcanza vía `ds_guard.py` corrido como script
+    # (`python tools/ds_guard.py ...`), solo `tools/` queda en `sys.path[0]`
+    # -- la raíz del repo NO, así que `import tools...` falla ahí aunque
+    # funcione al importar este paquete directo desde la raíz (mismo gotcha
+    # ya documentado para el resto de imports de este archivo).
     try:
-        from tools.nbrunner import execute as nbexecute
+        from nbrunner import execute as nbexecute
     except ModuleNotFoundError as exc:
         resultado["ejecutado"] = False
         resultado["ok"] = False

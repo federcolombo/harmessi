@@ -71,16 +71,23 @@ class _BaseNotebooksTest(unittest.TestCase):
             # `nbexecute` ya no es un atributo de módulo de `notebooks` (se
             # importa de forma perezosa dentro de `ejecutar_manifest`, fix de
             # eager-import de `nbformat`/`nbclient`): se parchea la fuente
-            # real, `tools.nbrunner.execute` (atributo `execute` del paquete
-            # `tools.nbrunner`), que es lo que el `from tools.nbrunner import
-            # execute as nbexecute` perezoso termina resolviendo. `create=True`
-            # porque, precisamente por ser perezoso, el submódulo real nunca se
-            # importó todavía en este proceso -- sin `create=True`, `mock.patch`
-            # exige que el atributo ya exista y falla con `AttributeError` antes
-            # de poder simularlo (no requiere `nbformat`/`nbclient` instalados:
-            # solo registra el mock como atributo del paquete, sin importar el
+            # real, `nbrunner.execute` (atributo `execute` del paquete
+            # `nbrunner`, IMPORT BARE -- mismo gotcha de doble identidad de
+            # módulo que en el resto del repo, `tools/` no tiene
+            # `__init__.py`: `notebooks.py` hace `sys.path.insert(0,
+            # _TOOLS_DIR)` y el lazy import es `from nbrunner import execute
+            # as nbexecute`, NO `from tools.nbrunner import execute` -- si acá
+            # se parchea `tools.nbrunner.execute` en vez de `nbrunner.execute`,
+            # son dos objetos de módulo distintos y el parche no afecta al que
+            # `ejecutar_manifest` realmente resuelve), que es lo que ese import
+            # perezoso termina resolviendo. `create=True` porque, precisamente
+            # por ser perezoso, el submódulo real nunca se importó todavía en
+            # este proceso -- sin `create=True`, `mock.patch` exige que el
+            # atributo ya exista y falla con `AttributeError` antes de poder
+            # simularlo (no requiere `nbformat`/`nbclient` instalados: solo
+            # registra el mock como atributo del paquete, sin importar el
             # submódulo real).
-            "nbexecute": mock.patch("tools.nbrunner.execute", create=True),
+            "nbexecute": mock.patch("nbrunner.execute", create=True),
             "nbfsdiff": mock.patch.object(notebooks, "nbfsdiff"),
             "nbcore": mock.patch.object(notebooks, "nbcore"),
             "launcher_common": mock.patch.object(notebooks, "launcher_common"),
