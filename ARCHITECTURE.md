@@ -59,6 +59,12 @@ otros la lógica de decisión vive mezclada con la lectura de stdin en el mismo 
 | `tools/datacontracts/evolution.py` | Clasificación determinista de compatibilidad entre dos versiones de un `DataContract` (v0.7 Change 4: `classify_contract_change`, códigos `CONTRACT-EVOLUTION-*`, produce `dsguard.checks.CheckResult`) -- importa únicamente `dsguard.checks` y el sibling `tools.datacontracts.core`; sin `policy` todo `status` es `N/A` (clasificado, nunca evaluado), con `policy` mapea `CompatibilityPolicy.COMPAT_ACTIONS`; pura, sin I/O, sin leer `profile.json` ni ningún archivo; único agregado a un paquete de un Change anterior, excepción prevista por el propio Change 0; no conoce protocolo de hooks, es core. |
 | `tools/autonomy/core.py` | Contrato neutral de autonomía (v0.8 Change 0) -- modos `autonomous`/`supervised` (por defecto `supervised`); `POLICY_TABLE` + `resolve_action` (clase de acción × modo → ejecutor/aprobación/resultado); catálogos STOP 1-12 y LIMIT; registro único de códigos `AUTONOMY-*`; roles + `ROLE_CAPABILITIES` + `role_responsibilities` (vista derivada) y `narrow_mode`; `ApprovalRef`, `PolicyApproval` y su validación; namespace reservado `policy:` (`is_reserved_policy_namespace`, `validate_human_identity`, `validate_human_approval_entry`); `PreApprovedDecision`/`validate_pre_approved`; `PolicyFinding` y `AutonomyError` -- solo stdlib (`re`, `unicodedata`, `dataclasses`, `typing`); no lee `guardrails.json` ni ningún archivo, no ejecuta nada; no importa `tools.*` ni hermanos; no conoce protocolo de hooks, es core. |
 | `tools/autonomy/policy.py` | Política de autonomía humana de `guardrails.json` (v0.8 Change 0) -- `parse_autonomy_policy` (parseo fail-closed; recibe `guard_policy_version_max` del llamador y NO importa `dsguard.pathguard`, cuyo `cargar_config` rechaza versiones no soportadas), `AutonomyPolicy`, `is_source_sealed`/`effective_source_access` (policy ∩ registro), `sealed_coherence_findings` (matcher inyectado, sin leer rutas) y `resolve_methodological_decision` -- solo stdlib acotada; depende únicamente de `core`; puro, sin I/O; sin policy equivale a v0.7 (`supervised`); no conoce protocolo de hooks, es core. |
+| `tools/datasources/core.py` | Tipos neutrales de fuentes de datos (v0.8 Change 1: `SourceRef`/`SourceCapabilities`/`ObservationRequest`/`SourceObservation`/`FieldObservation`/`SourceProvenance`/`SourceError`, `CODES` -- registro único de `SOURCE-*`) -- solo stdlib (`dataclasses`, `typing`, `re`, `json`, `hashlib`, `unicodedata`, `__future__`); sin `os`/`pathlib`/`sys`/`importlib`, sin hermanos ni `tools.*`; `source_kind`/`native_type` son etiquetas informativas acotadas por regex que solo se copian/serializan, el módulo NO ramifica sobre tecnología (R3); serialización determinista (`to_dict()` orden fijo, `canonical_json()`, `content_sha256()` excluye `provenance.generated_at`); no conoce protocolo de hooks, es core. |
+| `tools/datasources/scan.py` | Escaneo por patrón de secretos y localizadores físicos (v0.8 Change 1: `scan_secrets`/`scan_locators`, R19) -- puro sobre dicts, sin I/O; importa solo stdlib (`re`, `typing`) y `.core` (relativo, para los códigos `SOURCE-SECRET-DETECTED`/`SOURCE-DSN-DETECTED`/`SOURCE-ABSOLUTE-PATH`); best-effort por diseño (no reemplaza a `pathguard`), nunca reproduce el valor sospechoso en el hallazgo; no conoce protocolo de hooks, es core. |
+| `tools/datasources/registry.py` | Validación estática y pura del registro `.harmessi/sources.json` (v0.8 Change 1: `validate_registry`, `resolve_observer_file` con `exists_fn` inyectable, `check_registry_static`, R12-R14) -- importa solo stdlib (`re`, `typing`) y `.core`/`.scan` (relativos); `resolve_observer_file` nunca importa el módulo del observer ni toca el sistema de archivos directamente (el I/O real lo inyecta el llamador); no conoce protocolo de hooks, es core. |
+| `tools/datasources/runtime.py` | Capa de I/O e `importlib` de `datasources` (v0.8 Change 1: `load_registry`/`check_registry`, `observe_source` con el orden obligatorio de R16, `compare_fingerprint` R26, persistencia atómica en `.harmessi/observations/<observation_id>/observation.json` R23) -- importa stdlib (`os`, `pathlib`, `importlib`, `hashlib`, `json`, `datetime`, `sys`, `typing`) más `dsguard.checks` (vía `sys.path.insert`, mismo patrón que `tools/datacontracts/validation.py`) y los módulos puros propios (`.core`/`.registry`/`.scan`, relativos); **compone `access_check` inyectado como parámetro obligatorio de `observe_source` -- NO importa `tools.autonomy` ni `tools.dsguard.pathguard` directamente** (D8/R25): el control de acceso real lo arma `tools/ds_guard.py`; sin timeout en proceso (R17, límite documentado); no conoce protocolo de hooks, es core. |
+| `tools/datasources/profile_bridge.py` | Puente `profile.json` (`ds_profile`) → `SourceObservation` neutral (v0.8 Change 1: `profile_to_observation`, R27) -- puro sobre dicts, sin I/O; importa solo stdlib (`datetime`, `typing`) y `.core` (relativo); NO importa `ds_profile` (ese acoplamiento vive en `file_observer.py`); nunca copia `dataset_path` ni ninguna ruta; devuelve una `SourceProvenance` placeholder que el llamador debe sobrescribir; no conoce protocolo de hooks, es core. |
+| `tools/datasources/file_observer.py` | Único observer que Harmessi incluye (v0.8 Change 1: `FileObserver`/`factory`/`factory_with_repo_root`, R28) -- observa archivos locales (CSV/Parquet) vía `ds_profile`; **importa `ds_profile` de forma perezosa, siempre dentro de funciones/métodos, nunca a nivel de módulo** (así el paquete `datasources` puede convivir en stage `discovery` sin forzar `ds_profile` instalado; este archivo mismo se instala en `experiment`, R38); a nivel de módulo importa solo stdlib (`tempfile`, `pathlib`, `typing`) y `.profile_bridge` (relativo); pasa por el guard de holdout (`ds_profile.holdout_guard.verificar_permitido`) antes de leer; la ruta nunca aparece en la observación devuelta; no conoce protocolo de hooks, es core. |
 | `tools/fallback/handoff.py` | Contexto de handoff a nivel SDD (v0.5 Change 3) -- contexto mínimo suficiente para continuar un Change entre sesiones/proveedores sin reiniciar trabajo ni duplicar auditorías (`completed`/`pending`/`prior_findings`); persistido en `.harmessi/handoffs/<id>/handoff.json`, mismo patrón que `.harmessi/evals/`. |
 | `tools/modelquality/core.py` | Políticas de calidad de modelo neutrales (v0.7 Change 2: `ModelQualityPolicy`/`MetricRequirement`/`EvaluationContext`/`ObservedMetric`/`BaselineReference`, serialización determinista y hash de contenido de `ModelQualityPolicy`) -- solo stdlib; no entrena modelos, no calcula ninguna métrica, no observa ningún dato; familia independiente de `tools/datacontracts`, sin tipos compartidos; no conoce protocolo de hooks, es core. |
 | `tools/modelquality/validation.py` | Evaluación de `ModelQualityPolicy` contra métricas ya reportadas (v0.7 Change 2: `evaluate_policy`, códigos `QUALITY-*`, produce `dsguard.checks.CheckResult`) -- importa `dsguard.checks` y `tools.modelquality.core` (sibling); sin ninguna superficie de I/O ni de lectura de archivo; nunca recalcula ni verifica que el valor reportado sea numéricamente correcto (decisión 1 del roadmap); vocabulario `PASS`/`WARN`/`FAIL`/`N/A`, nunca `PASS` por falta de evidencia; no conoce protocolo de hooks, es core. |
@@ -207,6 +213,29 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
    `reporting`, `providers`, `routing`, `fallback`, `harmessi_bench`, `tools.datacontracts`,
    `tools.modelquality` y `tools.qualityevidence` no importan `tools.autonomy`. Verificado por
    `tools/tests/test_v08_autonomy_neutrality.py`.
+11. Familia `tools/datasources` (v0.8 Change 1, `20260928-source-neutral-data-access`): `core.py`
+   es solo-stdlib (`dataclasses`, `typing`, `re`, `json`, `hashlib`, `unicodedata`) y no importa
+   hermanos ni `tools.*`; `scan.py`/`registry.py`/`profile_bridge.py` son puros sobre dicts (sin
+   I/O) e importan solo stdlib acotada más `.core` (relativo; `registry.py` también `.scan`);
+   `runtime.py` hace I/O e `importlib`, importa `dsguard.checks` (vía `sys.path.insert`, mismo
+   patrón que la regla 7) y los módulos puros propios, pero **no importa `tools.autonomy` ni
+   `tools.dsguard.pathguard`**: el control de acceso real (`access_check`) lo compone
+   `tools/ds_guard.py` y se inyecta como parámetro obligatorio de `observe_source` (D8/R25);
+   `file_observer.py` importa `ds_profile` de forma perezosa (dentro de funciones, nunca a nivel
+   de módulo), único observer incluido por Harmessi. Nunca al revés: `dsguard`, `ds_profile`,
+   `dsimpact`, `reporting`, `providers`, `routing`, `fallback`, `harmessi_bench`,
+   `tools.autonomy`, `tools.modelquality` y `tools.qualityevidence` no importan `tools.datasources`.
+
+   **Excepción documentada:** `tools/datacontracts/validation.py` (y `legacy_wording.py` si lo
+   necesitara) importa `datasources.core`/`datasources.profile_bridge` -- es la única excepción a
+   la regla anterior, y ejercita la extensión aditiva ya prevista por la regla 7: "un único motor
+   de validación de contratos" que evalúa sobre `SourceObservation` (M1 del roadmap de v0.8,
+   `docs/roadmap/v0.8.md`: "Un único motor de validación de contratos... `datacontracts.validation`
+   evalúa sobre `SourceObservation`; `validate_contract` y las APIs de v0.7 son wrappers con
+   paridad exacta"). Nada más en `tools/datacontracts` importa `datasources`. Verificado por
+   `tools/tests/test_v08_datasources_neutrality.py` y `tools/tests/test_v08_source_id_parity.py`
+   (paridad exacta del literal `SOURCE_ID_PATTERN`, duplicado a propósito entre `datasources.core`
+   y `autonomy.core`, paquetes independientes).
 
 Estas reglas ya se cumplen hoy (verificado, ver `tools/tests/test_architecture_boundaries.py`,
 Change 3) — este documento las hace explícitas, no las introduce de cero.
@@ -331,10 +360,10 @@ fuente real  →  extensión del proyecto (adapter)  →  SourceObservation (neu
   ejecución y de cierre de un Change autónomo; el hook estricto global sobre el Bash del Lead queda
   para v0.10 y reutilizará la misma función pura de evaluación (que vive en core, ver deuda 1 de §4).
 
-**Regla de dependencias prevista (a formalizar como regla 11 al implementarse):** el paquete de
-fuentes puede importar `dsguard.checks` y consumir `profile.json` como `dict`; `dsguard`, `ds_profile`,
-`dsimpact`, `reporting`, `providers`, `routing`, `fallback`, `harmessi_bench` y las familias de v0.7 no
-lo importan (excepción acotada: la evolución de `datacontracts` para evaluar sobre observaciones).
+**Implementado en Change 1 (`20260928-source-neutral-data-access`).** La regla de dependencias
+descrita en el párrafo original de esta sección ya está en vigor como la regla 11 de §3 (paquete
+`tools/datasources`, filas en §2.1); la sección completa queda como registro histórico de la
+planificación, no como pendiente.
 
 **Vocabulario.** "Adapter" ya tiene dos acepciones en este documento (§2.2: hooks de Claude Code;
 `tools/providers`: proveedores de IA). El adapter de fuente sería una tercera; "provider" no debe
