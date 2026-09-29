@@ -246,5 +246,27 @@ class TestTypeFamilyEsLaAutoridadNoNativeType(unittest.TestCase):
         self.assertEqual(mismatch[0].status, checks.STATUS_FAIL)
 
 
+class TestTypeMismatchObservadoUnknownContratoMapeado(unittest.TestCase):
+    """R30: "Observado `unknown` con familia declarada mapeada -> WARN 'no
+    clasificable'" -- distinto del caso YA cubierto por
+    `TestTypeFamilyUnknown` (ahí es el CONTRATO el que declara `unknown`, dando N/A).
+    Acá es la OBSERVACIÓN la que no pudo clasificar el tipo (p. ej. R35 b/c: un dtype de
+    fuente no reconocido, o campo sin detalle), pero el CONTRATO sí exige una
+    `type_family` mapeada concreta -- eso debe dar WARN, nunca FAIL."""
+
+    def test_observacion_unknown_contrato_integer_da_warn_no_clasificable(self):
+        contrato = _contrato(fields=(_campo(name="id", type_family="integer", required=True, nullable=True),))
+        observacion = _observacion(
+            [_campo_obs("id", type_family="unknown", native_type="tipo_irrelevante", facets={})]
+        )
+        resultados = v.validate_contract_observation(contrato, observacion)
+        mismatch = _por_codigo(resultados, v.CODE_TYPE_MISMATCH)
+        self.assertEqual(len(mismatch), 1)
+        self.assertEqual(mismatch[0].status, checks.STATUS_WARN)
+        self.assertNotEqual(mismatch[0].status, checks.STATUS_FAIL)
+        self.assertIn("no clasificable", mismatch[0].message.lower())
+        self.assertEqual(mismatch[0].subject, "id")
+
+
 if __name__ == "__main__":
     unittest.main()

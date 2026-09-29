@@ -104,20 +104,28 @@ def _json_pointer(path: str, clave: Any) -> str:
     return f"{path}/{fragmento}"
 
 
-def scan_secrets(obj: Any, path: str = "$", _padre_es_hash: bool = False) -> list:
+def scan_secrets(obj: Any, path: str = "$", padre_es_hash: bool = False) -> list:
     """Recorre `obj` (dict/list/escalares) buscando claves de nombre
     sospechoso y valores con forma de credencial o de DSN. Devuelve
     `[(code, json_pointer, motivo), ...]` sin reproducir el valor.
 
-    La exención "clave nombrada como hash/sha" (R19) se hereda al hijo
-    inmediato: una clave `hash`/`fingerprint` con un hijo `value` también
-    queda exenta (cubre la forma `fingerprint.value` de la observación)."""
+    La exención "clave nombrada como hash/sha/fingerprint" (R19) aplica
+    SOLO al hijo inmediato de una clave hash: al evaluar un nodo, la
+    exención efectiva es `_clave_es_hash(clave_de_este_nodo) or
+    padre_es_hash` (si el PADRE INMEDIATO de este nodo tenía clave
+    hash/sha/fingerprint) -- cubre la forma `fingerprint.value` de la
+    observación (un hijo inmediato de `fingerprint`). NO se propaga más
+    allá de ese hijo inmediato: al recursar hacia los HIJOS de este nodo se
+    les pasa `padre_es_hash = _clave_es_hash(clave_de_este_nodo)`, evaluado
+    en ESTE nivel únicamente (nunca acumulado desde niveles superiores) --
+    un nieto de una clave hash (hijo de un hijo) ya NO hereda la exención."""
     hallazgos: list = []
     if isinstance(obj, dict):
         for clave, valor in obj.items():
             ruta = _json_pointer(path, clave)
             clave_str = clave if isinstance(clave, str) else str(clave)
-            es_hash = _clave_es_hash(clave_str) or _padre_es_hash
+            clave_es_hash_aqui = _clave_es_hash(clave_str)
+            es_hash = clave_es_hash_aqui or padre_es_hash
             if _clave_sospechosa(clave_str):
                 hallazgos.append(
                     (CODE_SECRET_DETECTED, ruta, "clave con nombre sospechoso de credencial")
@@ -129,10 +137,10 @@ def scan_secrets(obj: Any, path: str = "$", _padre_es_hash: bool = False) -> lis
                     )
                 elif _valor_forma_dsn(valor):
                     hallazgos.append((CODE_DSN_DETECTED, ruta, "valor con forma de DSN"))
-            hallazgos.extend(scan_secrets(valor, ruta, es_hash))
+            hallazgos.extend(scan_secrets(valor, ruta, clave_es_hash_aqui))
     elif isinstance(obj, list):
         for i, item in enumerate(obj):
-            hallazgos.extend(scan_secrets(item, _json_pointer(path, i), _padre_es_hash))
+            hallazgos.extend(scan_secrets(item, _json_pointer(path, i), padre_es_hash))
     elif isinstance(obj, str):
         if _valor_forma_dsn(obj):
             hallazgos.append((CODE_DSN_DETECTED, path, "valor con forma de DSN"))

@@ -31,6 +31,16 @@ def test_hash_sha256_en_clave_hash_no_se_marca():
     assert hallazgos == []
 
 
+def test_exencion_hash_no_se_propaga_mas_alla_del_hijo_inmediato():
+    """R19: la exención de clave hash/sha/fingerprint es de UN solo nivel. Un
+    nieto de una clave hash (hijo de un hijo) ya no hereda la exención, aunque
+    el código viejo (sin límite de profundidad) la propagaba sin fin -- ver
+    hallazgo del reviewer sobre el Change 1 de v0.8."""
+    valor_hex = "c" * 64
+    hallazgos = scan.scan_secrets({"api_hash": {"anidado": {"valor": valor_hex}}})
+    assert CODE_SECRET_DETECTED in _codigos(hallazgos)
+
+
 def test_note_recuento_de_tokens_no_se_marca():
     hallazgos = scan.scan_secrets({"note": "recuento de tokens"})
     assert hallazgos == []

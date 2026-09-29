@@ -934,6 +934,64 @@ def _demotar_pass_sin_evidencia(resultados: list, contract: Any, observation: "d
     return ajustados
 
 
+def _reclasificar_type_mismatch_unknown_observado(
+    resultados: list, contract: Any, observation: "datasources_core.SourceObservation"
+) -> list:
+    """R30: rama WARN "no clasificable" -- observado `unknown` con `type_family`
+    declarada MAPEADA en el contrato. Post-proceso deliberado FUERA de
+    `_regla_type_mismatch` (mismo patrón que `_demotar_pass_sin_evidencia`), para no
+    tocar esa regla ni arriesgar la paridad con el golden v0.7.
+
+    Caso YA cubierto por `_regla_type_mismatch` (sin tocar): el CONTRATO declara
+    `type_family="unknown"` -> N/A vía `hubo_na` (el contrato no exige nada
+    clasificable). Caso NUEVO que cubre esta función: la OBSERVACIÓN es la que no pudo
+    clasificar el tipo (`FieldObservation.type_family == "unknown"`, p. ej. R35 b/c: un
+    dtype de perfil no reconocido, o un campo sin entrada de detalle), pero el CONTRATO
+    sí exige una `type_family` concreta y mapeada -- eso hoy cae en FAIL vía
+    `_regla_type_mismatch` (el dtype reconstruido `"unknown"` nunca coincide con ningún
+    dtype legacy esperado), cuando en realidad no es una violación de tipo real sino una
+    falta de evidencia clasificable de la fuente: R30 exige WARN, no FAIL.
+
+    Reclasifica SOLO las entradas `CONTRACT-TYPE-MISMATCH` en estado FAIL cuyo `subject`
+    (nombre de campo) cumple AMBAS condiciones: (a) `type_family="unknown"` en la
+    observación, (b) `type_family` del contrato para ese campo está mapeada (presente en
+    `_DTYPE_ESPERADO_POR_FAMILIA` con un conjunto no vacío). Cualquier otro FAIL de
+    type-mismatch (violación real entre dos familias mapeadas distintas) queda intacto.
+
+    Verificado contra el corpus dorado v0.7 (114 casos, `build_golden_v07.py`) y los
+    fixtures de `test_validation.py`: NINGÚN caso usa un dtype de perfil fuera de los 5
+    reconocidos (`texto`/`entero`/`flotante`/`booleano`/`fecha`) ni un campo presente en
+    `schema` mas ausente de `columnas_detalle` mientras el contrato declara una
+    `type_family` mapeada para ese mismo campo -- por lo tanto esta función nunca se
+    activa para ningún caso del golden ni de `test_validation.py`, y se aplica sin
+    restringir por `wording` (a diferencia de otros post-procesos que sí podrían
+    necesitar esa restricción, acá no hizo falta)."""
+    type_family_observada = {campo.name: campo.type_family for campo in observation.fields}
+    type_family_contrato = {campo.name: campo.type_family for campo in contract.fields}
+    ajustados = []
+    for r in resultados:
+        nuevo = r
+        if (
+            r.code == CODE_TYPE_MISMATCH
+            and r.status == checks.STATUS_FAIL
+            and r.subject
+            and type_family_observada.get(r.subject) == "unknown"
+        ):
+            type_family_declarada = type_family_contrato.get(r.subject)
+            esperados = _DTYPE_ESPERADO_POR_FAMILIA.get(type_family_declarada, frozenset())
+            if esperados:
+                nuevo = _res(
+                    checks.STATUS_WARN,
+                    CODE_TYPE_MISMATCH,
+                    f"No clasificable: el campo {r.subject!r} declara "
+                    f"type_family={type_family_declarada!r} pero la fuente no pudo "
+                    "determinar su tipo observado (unknown).",
+                    r.subject,
+                )
+        ajustados.append(nuevo)
+    return ajustados
+
+
 def _observation_valida_forma(observation: Any, wording: dict) -> Optional[checks.CheckResult]:
     """`None` si `observation` tiene forma utilizable (`SourceObservation` o
     dict con esa forma); si no, el `CheckResult` a devolver (y cortar)."""
@@ -1021,7 +1079,8 @@ def validate_contract_observation(contract: Any, observation: Any, *, wording: O
         )
         profile_like = _observation_como_profile_like(obs)
         resultados = _validate_contract_interno(contract, profile_like)
-        return _demotar_pass_sin_evidencia(resultados, contract, obs)
+        resultados = _demotar_pass_sin_evidencia(resultados, contract, obs)
+        return _reclasificar_type_mismatch_unknown_observado(resultados, contract, obs)
     except Exception as exc:  # noqa: BLE001 -- contrato: nunca lanza
         return [checks.resultado_de_excepcion("CONTRACT-VALIDATE-OBSERVATION", exc)]
 
