@@ -70,8 +70,11 @@ if str(_TOOLS_DIR) not in sys.path:
 
 from dsguard import checks  # noqa: E402
 from ds_profile.holdout_guard import verificar_permitido  # noqa: E402
+from datasources import core as datasources_core  # noqa: E402
+from datasources import profile_bridge  # noqa: E402
 
 from . import core as datacontracts_core  # noqa: E402
+from . import legacy_wording  # noqa: E402
 
 # --- Códigos (R2 de spec.md) --------------------------------------------------
 
@@ -739,6 +742,189 @@ def _regla_constraint(constraint: Any, profile: dict) -> list:
     raise AssertionError(f"constraint_type inesperado (fuera de CONSTRAINT_TYPES): {tipo!r}")
 
 
+# --- Wording neutral (R33, ver decisión documentada en legacy_wording.py) ----------
+
+_WORDING_NEUTRAL = {
+    "evidence_invalid": "La observación de la fuente no es válida: {motivo}",
+    "evidence_wrong_type": (
+        "'observation' no es una SourceObservation ni un dict con esa forma "
+        "(se recibió {tipo})."
+    ),
+}
+
+LEGACY_PROFILE = legacy_wording.LEGACY_PROFILE
+
+
+# --- Adaptador "bridge inverso" (R29-R31, Estrategia A) -----------------------------
+
+
+def _observation_como_profile_like(observation: "datasources_core.SourceObservation") -> dict:
+    """Reconstruye un dict con la MISMA FORMA que el `profile` legacy
+    (`schema`/`columnas_detalle`/`sampling`/`filas`) a partir de una
+    `SourceObservation`, para poder reutilizar los `_regla_*` de v0.7 SIN
+    modificarlos ni una línea (Estrategia A del paso T5: ver el reporte de la
+    tarea para la comparación con la Estrategia B). Es literalmente el
+    "bridge inverso" de `datasources.profile_bridge.profile_to_observation`.
+
+    Fidelidad de `schema[name]`/`columnas_detalle[name]["dtype"]`: se usa
+    `FieldObservation.native_type` DIRECTO (el dtype legacy original,
+    verbatim, que el bridge ya preserva sin tocar) en vez de reconstruirlo a
+    partir de `type_family` (que perdería información: varios dtypes legacy
+    no reconocidos colapsan todos en `type_family="unknown"`). Esto es MÁS
+    fiel que la reconstrucción sugerida originalmente vía mapeo inverso de
+    `type_family`, y evita cualquier pérdida por esa vía. Si `native_type` es
+    `None` (campo sin detalle en el perfil original, o campo armado a mano
+    sin dtype) se usa el literal `"unknown"` como dtype reconstruido -- un
+    valor que nunca coincide con ningún dtype legacy real (`texto`/`entero`/
+    `flotante`/`booleano`/`fecha`), por lo que `_regla_type_mismatch` lo trata
+    siempre como "no coincide con ninguna familia mapeada", igual que un
+    dtype no reconocido en v0.7.
+
+    Exactitud de `unique.exactitud` POR CAMPO: se reconstruye desde la
+    `exactness` real de la faceta `distinct_count` de CADA campo individual
+    (`"exact"->"exacta"`, `"approximate"->"muestreada"`), NUNCA desde un
+    único flag global -- una `SourceObservation` puede mezclar columnas con
+    facetas `exact` y `approximate` simultáneamente, algo que el `profile`
+    v0.7 no podía representar (un solo `sampling["activo"]` global). El
+    `sampling.activo` del dict reconstruido es best-effort global (solo para
+    satisfacer el gate `_validar_evidencia`, que exige un bool ahí): ninguna
+    regla `_regla_*` lee `profile["sampling"]` directamente, así que su valor
+    exacto no afecta ningún resultado.
+
+    Ausencia de faceta: una faceta AUSENTE en la observación se traduce en la
+    clave legacy correspondiente AUSENTE del dict reconstruido (nunca en un
+    valor default `0`/`"exacta"` fabricado) -- ausencia se preserva como
+    ausencia, para no simular evidencia que no existe."""
+    schema: dict = {}
+    columnas_detalle: dict = {}
+    for campo in observation.fields:
+        dtype_legacy = campo.native_type if campo.native_type is not None else "unknown"
+        schema[campo.name] = dtype_legacy
+        detalle: dict = {"dtype": dtype_legacy, "top_valores": []}
+        facets = campo.facets or {}
+        if "null_count" in facets:
+            detalle["nulls"] = {"count": facets["null_count"]["value"]}
+        if "distinct_count" in facets:
+            dc_ = facets["distinct_count"]
+            detalle["unique"] = {
+                "count": dc_["value"],
+                "exactitud": "exacta" if dc_["exactness"] == "exact" else "muestreada",
+            }
+        if "value_distribution" in facets:
+            vd = facets["value_distribution"]
+            detalle["top_valores"] = [
+                {"valor": item["value"], "frecuencia": item["frequency"]} for item in vd["value"]
+            ]
+        if "value_range" in facets:
+            vr = facets["value_range"]["value"]
+            detalle["min"] = vr.get("min")
+            detalle["max"] = vr.get("max")
+        if "time_range" in facets:
+            tr = facets["time_range"]["value"]
+            detalle["fecha_min"] = tr.get("min")
+            detalle["fecha_max"] = tr.get("max")
+        columnas_detalle[campo.name] = detalle
+
+    dataset = observation.dataset or {}
+    row_count = dataset.get("row_count", {})
+    filas = row_count.get("value", 0) if isinstance(row_count, dict) else 0
+
+    sampling_dataset_active = bool(dataset.get("sampling", {}).get("active", False))
+    hay_approximate = any(
+        isinstance(faceta, dict) and faceta.get("exactness") == "approximate"
+        for campo in observation.fields
+        for faceta in (campo.facets or {}).values()
+    )
+
+    return {
+        "schema": schema,
+        "columnas_detalle": columnas_detalle,
+        "sampling": {"activo": sampling_dataset_active or hay_approximate},
+        "filas": filas,
+    }
+
+
+def _demotar_pass_sin_evidencia(resultados: list, contract: Any, observation: "datasources_core.SourceObservation") -> list:
+    """R30: una faceta ausente nunca debe dar PASS. Los `_regla_*` reutilizados
+    (Estrategia A) heredan de v0.7 una limitación puntual y localizada:
+    `not_null`, `min_value`/`max_value` y la regla estructural `nullability`
+    comparan con `isinstance(valor, int)`/`isinstance(valor, (int, float))` --
+    lo que trata "valor ausente" igual que "0 nulos observados"/"sin rango que
+    viole", dando PASS sin evidencia real. Es la MISMA limitación que ya tenía
+    v0.7 (nunca se manifestaba porque `profile.json` de `ds_profile` siempre
+    trae esas claves cuando hay datos), pero una `SourceObservation` armada a
+    mano SÍ puede omitir facetas legítimamente. Este post-proceso (deliberado
+    FUERA de los `_regla_*`, para no tocarlos) detecta esos PASS concretos y
+    los reclasifica a WARN cuando la faceta que los sustenta está REALMENTE
+    ausente de la observación (nunca cuando el valor observado es 0/vacío).
+
+    Nunca se activa para ningún caso del corpus dorado v0.7 (`golden_v07_validation.json`)
+    ni de `test_validation.py`: el bridge (`profile_bridge.profile_to_observation`)
+    siempre puebla `null_count`/`value_range` cuando el `profile.json` legacy trae
+    esas claves, y los fixtures de v0.7 siempre las traen."""
+    facets_by_field = {campo.name: set(campo.facets.keys()) for campo in observation.fields}
+    ajustados = []
+    for r in resultados:
+        nuevo = r
+        if r.status == checks.STATUS_PASS and r.subject and r.subject in facets_by_field:
+            faceta_necesaria = None
+            if r.code == CODE_NOT_NULL_EXPECTATION:
+                faceta_necesaria = "null_count"
+            elif r.code == CODE_RANGE:
+                faceta_necesaria = "value_range"
+            if faceta_necesaria and faceta_necesaria not in facets_by_field[r.subject]:
+                nuevo = _res(
+                    checks.STATUS_WARN,
+                    r.code,
+                    f"No verificable: falta evidencia observada ({faceta_necesaria!r}) para "
+                    f"{r.subject!r}.",
+                    r.subject,
+                )
+        ajustados.append(nuevo)
+
+    campos_no_nullable_sin_evidencia = sorted(
+        campo.name
+        for campo in contract.fields
+        if not campo.nullable
+        and campo.name in facets_by_field
+        and "null_count" not in facets_by_field[campo.name]
+    )
+    if campos_no_nullable_sin_evidencia:
+        for i, r in enumerate(ajustados):
+            if r.code == CODE_NULLABILITY and r.status == checks.STATUS_PASS:
+                ajustados[i] = _res(
+                    checks.STATUS_WARN,
+                    CODE_NULLABILITY,
+                    "No verificable: falta evidencia de nulos observada para "
+                    f"{campos_no_nullable_sin_evidencia!r}.",
+                )
+    return ajustados
+
+
+def _observation_valida_forma(observation: Any, wording: dict) -> Optional[checks.CheckResult]:
+    """`None` si `observation` tiene forma utilizable (`SourceObservation` o
+    dict con esa forma); si no, el `CheckResult` a devolver (y cortar)."""
+    if isinstance(observation, datasources_core.SourceObservation):
+        return None
+    if isinstance(observation, dict):
+        try:
+            datasources_core.SourceObservation.from_dict(observation)
+        except datasources_core.SourceError as exc:
+            return _res(
+                checks.STATUS_FAIL,
+                CODE_EVIDENCE_MISSING,
+                wording["evidence_invalid"].format(motivo=exc.message),
+                tecnico=True,
+            )
+        return None
+    return _res(
+        checks.STATUS_FAIL,
+        CODE_EVIDENCE_MISSING,
+        wording["evidence_wrong_type"].format(tipo=type(observation).__name__),
+        tecnico=True,
+    )
+
+
 # --- Funciones públicas (R3/R4) ----------------------------------------------------
 
 
@@ -771,11 +957,86 @@ def _validate_contract_interno(contract: Any, profile: Any) -> list:
     return _ejecutar(registros)
 
 
+def validate_contract_observation(contract: Any, observation: Any, *, wording: Optional[dict] = None) -> list:
+    """Evaluador ÚNICO, nativo sobre `SourceObservation` (R29 de spec.md, T5 del Change
+    1 de v0.8). `observation` acepta una instancia de `datasources.core.SourceObservation`
+    o un dict con esa forma (normalizado con `SourceObservation.from_dict`) -- la misma
+    mitigación de doble identidad de paquete ya aplicada en `datasources.runtime`. Nunca
+    lanza. `wording` (dict con claves `evidence_invalid`/`evidence_wrong_type`) solo
+    afecta los DOS mensajes del gate de forma propio de esta función -- ver
+    `legacy_wording.py` para la decisión documentada sobre por qué las reglas
+    reutilizadas de v0.7 no lo consultan."""
+    try:
+        if not isinstance(contract, datacontracts_core.DataContract):
+            return [
+                _res(
+                    checks.STATUS_FAIL,
+                    CODE_INPUT,
+                    f"'contract' no es una instancia de DataContract (se recibió "
+                    f"{type(contract).__name__}).",
+                    tecnico=True,
+                )
+            ]
+        wording_efectivo = wording if wording is not None else _WORDING_NEUTRAL
+        problema = _observation_valida_forma(observation, wording_efectivo)
+        if problema is not None:
+            return [problema]
+        obs = (
+            observation
+            if isinstance(observation, datasources_core.SourceObservation)
+            else datasources_core.SourceObservation.from_dict(observation)
+        )
+        profile_like = _observation_como_profile_like(obs)
+        resultados = _validate_contract_interno(contract, profile_like)
+        return _demotar_pass_sin_evidencia(resultados, contract, obs)
+    except Exception as exc:  # noqa: BLE001 -- contrato: nunca lanza
+        return [checks.resultado_de_excepcion("CONTRACT-VALIDATE-OBSERVATION", exc)]
+
+
+def _validate_contract_via_bridge(contract: Any, profile: Any) -> list:
+    if not isinstance(contract, datacontracts_core.DataContract):
+        return [
+            _res(
+                checks.STATUS_FAIL,
+                CODE_INPUT,
+                f"'contract' no es una instancia de DataContract (se recibió "
+                f"{type(contract).__name__}).",
+                tecnico=True,
+            )
+        ]
+    problema_evidencia = _validar_evidencia(profile)
+    if problema_evidencia is not None:
+        return [problema_evidencia]
+    try:
+        # NOTA: el pseudocódigo original del pedido de tarea sugería
+        # `source_id="__legacy__"`, pero ese literal NO matchea
+        # `datasources.core.SOURCE_ID_PATTERN` (`[a-z0-9][a-z0-9_-]{0,63}`,
+        # exige empezar con alfanumérico) -- `SourceProvenance.__post_init__`
+        # lo rechazaba con `SourceError(CODE_OBSERVATION_INVALID, ...)` en
+        # TODAS las llamadas, colapsando cualquier resultado a un único
+        # `CONTRACT-EVIDENCE-MISSING` (causa raíz de la regresión reportada
+        # por el Lead sobre `test_validation.py`). Corregido a un id válido.
+        observation = profile_bridge.profile_to_observation(profile, source_id="legacy-profile")
+    except datasources_core.SourceError as exc:
+        return [
+            _res(
+                checks.STATUS_FAIL,
+                CODE_EVIDENCE_MISSING,
+                f"No se pudo construir la observación desde el perfil: {exc.message}",
+                tecnico=True,
+            )
+        ]
+    return validate_contract_observation(contract, observation, wording=LEGACY_PROFILE)
+
+
 def validate_contract(contract: Any, profile: Any) -> list:
     """Pura: sin I/O, sin guard, sin `Path`. `profile` es un `dict` YA cargado (la forma
-    de `profile.json`). Nunca lanza -- ver docstring del módulo."""
+    de `profile.json`). Nunca lanza -- ver docstring del módulo. Wrapper v0.7 (T5,
+    Change 1 de v0.8): `_validar_evidencia` (gate legacy, SIN TOCAR) -> bridge
+    (`profile_bridge.profile_to_observation`) -> `validate_contract_observation`
+    (evaluador único, `wording=LEGACY_PROFILE`)."""
     try:
-        return _validate_contract_interno(contract, profile)
+        return _validate_contract_via_bridge(contract, profile)
     except Exception as exc:  # noqa: BLE001 -- contrato: nunca lanza
         return [checks.resultado_de_excepcion("CONTRACT-VALIDATE", exc)]
 
