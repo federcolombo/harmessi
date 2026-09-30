@@ -119,6 +119,12 @@ siquiera si la sección existe por error. Tests del Lead, 15/15 en
 
 ## T6 — Plantillas administradas (`tools/ds_init/profiles/python_jupyter_data/templates/`)
 
+**[hecho]** Edición puntual en los 4 archivos (2 templates + 2 copias instaladas), confirmada por
+grep propio del Lead: 0 coincidencias de "el usuario ejecuta"/"ningún agente puede correr" (R15-R16).
+`pausada_bloqueada` de la tabla §7 de `sdd.md*` no se mezcló con `aggregate_budget`/`max_sessions`
+(decisión deliberada del writer, ratificada — son conceptos distintos, no había instrucción de
+fusionarlos).
+
 - `sdd.md.tmpl`: reemplazar el texto de R15 citando el runtime de Change 2 y `approval_mode` de este
   Change; mismo criterio de edición puntual que D6 de `design.md` fija (no reescritura completa).
 - `SKILL_lead_data_scientist.md.tmpl`: reemplazar el texto de R16.
@@ -129,6 +135,16 @@ siquiera si la sección existe por error. Tests del Lead, 15/15 en
   `.claude/skills/lead-data-scientist/` da cero resultados (R15).
 
 ## T7 — Tests de repo y neutralidad
+
+**[hecho, por el Lead directamente]** `tools/tests/test_v08_change3_neutrality.py` nuevo (7 tests:
+R7, R19, R18). **Regresión real encontrada y corregida**: `sdd.py` importando `autonomy.core` (T1)
+rompía `tools/tests/test_v08_autonomy_neutrality.py` (Change 0, regla 10 de `ARCHITECTURE.md`) —
+no detectada por ninguna invocación anterior porque nadie corrió ese test específico hasta ahora.
+Corregido agregando una excepción documentada y acotada a un solo archivo (mismo patrón que la
+excepción de M1/datacontracts de la regla 11), en el test Y en `ARCHITECTURE.md`, con un test nuevo
+que confirma que la excepción es real y no un agujero (`test_la_excepcion_documentada_si_importa_
+autonomy_de_forma_bare`). `sdd.py` sigue clasificado como core en §2.1 (sin cambios de
+clasificación, solo la regla de dirección de dependencias de §3).
 
 - Test de matriz 2×2 `approval_mode` × modo de autonomía (R19); test de que los 12 `STOP_CATALOG`
   nunca resuelven `proceed` bajo ningún `approval_mode` (R7); test de compatibilidad hacia atrás

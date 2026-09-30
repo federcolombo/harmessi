@@ -9,7 +9,17 @@ Verifica:
   `re`, `collections.abc`, `__future__`) y `from . import core`; sin
   `json`/`os`/`pathlib`/`sys` ni `tools.*` (recibe `guard_policy_version_max`
   del llamador, no importa pathguard).
-- Dirección inversa: ningún paquete previo importa `tools.autonomy`/`autonomy`.
+- Dirección inversa: ningún paquete previo importa `tools.autonomy`/`autonomy`,
+  **con una única excepción documentada** (regla 10 de `ARCHITECTURE.md`,
+  enmendada por v0.8 Change 3, `20260930-autonomous-sdd-and-remediation`):
+  `tools/dsguard/sdd.py` importa `autonomy.core` (bare) para reutilizar
+  `PreApprovedDecision`/`validate_pre_approved` al implementar checkpoints de
+  negocio (R3 de ese Change) — el propio docstring de Change 0 en
+  `tools/autonomy/core.py` ya anticipaba este consumidor ("Este modulo NO
+  consulta control.json ni ningun archivo (eso es del Change 3)"). Ningún
+  otro archivo de `tools/dsguard` ni de ningún otro paquete de
+  `PAQUETES_SIN_AUTONOMY` importa `autonomy` — la excepción es puntual a un
+  solo archivo, no relaja la regla general.
 - `MODULOS_CORE` incluye `core.py` y `policy.py`.
 """
 from __future__ import annotations
@@ -124,6 +134,12 @@ class TestPolicyAutonomySoloStdlibYCore(unittest.TestCase):
             self.assertFalse(PROHIBIDOS & set(modulo.split(".")), f"import prohibido en policy.py: {modulo}")
 
 
+# Excepción documentada (v0.8 Change 3, R3/D1-D3 de
+# `20260930-autonomous-sdd-and-remediation`): único archivo de todos los
+# paquetes de `PAQUETES_SIN_AUTONOMY` que puede importar `autonomy`.
+EXCEPCION_DSGUARD_SDD = "tools/dsguard/sdd.py"
+
+
 class TestNingunPaqueteImportaAutonomy(unittest.TestCase):
     def test_ningun_modulo_de_los_paquetes_previos_importa_autonomy(self):
         violaciones = []
@@ -133,9 +149,29 @@ class TestNingunPaqueteImportaAutonomy(unittest.TestCase):
             for ruta in sorted(directorio.rglob("*.py")):
                 if "__pycache__" in ruta.parts or "tests" in ruta.relative_to(directorio).parts:
                     continue
+                rel = ruta.relative_to(REPO_ORIGEN).as_posix()
+                if rel == EXCEPCION_DSGUARD_SDD:
+                    continue
                 for referencia in _referencias_a_autonomy(ruta):
-                    violaciones.append(f"{ruta.relative_to(REPO_ORIGEN).as_posix()}: {referencia}")
-        self.assertEqual(violaciones, [], f"Módulo(s) que importan `autonomy` (regla 10 de ARCHITECTURE.md): {violaciones}")
+                    violaciones.append(f"{rel}: {referencia}")
+        self.assertEqual(
+            violaciones,
+            [],
+            f"Módulo(s) que importan `autonomy` fuera de la excepción documentada "
+            f"({EXCEPCION_DSGUARD_SDD}, regla 10 de ARCHITECTURE.md): {violaciones}",
+        )
+
+    def test_la_excepcion_documentada_si_importa_autonomy_de_forma_bare(self):
+        """La excepción es real (no un olvido): `sdd.py` importa `autonomy.core`
+        de forma bare (`from autonomy import core`, mismo estilo que el resto
+        del repo tras `sys.path.insert(0, tools_dir)`), nunca calificada como
+        `tools.autonomy`."""
+        referencias = _referencias_a_autonomy(_requerir(EXCEPCION_DSGUARD_SDD))
+        self.assertTrue(referencias, f"{EXCEPCION_DSGUARD_SDD} debería importar autonomy (excepción documentada)")
+        self.assertTrue(
+            any(ref.startswith("from autonomy import") for ref in referencias),
+            f"se esperaba un import bare 'from autonomy import ...', se encontró: {referencias}",
+        )
 
 
 class TestAutonomyEnModulosCore(unittest.TestCase):

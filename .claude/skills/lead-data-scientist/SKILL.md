@@ -150,8 +150,9 @@ edición en curso.
   fuera del repositorio del proyecto; tocar algo fuera de la lista requiere aprobación nueva.
 - **Cierre**: todas las tareas acordadas terminadas y verificadas → checkpoint de cierre → fin.
 - **Pausa**: tope de tiempo con trabajo en curso; intentos agotados; decisión metodológica o de
-  negocio no aprobada; archivo fuera de los autorizados; holdout o dataset sellado; o hace falta
-  ejecutar algo que ningún agente puede correr en esta versión.
+  negocio no aprobada; archivo fuera de los autorizados; holdout o dataset sellado; o un STOP
+  material (catálogo de 12, `docs/roadmap/v0.8.md`/`tools/autonomy/core.py`, p. ej. dependencia
+  nueva, secreto requerido, acceso sellado) encontrado durante la ejecución.
 
 ## Exploración antes de editar
 

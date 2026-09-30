@@ -213,7 +213,15 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
    `guard_policy_version_max` del llamador, y `pathguard.cargar_config` rechaza (fail-closed) una
    `version` de `guardrails.json` no soportada. Nunca al revés: `dsguard`, `ds_profile`, `dsimpact`,
    `reporting`, `providers`, `routing`, `fallback`, `harmessi_bench`, `tools.datacontracts`,
-   `tools.modelquality` y `tools.qualityevidence` no importan `tools.autonomy`. Verificado por
+   `tools.modelquality` y `tools.qualityevidence` no importan `tools.autonomy`.
+
+   **Excepción documentada (v0.8 Change 3, `20260930-autonomous-sdd-and-remediation`):**
+   `tools/dsguard/sdd.py` importa `autonomy.core` (bare) para reutilizar `PreApprovedDecision`/
+   `validate_pre_approved` al implementar checkpoints de negocio (`decision_type=
+   "business_checkpoint"`, R3 de ese Change) -- el propio docstring de Change 0 en
+   `tools/autonomy/core.py` ya anticipaba este consumidor ("Este modulo NO consulta control.json ni
+   ningun archivo (eso es del Change 3)"). Es la única excepción a la regla anterior: ningún otro
+   archivo de `tools/dsguard` ni de ningún otro paquete listado la importa. Verificado por
    `tools/tests/test_v08_autonomy_neutrality.py`.
 11. Familia `tools/datasources` (v0.8 Change 1, `20260928-source-neutral-data-access`): `core.py`
    es solo-stdlib (`dataclasses`, `typing`, `re`, `json`, `hashlib`, `unicodedata`) y no importa
