@@ -181,7 +181,11 @@ class TestRedaccionStdout(_BaseRuntimeTest):
 
 
 class TestTimeout(_BaseRuntimeTest):
-    def test_timeout_produce_check_warn(self):
+    def test_timeout_produce_check_fail(self):
+        # FAIL, no WARN: un timeout es una ejecución incompleta/fallida: el
+        # exit code del proceso `ds_guard.py exec ...` debe ser != 0
+        # (`checks.exit_code` solo bloquea con FAIL), para que un caller que
+        # solo mire el exit code no lo confunda con éxito.
         self.mocks["scripts"].ejecutar_script.return_value = _crudo_ok(
             exit_code=scripts_real.EXIT_CODE_TIMEOUT, timed_out=True
         )
@@ -189,7 +193,7 @@ class TestTimeout(_BaseRuntimeTest):
         resultado = self._ejecutar()
 
         self.assertTrue(resultado["record"]["timed_out"])
-        self.assertEqual(resultado["checks"][0]["status"], "WARN")
+        self.assertEqual(resultado["checks"][0]["status"], "FAIL")
         self.assertEqual(resultado["checks"][0]["code"], core.CODE_TIMEOUT)
 
 

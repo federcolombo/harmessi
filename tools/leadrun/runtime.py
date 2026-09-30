@@ -28,7 +28,6 @@ pasar por la allowlist DESDE ESTE MÓDULO.
 from __future__ import annotations
 
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -204,7 +203,11 @@ def _ejecutar_forma_notebook(request: "leadrun_core.ExecutionRequest", repo_root
 # `datasources.runtime._persistir_observacion`
 # (`openspec/changes/20260928-source-neutral-data-access/spec.md` R23):
 # bytes idénticos a lo ya persistido -> no-op; bytes distintos con el mismo
-# `execution_id` -> error de colisión, SIN sobreescribir.
+# `execution_id` -> error de colisión, SIN sobreescribir. La escritura final
+# reutiliza `dsguard_core.escribir_texto_atomico` (tmp en el mismo directorio
+# + `os.replace`) -- R16 exige explícitamente "reutilizado por import, no
+# reimplementado"; la detección de colisión de arriba sí es propia de este
+# módulo (no existe en `dsguard.core`).
 # ---------------------------------------------------------------------------
 
 
@@ -227,16 +230,7 @@ def _persistir_registro(repo_root: Path, record: "leadrun_core.ExecutionRecord")
             kind=dsguard_checks.KIND_TECHNICAL_ERROR,
         )
 
-    tmp_path = dir_path / (file_path.name + ".tmp")
-    try:
-        tmp_path.write_bytes(payload_bytes)
-        os.replace(tmp_path, file_path)
-    finally:
-        if tmp_path.exists():
-            try:
-                tmp_path.unlink()
-            except OSError:
-                pass
+    dsguard_core.escribir_texto_atomico(file_path, payload)
     return None
 
 
@@ -368,8 +362,15 @@ def ejecutar(
         # definidos en `core.CODES`; estos son códigos de diagnóstico propios
         # de `runtime.py`, fuera de ese catálogo cerrado).
         if record.timed_out:
+            # FAIL, no WARN: un timeout es una ejecución incompleta/fallida
+            # (exit_code sentinel != 0, R10), no una advertencia blanda. Si
+            # fuera WARN (`checks.exit_code` solo bloquea con FAIL), el
+            # proceso `ds_guard.py exec ...` terminaría con exit code 0 --
+            # indistinguible de éxito para cualquier caller que solo mire el
+            # exit code del proceso, aunque `ExecutionRecord.timed_out=True`
+            # quede correctamente persistido como evidencia.
             resultado_check = dsguard_checks.CheckResult(
-                dsguard_checks.STATUS_WARN,
+                dsguard_checks.STATUS_FAIL,
                 leadrun_core.CODE_TIMEOUT,
                 f"la ejecución superó el timeout de {request.timeout_seconds}s",
             )
