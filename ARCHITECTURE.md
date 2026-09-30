@@ -397,6 +397,19 @@ está en vigor como la regla 12 de §3 (paquete `tools/leadrun`, filas en §2.1)
 global sobre el Bash del Lead sigue fuera de alcance (queda para v0.10, como ya aclaraba el párrafo
 original).
 
+**Enmienda 2026-09-30 (NO implementada -- planificación, no código).** `docs/roadmap/v0.8.md` agregó
+cuatro decisiones materiales nuevas (M7-M10, todas opt-in/backward-compatible) para Changes 3-5,
+sin reabrir Changes 0-2: `approval_mode: checkpoints` (M7, extiende el ciclo de aprobación de
+Change 3 sin crear una segunda arquitectura de approvals); project capabilities / instalación
+capability-aware (M8, extiende `tools/ds_init/manifest.py` y el modelo `Core → capabilities →
+assets provisionados`, dimensión distinta de `installation_stage`); fuentes externas file-backed de
+solo lectura (M9, extiende el registro de `tools/datasources` de Change 1 sin modificar
+`SourceObservation`/`SourceRef`, la ruta absoluta nunca entra a un artefacto portable); layering de
+configuración `managed defaults → project config → local overrides → effective config` (M10,
+`permiso efectivo = policy humana ∩ project config ∩ local override`, fail-closed, mismo principio
+ya en vigor para M2). Ninguna de las cuatro está implementada todavía; cuando se implementen, el
+inventario pasa a §2 y las reglas a §3, mismo patrón que Change 1/Change 2 arriba.
+
 **Vocabulario.** "Adapter" ya tiene dos acepciones en este documento (§2.2: hooks de Claude Code;
 `tools/providers`: proveedores de IA). El adapter de fuente sería una tercera; "provider" no debe
 usarse para fuentes de datos porque ya lo ocupa `tools/providers`.
