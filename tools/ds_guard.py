@@ -323,6 +323,23 @@ def cmd_approve(args: argparse.Namespace) -> int:
             print(f"El artefacto no existe: {artefacto}", file=sys.stderr)
             return 2
 
+    # Checkpoints de negocio (T5, R3-R6 de 20260930-autonomous-sdd-and-remediation):
+    # si se aprueba `proposal.md` y el Change declara `approval_mode:
+    # checkpoints`, se parsea su sección `## Checkpoints de negocio` y se
+    # persiste en `control["decisiones_preaprobadas"]` -- reemplaza el
+    # contenido anterior (refleja el `proposal.md` que se está aprobando
+    # ahora, no se acumula entre re-aprobaciones). Fail-closed (R3, "nunca un
+    # checkpoint fantasma"): si hay algún bullet inválido, se rechaza la
+    # aprobación de `proposal.md` completa (exit 2, no se escribe nada) en vez
+    # de aceptar una lista de checkpoints parcialmente inválida.
+    if "proposal.md" in args.artefacto and sdd.resolver_approval_mode(control) == "checkpoints":
+        texto_proposal = (change_dir / "proposal.md").read_text(encoding="utf-8")
+        checkpoints, hallazgos_checkpoints = sdd.parsear_checkpoints_de_propuesta(texto_proposal)
+        if hallazgos_checkpoints:
+            print(core.formatear_findings_texto(hallazgos_checkpoints), file=sys.stderr)
+            return 2
+        control["decisiones_preaprobadas"] = checkpoints
+
     entradas = []
     for artefacto in args.artefacto:
         ruta = change_dir / artefacto
@@ -408,6 +425,110 @@ def cmd_transition(args: argparse.Namespace) -> int:
     return 1 if kdd_sync_error is not None else 0
 
 
+# --- autonomy budgets (v0.8 Change 3: 20260930-autonomous-sdd-and-remediation) -
+#
+# `autonomy.budgets` en `.claude/guardrails.json` (R8-R9 de spec.md, D5 de
+# design.md): extensión aditiva de la policy de Change 0, validada acá (no en
+# `tools/autonomy/policy.py`, que ignora claves desconocidas por diseño) --
+# mismo patrón de composición que `_resolver_aprobacion_exec` (Change 2).
+
+_BUDGET_DEFAULTS = {
+    "session_minutes": 90,
+    "aggregate_minutes": None,
+    "max_sessions": None,
+    "max_concurrent_subagents": None,
+    "remediation_max_intentos_default": 2,
+}
+
+
+class BudgetsInvalidosError(Exception):
+    """`autonomy.budgets` declara un valor presente pero inválido (R9:
+    fail-closed -- no-entero, negativo o cero). Lleva los `core.Finding` con
+    código `AUTONOMY-POLICY-LIMITS` para que el llamador (CLI) los traduzca a
+    exit 2, mismo patrón que `sdd.RemediacionLimiteError`."""
+
+    def __init__(self, findings: list):
+        self.findings = findings
+        super().__init__("; ".join(f.mensaje for f in findings))
+
+
+def _resolver_budgets(repo_root: Path) -> dict:
+    """Lee `.claude/guardrails.json` -> `autonomy.budgets` y devuelve un dict
+    con las 5 claves de policy SIEMPRE presentes: `session_minutes`,
+    `aggregate_minutes`, `max_sessions`, `max_concurrent_subagents`,
+    `remediation_max_intentos_default` (R8 de spec.md). Ausencia del archivo,
+    de la clave `autonomy`/`autonomy.budgets`, o de una clave individual
+    dentro de ese dict -> el literal hardcodeado de hoy (`_BUDGET_DEFAULTS`),
+    cero cambio de comportamiento sin declarar la clave.
+
+    Fail-closed (R9): un valor PRESENTE pero inválido (no-entero -- bool
+    excluido --, negativo o cero) para cualquiera de las 5 claves levanta
+    `BudgetsInvalidosError` con el código `AUTONOMY-POLICY-LIMITS`
+    (`tools.autonomy.core.CODE_POLICY_LIMITS`, ya reservado por Change 0 para
+    justamente esto: límites de policy mal formados) -- nunca se trata como
+    ausente ni se degrada en silencio al default.
+
+    Reusa `pathguard.cargar_config` para el mismo fail-closed que ya aplica
+    `_resolver_aprobacion_exec` ante un `guardrails.json` corrupto o con
+    `version` no soportada (acá, ante ese caso, se degrada a los defaults de
+    budgets sin lanzar -- el resto del CLI ya reporta ese error de
+    `guardrails.json` por su cuenta cuando corresponde; esta función nunca
+    bloquea nada por sí sola salvo el caso puntual de R9). `autonomy.budgets`
+    no es una clave que `ConfigGuardrails`/`cargar_config` conozcan, así que
+    el JSON crudo se relee aparte para llegar a ella -- mismo patrón que
+    `_resolver_aprobacion_exec` ya usa para llegar a `autonomy`."""
+    resultado = dict(_BUDGET_DEFAULTS)
+
+    pathguard_mod = _importar_perezoso("dsguard", "pathguard")
+    if pathguard_mod is None:
+        return resultado
+
+    ruta_config = Path(repo_root) / pathguard_mod.RUTA_CONFIG_RELATIVA
+    if not ruta_config.exists():
+        return resultado
+
+    try:
+        pathguard_mod.cargar_config(repo_root)
+    except pathguard_mod.ConfigGuardrailsError:
+        return resultado
+
+    try:
+        guardrails_dict = json.loads(ruta_config.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return resultado
+    if not isinstance(guardrails_dict, dict):
+        return resultado
+
+    autonomy_dict = guardrails_dict.get("autonomy")
+    if not isinstance(autonomy_dict, dict):
+        return resultado
+    budgets_dict = autonomy_dict.get("budgets")
+    if not isinstance(budgets_dict, dict):
+        return resultado
+
+    hallazgos: list = []
+    codigo = sdd.autonomy_core.CODE_POLICY_LIMITS
+    for clave in _BUDGET_DEFAULTS:
+        if clave not in budgets_dict:
+            continue
+        valor = budgets_dict[clave]
+        if isinstance(valor, bool) or not isinstance(valor, int) or valor <= 0:
+            hallazgos.append(
+                core.Finding(
+                    codigo,
+                    f"autonomy.budgets.{clave} = {valor!r} inválido: debe ser un entero positivo",
+                    str(ruta_config),
+                )
+            )
+            continue
+        resultado[clave] = valor
+
+    if hallazgos:
+        raise BudgetsInvalidosError(hallazgos)
+
+    return resultado
+
+
 # --- session ----------------------------------------------------------------
 
 def cmd_session_start(args: argparse.Namespace) -> int:
@@ -419,10 +540,21 @@ def cmd_session_start(args: argparse.Namespace) -> int:
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     try:
+        budgets = _resolver_budgets(repo_root)
+    except BudgetsInvalidosError as e:
+        print(core.formatear_findings_texto(e.findings), file=sys.stderr)
+        return 2
+
+    # `--minutos` explícito del llamador manda siempre, sin consultar policy
+    # (R8 de spec.md); solo si el flag no se pasó (`None`, ver default de
+    # argparse) se resuelve desde `autonomy.budgets.session_minutes`.
+    minutos = args.minutos if args.minutos is not None else budgets["session_minutes"]
+
+    try:
         entrada = sdd.session_start(
             control,
             modo=args.modo,
-            minutos=args.minutos,
+            minutos=minutos,
             max_tareas=args.max_tareas,
             max_roles=args.max_roles,
             max_reintentos=args.max_reintentos,
@@ -453,6 +585,12 @@ def cmd_session_note(args: argparse.Namespace) -> int:
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     try:
+        budgets = _resolver_budgets(repo_root)
+    except BudgetsInvalidosError as e:
+        print(core.formatear_findings_texto(e.findings), file=sys.stderr)
+        return 2
+
+    try:
         sdd.session_note(
             control,
             args.rol,
@@ -463,6 +601,9 @@ def cmd_session_note(args: argparse.Namespace) -> int:
             causa=args.causa,
             cambio_aplicado=args.cambio_aplicado,
             resultado=args.resultado,
+            # R20 de spec.md: default de policy, no el literal `2` hardcodeado
+            # en la firma de `sdd.remediation_note`.
+            max_intentos_remediacion=budgets["remediation_max_intentos_default"],
         )
     except (sdd.SesionAusenteError, ValueError) as e:
         print(str(e), file=sys.stderr)
@@ -528,6 +669,55 @@ def cmd_session_close(args: argparse.Namespace) -> int:
     elif estado_final == "pausada":
         print("⏸️ SESIÓN PAUSADA")
     print("Sesión cerrada.")
+    return 0
+
+
+def cmd_session_aggregate(args: argparse.Namespace) -> int:
+    """`session aggregate` (T5, v0.8 Change 3): expone `sdd.presupuesto_
+    agregado(control)` + `sdd.chequear_limite_agregado(control, ...)` contra
+    los topes agregados configurados (`autonomy.budgets.aggregate_minutes`/
+    `max_sessions`, R8-R12 de spec.md). Puramente informativo, exit code 0
+    siempre que no haya un error de uso/entorno -- mismo criterio que `session
+    status`: agotar un límite agregado nunca bloquea esta consulta, solo se
+    reporta (R11: checkpoint resumible, nunca STOP ni aprobación automática)."""
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+
+    try:
+        budgets = _resolver_budgets(repo_root)
+    except BudgetsInvalidosError as e:
+        print(core.formatear_findings_texto(e.findings), file=sys.stderr)
+        return 2
+
+    agregado = sdd.presupuesto_agregado(control)
+    config_agregado = {
+        "aggregate_minutes": budgets["aggregate_minutes"],
+        "max_sessions": budgets["max_sessions"],
+    }
+    findings = sdd.chequear_limite_agregado(control, config_agregado)
+
+    if args.json:
+        payload = dict(agregado)
+        payload["limites_configurados"] = config_agregado
+        payload["findings"] = [f.to_dict() for f in findings]
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(
+            f"Sesiones totales: {agregado['sesiones_totales']} "
+            f"(abiertas: {agregado['sesiones_abiertas']}) — "
+            f"minutos consumidos: {agregado['minutos_consumidos_totales']:.1f}"
+        )
+        if config_agregado["aggregate_minutes"] is not None or config_agregado["max_sessions"] is not None:
+            print(
+                f"Límites configurados: aggregate_minutes={config_agregado['aggregate_minutes']} "
+                f"max_sessions={config_agregado['max_sessions']}"
+            )
+        for f in findings:
+            print(f"  [{f.codigo}] {f.mensaje}")
     return 0
 
 
@@ -2515,10 +2705,16 @@ def cmd_init(args: argparse.Namespace) -> int:
     ]
     rutas_autorizadas.append(f"openspec/changes/{args.change_id}/control.json")
 
+    # `aprobacion_modo` (R1/D1 de 20260930-autonomous-sdd-and-remediation):
+    # ausente el flag -> `per_change` (default, idéntico al comportamiento de
+    # hoy para cualquier Change que no lo declare explícitamente).
+    aprobacion_modo = args.approval_mode if args.approval_mode is not None else sdd.APPROVAL_MODE_DEFAULT
+
     control = {
         "schema_version": 1,
         "change_id": args.change_id,
         "modo": args.modo,
+        "aprobacion_modo": aprobacion_modo,
         "origen": "ds_guard init",
         "creado_utc": core.ahora_utc(),
         "baseline": baseline,
@@ -2561,6 +2757,18 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     p_init.add_argument("--change-id", required=True)
     p_init.add_argument("--modo", required=True, choices=["completo", "abreviado"])
+    p_init.add_argument(
+        "--approval-mode",
+        choices=list(sdd.APPROVAL_MODES),
+        default=None,
+        dest="approval_mode",
+        help=(
+            "Modo de aprobación del Change (R1/D1 de "
+            "20260930-autonomous-sdd-and-remediation): 'per_change' (default, "
+            "backward-compatible) o 'checkpoints' (opt-in, M7). Ausente -> "
+            "'per_change', comportamiento idéntico a hoy."
+        ),
+    )
     p_init.add_argument("--json", action="store_true")
     p_init.set_defaults(func=cmd_init)
 
@@ -2608,7 +2816,12 @@ def construir_parser() -> argparse.ArgumentParser:
     p_session_start = session_sub.add_parser("start")
     p_session_start.add_argument("--change-id", required=True)
     p_session_start.add_argument("--modo", default="estandar")
-    p_session_start.add_argument("--minutos", type=int, default=90)
+    # Default `None` (v0.8 Change 3, R8 de spec.md): si el llamador no pasa
+    # `--minutos` explícito, `cmd_session_start` resuelve el valor desde
+    # `autonomy.budgets.session_minutes` (o `90` si esa policy no está
+    # declarada) -- ver `_resolver_budgets`. Un `--minutos` explícito manda
+    # siempre, sin consultar policy.
+    p_session_start.add_argument("--minutos", type=int, default=None)
     p_session_start.add_argument("--max-tareas", type=int, default=3)
     p_session_start.add_argument("--max-roles", type=int, default=2)
     p_session_start.add_argument("--max-reintentos", type=int, default=2)
@@ -2641,6 +2854,21 @@ def construir_parser() -> argparse.ArgumentParser:
     p_session_close.add_argument("--change-id", required=True)
     p_session_close.add_argument("--estado", required=True, choices=["completada", "pausada"])
     p_session_close.set_defaults(func=cmd_session_close)
+
+    p_session_aggregate = session_sub.add_parser(
+        "aggregate",
+        help=(
+            "Presupuesto agregado entre sesiones del Change (R10-R12 de "
+            "20260930-autonomous-sdd-and-remediation): minutos consumidos "
+            "totales, cantidad de sesiones, y si algún tope agregado "
+            "configurado (autonomy.budgets.aggregate_minutes/max_sessions) ya "
+            "se alcanzó o superó. Informativo, nunca bloqueante (mismo "
+            "criterio que 'session status')."
+        ),
+    )
+    p_session_aggregate.add_argument("--change-id", required=True)
+    p_session_aggregate.add_argument("--json", action="store_true")
+    p_session_aggregate.set_defaults(func=cmd_session_aggregate)
 
     p_notebook_diff = subparsers.add_parser(
         "notebook-diff", help="Diff por celdas de uno o más .ipynb contra una revisión de git. Nunca ejecuta."

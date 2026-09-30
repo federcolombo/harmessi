@@ -13,6 +13,15 @@ from . import repo as repo_mod
 from . import scope
 from .core import Finding, ahora_utc, escribir_control, hash_lf_v1, minutos_restantes, parsear_utc
 
+# `tools/` ya está en `sys.path` en todo contexto real donde `dsguard.sdd` se
+# importa (CLI: `ds_guard.py:23`; tests: `sys.path.insert(0, tools/)` antes de
+# `from dsguard import sdd`) -- mismo patrón que `tools/leadrun/runtime.py`
+# usa para `from dsguard import checks as dsguard_checks`, aplicado acá para
+# el paquete hermano `autonomy` (v0.8 Change 3, `20260930-autonomous-sdd-and-
+# remediation`). Sin tocar `tools/autonomy/core.py` (Change 0, cerrado): solo
+# se consumen sus constantes/funciones ya existentes.
+from autonomy import core as autonomy_core
+
 # --- Estados y transiciones ----------------------------------------------------
 
 ESTADOS_VALIDOS = {
@@ -675,7 +684,11 @@ def session_start(
         "deadline_utc": deadline_dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "minutos_consumidos": 0.0,
         "resultado": None,
-        "subagentes": {},
+        # v0.8 Change 3 (R13-R14 de spec.md, D6 de design.md): contador
+        # autorreportado por el Lead, sin enforcement técnico real -- un Lead
+        # que omite el autorreporte no es detectado por este mecanismo. Ver
+        # `session_note(tipo="subagente", ...)` y `limite_subagentes_alcanzado`.
+        "subagentes": {"conteo": 0},
         "tareas": [],
         "roles": [],
         "reintentos": 0,
@@ -697,13 +710,39 @@ def session_note(
     cambio_aplicado: Optional[str] = None,
     resultado: Optional[str] = None,
     max_intentos_remediacion: int = 2,
+    evento: Optional[str] = None,
 ) -> dict:
-    if tipo not in ("planificada", "reintento", "ronda"):
+    """Ver también `tipo == "subagente"` (v0.8 Change 3, R13-R14 de `spec.md`,
+    D6 de `design.md`): autorreportado por el Lead, sin enforcement técnico
+    real -- un Lead que omite el autorreporte no es detectado por este
+    mecanismo. `evento` (`"abrir"|"cerrar"`) solo aplica cuando
+    `tipo == "subagente"`; se agrega al final de la firma, con default `None`,
+    para no romper ningún llamador existente que no lo pase."""
+    if tipo not in ("planificada", "reintento", "ronda", "subagente"):
         raise ValueError(f"tipo de nota inválido: {tipo!r}")
     activa = _sesion_activa(control)
     if activa is None:
         raise SesionAusenteError("No hay sesión activa: 'session note' requiere una sesión abierta")
-    if tipo == "reintento":
+    if tipo == "subagente":
+        if evento not in ("abrir", "cerrar"):
+            raise ValueError(f"evento de nota de subagente inválido: {evento!r}")
+        subagentes = activa.get("subagentes")
+        if not isinstance(subagentes, dict):
+            # Formato viejo (`{}` sin usar, o ausente) -- se re-arranca en la
+            # forma nueva sin pisar un valor real si ya lo hubiera.
+            subagentes = {"conteo": 0}
+        conteo = subagentes.get("conteo", 0)
+        if evento == "abrir":
+            subagentes["conteo"] = conteo + 1
+        else:
+            if conteo <= 0:
+                raise ValueError(
+                    "No hay subagentes abiertos registrados: 'cerrar' sin una "
+                    "apertura previa no se admite (no baja de 0)"
+                )
+            subagentes["conteo"] = conteo - 1
+        activa["subagentes"] = subagentes
+    elif tipo == "reintento":
         if remediation_tipo is not None:
             # Bounded remediation (R11-R18): si `remediation_note` rehúsa
             # (ventana agotada, tipo inválido, etc.), no se toca nada -- ni la
@@ -820,6 +859,7 @@ def session_status(control: dict) -> dict:
         "roles": activa.get("roles"),
         "reintentos": activa.get("reintentos"),
         "rondas_revision": activa.get("rondas_revision"),
+        "subagentes": (activa.get("subagentes") or {}).get("conteo", 0),
         "findings": [f.to_dict() for f in findings],
     }
 
@@ -845,3 +885,244 @@ def session_close(control: dict, estado_final: str) -> dict:
     restantes = minutos_restantes(activa)
     activa["resultado"] = "dentro_de_presupuesto" if restantes >= 0 else "excedida"
     return activa
+
+
+# --- Autonomía v0.8 Change 3 (`20260930-autonomous-sdd-and-remediation`) ------
+#
+# `approval_mode` (control["aprobacion_modo"]), checkpoints de negocio
+# (control["decisiones_preaprobadas"]) y presupuesto agregado entre sesiones.
+# Compone `tools.autonomy.core` (Change 0, cerrado) sin tocarlo: solo se leen
+# sus constantes/funciones de validación ya existentes (`validate_pre_approved`,
+# `CODE_PREAPPROVED_INVALID`, `CODE_LIMIT_AGGREGATE_BUDGET`). Ver D1-D2/D4 de
+# `openspec/changes/20260930-autonomous-sdd-and-remediation/design.md`.
+
+APPROVAL_MODES = ("per_change", "checkpoints")
+APPROVAL_MODE_DEFAULT = "per_change"
+
+
+def resolver_approval_mode(control: dict) -> str:
+    """`control["aprobacion_modo"]` -> `"per_change"` | `"checkpoints"` (R1 de
+    `spec.md`). Ausente, `None` o cualquier valor que no sea exactamente
+    `"checkpoints"` resuelve `"per_change"` -- el default de hoy, sin excepción
+    ni error: esta función solo *lee*, nunca valida/rechaza un valor mal
+    formado (eso, si hace falta, es responsabilidad de un gate aparte, fuera
+    de esta invocación)."""
+    valor = control.get("aprobacion_modo")
+    if valor == "checkpoints":
+        return "checkpoints"
+    return APPROVAL_MODE_DEFAULT
+
+
+_RE_CHECKPOINT_BULLET = re.compile(
+    r"^-\s+\*\*(?P<id>[^*]+)\*\*:\s*(?P<resumen>.+?)\s*—\s*alcance:\s*(?P<alcance>.+?)"
+    r"\s*—\s*aprobacion:\s*(?P<change_id>[0-9]{8}-[a-z0-9][a-z0-9-]*)/proposal\.md@"
+    r"(?P<hash>[0-9a-f]{64})\s*$"
+)
+
+
+def parsear_checkpoints_de_propuesta(texto: str) -> tuple:
+    """Checkpoints de negocio (`## Checkpoints de negocio` de `proposal.md`,
+    condicional a `approval_mode: checkpoints`, R3-R4 de `spec.md`; D2 de
+    `design.md`) -> `(checkpoints_validos, hallazgos)`.
+
+    `checkpoints_validos` es una `list[dict]`, cada elemento con la forma
+    EXACTA de `PreApprovedDecision.to_dict()` (`approval_ref`, `decision_type`,
+    `scope`, `summary`) y `decision_type == "business_checkpoint"`, ya
+    validado sin hallazgos por `tools.autonomy.core.validate_pre_approved`
+    (sin tocar esa función). `hallazgos` es `list[Finding]` (este módulo, no
+    `PolicyFinding`) -- uno por cada bullet que no parseó o que parseó pero no
+    validó; nunca se agrega el checkpoint correspondiente a
+    `checkpoints_validos` en esos casos (sin checkpoint fantasma, ver riesgo
+    de `design.md`).
+
+    Se devuelve una tupla en vez de solo la lista (decisión de implementación
+    de esta invocación, T1): un checkpoint mal formado no debe desaparecer en
+    silencio -- el llamador (CLI, fuera de esta invocación) decide qué hacer
+    con `hallazgos` (típicamente: rechazar la aprobación de la propuesta).
+
+    Formato de bullet (uno por línea, definido por esta invocación -- D2 de
+    `design.md` deja el formato exacto a criterio del implementador; se
+    necesitan los 3 campos de `ApprovalRef` -- `artefacto`, `change_id`,
+    `hash` -- para que `validate_pre_approved` no rechace por
+    `approval_ref` incompleta, por eso el bullet lleva `change_id` y `hash`
+    explícitos, no solo `hash` como en el ejemplo ilustrativo del encargo):
+
+        - **<id>**: <resumen> — alcance: <ruta1>, <ruta2> — aprobacion:
+          <change_id>/proposal.md@<hash-sha256>
+
+    Ejemplo real (hash de relleno de 64 hex, no uno real de este repo):
+
+        - **budget-sprint3**: Aprobar el tope de presupuesto agregado del
+          sprint 3 — alcance: tools/dsguard/sdd.py, tools/tests/test_lifecycle.py
+          — aprobacion: 20260930-autonomous-sdd-and-remediation/proposal.md@
+          0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
+
+    `id` no es una clave aparte de `PreApprovedDecision` (no existe en
+    `to_dict()`): se embebe como prefijo de `summary` (`"<id>: <resumen>"`),
+    sin inventar un campo nuevo fuera del vocabulario ya validado por
+    `validate_pre_approved`. `artefacto` es siempre el literal `"proposal.md"`
+    (nunca se lee del bullet: `validate_pre_approved`/`_scope_item_detail` ya
+    lo exige así, R3 de `spec.md`).
+    """
+    seccion = _contenido_de_seccion(texto, "## Checkpoints de negocio")
+    checkpoints_validos: list = []
+    hallazgos: list = []
+    if not seccion:
+        return checkpoints_validos, hallazgos
+
+    ubicacion = "proposal.md#Checkpoints de negocio"
+    for linea in seccion.splitlines():
+        linea = linea.strip()
+        if not linea or not linea.startswith("-"):
+            continue
+        m = _RE_CHECKPOINT_BULLET.match(linea)
+        if not m:
+            hallazgos.append(
+                Finding(
+                    autonomy_core.CODE_PREAPPROVED_INVALID,
+                    f"Bullet de checkpoint con formato ambiguo/incompleto: {linea!r}",
+                    ubicacion,
+                )
+            )
+            continue
+
+        alcance = [item.strip() for item in m.group("alcance").split(",") if item.strip()]
+        candidato = {
+            "approval_ref": {
+                "artefacto": "proposal.md",
+                "change_id": m.group("change_id"),
+                "hash": m.group("hash"),
+            },
+            "decision_type": "business_checkpoint",
+            "scope": alcance,
+            "summary": f"{m.group('id').strip()}: {m.group('resumen').strip()}",
+        }
+        hallazgos_validacion = autonomy_core.validate_pre_approved(
+            candidato, known_types=("business_checkpoint",)
+        )
+        if hallazgos_validacion:
+            for h in hallazgos_validacion:
+                hallazgos.append(
+                    Finding(
+                        h.code,
+                        f"Checkpoint inválido en '{h.path}': {h.detail_key}",
+                        ubicacion,
+                    )
+                )
+            continue
+
+        checkpoints_validos.append(candidato)
+
+    return checkpoints_validos, hallazgos
+
+
+def presupuesto_agregado(control: dict) -> dict:
+    """Vista derivada pura (sin I/O, sin escritura) sobre `control["sesiones"]`
+    (R10, R12, R12a de `spec.md`; D4 de `design.md`) --
+
+        {"minutos_consumidos_totales": float, "sesiones_totales": int,
+         "sesiones_abiertas": int}
+
+    Para una sesión cerrada, usa su `minutos_consumidos` ya persistido (igual
+    que `session_close` lo dejó). Para la sesión activa (`estado_final ==
+    "activa"`, a lo sumo una, `_sesion_activa`), calcula sus minutos
+    consumidos hasta el momento con la MISMA lógica que ya usa
+    `session_status` (`inicio_utc` vía `parsear_utc`, contra el momento
+    actual vía `parsear_utc(ahora_utc())`) -- no se duplica con una copia
+    ligeramente distinta.
+
+    `sesiones_totales = len(control.get("sesiones", []))`: ya satisface R12a
+    (reapertura tras `pausada_bloqueada` consume una nueva unidad de
+    `max_sessions`) sin ingeniería adicional -- decisión congelada de D4 de
+    `design.md`, ver ahí el razonamiento completo. Esta función no llama a
+    `session_start` ni lo modifica: una consulta nunca infla el conteo.
+    """
+    sesiones = control.get("sesiones", [])
+    minutos_totales = 0.0
+    sesiones_abiertas = 0
+    ahora = parsear_utc(ahora_utc())
+
+    for sesion in sesiones:
+        if sesion.get("estado_final") == "activa":
+            sesiones_abiertas += 1
+            inicio = parsear_utc(sesion["inicio_utc"])
+            minutos_totales += (ahora - inicio).total_seconds() / 60.0
+        else:
+            minutos_totales += sesion.get("minutos_consumidos", 0.0) or 0.0
+
+    return {
+        "minutos_consumidos_totales": minutos_totales,
+        "sesiones_totales": len(sesiones),
+        "sesiones_abiertas": sesiones_abiertas,
+    }
+
+
+def chequear_limite_agregado(control: dict, config_budgets: Optional[dict]) -> list:
+    """Compara `presupuesto_agregado(control)` contra `config_budgets`
+    (`{"aggregate_minutes": ..., "max_sessions": ...}`, ambas claves
+    opcionales -- ausente = sin límite en ese eje; `config_budgets` puede ser
+    `None`, equivalente a `{}`) y devuelve una lista de `Finding` con código
+    `AUTONOMY-LIMIT-AGGREGATE-BUDGET` (`tools.autonomy.core.
+    CODE_LIMIT_AGGREGATE_BUDGET`, ya reservado por Change 0, reutilizado tal
+    cual -- ningún código nuevo) cuando el consumo agregado ya alcanzó o
+    superó el límite configurado en cualquiera de los dos ejes (tiempo,
+    cantidad de sesiones).
+
+    Agotar este límite produce `checkpoint_resumable`, NUNCA STOP ni
+    aprobación automática (R11 de `spec.md`, cita textual). Esta función es
+    puramente informativa: no lanza excepción, no escribe nada en `control`,
+    no impide `session_start` ni ningún otro llamado -- decidir qué hacer con
+    el `Finding` devuelto (p. ej. negarse a abrir una sesión nueva) es
+    responsabilidad exclusiva del llamador (CLI, fuera de esta invocación).
+    Su firma no tiene ningún parámetro de "usuario"/"aprobado_por": no puede
+    pedir aprobación humana, ni implícita ni explícitamente.
+    """
+    findings: list = []
+    agregado = presupuesto_agregado(control)
+    config_budgets = config_budgets or {}
+
+    limite_minutos = config_budgets.get("aggregate_minutes")
+    if limite_minutos is not None and agregado["minutos_consumidos_totales"] >= limite_minutos:
+        findings.append(
+            Finding(
+                autonomy_core.CODE_LIMIT_AGGREGATE_BUDGET,
+                f"Presupuesto agregado de tiempo alcanzado/excedido: "
+                f"{agregado['minutos_consumidos_totales']:.1f} min >= {limite_minutos} min",
+            )
+        )
+
+    limite_sesiones = config_budgets.get("max_sessions")
+    if limite_sesiones is not None and agregado["sesiones_totales"] >= limite_sesiones:
+        findings.append(
+            Finding(
+                autonomy_core.CODE_LIMIT_AGGREGATE_BUDGET,
+                f"Cantidad de sesiones ({agregado['sesiones_totales']}) alcanzó/superó "
+                f"el máximo agregado configurado ({limite_sesiones})",
+            )
+        )
+
+    return findings
+
+
+def limite_subagentes_alcanzado(control: dict, max_concurrentes: Optional[int]) -> bool:
+    """`True` si el conteo autorreportado de subagentes concurrentes
+    (`activa["subagentes"]["conteo"]`, poblado por `session_note(
+    tipo="subagente", evento="abrir"|"cerrar")`) ya alcanzó o superó
+    `max_concurrentes` (v0.8 Change 3, R13-R14 de `spec.md`, D6 de
+    `design.md`). Autorreportado por el Lead, sin enforcement técnico real --
+    un Lead que omite el autorreporte no es detectado por este mecanismo:
+    esta función es solo la consulta que un llamador (CLI/Lead, fuera de esta
+    invocación) haría ANTES de invocar el tool `Agent`; no bloquea nada por
+    sí sola, no escribe nada en `control`.
+
+    `False` sin sesión activa, o si `max_concurrentes is None` (sin límite
+    configurado) -- en cualquier otro caso ("hay sesión activa" Y "hay límite
+    configurado"), `True` solo si el conteo ya llegó al máximo.
+    """
+    if max_concurrentes is None:
+        return False
+    activa = _sesion_activa(control)
+    if activa is None:
+        return False
+    conteo = (activa.get("subagentes") or {}).get("conteo", 0)
+    return conteo >= max_concurrentes
