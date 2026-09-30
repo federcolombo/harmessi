@@ -1,5 +1,5 @@
 ---
-estado: aprobada_implementacion
+estado: cerrada
 ---
 
 # Tareas — 20260930-autonomous-sdd-and-remediation

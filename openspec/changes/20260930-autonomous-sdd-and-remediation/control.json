@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "change_id": "20260930-autonomous-sdd-and-remediation",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-30T14:14:00Z",
+  "baseline": {
+    "commit": "80c2a93a3081c1129f4c4c75eb3984e05df7751c",
+    "rama": "v0.8-dev",
+    "capturado_utc": "2026-09-30T14:14:00Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/SKILL.md",
+      ".claude/skills/lead-data-scientist/sdd.md",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.8.md",
+      "openspec/changes/20260930-autonomous-sdd-and-remediation/control.json",
+      "openspec/changes/20260930-autonomous-sdd-and-remediation/design.md",
+      "openspec/changes/20260930-autonomous-sdd-and-remediation/proposal.md",
+      "openspec/changes/20260930-autonomous-sdd-and-remediation/spec.md",
+      "openspec/changes/20260930-autonomous-sdd-and-remediation/tasks.md",
+      "openspec/changes/20260930-autonomous-sdd-and-remediation/verification.md",
+      "tools/ds_guard.py",
+      "tools/ds_init/profiles/python_jupyter_data/templates/SKILL_lead_data_scientist.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/sdd.md.tmpl",
+      "tools/dsguard/sdd.py",
+      "tools/tests/test_autonomy_sdd.py",
+      "tools/tests/test_ds_guard_budgets_cli.py",
+      "tools/tests/test_v08_autonomy_neutrality.py",
+      "tools/tests/test_v08_change3_neutrality.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "842224584645b86590dda22cd7bf6a11d009db9b10f8afb6bdd072a521810f82",
+      "registrado_utc": "2026-09-30T14:26:45Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-30",
+      "alcance_aprobado": "Change 3 - autonomous-sdd-and-remediation (docs/roadmap/v0.8.md, M7)",
+      "cita": "Apruebo explicitamente proposal.md, spec.md y design.md del Change 3 autonomous-sdd-and-remediation. El SDD esta alineado con el roadmap enmendado. Fija ademas la decision de R12a (reapertura tras pausada_bloqueada consume una nueva unidad de max_sessions) y confirma explicitamente el resto del SDD (per_change/checkpoints, PreApprovedDecision, continue_preapproved_decision, los 12 STOP inmutables, los 5 budgets configurables, LIMIT vs approval gate, concurrencia best-effort documentada honestamente, reuso de remediation, sin estados SDD paralelos, backward compatibility). Autoriza continuar autonomamente con la implementacion completa de Change 3, maximo 2 ciclos writer-reviewer, sin volver a pedir aprobacion por decisiones ya cubiertas por este SDD; STOP solo ante contradiccion material nueva, dependencia nueva, backward compatibility rota, expansion sustancial de scope, bypass/excepcion, reviewer que refuta el enfoque, o remediation agotada."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f1338055555bedc076e3e2667e054130f1219d8b9584535e133b191ae354cbd3",
+      "registrado_utc": "2026-09-30T14:26:46Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-30",
+      "alcance_aprobado": "Change 3 - autonomous-sdd-and-remediation (docs/roadmap/v0.8.md, M7)",
+      "cita": "Apruebo explicitamente proposal.md, spec.md y design.md del Change 3 autonomous-sdd-and-remediation. El SDD esta alineado con el roadmap enmendado. Fija ademas la decision de R12a (reapertura tras pausada_bloqueada consume una nueva unidad de max_sessions) y confirma explicitamente el resto del SDD (per_change/checkpoints, PreApprovedDecision, continue_preapproved_decision, los 12 STOP inmutables, los 5 budgets configurables, LIMIT vs approval gate, concurrencia best-effort documentada honestamente, reuso de remediation, sin estados SDD paralelos, backward compatibility). Autoriza continuar autonomamente con la implementacion completa de Change 3, maximo 2 ciclos writer-reviewer, sin volver a pedir aprobacion por decisiones ya cubiertas por este SDD; STOP solo ante contradiccion material nueva, dependencia nueva, backward compatibility rota, expansion sustancial de scope, bypass/excepcion, reviewer que refuta el enfoque, o remediation agotada."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ac8205c4b0a2f2ac707e188103e7929fefd11d1dd1271a6238dc268b8836ab27",
+      "registrado_utc": "2026-09-30T14:26:47Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-30",
+      "alcance_aprobado": "Change 3 - autonomous-sdd-and-remediation (docs/roadmap/v0.8.md, M7)",
+      "cita": "Apruebo explicitamente proposal.md, spec.md y design.md del Change 3 autonomous-sdd-and-remediation. El SDD esta alineado con el roadmap enmendado. Fija ademas la decision de R12a (reapertura tras pausada_bloqueada consume una nueva unidad de max_sessions) y confirma explicitamente el resto del SDD (per_change/checkpoints, PreApprovedDecision, continue_preapproved_decision, los 12 STOP inmutables, los 5 budgets configurables, LIMIT vs approval gate, concurrencia best-effort documentada honestamente, reuso de remediation, sin estados SDD paralelos, backward compatibility). Autoriza continuar autonomamente con la implementacion completa de Change 3, maximo 2 ciclos writer-reviewer, sin volver a pedir aprobacion por decisiones ya cubiertas por este SDD; STOP solo ante contradiccion material nueva, dependencia nueva, backward compatibility rota, expansion sustancial de scope, bypass/excepcion, reviewer que refuta el enfoque, o remediation agotada."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-30T14:26:57Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-30T16:03:25Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-30T16:03:26Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-30T16:03:41Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-30T16:03:09Z",
+      "cierre_utc": "2026-09-30T16:03:48Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 60,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-30T17:03:09Z",
+      "minutos_consumidos": 0.65,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}
