@@ -475,5 +475,153 @@ class TestApprovePerChangeNoParseaCheckpoints(_BaseRepoGit):
         self.assertNotIn("decisiones_preaprobadas", control)
 
 
+def _aprobar_proposal_generico(repo: Path, change_id: str = _CHANGE_ID) -> subprocess.CompletedProcess:
+    return _correr_ds_guard(
+        [
+            "approve",
+            "--change-id", change_id,
+            "--artefacto", "proposal.md",
+            "--usuario", "Test",
+            "--fecha", "2026-09-30",
+            "--alcance", "test",
+            "--cita", "test",
+        ],
+        repo,
+    )
+
+
+class TestApproveConDependenciasPreaprobadas(_BaseRepoGit):
+    """M11 (adenda post-cierre 2026-09-30): dependencias pre-aprobadas del
+    proyecto, parseadas y persistidas al aprobar `proposal.md` en
+    `approval_mode: checkpoints` -- mismo patrón que
+    `TestApproveChecklistCheckpoints`."""
+
+    def setUp(self):
+        super().setUp()
+        r = self._init(approval_mode="checkpoints")
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def _escribir_proposal(self, seccion_dependencias: str) -> None:
+        ruta = self.repo / "openspec" / "changes" / _CHANGE_ID / "proposal.md"
+        ruta.write_text(f"# Propuesta\n\n{seccion_dependencias}\n", encoding="utf-8")
+
+    def test_dependencia_bien_formada_se_persiste(self):
+        self._escribir_proposal("## Dependencias pre-aprobadas\n\n- package-a: >=1.2,<2\n")
+        r = _aprobar_proposal_generico(self.repo)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        control = _leer_control(self.repo)
+        self.assertEqual(control["dependencias_preaprobadas"], [{"nombre": "package-a", "rango": ">=1.2,<2"}])
+
+    def test_dependencia_invalida_rechaza_la_aprobacion_completa(self):
+        self._escribir_proposal("## Dependencias pre-aprobadas\n\n- sin-separador-de-rango\n")
+        r = _aprobar_proposal_generico(self.repo)
+        self.assertEqual(r.returncode, 2, r.stdout)
+        control = _leer_control(self.repo)
+        self.assertEqual(control.get("aprobaciones", []), [])
+        self.assertNotIn("dependencias_preaprobadas", control)
+
+    def test_sin_seccion_de_dependencias_aprueba_con_lista_vacia(self):
+        self._escribir_proposal("## Otra sección\nsin dependencias acá\n")
+        r = _aprobar_proposal_generico(self.repo)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        control = _leer_control(self.repo)
+        self.assertEqual(control["dependencias_preaprobadas"], [])
+
+    def test_per_change_no_toca_dependencias_preaprobadas(self):
+        r = self._init(change_id="20260930-test-budgets-cli-per-change")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        ruta = self.repo / "openspec" / "changes" / "20260930-test-budgets-cli-per-change" / "proposal.md"
+        ruta.write_text(
+            "# Propuesta\n\n## Dependencias pre-aprobadas\n\n- formato-ambiguo-sin-rango\n",
+            encoding="utf-8",
+        )
+        r = _aprobar_proposal_generico(self.repo, change_id="20260930-test-budgets-cli-per-change")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        control = _leer_control(self.repo, change_id="20260930-test-budgets-cli-per-change")
+        self.assertNotIn("dependencias_preaprobadas", control)
+
+
+class TestDependencyClassifyCLI(_BaseRepoGit):
+    def setUp(self):
+        super().setUp()
+        r = self._init()
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def _clasificar(self, nombre: str, version: str) -> subprocess.CompletedProcess:
+        return _correr_ds_guard(
+            [
+                "dependency", "classify",
+                "--change-id", _CHANGE_ID,
+                "--nombre", nombre,
+                "--version", version,
+                "--json",
+            ],
+            self.repo,
+        )
+
+    def test_sin_dependencias_preaprobadas_da_codigo_stop(self):
+        r = self._clasificar("package-a", "1.5")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        payload = json.loads(r.stdout)
+        self.assertTrue(payload["clasificacion"].startswith("AUTONOMY-STOP-"))
+
+    def test_dependencia_preaprobada_dentro_de_rango_da_no_stop(self):
+        control = _leer_control(self.repo)
+        control["dependencias_preaprobadas"] = [{"nombre": "package-a", "rango": ">=1.2,<2"}]
+        _escribir_control(self.repo, control)
+        r = self._clasificar("package-a", "1.5")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        payload = json.loads(r.stdout)
+        self.assertEqual(payload["clasificacion"], "no_stop")
+
+    def test_dependencia_preaprobada_fuera_de_rango_da_codigo_stop(self):
+        control = _leer_control(self.repo)
+        control["dependencias_preaprobadas"] = [{"nombre": "package-a", "rango": ">=1.2,<2"}]
+        _escribir_control(self.repo, control)
+        r = self._clasificar("package-a", "2.5")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        payload = json.loads(r.stdout)
+        self.assertTrue(payload["clasificacion"].startswith("AUTONOMY-STOP-"))
+
+
+class TestSessionEfficiencyCLI(_BaseRepoGit):
+    def setUp(self):
+        super().setUp()
+        r = self._init()
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_change_recien_creado_da_ceros(self):
+        r = _correr_ds_guard(
+            ["session", "efficiency", "--change-id", _CHANGE_ID, "--json"], self.repo
+        )
+        self.assertEqual(r.returncode, 0, r.stderr)
+        payload = json.loads(r.stdout)
+        self.assertEqual(payload["writer_lead_cycles"], 0)
+        self.assertEqual(payload["remediation_cycles"], 0)
+        self.assertEqual(payload["executions_count"], 0)
+        self.assertEqual(payload["execution_duration_total_seconds"], 0.0)
+
+    def test_refleja_referencias_de_ejecucion_inyectadas(self):
+        # Caso de una ejecución real ya registrada -- fixture directa sobre
+        # `control["metricas_eficiencia"]`, más barato que armar una
+        # ejecución real de punta a punta vía `ds_guard exec script`
+        # (decisión documentada acá, per instrucción del Lead).
+        control = _leer_control(self.repo)
+        control["metricas_eficiencia"] = {
+            "ejecuciones": [
+                {"execution_id": "e1", "duration_seconds": 1.5, "command_form": "script"},
+                {"execution_id": "e2", "duration_seconds": 2.5, "command_form": "pytest"},
+            ]
+        }
+        _escribir_control(self.repo, control)
+        r = _correr_ds_guard(
+            ["session", "efficiency", "--change-id", _CHANGE_ID, "--json"], self.repo
+        )
+        self.assertEqual(r.returncode, 0, r.stderr)
+        payload = json.loads(r.stdout)
+        self.assertEqual(payload["executions_count"], 2)
+        self.assertEqual(payload["execution_duration_total_seconds"], 4.0)
+
+
 if __name__ == "__main__":
     unittest.main()

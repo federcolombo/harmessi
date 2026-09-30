@@ -266,3 +266,52 @@ de `data-science-reviewer` sobre este fix puntual (no de todo Change 3 de nuevo)
 en verde) — no se repitió la regresión completa de `tools/` (no aplica ninguno de los criterios que
 la exigirían: sin modificación transversal inesperada, sin riesgo transversal señalado por el
 reviewer, sin gate formal que la exija para este tipo de corrección puntual post-cierre).
+
+## Addendum (2026-09-30, continuación) — M11 (dependencias pre-aprobadas) y métricas de eficiencia
+
+**No reabre `proposal.md`/`spec.md`/`design.md`** (hashes intactos). Documentado acá, en
+`docs/roadmap/v0.8.md` (M11 y "Corrección y adenda post-cierre", punto 3) y en el decision ledger
+(`decision_id: 20260930-dependency-preapproval-and-efficiency-metrics`).
+
+**M11 — clasificación de dependencias pre-aprobadas, sin vía de instalación**:
+`parsear_dependencias_preaprobadas`/`clasificar_dependencia` (`tools/dsguard/sdd.py`), persistidas
+al aprobar `proposal.md` en `approval_mode: checkpoints` (mismo patrón fail-closed que checkpoints
+de negocio, `cmd_approve`). Parser de rangos de versión solo-stdlib (sin agregar `packaging` como
+dependencia de Harmessi), simplificado a enteros dotados (sin sufijos `rc`/`post`), documentado
+como tal. Nunca inventa un código STOP nuevo: busca `"new_dependency"` en el `STOP_CATALOG` público
+de `tools.autonomy.core` (corregido en la revisión: la primera versión usaba el helper privado
+`_stop_code`, cruzando el límite de encapsulamiento del módulo sin necesidad — `STOP_CATALOG` solo
+alcanza). Subcomando `ds_guard dependency classify --change-id <id> --nombre <n> --version <v>`,
+puramente informativo. Confirmado por auditoría explícita (ya citada en el roadmap): `tools/leadrun/`
+no tiene ninguna primitiva gobernada de instalación, así que M11 es solo clasificación, sin ninguna
+vía de instalación real.
+
+**Métricas de eficiencia writer→Lead**: `calcular_metricas_eficiencia` (`tools/dsguard/sdd.py`),
+vista derivada sobre `control["sesiones"]`/`control["remediaciones"]` más una referencia liviana a
+ejecuciones (`control["metricas_eficiencia"]["ejecuciones"]`, solo `execution_id`/
+`duration_seconds`/`command_form` — nunca duplica el `ExecutionRecord` completo, que sigue viviendo
+en `.harmessi/executions/`). Subcomando `ds_guard session efficiency --change-id <id>`, informativo,
+nunca gate. Guía de proceso (batching por unidad de trabajo, handoffs compactos) agregada a
+`SKILL.md`/su template, sección "Eficiencia writer → Lead" (idéntica en ambos archivos, confirmado).
+
+**Hallazgo real encontrado y documentado (no bloqueante, límite honesto)**: `_ejecutar_exec_comun`
+(`tools/ds_guard.py`) nunca escribía `control.json` antes de esta adenda — nada lo requería hasta
+que las métricas de eficiencia necesitaron una referencia persistida. Ahora sí escribe, tras una
+ejecución exitosa. La revisión acotada señaló que esto abre una ventana de lectura-modificación-
+escritura más larga que la de cualquier otro comando del CLI (hasta `timeout_seconds`, sin lock de
+archivo entre procesos) — documentado explícitamente en el código como límite honesto no resuelto
+con un mecanismo nuevo (mismo criterio que subagentes concurrentes/R13 o timeout de proceso
+huérfano/Change 2 R10), dado que el modelo operativo real de Harmessi es un único Lead invocando el
+CLI de forma serial.
+
+**Revisión acotada** de `data-science-reviewer` sobre este entregable puntual: 1 hallazgo menor
+(acceso a símbolo privado `autonomy_core._stop_code`), corregido a `STOP_CATALOG` público; sin
+hallazgos bloqueantes en el resto de lo revisado (parser de versiones fail-closed en ambos puntos
+de entrada, fail-closed de `cmd_approve`, backward-compat de `calcular_metricas_eficiencia`,
+`tools/autonomy/core.py` no tocado).
+
+**Tests**: 75/75 en verde (`test_autonomy_sdd.py` + `test_ds_guard_budgets_cli.py` +
+`test_ds_guard_exec.py`, incluye las clases nuevas `TestParsearDependenciasPreaprobadas`,
+`TestClasificarDependencia`, `TestCalcularMetricasEficiencia` a nivel de `sdd.py`, y
+`TestApproveConDependenciasPreaprobadas`, `TestDependencyClassifyCLI`, `TestSessionEfficiencyCLI` a
+nivel de CLI end-to-end). Regresión dirigida, no completa (mismo criterio que el addendum anterior).

@@ -192,6 +192,27 @@ Un campo que no corresponda se escribe **"no aplica" con su justificación**, nu
 `data-science-reviewer` no corre comandos: si hay que revisar un diff real, el Lead corre `git diff`
 él mismo y pega el contenido en el campo 2.
 
+## Eficiencia writer → Lead (adenda post-cierre 2026-09-30, sin cambiar roles)
+
+El writer sigue sin ejecutar; el Lead sigue siendo el único ejecutor. Dentro de eso:
+
+- **Por default, el writer completa una unidad de trabajo coherente** (definida en
+  `proposal.md`/`tasks.md`, nunca inventada a mitad de camino por el writer) antes del handoff al
+  Lead para ejecutar/verificar — no ejecutar después de cada microtarea. La spec/tasks puede exigir
+  ejecución intermedia cuando tenga valor real: migración delicada, dependencia entre pasos, riesgo
+  alto, debugging, checkpoint técnico explícito — tampoco se arman batches gigantes sin ningún
+  feedback intermedio.
+- **Handoffs Lead → writer compactos**: priorizan error relevante, traceback reducido, diff, rutas,
+  IDs, resultados de tests — nunca reenviar un archivo completo que el writer ya leyó, salvo que
+  haya cambiado materialmente. Reusar `ds_profile`/`SourceObservation`/summaries/manifests/evidence
+  ya existente en vez de releer una fuente grande para reconstruir contexto ya disponible.
+- **Métricas de observación** (`ds_guard session efficiency --change-id <id>`):
+  `writer_lead_cycles`, `remediation_cycles`, `executions_count`,
+  `execution_duration_total_seconds` — derivadas de evidencia ya existente
+  (`control["sesiones"]`/`control["remediaciones"]`, y una referencia liviana a los
+  `ExecutionRecord` de `ds_guard exec ...`, sin duplicarlos). Son observación para Change 5, **nunca
+  un gate**: no se optimizan a costa de saltear validación o al `data-science-reviewer`.
+
 ## Checkpoint de cierre o pausa
 
 Se emite en el chat como mensaje final estructurado; no crea ni actualiza archivos — la

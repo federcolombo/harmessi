@@ -340,6 +340,19 @@ def cmd_approve(args: argparse.Namespace) -> int:
             return 2
         control["decisiones_preaprobadas"] = checkpoints
 
+        # Dependencias pre-aprobadas del proyecto (M11, adenda post-cierre
+        # 2026-09-30 de `docs/roadmap/v0.8.md`): mismo criterio que los
+        # checkpoints de negocio -- se parsea junto con `proposal.md` en
+        # `approval_mode: checkpoints`, se persiste en
+        # `control["dependencias_preaprobadas"]` (reemplaza en cada
+        # re-aprobación, no se acumula), y fail-closed: un bullet inválido
+        # rechaza la aprobación COMPLETA (exit 2, no se escribe nada).
+        dependencias, hallazgos_dependencias = sdd.parsear_dependencias_preaprobadas(texto_proposal)
+        if hallazgos_dependencias:
+            print(core.formatear_findings_texto(hallazgos_dependencias), file=sys.stderr)
+            return 2
+        control["dependencias_preaprobadas"] = dependencias
+
     entradas = []
     for artefacto in args.artefacto:
         ruta = change_dir / artefacto
@@ -746,6 +759,56 @@ def cmd_session_aggregate(args: argparse.Namespace) -> int:
             )
         for f in findings:
             print(f"  [{f.codigo}] {f.mensaje}")
+    return 0
+
+
+def cmd_session_efficiency(args: argparse.Namespace) -> int:
+    """`session efficiency` (M11/adenda post-cierre 2026-09-30, "Eficiencia
+    writer -> Lead" de `docs/roadmap/v0.8.md`): expone
+    `sdd.calcular_metricas_eficiencia(control)`. Puramente informativo/de
+    observación (nunca gate numérico), mismo criterio que `session
+    aggregate`/`session status`: exit 0 salvo error de uso/entorno."""
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+
+    metricas = sdd.calcular_metricas_eficiencia(control)
+
+    if args.json:
+        print(json.dumps(metricas, ensure_ascii=False))
+    else:
+        print(f"writer_lead_cycles: {metricas['writer_lead_cycles']}")
+        print(f"remediation_cycles: {metricas['remediation_cycles']}")
+        print(f"executions_count: {metricas['executions_count']}")
+        print(f"execution_duration_total_seconds: {metricas['execution_duration_total_seconds']:.1f}")
+    return 0
+
+
+# --- dependency (M11: 20260930-autonomous-sdd-and-remediation, adenda) -------
+#
+# `dependency classify`: consulta/clasificación pura (no instala nada, no
+# bloquea nada por sí sola -- análogo a `session aggregate`). Lee
+# `control["dependencias_preaprobadas"]` (poblado por `cmd_approve` cuando el
+# Change está en `approval_mode: checkpoints`).
+
+def cmd_dependency_classify(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+
+    dependencias_preaprobadas = control.get("dependencias_preaprobadas", [])
+    resultado = sdd.clasificar_dependencia(args.nombre, args.version, dependencias_preaprobadas)
+
+    if args.json:
+        print(json.dumps({"clasificacion": resultado}, ensure_ascii=False))
+    else:
+        print(resultado)
     return 0
 
 
@@ -1321,6 +1384,7 @@ def _ejecutar_exec_comun(
     args: argparse.Namespace,
     repo_root: Path,
     control: dict,
+    control_path: Path,
     command_form: str,
     argv: list,
     artefacto: str,
@@ -1366,6 +1430,48 @@ def _ejecutar_exec_comun(
 
     resultado = leadrun_runtime.ejecutar(request, repo_root, executed_by, modo, approval, control)
 
+    # Métricas de eficiencia writer -> Lead (adenda post-cierre 2026-09-30,
+    # punto 3 de "Corrección y adenda post-cierre" de `docs/roadmap/v0.8.md`):
+    # referencia LIVIANA a la ejecución (no duplica el `ExecutionRecord`
+    # completo, ya persistido por `leadrun_runtime.ejecutar` en
+    # `.harmessi/executions/`) -- solo `execution_id`/`duration_seconds` (del
+    # `record` ya devuelto) + `command_form` (ya disponible como parámetro).
+    # Responsabilidad de `ds_guard.py` (Change 3): NO toca
+    # `tools/leadrun/core.py`/`runtime.py` (Change 2, cerrado). Se persiste
+    # acá porque, antes de este fix, ningún punto de `_ejecutar_exec_comun`
+    # escribía `control.json` (discrepancia encontrada y corregida durante
+    # esta misma tarea).
+    #
+    # Límite honesto (hallazgo de revisión, documentado, no resuelto con un
+    # mecanismo nuevo): `control` se carga una sola vez al inicio de esta
+    # función y se reescribe recién acá, después de que `leadrun_runtime.
+    # ejecutar` termina -- una ventana que puede durar hasta
+    # `request.timeout_seconds` (minutos), mucho más larga que la de
+    # cualquier otro comando de este archivo (todos hacen lectura-
+    # modificación-escritura casi instantánea). `escribir_control` es
+    # atómico (tmp + `os.replace`, `tools/dsguard/core.py`) pero NO tiene
+    # locking entre procesos: si otra invocación de `ds_guard` escribe
+    # `control.json` durante esa ventana, esta escritura la pisaría (lost
+    # update) por operar sobre una copia en memoria desactualizada. El
+    # modelo operativo real de Harmessi es un único Lead invocando el CLI
+    # de forma serial (sin orquestación multi-proceso propia), lo que hace
+    # este riesgo poco probable en la práctica, pero no imposible si un
+    # subagente concurrente también invoca `ds_guard` mientras el Lead
+    # corre una ejecución larga -- mismo criterio de "límite honesto,
+    # documentado, no resuelto" que subagentes concurrentes (R13) o timeout
+    # de proceso huérfano (Change 2, R10); no se agrega un lock de archivo
+    # nuevo para esto.
+    if resultado.get("record") is not None:
+        ejecuciones = control.setdefault("metricas_eficiencia", {}).setdefault("ejecuciones", [])
+        ejecuciones.append(
+            {
+                "execution_id": resultado["record"]["execution_id"],
+                "duration_seconds": resultado["record"]["duration_seconds"],
+                "command_form": command_form,
+            }
+        )
+        core.escribir_control(control_path, control)
+
     # `resultado["checks"]` son dicts (`CheckResult.to_dict()`); se
     # reconstruyen como `CheckResult` para reusar `_imprimir_check_results`/
     # `checks.exit_code` sin duplicar esa lógica de formateo/exit code.
@@ -1400,7 +1506,7 @@ def cmd_exec_script(args: argparse.Namespace) -> int:
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         return 3
-    _change_dir_, _tasks_path, _control_path, control = _cargar_change(repo_root, args.change_id)
+    _change_dir_, _tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     leadrun_core, _leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
     if leadrun_core is None:
@@ -1419,7 +1525,7 @@ def cmd_exec_script(args: argparse.Namespace) -> int:
         print(f"No se pudo calcular el hash del script {args.script!r}: {exc}", file=sys.stderr)
         return 2
 
-    return _ejecutar_exec_comun(args, repo_root, control, "script", argv, artefacto, hash_comando)
+    return _ejecutar_exec_comun(args, repo_root, control, control_path, "script", argv, artefacto, hash_comando)
 
 
 def cmd_exec_pytest(args: argparse.Namespace) -> int:
@@ -1428,7 +1534,7 @@ def cmd_exec_pytest(args: argparse.Namespace) -> int:
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         return 3
-    _change_dir_, _tasks_path, _control_path, control = _cargar_change(repo_root, args.change_id)
+    _change_dir_, _tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     leadrun_core, _leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
     if leadrun_core is None:
@@ -1443,7 +1549,7 @@ def cmd_exec_pytest(args: argparse.Namespace) -> int:
     artefacto = "pytest:" + "|".join(args.paths)
     hash_comando = leadrun_core.content_sha256(list(argv))
 
-    return _ejecutar_exec_comun(args, repo_root, control, "pytest", argv, artefacto, hash_comando)
+    return _ejecutar_exec_comun(args, repo_root, control, control_path, "pytest", argv, artefacto, hash_comando)
 
 
 def cmd_exec_notebook(args: argparse.Namespace) -> int:
@@ -1452,7 +1558,7 @@ def cmd_exec_notebook(args: argparse.Namespace) -> int:
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         return 3
-    _change_dir_, _tasks_path, _control_path, control = _cargar_change(repo_root, args.change_id)
+    _change_dir_, _tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     leadrun_core, _leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
     if leadrun_core is None:
@@ -1469,7 +1575,7 @@ def cmd_exec_notebook(args: argparse.Namespace) -> int:
         print(f"No se pudo calcular el hash del manifest {args.manifest!r}: {exc}", file=sys.stderr)
         return 2
 
-    return _ejecutar_exec_comun(args, repo_root, control, "notebook", argv, artefacto, hash_comando)
+    return _ejecutar_exec_comun(args, repo_root, control, control_path, "notebook", argv, artefacto, hash_comando)
 
 
 # --- source (v0.8 Change 1 T6: 20260928-source-neutral-data-access) ---------
@@ -2898,6 +3004,19 @@ def construir_parser() -> argparse.ArgumentParser:
     p_session_aggregate.add_argument("--json", action="store_true")
     p_session_aggregate.set_defaults(func=cmd_session_aggregate)
 
+    p_session_efficiency = session_sub.add_parser(
+        "efficiency",
+        help=(
+            "Métricas de observación de eficiencia writer -> Lead (adenda "
+            "post-cierre 2026-09-30 de 20260930-autonomous-sdd-and-remediation): "
+            "writer_lead_cycles, remediation_cycles, executions_count, "
+            "execution_duration_total_seconds. Informativo, nunca gate."
+        ),
+    )
+    p_session_efficiency.add_argument("--change-id", required=True)
+    p_session_efficiency.add_argument("--json", action="store_true")
+    p_session_efficiency.set_defaults(func=cmd_session_efficiency)
+
     p_notebook_diff = subparsers.add_parser(
         "notebook-diff", help="Diff por celdas de uno o más .ipynb contra una revisión de git. Nunca ejecuta."
     )
@@ -3119,6 +3238,31 @@ def construir_parser() -> argparse.ArgumentParser:
     p_exec_notebook.add_argument("--timeout", type=int, default=600)
     p_exec_notebook.add_argument("--json", action="store_true")
     p_exec_notebook.set_defaults(func=cmd_exec_notebook)
+
+    p_dependency = subparsers.add_parser(
+        "dependency",
+        help=(
+            "Clasificación de dependencias del proyecto pre-aprobadas (M11, "
+            "adenda post-cierre 2026-09-30 de 20260930-autonomous-sdd-and-"
+            "remediation). Solo clasificación STOP/no-STOP, sin vía de "
+            "instalación real."
+        ),
+    )
+    dependency_sub = p_dependency.add_subparsers(dest="subcomando", required=True)
+
+    p_dependency_classify = dependency_sub.add_parser(
+        "classify",
+        help=(
+            "Clasifica nombre+version contra control['dependencias_preaprobadas']: "
+            "'no_stop' si está listada y en rango, o el código STOP de "
+            "new_dependency en cualquier otro caso."
+        ),
+    )
+    p_dependency_classify.add_argument("--change-id", required=True)
+    p_dependency_classify.add_argument("--nombre", required=True)
+    p_dependency_classify.add_argument("--version", required=True)
+    p_dependency_classify.add_argument("--json", action="store_true")
+    p_dependency_classify.set_defaults(func=cmd_dependency_classify)
 
     p_source = subparsers.add_parser(
         "source",

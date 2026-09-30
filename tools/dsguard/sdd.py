@@ -1129,3 +1129,271 @@ def limite_subagentes_alcanzado(control: dict, max_concurrentes: Optional[int]) 
         return False
     conteo = (activa.get("subagentes") or {}).get("conteo", 0)
     return conteo >= max_concurrentes
+
+
+# --- M11: pre-aprobación de dependencias del proyecto (adenda post-cierre ----
+# 2026-09-30, "Corrección y adenda post-cierre" de
+# `docs/roadmap/v0.8.md`) -------------------------------------------------
+#
+# Extiende, sin reabrirlo, el STOP `new_dependency` (STOP 4, `tools.autonomy.
+# core.STOP_CATALOG`) y el mecanismo de `approval_mode: checkpoints` (M7).
+# `STOP_CATALOG`/`POLICY_TABLE` de `tools.autonomy.core` NO se tocan: la
+# clasificación vive acá y solo los consulta. Esto NO es una vía de
+# instalación de dependencias -- solo clasifica si una solicitud dispara STOP
+# o no (M11, congelado en el roadmap).
+
+# Código nuevo y legítimo (a diferencia de los checkpoints de negocio, que
+# reutilizan `autonomy_core.CODE_PREAPPROVED_INVALID`): una dependencia
+# pre-aprobada no es un `PreApprovedDecision` (M11 no crea un tipo de "decisión"
+# por dependencia, la trazabilidad de la aprobación humana ya la da el hash de
+# `proposal.md` completo al aprobarlo, no una `ApprovalRef` por dependencia
+# individual) -- por eso no existía ningún código previo para bullets de
+# dependencias mal formados.
+CODE_DEPENDENCY_PREAPPROVAL_INVALID = "SDD-DEPENDENCY-PREAPPROVAL-INVALID"
+
+_RE_DEPENDENCY_BULLET = re.compile(r"^-\s*(?P<nombre>[^:]*?)\s*:\s*(?P<rango>.+?)\s*$")
+
+# Operadores de comparación soportados, en el mismo orden en que deben
+# probarse (`>=`/`<=` antes que `>`/`<` para no matchear el prefijo corto).
+_OPERADORES_RANGO = (">=", "<=", "==", "!=", ">", "<")
+
+
+def _parsear_version(version: str) -> tuple:
+    """`"1.2.0"` -> `(1, 2, 0)`. Lanza `ValueError` si algún componente no es
+    un entero no negativo, o si `version` está vacía. Sin soporte de sufijos
+    tipo `rc1`/`post1`/`dev0` -- simplificación deliberada, solo-stdlib, para
+    no agregar una dependencia nueva a Harmessi (p. ej. `packaging`)."""
+    version = version.strip()
+    if not version:
+        raise ValueError("version_vacia")
+    partes = version.split(".")
+    componentes = []
+    for parte in partes:
+        if not parte.isdigit():
+            raise ValueError(f"componente_no_entero:{parte!r}")
+        componentes.append(int(parte))
+    return tuple(componentes)
+
+
+def _parsear_rango_version(rango: str) -> list:
+    """Parser MÍNIMO y solo-stdlib de rangos tipo PEP 440 simplificado:
+    `>=`, `<=`, `>`, `<`, `==`, `!=`, combinados con coma (p. ej.
+    `>=1.2,<2`). Cada versión se parsea como tupla de enteros separados por
+    `.` (`_parsear_version`), sin soporte de sufijos tipo `rc1`/`post1` --
+    limitación deliberada (ver `_parsear_version`).
+
+    Devuelve `list[tuple[str, tuple[int, ...]]]` (operador, tupla de
+    versión). Lanza `ValueError` (capturado por el llamador,
+    `_version_satisface_rango`) si `rango` está vacío, si algún término no
+    tiene un operador soportado, o si la versión de algún término no
+    parsea."""
+    rango = rango.strip()
+    if not rango:
+        raise ValueError("rango_vacio")
+    terminos = []
+    for termino in rango.split(","):
+        termino = termino.strip()
+        if not termino:
+            raise ValueError("termino_vacio")
+        operador_encontrado = None
+        for operador in _OPERADORES_RANGO:
+            if termino.startswith(operador):
+                operador_encontrado = operador
+                break
+        if operador_encontrado is None:
+            raise ValueError(f"operador_no_soportado:{termino!r}")
+        version_texto = termino[len(operador_encontrado):]
+        terminos.append((operador_encontrado, _parsear_version(version_texto)))
+    return terminos
+
+
+def _rellenar_a_igual_longitud(a: tuple, b: tuple) -> tuple:
+    """`(a, b)` con ceros a la derecha para que tengan la misma longitud
+    (`"1.2"` == `"1.2.0"`)."""
+    n = max(len(a), len(b))
+    a2 = a + (0,) * (n - len(a))
+    b2 = b + (0,) * (n - len(b))
+    return a2, b2
+
+
+def _comparar_versiones(a: tuple, b: tuple) -> int:
+    """-1/0/1, rellenando a igual longitud antes de comparar."""
+    a2, b2 = _rellenar_a_igual_longitud(a, b)
+    if a2 < b2:
+        return -1
+    if a2 > b2:
+        return 1
+    return 0
+
+
+def _version_satisface_rango(version: str, rango: str) -> bool:
+    """`True` si `version` (p. ej. `"1.5"`) satisface todos los términos de
+    `rango` (p. ej. `">=1.2,<2"`). `False` (fail-closed, nunca lanza) si
+    `version` o `rango` no son parseables por
+    `_parsear_version`/`_parsear_rango_version`."""
+    try:
+        version_tupla = _parsear_version(version)
+        terminos = _parsear_rango_version(rango)
+    except ValueError:
+        return False
+    for operador, version_rango in terminos:
+        cmp = _comparar_versiones(version_tupla, version_rango)
+        if operador == ">=" and not (cmp >= 0):
+            return False
+        if operador == "<=" and not (cmp <= 0):
+            return False
+        if operador == ">" and not (cmp > 0):
+            return False
+        if operador == "<" and not (cmp < 0):
+            return False
+        if operador == "==" and not (cmp == 0):
+            return False
+        if operador == "!=" and not (cmp != 0):
+            return False
+    return True
+
+
+def parsear_dependencias_preaprobadas(texto: str) -> tuple:
+    """Sección `## Dependencias pre-aprobadas` de `proposal.md` (M11) ->
+    `(dependencias_validas, hallazgos)`.
+
+    `dependencias_validas` es `list[dict]`, cada elemento
+    `{"nombre": str, "rango": str}` -- SIN un tipo `PreApprovedDecision` (M11
+    no reutiliza ese tipo: es una lista simple de dependencias, no una
+    decisión con `approval_ref`, ver comentario de módulo arriba).
+    `hallazgos` es `list[Finding]` con código
+    `CODE_DEPENDENCY_PREAPPROVAL_INVALID`, uno por bullet mal formado (sin
+    `:`, nombre vacío, rango vacío o no parseable por
+    `_parsear_rango_version`) -- nunca se agrega la dependencia
+    correspondiente a `dependencias_validas` en esos casos (sin dependencia
+    fantasma, mismo criterio que `parsear_checkpoints_de_propuesta`).
+
+    Formato de bullet (uno por línea, ejemplo):
+
+        - package-a: >=1.2,<2
+
+    Sección ausente (o vacía) -> `([], [])`, sin error."""
+    seccion = _contenido_de_seccion(texto, "## Dependencias pre-aprobadas")
+    dependencias_validas: list = []
+    hallazgos: list = []
+    if not seccion:
+        return dependencias_validas, hallazgos
+
+    ubicacion = "proposal.md#Dependencias pre-aprobadas"
+    for linea in seccion.splitlines():
+        linea = linea.strip()
+        if not linea or not linea.startswith("-"):
+            continue
+        m = _RE_DEPENDENCY_BULLET.match(linea)
+        if not m:
+            hallazgos.append(
+                Finding(
+                    CODE_DEPENDENCY_PREAPPROVAL_INVALID,
+                    f"Bullet de dependencia con formato ambiguo/incompleto (sin ':'): {linea!r}",
+                    ubicacion,
+                )
+            )
+            continue
+        nombre = m.group("nombre").strip()
+        rango = m.group("rango").strip()
+        if not nombre:
+            hallazgos.append(
+                Finding(
+                    CODE_DEPENDENCY_PREAPPROVAL_INVALID,
+                    f"Bullet de dependencia con nombre vacío: {linea!r}",
+                    ubicacion,
+                )
+            )
+            continue
+        if not rango:
+            hallazgos.append(
+                Finding(
+                    CODE_DEPENDENCY_PREAPPROVAL_INVALID,
+                    f"Bullet de dependencia con rango vacío: {linea!r}",
+                    ubicacion,
+                )
+            )
+            continue
+        try:
+            _parsear_rango_version(rango)
+        except ValueError as exc:
+            hallazgos.append(
+                Finding(
+                    CODE_DEPENDENCY_PREAPPROVAL_INVALID,
+                    f"Bullet de dependencia con rango no parseable ({exc}): {linea!r}",
+                    ubicacion,
+                )
+            )
+            continue
+        dependencias_validas.append({"nombre": nombre, "rango": rango})
+
+    return dependencias_validas, hallazgos
+
+
+def clasificar_dependencia(nombre: str, version: str, dependencias_preaprobadas: list) -> str:
+    """Clasifica una solicitud de dependencia del proyecto (M11): `"no_stop"`
+    si `nombre` figura EXACTO (case-sensitive) en `dependencias_preaprobadas`
+    y `version` satisface el `rango` de esa entrada; en cualquier otro caso
+    (nombre no listado, versión fuera de rango, o `version` no parseable)
+    devuelve el código STOP de `new_dependency`
+    (`tools.autonomy.core.STOP_CATALOG`, buscado programáticamente -- nunca
+    hardcodeado). Función PURA: no escribe nada, no lanza excepción por una
+    versión rara (fail-closed: la trata como "no satisface")."""
+    for entrada in dependencias_preaprobadas or []:
+        if entrada.get("nombre") == nombre:
+            if _version_satisface_rango(version, entrada.get("rango", "")):
+                return "no_stop"
+            break
+    # Búsqueda sobre el símbolo PÚBLICO `STOP_CATALOG` (no
+    # `autonomy_core._stop_code`, privado por convención -- hallazgo de
+    # revisión, corregido: cruzaba el límite de encapsulamiento del módulo
+    # sin necesidad, ya que `STOP_CATALOG` alcanza y es parte del contrato
+    # público de `tools.autonomy.core`, Change 0, sin tocarlo).
+    return next(e.code for e in autonomy_core.STOP_CATALOG if e.key == "new_dependency")
+
+
+# --- Métricas de eficiencia writer -> Lead (adenda post-cierre 2026-09-30, ---
+# punto 3 de "Corrección y adenda post-cierre" de `docs/roadmap/v0.8.md`) ----
+#
+# Vistas derivadas puras sobre datos ya existentes en `control.json` (más la
+# referencia liviana de ejecuciones, aditiva, poblada por `ds_guard.py`) --
+# observación para Change 5, nunca gate numérico.
+
+def calcular_metricas_eficiencia(control: dict) -> dict:
+    """`{"writer_lead_cycles": int, "remediation_cycles": int,
+    "executions_count": int, "execution_duration_total_seconds": float}`.
+
+    - `writer_lead_cycles`: suma de `len(tareas)` de todas las sesiones --
+      cada tarea registrada (`session_note(tipo="planificada", tarea=...)`)
+      ya representa un ciclo writer -> Lead completo.
+    - `remediation_cycles`: suma de intentos ya registrados en la ventana
+      vigente (última) de cada remediación de `control["remediaciones"]`.
+    - `executions_count`/`execution_duration_total_seconds`: derivados de
+      `control["metricas_eficiencia"]["ejecuciones"]` (referencias livianas
+      pobladas por `ds_guard.py` tras cada ejecución gobernada exitosa con
+      `record`). Ausente (Change/`control.json` anterior a este fix, o
+      ninguna ejecución gobernada corrida todavía) -> `0`/`0.0`, sin romper
+      backward compatibility.
+
+    Función PURA: sin I/O, sin escritura."""
+    sesiones = control.get("sesiones", [])
+    writer_lead_cycles = sum(len(s.get("tareas", []) or []) for s in sesiones)
+
+    remediaciones = control.get("remediaciones", [])
+    remediation_cycles = 0
+    for r in remediaciones:
+        ventanas = r.get("ventanas") or [{}]
+        remediation_cycles += len(ventanas[-1].get("intentos", []) or [])
+
+    ejecuciones = control.get("metricas_eficiencia", {}).get("ejecuciones", [])
+    executions_count = len(ejecuciones)
+    execution_duration_total_seconds = sum(
+        float(e.get("duration_seconds", 0.0) or 0.0) for e in ejecuciones
+    )
+
+    return {
+        "writer_lead_cycles": writer_lead_cycles,
+        "remediation_cycles": remediation_cycles,
+        "executions_count": executions_count,
+        "execution_duration_total_seconds": execution_duration_total_seconds,
+    }

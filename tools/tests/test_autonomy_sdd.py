@@ -313,5 +313,100 @@ class TestLimiteSubagentesAlcanzado(unittest.TestCase):
         self.assertTrue(sdd.limite_subagentes_alcanzado(self.control, 2))
 
 
+# --- M11: dependencias pre-aprobadas (adenda post-cierre 2026-09-30) --------
+
+
+class TestParsearDependenciasPreaprobadas(unittest.TestCase):
+    def test_bullet_bien_formado(self):
+        texto = "## Dependencias pre-aprobadas\n\n- package-a: >=1.2,<2\n"
+        deps, hallazgos = sdd.parsear_dependencias_preaprobadas(texto)
+        self.assertEqual(hallazgos, [])
+        self.assertEqual(deps, [{"nombre": "package-a", "rango": ">=1.2,<2"}])
+
+    def test_bullet_mal_formado_sin_dos_puntos(self):
+        texto = "## Dependencias pre-aprobadas\n\n- package-a sin rango\n"
+        deps, hallazgos = sdd.parsear_dependencias_preaprobadas(texto)
+        self.assertEqual(deps, [])
+        self.assertEqual(len(hallazgos), 1)
+        self.assertEqual(hallazgos[0].codigo, sdd.CODE_DEPENDENCY_PREAPPROVAL_INVALID)
+
+    def test_bullet_rango_no_parseable(self):
+        texto = "## Dependencias pre-aprobadas\n\n- package-a: no-es-un-rango\n"
+        deps, hallazgos = sdd.parsear_dependencias_preaprobadas(texto)
+        self.assertEqual(deps, [])
+        self.assertEqual(len(hallazgos), 1)
+        self.assertEqual(hallazgos[0].codigo, sdd.CODE_DEPENDENCY_PREAPPROVAL_INVALID)
+
+    def test_seccion_ausente_da_listas_vacias(self):
+        deps, hallazgos = sdd.parsear_dependencias_preaprobadas("## Otra sección\nignorar\n")
+        self.assertEqual(deps, [])
+        self.assertEqual(hallazgos, [])
+
+
+class TestClasificarDependencia(unittest.TestCase):
+    def setUp(self):
+        self.deps = [{"nombre": "package-a", "rango": ">=1.2,<2"}]
+
+    def test_version_dentro_de_rango(self):
+        self.assertEqual(sdd.clasificar_dependencia("package-a", "1.5", self.deps), "no_stop")
+
+    def test_version_fuera_de_rango_da_stop(self):
+        self.assertEqual(
+            sdd.clasificar_dependencia("package-a", "2.0", self.deps),
+            autonomy_core._stop_code("new_dependency"),
+        )
+
+    def test_nombre_no_listado_da_stop(self):
+        self.assertEqual(
+            sdd.clasificar_dependencia("otro-paquete", "1.0", self.deps),
+            autonomy_core._stop_code("new_dependency"),
+        )
+
+    def test_version_no_parseable_da_stop_fail_closed(self):
+        self.assertEqual(
+            sdd.clasificar_dependencia("package-a", "no-version", self.deps),
+            autonomy_core._stop_code("new_dependency"),
+        )
+
+    def test_relleno_de_ceros(self):
+        self.assertTrue(sdd._version_satisface_rango("1.2", ">=1.2.0,<=1.2.0"))
+        self.assertTrue(sdd._version_satisface_rango("1.2.0", ">=1.2,<=1.2"))
+
+
+# --- Eficiencia writer -> Lead (adenda post-cierre 2026-09-30) ---------------
+
+
+class TestCalcularMetricasEficiencia(unittest.TestCase):
+    def test_valores_exactos_con_fixture_completo(self):
+        control = {
+            "sesiones": [
+                {"tareas": ["t1", "t2"]},
+                {"tareas": ["t3"]},
+            ],
+            "remediaciones": [
+                {"ventanas": [{"intentos": [{}, {}]}]},
+                {"ventanas": [{"intentos": [{}]}, {"intentos": [{}, {}, {}]}]},
+            ],
+            "metricas_eficiencia": {
+                "ejecuciones": [
+                    {"execution_id": "e1", "duration_seconds": 1.5, "command_form": "script"},
+                    {"execution_id": "e2", "duration_seconds": 2.5, "command_form": "pytest"},
+                ]
+            },
+        }
+        metricas = sdd.calcular_metricas_eficiencia(control)
+        self.assertEqual(metricas["writer_lead_cycles"], 3)
+        # r1: última ventana (única) tiene 2 intentos; r2: última ventana tiene 3.
+        self.assertEqual(metricas["remediation_cycles"], 5)
+        self.assertEqual(metricas["executions_count"], 2)
+        self.assertEqual(metricas["execution_duration_total_seconds"], 4.0)
+
+    def test_sin_clave_metricas_eficiencia_da_ceros(self):
+        control = {"sesiones": [], "remediaciones": []}
+        metricas = sdd.calcular_metricas_eficiencia(control)
+        self.assertEqual(metricas["executions_count"], 0)
+        self.assertEqual(metricas["execution_duration_total_seconds"], 0.0)
+
+
 if __name__ == "__main__":
     unittest.main()
