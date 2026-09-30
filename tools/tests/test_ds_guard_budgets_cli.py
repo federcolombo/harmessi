@@ -180,7 +180,11 @@ class TestSessionAggregate(_BaseRepoGit):
         self.assertEqual(payload["sesiones_totales"], 1)
         self.assertEqual(payload["sesiones_abiertas"], 1)
 
-    def test_max_sessions_excedido_reporta_finding_sin_bloquear_exit_0(self):
+    def test_max_sessions_excedido_reporta_finding_en_session_aggregate(self):
+        # `session aggregate` (consulta pura, R11) sigue siendo informativo
+        # incluso cuando el límite ya está alcanzado -- esto NO contradice
+        # R12 (que exige que `session start`, no `session aggregate`,
+        # rechace abrir una sesión nueva; ver el test siguiente).
         _escribir_guardrails(self.repo, _guardrails_con_budgets({"max_sessions": 1}))
         r = _correr_ds_guard(["session", "start", "--change-id", _CHANGE_ID], self.repo)
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -191,6 +195,27 @@ class TestSessionAggregate(_BaseRepoGit):
         payload = json.loads(r.stdout)
         self.assertEqual(len(payload["findings"]), 1)
         self.assertEqual(payload["findings"][0]["codigo"], "AUTONOMY-LIMIT-AGGREGATE-BUDGET")
+
+    def test_max_sessions_excedido_rechaza_una_session_start_adicional(self):
+        # R12 de spec.md (hallazgo de revisión T8, corregido): a diferencia
+        # de `aggregate_minutes` (solo informativo), `max_sessions` SÍ debe
+        # bloquear una `session start` adicional -- sin escribir una entrada
+        # nueva en `control["sesiones"]`.
+        _escribir_guardrails(self.repo, _guardrails_con_budgets({"max_sessions": 1}))
+        r = _correr_ds_guard(["session", "start", "--change-id", _CHANGE_ID], self.repo)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = _correr_ds_guard(
+            ["session", "close", "--change-id", _CHANGE_ID, "--estado", "pausada"], self.repo
+        )
+        self.assertEqual(r.returncode, 0, r.stderr)
+        control_antes = _leer_control(self.repo)
+        self.assertEqual(len(control_antes["sesiones"]), 1)
+
+        r = _correr_ds_guard(["session", "start", "--change-id", _CHANGE_ID], self.repo)
+        self.assertEqual(r.returncode, 2, r.stdout)
+
+        control_despues = _leer_control(self.repo)
+        self.assertEqual(len(control_despues["sesiones"]), 1)  # no se abrió una 2ª ventana
 
 
 _HASH_RELLENO = "0123456789abcdef" * 4  # 64 hex chars, no es un hash real del repo.

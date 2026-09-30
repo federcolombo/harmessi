@@ -550,6 +550,20 @@ def cmd_session_start(args: argparse.Namespace) -> int:
     # argparse) se resuelve desde `autonomy.budgets.session_minutes`.
     minutos = args.minutos if args.minutos is not None else budgets["session_minutes"]
 
+    # R12 de spec.md: a diferencia de `aggregate_minutes` (R11, puramente
+    # informativo -- NO bloquea abrir), `max_sessions` SÍ bloquea `session
+    # start` -- es la mitad de la decisión congelada R12a (reapertura tras
+    # `pausada_bloqueada` consume una nueva ventana; agotado el máximo, la
+    # SIGUIENTE reapertura queda rechazada, no silenciosamente permitida).
+    # Se chequea ANTES de llamar a `sdd.session_start` y antes de escribir
+    # nada -- si se rechaza, `control.json` queda intacto.
+    findings_max_sessions = sdd.chequear_limite_agregado(
+        control, {"max_sessions": budgets["max_sessions"]}
+    )
+    if findings_max_sessions:
+        print(core.formatear_findings_texto(findings_max_sessions), file=sys.stderr)
+        return 2
+
     try:
         entrada = sdd.session_start(
             control,

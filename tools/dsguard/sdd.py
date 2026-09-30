@@ -940,12 +940,15 @@ def parsear_checkpoints_de_propuesta(texto: str) -> tuple:
     silencio -- el llamador (CLI, fuera de esta invocación) decide qué hacer
     con `hallazgos` (típicamente: rechazar la aprobación de la propuesta).
 
-    Formato de bullet (uno por línea, definido por esta invocación -- D2 de
-    `design.md` deja el formato exacto a criterio del implementador; se
-    necesitan los 3 campos de `ApprovalRef` -- `artefacto`, `change_id`,
-    `hash` -- para que `validate_pre_approved` no rechace por
-    `approval_ref` incompleta, por eso el bullet lleva `change_id` y `hash`
-    explícitos, no solo `hash` como en el ejemplo ilustrativo del encargo):
+    Formato de bullet (uno por línea, ajustado durante esta invocación --
+    el ejemplo ilustrativo de D2 de `design.md` (`... — tipo:
+    business_checkpoint`) no incluye `change_id`, pero `ApprovalRef`/
+    `_validar_ref` de `tools.autonomy.core` lo exige como uno de los 3
+    campos obligatorios (`artefacto`, `change_id`, `hash`) -- con el
+    formato literal de D2, ningún checkpoint podría pasar nunca
+    `validate_pre_approved` sin hallazgos. Corregido acá agregando
+    `change_id` explícito al bullet; detalle completo en `tasks.md` §T1 de
+    este Change, sin reabrir el hash aprobado de `design.md`):
 
         - **<id>**: <resumen> — alcance: <ruta1>, <ruta2> — aprobacion:
           <change_id>/proposal.md@<hash-sha256>

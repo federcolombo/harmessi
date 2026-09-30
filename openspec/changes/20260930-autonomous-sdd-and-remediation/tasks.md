@@ -155,6 +155,33 @@ clasificación, solo la regla de dirección de dependencias de §3).
 
 ## T8 — Revisión (data-science-reviewer, solo lectura)
 
+**[hecho]** Auditoría parcial (presupuesto de turnos agotado antes del barrido completo de R14-R20).
+**1 hallazgo BLOQUEANTE real, corregido y re-verificado por el Lead** (1 solo ciclo writer↔reviewer
+usado, de los 2 autorizados):
+
+1. **R12 no implementado**: `cmd_session_start` nunca consultaba `max_sessions` antes de abrir una
+   sesión — solo `session aggregate` (informativo) lo reportaba. Corregido: `cmd_session_start`
+   ahora llama `sdd.chequear_limite_agregado(control, {"max_sessions": ...})` ANTES de
+   `sdd.session_start` y devuelve exit 2 sin escribir `control.json` si ya está en el máximo
+   (`aggregate_minutes` sigue sin bloquear, R11, a propósito). Los 2 tests que el reviewer señaló
+   como insuficientes fueron corregidos: `test_max_sessions_excedido_rechaza_una_session_start_
+   adicional` (nuevo, CLI end-to-end, `test_ds_guard_budgets_cli.py`) y el comentario del paso 6 de
+   `TestNoEvasionR12a` (`test_autonomy_sdd.py`) aclarado para no sugerir que prueba el bloqueo real
+   (que vive a nivel CLI, no en `sdd.py` — decisión de diseño D5, sin cambios).
+
+2 hallazgos NO bloqueantes, también resueltos: nota sobre `design.md` D2 vs. formato real de bullet
+(docstring de `parsear_checkpoints_de_propuesta` corregido, sin reabrir `design.md` aprobado); gap
+real de documentación de R14 (`max_concurrent_subagents` nunca mencionado en el skill instalado,
+mecanismo funcionalmente muerto sin esa documentación) — agregado a `SKILL.md`/`SKILL_lead_data_
+scientist.md.tmpl`, sección "Gestión de sesiones", junto a "Unidad de cupo".
+
+Puntos que el reviewer marcó "no verificado en esta pasada" y el Lead cerró directamente: R7 (test
+real, no hardcodeado — confirmado, es el propio código del Lead); R18 (`test_v08_autonomy_
+neutrality.py` solo ganó la excepción documentada + 1 test nuevo, nada más tocado — confirmado por
+el propio diff del Lead).
+
+39/39 tests en verde tras el fix (`test_ds_guard_budgets_cli.py` + `test_autonomy_sdd.py`).
+
 - Revisar T1-T7 contra `spec.md` completo (R1-R20) y contra los riesgos de `design.md`.
 - Verificar en particular: R7 (los 12 STOP nunca se vuelven `proceed`), R18 (cero tests existentes
   editados), R13 (límite de subagentes declarado honesto, no sobrevendido).

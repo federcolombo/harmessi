@@ -221,9 +221,20 @@ class TestNoEvasionR12a(unittest.TestCase):
         agregado = sdd.presupuesto_agregado(self.control)
         self.assertEqual(agregado["sesiones_totales"], 2)
 
-        # (6): una reapertura adicional (3ª ventana) queda bloqueada por el
-        #      código de límite agregado -- `chequear_limite_agregado` señala
-        #      el límite ya alcanzado con `max_sessions=2`.
+        # (6): el límite ya está agotado -- `chequear_limite_agregado`
+        #      (función pura de `sdd.py`, sin conocer política de CLI) lo
+        #      detecta correctamente con `max_sessions=2`. Esta función NO
+        #      es quien bloquea el `session start` en sí (por diseño, D5: la
+        #      composición de budgets vive en `ds_guard.py`, no en `sdd.py`
+        #      -- `sdd.session_start` no conoce `max_sessions`) -- la prueba
+        #      real de "no se abre una sesión nueva" (R12, hallazgo de
+        #      revisión T8, corregido) está a nivel CLI en
+        #      `tools/tests/test_ds_guard_budgets_cli.py::
+        #      test_max_sessions_excedido_rechaza_una_session_start_adicional`,
+        #      que sí ejercita `ds_guard session start` de punta a punta y
+        #      confirma `returncode == 2` y que `control["sesiones"]` no
+        #      creció. Acá solo se prueba que la detección de la que depende
+        #      ese rechazo es correcta.
         findings = sdd.chequear_limite_agregado(self.control, {"max_sessions": 2})
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].codigo, autonomy_core.CODE_LIMIT_AGGREGATE_BUDGET)

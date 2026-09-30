@@ -140,6 +140,14 @@ edición en curso.
   exacto. Nunca se excede el cupo.
 - **Unidad de cupo**: el cupo de subagentes cuenta roles distintos convocados; reinvocar el mismo
   rol consume el límite de intentos, pero no agrega otro subagente al cupo.
+- **`max_concurrent_subagents` (v0.8 Change 3, límite honesto/best-effort, distinto del cupo de
+  arriba):** si el proyecto declara `autonomy.budgets.max_concurrent_subagents` en
+  `.claude/guardrails.json`, el Lead autorreporta cada convocatoria/cierre de subagente
+  (`ds_guard session note --tipo subagente --evento abrir|cerrar`, `tools/dsguard/sdd.py`) y
+  consulta el conteo actual contra ese máximo ANTES de convocar uno nuevo; si ya está en el máximo,
+  no convoca y lo reporta como límite alcanzado. Es autorreportado, cooperativo, **sin enforcement
+  técnico real** — un Lead que omite el autorreporte no queda bloqueado por ningún mecanismo del
+  harness (mismo criterio honesto que el resto de los límites de este documento).
 - **Límite de intentos**: 2 reinvocaciones del mismo subagente sobre la misma tarea tras un
   resultado insatisfactorio; agotadas, el Lead para y consulta. No confundir con `maxTurns` del
   frontmatter de cada agente, que es un límite interno del subagente. Además del contador agregado
