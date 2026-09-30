@@ -37,7 +37,7 @@ otros la lógica de decisión vive mezclada con la lectura de stdin en el mismo 
 | `tools/ds_profile/*` (todo excepto lo que reusa `pathguard` como config) | Profiling de datasets |
 | `tools/nbrunner/core.py`, `execute.py`, `fsdiff.py`, `manifest.py` | Ejecución controlada de notebooks (invocada por el adapter, no es adapter en sí) |
 | `tools/launcher_common.py` | **Mixto, ver §2.3** — la mayoría de sus funciones (`resolver_venv_dir`, `ruta_interprete_venv`, `resolver_repo_root`) son utilidades neutras de resolución de venv/repo Git, usadas también por `tools/harmessi/doctor.py` (core, diagnóstico) — pero también contiene `lanzar_hook`, que sí es específica de Claude Code |
-| `tools/ds_guard.py`, `tools/ds_profile/cli.py`, `tools/dsimpact/cli.py`, `tools/harmessi/cli.py` | CLIs `argparse` — portables: cualquier orquestador que pueda invocar un proceso puede usarlos, no conocen el protocolo de hooks |
+| `tools/ds_guard.py`, `tools/ds_profile/cli.py`, `tools/dsimpact/cli.py`, `tools/harmessi/cli.py`, `tools/notebook_runner.py` | CLIs `argparse` — portables: cualquier orquestador que pueda invocar un proceso puede usarlos, no conocen el protocolo de hooks (`tools/notebook_runner.py`, v0.8 Change 2, cierra el gap del audit de `notebook-runner`: mismo patrón `_repo_root()` que `ds_guard.py`, compone `tools.leadrun.notebooks` -- único import calificado `tools.*` de todo el paquete `leadrun`, sin lógica nueva de validación) |
 | `tools/ds_init/*` | Instalador/scaffolding — su propia lógica (planner, writer, templating, control.json) es agnóstica; el *contenido* que instala está hoy pensado para Claude Code, pero el instalador mismo no se invoca como hook ni depende del protocolo de hooks |
 | `tools/providers/core.py` | Contrato neutral de invocación multi-proveedor (v0.5 Change 0) — "adapter" en el sentido de patrón de diseño (adapter de proveedor de IA), no confundir con la acepción "Adapter" de §2.2 (protocolo `PreToolUse` de Claude Code); este módulo es core porque no conoce ningún protocolo específico de invocador, es un contrato neutral que las 4 implementaciones concretas satisfacen |
 | `tools/harmessi_bench/core.py` | Tipos neutrales y scoring determinista del framework de evals (v0.5 Change 1) — no importa `tools.providers` ni ningún proveedor concreto; `runner.py` (no listado acá, mismo criterio que las 4 implementaciones de adapters de Change 0) es quien invoca un target reusando el contrato de `tools/providers/core.py` y `storage.py` quien persiste resultados en `.harmessi/evals/<run_id>/result.json` (mismo patrón de `ds_profile` → `.harmessi/profiles/`); no conoce protocolo de hooks, es core. |
@@ -69,6 +69,8 @@ otros la lógica de decisión vive mezclada con la lectura de stdin en el mismo 
 | `tools/modelquality/core.py` | Políticas de calidad de modelo neutrales (v0.7 Change 2: `ModelQualityPolicy`/`MetricRequirement`/`EvaluationContext`/`ObservedMetric`/`BaselineReference`, serialización determinista y hash de contenido de `ModelQualityPolicy`) -- solo stdlib; no entrena modelos, no calcula ninguna métrica, no observa ningún dato; familia independiente de `tools/datacontracts`, sin tipos compartidos; no conoce protocolo de hooks, es core. |
 | `tools/modelquality/validation.py` | Evaluación de `ModelQualityPolicy` contra métricas ya reportadas (v0.7 Change 2: `evaluate_policy`, códigos `QUALITY-*`, produce `dsguard.checks.CheckResult`) -- importa `dsguard.checks` y `tools.modelquality.core` (sibling); sin ninguna superficie de I/O ni de lectura de archivo; nunca recalcula ni verifica que el valor reportado sea numéricamente correcto (decisión 1 del roadmap); vocabulario `PASS`/`WARN`/`FAIL`/`N/A`, nunca `PASS` por falta de evidencia; no conoce protocolo de hooks, es core. |
 | `tools/qualityevidence/core.py` | Tipos neutrales de evidencia de calidad (v0.7 Change 3: `QualityEvidenceManifest`/`DriftEvidence`/`EvidenceSource`/`DeclarationRef`/`ScopeWindow`, serialización determinista y hash de contenido que excluye `generated_at`) -- solo stdlib; no calcula nada desde datos crudos, no observa ningún dataset; familia independiente de `tools.datacontracts`/`tools.modelquality`/`tools.reporting`, sin tipos compartidos; no conoce protocolo de hooks, es core. |
+| `tools/leadrun/core.py`, `allowlist.py` | Tipos y allowlist puros del runtime de ejecución del Lead (v0.8 Change 2, `20260929-lead-execution-runtime`) -- `core.py` es solo-stdlib (`hashlib`, `json`, `re`, `dataclasses`, `typing`, `__future__`), sin imports relativos ni de `os`/`pathlib`/`sys`/`subprocess`/`importlib`: declara `ExecutionForm`/`ExecutionRequest`/`ExecutionRecord` y el registro único de códigos `EXEC-*` (`CODES`); `approval` se recibe ya serializado como `dict`/`None` porque este módulo NO importa `tools.autonomy` (excepción de tipo de dato, no de import). `allowlist.py` es puro sobre `str`/`tuple` (importa `os.path` solo para manipulación de strings en memoria -- `normcase`/`normpath` -- nunca para tocar el disco, más `re`/`typing`/`.core`): reconoce la FORMA de un comando (script/pytest/notebook/cli_diagnostic) sin decidir autorización semántica ni consultar `control.json`; no conoce protocolo de hooks, es core. |
+| `tools/leadrun/scripts.py`, `notebooks.py`, `runtime.py` | Capa de I/O del runtime de ejecución del Lead (v0.8 Change 2) -- `scripts.py` importa `subprocess`/`time`/`pathlib`/`typing` + `.core` (relativo) y ejecuta vía `subprocess.run(..., capture_output=True, text=True)`, sin volver a evaluar la allowlist. `notebooks.py` compone `tools.nbrunner.{core,fsdiff,manifest}` y `tools.launcher_common` a nivel de módulo, más `.core` (relativo); `tools.nbrunner.execute` (que importa `nbformat`/`nbclient` a nivel de módulo) se importa de forma PEREZOSA, solo dentro de `ejecutar_manifest`, mismo criterio que `ds_profile` en `tools/datasources/file_observer.py` (regla 11). `runtime.py` es el único módulo del paquete que produce y persiste un `ExecutionRecord` (`.harmessi/executions/<id>/record.json`, escritura atómica); importa `dsguard.checks`/`datasources.scan` (vía `sys.path.insert`, mismo patrón que `tools/datasources/runtime.py`) y `.allowlist`/`.core`/`.notebooks`/`.scripts` (relativos), pero **no importa `tools.autonomy` ni `tools.dsguard.pathguard`**: esa composición de aprobación vive en `tools/ds_guard.py` (mismo patrón que la regla 11 para `access_check`); no conoce protocolo de hooks, es core. |
 | `tools/qualityevidence/evidence.py` | Persistencia de evidencia de calidad y cómputo de drift (v0.7 Change 3: construcción/escritura atómica/lectura verificada de `QualityEvidenceManifest` bajo `.harmessi/quality/`, `build_drift_evidence`/`drift_from_profiles` con `DRIFT_COMPARISON_MODES` acotado a diferencia absoluta/relativa, `resolve_evidence_ref` como convención opcional sobre `ObservedMetric.evidence_ref`/`BaselineReference.evidence_ref` de Change 2, sin modificarlo) -- importa `dsguard.checks` y `ds_profile.holdout_guard.verificar_permitido` (único símbolo); reimplementa localmente hash sha256 chunked/JSON canónico/escritura atómica (mismo criterio que `tools/dsguard/mlops_evidence.py`); nunca lee un `profile.json` sin el guard; nunca `PASS`/`FAIL` de drift sin threshold declarado (`N/A` "evidencia registrada sin veredicto"); no conoce protocolo de hooks, es core. |
 
 Las 4 implementaciones concretas del contrato de `tools/providers/core.py` —
@@ -237,6 +239,29 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
    (paridad exacta del literal `SOURCE_ID_PATTERN`, duplicado a propósito entre `datasources.core`
    y `autonomy.core`, paquetes independientes).
 
+12. Familia `tools/leadrun` (v0.8 Change 2, `20260929-lead-execution-runtime`): `core.py` es
+   solo-stdlib (`hashlib`, `json`, `re`, `dataclasses`, `typing`) y no importa hermanos ni
+   `tools.*`, sin imports relativos ni de `os`/`pathlib`/`sys`/`subprocess`/`importlib`;
+   `allowlist.py` es puro sobre `str`/`tuple` (`os.path` solo para manipulación de strings en
+   memoria, `re`, `typing`, `.core` relativo); `scripts.py` hace I/O (`subprocess`, `time`,
+   `pathlib`, `typing`, `.core`); `notebooks.py` compone `tools.nbrunner.{core,fsdiff,manifest}` y
+   `tools.launcher_common` a nivel de módulo más `.core` (relativo), con `tools.nbrunner.execute`
+   importado de forma perezosa solo dentro de `ejecutar_manifest` (mismo criterio que `ds_profile`
+   en la regla 11); `runtime.py` importa `dsguard.checks`/`datasources.scan` (vía
+   `sys.path.insert`) y `.allowlist`/`.core`/`.notebooks`/`.scripts` (relativos), pero **no
+   importa `tools.autonomy` ni `tools.dsguard.pathguard`**: esa composición de aprobación vive en
+   `tools/ds_guard.py`, en imports perezosos dentro de funciones (`_importar_perezoso`/
+   `_leadrun_modulos()`, mismo patrón ya usado para `datasources`/`autonomy`/`qualityevidence`/
+   etc.), así que tampoco cuenta como import de `leadrun` a nivel de módulo de `ds_guard.py`.
+   `tools/notebook_runner.py` importa `dsguard.core`/`dsguard.repo` más `tools.leadrun.notebooks`
+   (único import calificado `tools.*` de todo el paquete). A diferencia de la regla 11
+   (`tools/datasources`), acá la dirección es completamente asimétrica y **sin ninguna excepción
+   documentada**: `tools/leadrun` importa de `nbrunner`/`dsguard`/`datasources`, pero ningún
+   paquete (`dsguard`, `ds_profile`, `dsimpact`, `reporting`, `providers`, `routing`, `fallback`,
+   `harmessi_bench`, `autonomy`, `modelquality`, `qualityevidence`, `datasources`,
+   `datacontracts`, `nbrunner`) importa `tools.leadrun`/`leadrun`, ni siquiera `ds_guard.py` a
+   nivel de módulo. Verificado por `tools/tests/test_v08_leadrun_neutrality.py`.
+
 Estas reglas ya se cumplen hoy (verificado, ver `tools/tests/test_architecture_boundaries.py`,
 Change 3) — este documento las hace explícitas, no las introduce de cero.
 
@@ -364,6 +389,13 @@ fuente real  →  extensión del proyecto (adapter)  →  SourceObservation (neu
 descrita en el párrafo original de esta sección ya está en vigor como la regla 11 de §3 (paquete
 `tools/datasources`, filas en §2.1); la sección completa queda como registro histórico de la
 planificación, no como pendiente.
+
+**Implementado en Change 2 (`20260929-lead-execution-runtime`).** La parte de "Ejecución (M5)"
+descrita arriba -- runtime gobernado que produce evidencia de ejecución vía `ExecutionRecord`,
+allowlist declarativa de forma de comando reutilizable por el futuro hook estricto de v0.10 -- ya
+está en vigor como la regla 12 de §3 (paquete `tools/leadrun`, filas en §2.1). El hook estricto
+global sobre el Bash del Lead sigue fuera de alcance (queda para v0.10, como ya aclaraba el párrafo
+original).
 
 **Vocabulario.** "Adapter" ya tiene dos acepciones en este documento (§2.2: hooks de Claude Code;
 `tools/providers`: proveedores de IA). El adapter de fuente sería una tercera; "provider" no debe
