@@ -405,18 +405,36 @@ está en vigor como la regla 12 de §3 (paquete `tools/leadrun`, filas en §2.1)
 global sobre el Bash del Lead sigue fuera de alcance (queda para v0.10, como ya aclaraba el párrafo
 original).
 
-**Enmienda 2026-09-30 (NO implementada -- planificación, no código).** `docs/roadmap/v0.8.md` agregó
-cuatro decisiones materiales nuevas (M7-M10, todas opt-in/backward-compatible) para Changes 3-5,
-sin reabrir Changes 0-2: `approval_mode: checkpoints` (M7, extiende el ciclo de aprobación de
-Change 3 sin crear una segunda arquitectura de approvals); project capabilities / instalación
-capability-aware (M8, extiende `tools/ds_init/manifest.py` y el modelo `Core → capabilities →
-assets provisionados`, dimensión distinta de `installation_stage`); fuentes externas file-backed de
-solo lectura (M9, extiende el registro de `tools/datasources` de Change 1 sin modificar
-`SourceObservation`/`SourceRef`, la ruta absoluta nunca entra a un artefacto portable); layering de
-configuración `managed defaults → project config → local overrides → effective config` (M10,
-`permiso efectivo = policy humana ∩ project config ∩ local override`, fail-closed, mismo principio
-ya en vigor para M2). Ninguna de las cuatro está implementada todavía; cuando se implementen, el
-inventario pasa a §2 y las reglas a §3, mismo patrón que Change 1/Change 2 arriba.
+**Enmienda 2026-09-30.** `docs/roadmap/v0.8.md` agregó cuatro decisiones materiales (M7-M10, todas
+opt-in/backward-compatible) para Changes 3-5, sin reabrir Changes 0-2: `approval_mode: checkpoints`
+(M7, extiende el ciclo de aprobación de Change 3 sin crear una segunda arquitectura de approvals);
+project capabilities / instalación capability-aware (M8, extiende `tools/ds_init/manifest.py` y el
+modelo `Core → capabilities → assets provisionados`, dimensión distinta de `installation_stage`);
+fuentes externas file-backed de solo lectura (M9, extiende el registro de `tools/datasources` de
+Change 1 sin modificar `SourceObservation`/`SourceRef`, la ruta absoluta nunca entra a un artefacto
+portable); layering de configuración `managed defaults → project config → local overrides →
+effective config` (M10, `permiso efectivo = policy humana ∩ project config ∩ local override`,
+fail-closed, mismo principio ya en vigor para M2). **M7 ya está implementada** (Change 3,
+`20260930-autonomous-sdd-and-remediation`, cerrado -- `tools/dsguard/sdd.py`/`tools/ds_guard.py`,
+regla 10 de §3 arriba documenta la excepción real de dependencias que introdujo). **M8-M10 siguen
+sin implementar** (Change 4, sin SDD todavía); cuando se implementen, el inventario pasa a §2 y las
+reglas a §3, mismo patrón que Change 1/Change 2.
+
+**Adenda 2026-09-30 (costos residuales, NO implementada -- planificación, no código).** Dos
+decisiones materiales más (M11-M12), sin reabrir Changes 0-2 ni los artefactos aprobados por hash de
+Change 3 (ya cerrado): pre-aprobación de dependencias del proyecto (M11 -- extiende
+`approval_mode: checkpoints` de M7/Change 3 y el STOP ya existente `new_dependency`, sin modificar
+`tools/autonomy/core.py`; auditado que `tools/leadrun/` no tiene hoy ninguna primitiva gobernada de
+instalación, así que M11 es solo clasificación STOP/no-STOP, sin ninguna vía de instalación real);
+integridad detectiva de fuentes externas read-only (M12 -- fingerprint tamaño+`mtime`/hash opcional
+antes/después de una ejecución gobernada de Change 2, mapeado al STOP ya existente `data_loss_risk`,
+sin STOP nuevo ni cambios a `tools/leadrun/core.py`/`runtime.py`; diagnóstico de permisos OS de solo
+lectura en `harmessi doctor`, nunca mutación). Dos correcciones puntuales ya aplicadas sobre Change
+3 (cerrado) sin reabrir sus artefactos aprobados: `aggregate_minutes` pasó a ser LIMIT efectivo
+(`tools/ds_guard.py::cmd_session_start`, documentado en `openspec/decisions/ledger.jsonl` y en
+`verification.md` de ese Change); las otras dos (M11 modelado, eficiencia writer→Lead) quedan para
+implementación correctiva inmediata bajo el mismo criterio -- ninguna de las dos toca la
+clasificación core/adapter de este documento por sí sola.
 
 **Vocabulario.** "Adapter" ya tiene dos acepciones en este documento (§2.2: hooks de Claude Code;
 `tools/providers`: proveedores de IA). El adapter de fuente sería una tercera; "provider" no debe
