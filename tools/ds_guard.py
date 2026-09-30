@@ -550,18 +550,32 @@ def cmd_session_start(args: argparse.Namespace) -> int:
     # argparse) se resuelve desde `autonomy.budgets.session_minutes`.
     minutos = args.minutos if args.minutos is not None else budgets["session_minutes"]
 
-    # R12 de spec.md: a diferencia de `aggregate_minutes` (R11, puramente
-    # informativo -- NO bloquea abrir), `max_sessions` SÍ bloquea `session
-    # start` -- es la mitad de la decisión congelada R12a (reapertura tras
-    # `pausada_bloqueada` consume una nueva ventana; agotado el máximo, la
-    # SIGUIENTE reapertura queda rechazada, no silenciosamente permitida).
-    # Se chequea ANTES de llamar a `sdd.session_start` y antes de escribir
-    # nada -- si se rechaza, `control.json` queda intacto.
-    findings_max_sessions = sdd.chequear_limite_agregado(
-        control, {"max_sessions": budgets["max_sessions"]}
+    # R12/R12a de spec.md, ENMENDADO (decisión humana explícita registrada en
+    # el decision ledger, `ds_guard decision list --change-id
+    # 20260930-autonomous-sdd-and-remediation`, ver también
+    # `verification.md` de ese Change): tanto `max_sessions` COMO
+    # `aggregate_minutes` son LIMIT efectivos -- ambos bloquean abrir una
+    # ventana nueva al alcanzarlos o superarlos. La afirmación anterior de
+    # que `aggregate_minutes` era "puramente informativo" (R11 tal como se
+    # interpretó originalmente) quedó superseded: el propio catálogo LIMIT
+    # de `tools.autonomy.core` (`CHECKPOINT_RESUMABLE`) siempre implicó que
+    # agotar CUALQUIERA de los dos ejes agregados produce un checkpoint
+    # resumible -- eso solo puede cumplirse si ambos ejes impiden abrir una
+    # ventana nueva, no solo uno. Se chequea ANTES de llamar a
+    # `sdd.session_start` y antes de escribir nada -- si se rechaza,
+    # `control.json` queda intacto. Nunca produce STOP ni aprobación humana
+    # automática (siguen siendo LIMIT, no STOP_CATALOG); nunca se resetea
+    # cerrando/reabriendo (R12a, `presupuesto_agregado` suma sobre TODAS las
+    # sesiones de `control["sesiones"]`, sin excepción).
+    findings_limite_agregado = sdd.chequear_limite_agregado(
+        control,
+        {
+            "max_sessions": budgets["max_sessions"],
+            "aggregate_minutes": budgets["aggregate_minutes"],
+        },
     )
-    if findings_max_sessions:
-        print(core.formatear_findings_texto(findings_max_sessions), file=sys.stderr)
+    if findings_limite_agregado:
+        print(core.formatear_findings_texto(findings_limite_agregado), file=sys.stderr)
         return 2
 
     try:

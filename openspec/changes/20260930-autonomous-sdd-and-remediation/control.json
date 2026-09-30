@@ -21,6 +21,7 @@
       "openspec/changes/20260930-autonomous-sdd-and-remediation/spec.md",
       "openspec/changes/20260930-autonomous-sdd-and-remediation/tasks.md",
       "openspec/changes/20260930-autonomous-sdd-and-remediation/verification.md",
+      "openspec/decisions/ledger.jsonl",
       "tools/ds_guard.py",
       "tools/ds_init/profiles/python_jupyter_data/templates/SKILL_lead_data_scientist.md.tmpl",
       "tools/ds_init/profiles/python_jupyter_data/templates/sdd.md.tmpl",

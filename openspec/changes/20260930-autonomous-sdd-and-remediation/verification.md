@@ -217,3 +217,52 @@ commits/tags automáticos, políticas nuevas de calidad; un lock de concurrencia
 ## Resultado final
 
 **Change 3 cumple R1-R20 con las correcciones y aclaraciones documentadas.**
+
+## Addendum (2026-09-30) — corrección posterior al cierre: `aggregate_minutes` es LIMIT efectivo
+
+**No reabre `proposal.md`/`spec.md`/`design.md`** (aprobados por hash, hashes intactos — ver
+`control.json` → `aprobaciones`). Documentado acá, en `docs/roadmap/v0.8.md` y en el decision
+ledger (`openspec/decisions/ledger.jsonl`, `decision_id:
+20260930-aggregate-budget-limit-efectivo`), per instrucción explícita del autor de no mutar
+artefactos ya aprobados.
+
+**Qué pasó**: la aprobación humana original de Change 3 fijó explícitamente "alcanzar cualquiera de
+esos límites [`max_sessions`, `aggregate_budget`] produce `checkpoint_resumable`". La
+implementación de T3/T5 (este `verification.md`, sección "§4 Presupuesto agregado", texto original)
+solo hizo bloquear `max_sessions` en `cmd_session_start`, dejando `aggregate_minutes` puramente
+informativo (expuesto solo vía `session aggregate`, de solo lectura) — una desviación real de la
+aprobación humana, no detectada por la revisión de T8 (que se enfocó en `max_sessions`, el otro eje
+del mismo hallazgo) ni por el Lead al cerrar el Change. El autor la detectó después del cierre y
+fijó la corrección explícitamente: **`aggregate_minutes` es un LIMIT efectivo**, igual que
+`max_sessions`.
+
+**Afirmación superseded**: en "§4 Presupuesto agregado" arriba, donde dice "`aggregate_minutes`
+sigue sin bloquear (R11, a propósito, son ejes distintos)" — esa lectura de R11/R12 quedó
+**superseded** por la decisión del autor. La distinción real no es "un eje bloquea y el otro no":
+ambos ejes agregados (`max_sessions` y `aggregate_minutes`) bloquean `session start` al alcanzarse;
+la única distinción real es entre LIMIT (ambos ejes agregados, más el LIMIT de presupuesto de
+sesión individual ya existente desde antes de Change 3) y STOP (los 12 STOP materiales de Change 0,
+sin tocar) — LIMIT nunca pide aprobación humana ni es STOP, STOP siempre la pide.
+
+**Corrección aplicada** (commit corrective separado, ver `git log`): `chequear_limite_agregado`
+(`tools/dsguard/sdd.py`) ya soportaba ambos ejes desde T1-T2 — no requirió ningún cambio. El fix
+completo vivió en `cmd_session_start` (`tools/ds_guard.py`), que ahora pasa `aggregate_minutes`
+junto con `max_sessions` al chequeo que bloquea antes de abrir una sesión nueva (antes solo pasaba
+`max_sessions`). Sin contador paralelo (sigue siendo vista derivada pura sobre
+`control["sesiones"]`, sin ningún campo nuevo persistido). Sin STOP nuevo, sin aprobación
+automática, sin reset al cerrar/reabrir (`presupuesto_agregado` suma sobre TODAS las sesiones, sin
+excepción).
+
+**Tests nuevos** (`tools/tests/test_ds_guard_budgets_cli.py::TestAggregateMinutesLimitEfectivo`, 11
+escenarios, todos end-to-end contra el CLI real como subproceso): debajo del límite abre;
+exactamente en el límite bloquea (umbral `>=`); encima bloquea; varias sesiones suman; cerrar/
+reabrir no resetea; IDs distintos no evaden; `max_sessions`/`aggregate_minutes` funcionan
+independientemente (2 sub-tests); agregado agotado da LIMIT (`AUTONOMY-LIMIT-AGGREGATE-BUDGET`)
+nunca STOP; config ausente es backward-compatible; config inválida es fail-closed. Revisión acotada
+de `data-science-reviewer` sobre este fix puntual (no de todo Change 3 de nuevo).
+
+**Regresión**: dirigida (tests nuevos + `test_autonomy_sdd.py` + `test_v08_change3_neutrality.py` +
+`test_v08_autonomy_neutrality.py` + `test_remediation.py` + `test_architecture_boundaries.py`, todos
+en verde) — no se repitió la regresión completa de `tools/` (no aplica ninguno de los criterios que
+la exigirían: sin modificación transversal inesperada, sin riesgo transversal señalado por el
+reviewer, sin gate formal que la exija para este tipo de corrección puntual post-cierre).
