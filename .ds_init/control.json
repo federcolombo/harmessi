@@ -155,7 +155,7 @@
     },
     {
       "ruta": "tools/dsguard/pathguard.py",
-      "sha256": "718184eab77e8a32c2f3a66bf01ef703e1c8b15c3bafb3302e6387fffcb596a9"
+      "sha256": "aadbdc0043862e486b5c3efdd07cd3abe64fa3c18a6711f5212834eae4371282"
     },
     {
       "ruta": "tools/dsguard/hook_rutas.py",
@@ -203,31 +203,31 @@
     },
     {
       "ruta": "tools/leadrun/__init__.py",
-      "sha256": "9bc575df023cc87542fafdc7d37bf9238c090268b82eec88c933119fc7bf0a81"
+      "sha256": "3866757fb23d7a9730357f3dcfb0b235945360b73451ad8a55566e81c79cc24c"
     },
     {
       "ruta": "tools/leadrun/core.py",
-      "sha256": "f3a252a57cf34f97d1dd9c48f48332bc70f0526f3f9fb7ba6f87ab82e8465283"
+      "sha256": "ea70cf76e00a70e7e5db5c42bf344f51b55b29dc4fb34ac5a9ee6243e4dc20ad"
     },
     {
       "ruta": "tools/leadrun/allowlist.py",
-      "sha256": "2c4ab9f6106df06134eef0b1c1d03f4c160cc958918ac5a8ec946ee3ba135832"
+      "sha256": "ad758be0b8f99b4335083f43afb0944e74188264a9a79c1df2ab971a9a6e18c7"
     },
     {
       "ruta": "tools/leadrun/scripts.py",
-      "sha256": "95f335f241caf6b02532c22ef1397a78acf312cdb8579727634437b6bd691b90"
+      "sha256": "c805ee387169f464fb1abe244f2f32d3479613720c2af08ba05b9d2575284b16"
     },
     {
       "ruta": "tools/leadrun/notebooks.py",
-      "sha256": "0fbfb0dff482ae5401f95cb5377e7fe5ec46d670868bc7160d329ea9894f9f1c"
+      "sha256": "84c468937c429c81dbbc6237df920bba70d3f154cc6af9de4ec7baa9c8dbd908"
     },
     {
       "ruta": "tools/leadrun/runtime.py",
-      "sha256": "593d13c12941bc9119c13999c75501f9594f8b2c34360ecd41ba168e97b1c9b5"
+      "sha256": "2682af0e5e1e011d5509f5613fa7d46efa4079d6131f73ba948d60ee316357a9"
     },
     {
       "ruta": "tools/notebook_runner.py",
-      "sha256": "ae5a501b3069cf94ae92b5ca43bb964f85919ecc8ca5b4cd533bbc72c4155d27"
+      "sha256": "fc0c1f5720dcab04afa386be4dd5158a4c872b1e390da05c139c80b2263e2d3b"
     },
     {
       "ruta": "tools/tests/test_harness_smoke.py",
@@ -395,47 +395,47 @@
     },
     {
       "ruta": "tools/autonomy/__init__.py",
-      "sha256": "7b6498c64520a5b3fac684bb85ee8546a17c1a6ca47c87e67d44f8b83fc39062"
+      "sha256": "f5e6d9eb75f08a33f8e9478671c1cee05afe496357ea1ac75b3a631935dae861"
     },
     {
       "ruta": "tools/autonomy/core.py",
-      "sha256": "71a9011e02842d4ef2c7239c228f31024cc44b0b545cdac75fa0a2ab0a0e959a"
+      "sha256": "ab6f64dba5c1a7ae2cc62f7c5ec5702dc5c46b22f124ca31c08c88c4e3db6f86"
     },
     {
       "ruta": "tools/autonomy/policy.py",
-      "sha256": "a0fa0c4b1a86896ed4a85051b73f03272c131b13bc850fa5ef372d3e06f04a50"
+      "sha256": "5b6d7d63ca87f691f6d4c8c6b3f5163b65cab305e3bf910c2ff8c92a4c68fa05"
     },
     {
       "ruta": "tools/datasources/__init__.py",
-      "sha256": "11c853de2edba1e99f27df7ad654d1db3577464ae4d38df3dbc8f35345c62915"
+      "sha256": "fca984d64a6647f84fb659574e6f2a3f09d2776bed184260f13e61e1d4a05926"
     },
     {
       "ruta": "tools/datasources/core.py",
-      "sha256": "0da0f51df8aa00af6ec3a6dc616d41ca55930024f410be8816f7ab11a1159161"
+      "sha256": "c75a094d7df040797668b516d9478d2765a9818ea88406abf01e14ebfbc7abdf"
     },
     {
       "ruta": "tools/datasources/scan.py",
-      "sha256": "3345f0043dd80c6fb06dbb56811b5ee51cb401bbfc3d5ae6ddd4c9723452ed5e"
+      "sha256": "86af51d6bbef415eba48b2096e9061ac6b9e68b279090fb2275cbbafbc66a0fc"
     },
     {
       "ruta": "tools/datasources/registry.py",
-      "sha256": "f153e03da66d1a49b2b3b268822a34fd50b132af963ef739716eabe4c50c7b09"
+      "sha256": "8ff5ef1bea5a267df82e9d8797fb71f9fbd6116b6a39bc7d4878209daa83c779"
     },
     {
       "ruta": "tools/datasources/runtime.py",
-      "sha256": "dd7aab751f067ad1e62d11c061037f23a0f250b0b98e302afb45806c6ccfca7c"
+      "sha256": "b1a704a677b1d73dafd4b47af25a800058ba7d586ece60c4ace3b697dff37e00"
     },
     {
       "ruta": "tools/datasources/profile_bridge.py",
-      "sha256": "6930ff20da3bb4e22c0d56b498e722555a1834c27d89dfcd571fc048073cc183"
+      "sha256": "b869bc21c16f5412bf83e25681e61e4ff2fb2fcde8ba01f6c8c9a3675abf5c54"
     },
     {
       "ruta": "tools/datasources/file_observer.py",
-      "sha256": "8850fb606b285defc6ef44d29db23dc90892b1b95ebf54e8f17a795ff8d5a46c"
+      "sha256": "0cee085417778d7a8d45d5977d0b3bd0b97d18acb90174b709e344e67efbd542"
     },
     {
       "ruta": "tools/datacontracts/legacy_wording.py",
-      "sha256": "85ce9d3ffa50291b242a7a96c8ed09020cd0a9b2f2cc8ce0bb2ebfe5ad7c2af5"
+      "sha256": "5bc6adf6d8ab721d03a06a2722347ffe9a7da0c5c35877b4677c4b690adf0618"
     },
     {
       "ruta": "tools/modelquality/__init__.py",
