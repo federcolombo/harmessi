@@ -14,9 +14,11 @@ from pathlib import Path
 from .manifest import (
     GENERADO,
     MERGE,
+    ORDEN_STAGES,
     PLANTILLA,
     VERBATIM,
     manifest_para_perfil,
+    manifest_para_perfil_stage_y_capabilities,
     manifest_para_perfil_y_stage,
 )
 from .preflight import detectar_colisiones
@@ -66,10 +68,13 @@ def _accion_para_entrada(entrada, colisiones: set, integrar_claude_md: bool) -> 
     raise ValueError(f"tratamiento sin acción definida: {entrada.tratamiento!r}")
 
 
-def construir_plan(perfil: str, destino: Path, config: dict, stage: str = None) -> list:
+def construir_plan(
+    perfil: str, destino: Path, config: dict, stage: str = None, capabilities_habilitadas=None
+) -> list:
     """Combina `manifest_para_perfil(perfil)` (o `manifest_para_perfil_y_stage`
-    si se pasa `stage`) + `detectar_colisiones` y arma la lista de
-    `AccionPlan` (R3, R10, R4 de Change 7 v0.3).
+    si se pasa `stage`, o `manifest_para_perfil_stage_y_capabilities` si
+    además se pasa `capabilities_habilitadas`) + `detectar_colisiones` y arma
+    la lista de `AccionPlan` (R3, R10, R4 de Change 7 v0.3; M8 de Change 4).
 
     `config` acepta la clave opcional `integrar_claude` (bool, default
     `False`) — corresponde al flag `--integrar-claude` de la CLI.
@@ -77,8 +82,24 @@ def construir_plan(perfil: str, destino: Path, config: dict, stage: str = None) 
     `stage` (opcional, uno de `manifest.ORDEN_STAGES`): si es `None`
     (default), usa `manifest_para_perfil(perfil)` — comportamiento actual,
     sin cambios, para cualquier caller que no pase este parámetro. Si se
-    pasa, usa `manifest_para_perfil_y_stage(perfil, stage)` en su lugar."""
-    if stage is None:
+    pasa, usa `manifest_para_perfil_y_stage(perfil, stage)` en su lugar.
+
+    `capabilities_habilitadas` (opcional, M8 -- hallazgo de hardening de
+    Change 5: `manifest_para_perfil_stage_y_capabilities` ya existía desde
+    Change 4 pero ningún llamador real la invocaba, dejando el filtro de
+    capabilities inalcanzable desde la CLI real pese a estar completamente
+    implementado y testeado a nivel unitario). `None` (default) preserva
+    exactamente el comportamiento de arriba -- cero cambio para cualquier
+    llamador que no lo pase. Si se pasa (iterable de strings), se usa
+    SIEMPRE `manifest_para_perfil_stage_y_capabilities`, con `stage` resuelto
+    al máximo de `ORDEN_STAGES` si no se pasó un `stage` explícito (el filtro
+    de capabilities no tiene sentido sin alguna noción de stage, aunque sea
+    el máximo -- nunca se intenta aplicar capabilities sobre
+    `manifest_para_perfil` sin stage)."""
+    if capabilities_habilitadas is not None:
+        stage_efectivo = stage if stage is not None else ORDEN_STAGES[-1]
+        entradas = manifest_para_perfil_stage_y_capabilities(perfil, stage_efectivo, capabilities_habilitadas)
+    elif stage is None:
         entradas = manifest_para_perfil(perfil)
     else:
         entradas = manifest_para_perfil_y_stage(perfil, stage)

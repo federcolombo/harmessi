@@ -413,6 +413,58 @@ def test_observe_source_es_idempotente():
         assert not any(r.status == checks.STATUS_FAIL for r in res2)
 
 
+def test_observe_source_observer_dotted_relativo_a_repo_root_sin_repo_root_en_syspath():
+    """Regresión (v0.8 Change 5, Caso C/R8): `observer` se valida
+    estáticamente (resolve_observer_file) como ruta de módulo relativa al
+    REPO ROOT -- ej. el observer real incluido se referencia como
+    "tools.datasources.file_observer:factory". Pero en producción
+    `ds_guard.py` se invoca como script directo (`python tools/ds_guard.py
+    ...`), donde Python solo agrega el directorio del script (`tools/`) a
+    `sys.path`, NUNCA el repo root -- así que `import_module("paquete_decoy...")`
+    fallaba con ModuleNotFoundError incluso para el observer real. Este test
+    simula exactamente ese entorno: un paquete decoy bajo un repo_root nuevo,
+    con el repo_root explícitamente ausente de `sys.path` antes de llamar."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        assert str(tmp_path) not in sys.path
+
+        paquete_dir = tmp_path / "paquete_decoy_repo_root"
+        paquete_dir.mkdir()
+        (paquete_dir / "__init__.py").write_text("", encoding="utf-8")
+        (paquete_dir / "modulo.py").write_text(
+            "class _Obs:\n"
+            "    def capabilities(self):\n"
+            "        return {'facets': {}, 'operations': []}\n"
+            "    def observe(self, request):\n"
+            "        return {'dataset': {}, 'fields': []}\n"
+            "def factory(source_id, options):\n"
+            "    return _Obs()\n",
+            encoding="utf-8",
+        )
+        _escribir_registro(
+            tmp_path,
+            _fuente(observer="paquete_decoy_repo_root.modulo:factory"),
+        )
+        try:
+            assert str(tmp_path) not in sys.path
+            observation, resultados = runtime.observe_source(
+                tmp, "customers", {"source_id": "customers"}, _access_check_permite
+            )
+            assert observation is not None
+            assert not any(r.status == checks.STATUS_FAIL for r in resultados)
+        finally:
+            sys.modules.pop("paquete_decoy_repo_root.modulo", None)
+            sys.modules.pop("paquete_decoy_repo_root", None)
+            try:
+                sys.path.remove(str(tmp_path))
+            except ValueError:
+                pass
+            try:
+                sys.path.remove(str(tmp_path))
+            except ValueError:
+                pass
+
+
 # ---------------------------------------------------------------------------
 # observe_source: excepciones del observer (technical_error)
 # ---------------------------------------------------------------------------

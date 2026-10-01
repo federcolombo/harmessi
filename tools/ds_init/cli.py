@@ -27,7 +27,7 @@ from pathlib import Path
 from . import control as control_mod
 from . import legacy as legacy_mod
 from . import writer
-from .manifest import ORDEN_STAGES, manifest_para_perfil_y_stage, raiz_repo_origen
+from .manifest import CAPABILITIES_CONOCIDAS, ORDEN_STAGES, manifest_para_perfil_y_stage, raiz_repo_origen
 from .planner import construir_plan, formatear_plan
 from .preflight import DestinoInvalidoError, validar_destino
 from .version import HARNESS_VERSION
@@ -69,6 +69,17 @@ def construir_parser() -> argparse.ArgumentParser:
     parser.add_argument("--notebooks-dir", default="notebooks", help="Directorio de notebooks del proyecto destino (default: notebooks, solo 'install').")
     parser.add_argument("--venv-dir", default=".venv", help="Directorio del entorno virtual del proyecto destino (default: .venv, solo 'install').")
     parser.add_argument("--integrar-claude", action="store_true", help="Integra un bloque delimitado en un CLAUDE.md ya existente (R9, solo 'install').")
+    parser.add_argument(
+        "--disable-capability",
+        action="append",
+        choices=list(CAPABILITIES_CONOCIDAS),
+        default=None,
+        metavar="CAPABILITY",
+        help="Deshabilita una capability (M8, repetible) -- ninguna entrada del manifiesto "
+        "declarada bajo esa capability se provisiona. Default: todas las capabilities "
+        f"conocidas ({CAPABILITIES_CONOCIDAS}) habilitadas, comportamiento idéntico a no pasar "
+        "este flag. Válido para 'install' y 'sync'.",
+    )
     parser.add_argument(
         "--stage",
         choices=list(ORDEN_STAGES),
@@ -147,6 +158,8 @@ def _main_install(parser: argparse.ArgumentParser, args: argparse.Namespace, des
         print(f"[ABORTADO] {exc}", file=sys.stderr)
         return 1
 
+    capabilities_habilitadas = frozenset(CAPABILITIES_CONOCIDAS) - frozenset(args.disable_capability or [])
+
     config = {
         "perfil": PERFIL_MVP,
         "nombre": args.nombre,
@@ -156,9 +169,10 @@ def _main_install(parser: argparse.ArgumentParser, args: argparse.Namespace, des
         "integrar_claude": args.integrar_claude,
         "stage": stage,
         "placeholders": _contexto_placeholders(args.nombre, args.notebooks_dir, args.venv_dir),
+        "capabilities_habilitadas": sorted(capabilities_habilitadas),
     }
 
-    plan = construir_plan(PERFIL_MVP, destino, config, stage=stage)
+    plan = construir_plan(PERFIL_MVP, destino, config, stage=stage, capabilities_habilitadas=capabilities_habilitadas)
     print(formatear_plan(plan))
 
     if args.execute:
@@ -224,6 +238,8 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
     notebooks_dir = configuracion_previa.get("notebooks_dir")
     venv_dir = configuracion_previa.get("venv_dir")
 
+    capabilities_habilitadas = frozenset(CAPABILITIES_CONOCIDAS) - frozenset(args.disable_capability or [])
+
     config = {
         "perfil": perfil,
         "nombre": nombre,
@@ -233,9 +249,10 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
         "integrar_claude": False,
         "stage": target,
         "placeholders": _contexto_placeholders(nombre, notebooks_dir, venv_dir),
+        "capabilities_habilitadas": sorted(capabilities_habilitadas),
     }
 
-    plan = construir_plan(perfil, destino, config, stage=target)
+    plan = construir_plan(perfil, destino, config, stage=target, capabilities_habilitadas=capabilities_habilitadas)
     print(formatear_plan(plan))
 
     if not args.execute:
@@ -261,7 +278,12 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
     try:
         control_recien_escrito = json.loads(ruta_control.read_text(encoding="utf-8"))
         control_mod.regenerar_control(
-            destino, control_recien_escrito, perfil=perfil, stage=target, installation_stage=target
+            destino,
+            control_recien_escrito,
+            perfil=perfil,
+            stage=target,
+            installation_stage=target,
+            capabilities_habilitadas=capabilities_habilitadas,
         )
     except Exception as exc:  # noqa: BLE001 - fallo real, nunca debe pasar desapercibido
         print(

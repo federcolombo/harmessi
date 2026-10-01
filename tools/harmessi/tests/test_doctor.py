@@ -1064,5 +1064,74 @@ class TestCheckOwnership5Vias(unittest.TestCase):
         self.assertEqual(encontrados[0].status, checks.STATUS_PASS)
 
 
+class TestCheckArchivosAdministradosCapabilityAware(unittest.TestCase):
+    """M8 (hallazgo de hardening, Change 5): `_check_archivos_administrados`
+    no tenía ninguna noción de capabilities -- un asset deliberadamente no
+    provisionado por `predictive_modeling=false` se reportaba como
+    `HARMESSI-ARCHIVO-FALTANTE` (`WARN`), nunca como `N/A` (contradice R3/R6
+    de Change 4, que afirmaba esto ya estaba "Cumplido" basándose solo en el
+    test unitario de la función de filtro, sin confirmar que estuviera
+    wireada a Doctor)."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal(prefix="doctor_capability_")
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _instalar_con_capability_deshabilitada(self):
+        config = _config_base(self.repo)
+        config["capabilities_habilitadas"] = []
+        plan = construir_plan(
+            PERFIL, self.repo, config, stage="experiment", capabilities_habilitadas=frozenset()
+        )
+        return ds_init_writer.instalar(plan, self.repo, config)
+
+    def test_modelquality_faltante_por_capability_reporta_na_no_warn(self):
+        self._instalar_con_capability_deshabilitada()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+
+        codigos_por_destino = {
+            r.subject: r.code for r in resultados if r.subject and "modelquality" in r.subject
+        }
+        self.assertEqual(len(codigos_por_destino), 3)
+        for codigo in codigos_por_destino.values():
+            self.assertEqual(codigo, "HARMESSI-CAPABILITY-DISABLED")
+        self.assertTrue(all(r.status == checks.STATUS_NA for r in resultados if "modelquality" in (r.subject or "")))
+        # Nunca FAIL/WARN para estos destinos.
+        self.assertFalse(
+            any(
+                "modelquality" in (r.subject or "") and r.status in (checks.STATUS_FAIL, checks.STATUS_WARN)
+                for r in resultados
+            )
+        )
+
+    def test_instalacion_normal_sigue_reportando_ok_para_modelquality(self):
+        # Regresión/backward compat: sin deshabilitar nada, los 3 archivos
+        # están presentes -> ni siquiera aparecen en los resultados (la
+        # función solo reporta lo que falta).
+        _instalar_harness_real(self.repo)
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertFalse(any("modelquality" in (r.subject or "") for r in resultados))
+
+    def test_control_json_legacy_sin_capabilities_habilitadas_sigue_reportando_warn(self):
+        # Backward compat explícita (R5): un `control.json` de ANTES de este
+        # fix (sin la clave `capabilities_habilitadas`) no puede distinguir
+        # "deshabilitado a propósito" de "falta de verdad" -- debe seguir
+        # comportándose EXACTAMENTE como antes (WARN, nunca N/A por
+        # inferencia), aunque el archivo realmente no esté.
+        self._instalar_con_capability_deshabilitada()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        del control_data["capabilities_habilitadas"]
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        codigos = {r.subject: r.code for r in resultados if r.subject and "modelquality" in r.subject}
+        self.assertEqual(len(codigos), 3)
+        for codigo in codigos.values():
+            self.assertEqual(codigo, "HARMESSI-ARCHIVO-FALTANTE")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -428,7 +428,12 @@ def instalar(plan: list, destino, config: dict) -> ResultadoInstalacion:
         _escribir_journal(journal_path, entradas_journal)
 
         control_mod.generar_control(
-            destino, perfil, config, archivos_aplicados, installation_stage=stage
+            destino,
+            perfil,
+            config,
+            archivos_aplicados,
+            installation_stage=stage,
+            capabilities_habilitadas=config.get("capabilities_habilitadas"),
         )
     except Exception as exc:
         fallos_rollback = _revertir_journal(entradas_journal, destino, staging)

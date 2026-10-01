@@ -37,6 +37,16 @@ TRATAMIENTOS_VALIDOS = (VERBATIM, PLANTILLA, GENERADO, MERGE)
 # se confunden ni se escriben implícitamente entre sí).
 ORDEN_STAGES = ("discovery", "experiment", "production_candidate", "production")
 
+# Vocabulario cerrado de capabilities conocidas (M8, Change 4:
+# `20260930-project-extension-and-installer-integration`, R1-R2 de su
+# `spec.md`). Único eje con contenido real a excluir hoy: `predictive_modeling`
+# (`data_analysis`/`reporting` quedan documentados como vocabulario reservado,
+# sin entradas que los declaren todavía). Usado por `cli.py` (Change 5,
+# hallazgo de hardening: la función de filtro ya existía pero no estaba
+# wireada a ningún flag real del instalador) para resolver el default "todas
+# habilitadas" -- backward compatible, cero cambio si nadie deshabilita nada.
+CAPABILITIES_CONOCIDAS = ("predictive_modeling",)
+
 # Mapeo explícito entre el identificador público de perfil (el que se escribe
 # en `--perfil` / el default de la CLI, con guiones, R2) y el nombre real del
 # directorio del perfil bajo `profiles/` (con guion bajo — no se renombra).

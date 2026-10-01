@@ -401,12 +401,42 @@ def _check_archivos_administrados(destino: Path, control_data: Optional[dict]) -
             checks.CheckResult(checks.STATUS_FAIL, "HARMESSI-ARCHIVOS-ESPERADOS", str(exc))
         ]
 
+    # M8 (hallazgo de hardening, Change 5): `capabilities_habilitadas`
+    # persistida por `control.generar_control` (si el instalador la pasó).
+    # `None` (ausente, instalación legacy o sin capabilities declaradas) ->
+    # se asume TODO habilitado, comportamiento EXACTO de antes de esta
+    # verificación (R5: sin esta opción, cero cambio). Si está presente, una
+    # entrada cuyo `capabilities` no sea subconjunto de las habilitadas
+    # nunca es "faltante de verdad": es `N/A -- capability not enabled`
+    # (R3 de Change 4, implementado recién acá -- no estaba wireado).
+    capabilities_habilitadas_raw = control_data.get("capabilities_habilitadas")
+    capabilities_habilitadas = (
+        frozenset(capabilities_habilitadas_raw)
+        if isinstance(capabilities_habilitadas_raw, list)
+        else None
+    )
+
     resultados = []
     for entrada in entradas:
         if entrada.destino == ".ds_init/control.json":
             continue  # verificado aparte (HARMESSI-CONTROL-JSON)
         ruta = destino / entrada.destino
         if ruta.exists():
+            continue
+        if (
+            capabilities_habilitadas is not None
+            and entrada.capabilities
+            and not set(entrada.capabilities) <= capabilities_habilitadas
+        ):
+            resultados.append(
+                checks.CheckResult(
+                    checks.STATUS_NA,
+                    "HARMESSI-CAPABILITY-DISABLED",
+                    f"No provisionado: capability {list(entrada.capabilities)} no habilitada "
+                    f"-- {entrada.destino}",
+                    subject=entrada.destino,
+                )
+            )
             continue
         critico = entrada.destino in _RUTAS_CRITICAS
         resultados.append(

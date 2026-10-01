@@ -291,6 +291,15 @@ def _observe_source_interno(repo_root, source_id, request, access_check, options
     # --- Paso 3: import + factory + capabilities() + observe() -------------
     modulo_nombre, _, callable_nombre = source_ref.observer.partition(":")
     try:
+        # `observer` se valida estáticamente (resolve_observer_file) como ruta
+        # de módulo RELATIVA AL REPO ROOT (p. ej. "tools.datasources.file_observer"
+        # -> "tools/datasources/file_observer.py"). `sys.path` solo tiene
+        # `_TOOLS_DIR` insertado (ver arriba), nunca `repo_root`, así que sin
+        # esto `import_module` de cualquier observer con ese prefijo falla con
+        # ModuleNotFoundError incluso para el observer real incluido.
+        repo_root_str = str(Path(repo_root).resolve())
+        if repo_root_str not in sys.path:
+            sys.path.insert(0, repo_root_str)
         mod = importlib.import_module(modulo_nombre)
         factory = getattr(mod, callable_nombre)
         options_efectivas = dict(source_ref.options)

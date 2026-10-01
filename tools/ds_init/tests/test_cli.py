@@ -849,5 +849,123 @@ class TestAdopcionProyectoExistente(unittest.TestCase):
         self.assertNotIn("docs/brief.md", rutas_administradas)
 
 
+class TestCliDisableCapability(unittest.TestCase):
+    """M8 (hallazgo de hardening, Change 5): `manifest_para_perfil_stage_y_
+    capabilities` (Change 4) existía y estaba testeada a nivel unitario,
+    pero ningún llamador real la invocaba -- `--disable-capability` nunca
+    existió como flag de la CLI real, dejando el filtro de capabilities
+    completamente inalcanzable desde una instalación de verdad. Corregido:
+    `cli.py` ahora expone el flag y lo wirea a `construir_plan`/
+    `control.generar_control`/`regenerar_control`."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_disable_capability_predictive_modeling_no_provisiona_modelquality(self):
+        codigo = main(
+            [
+                "--destino",
+                str(self.repo),
+                "--nombre",
+                "proyecto-de-prueba",
+                "--stage",
+                "experiment",
+                "--disable-capability",
+                "predictive_modeling",
+                "--execute",
+            ]
+        )
+        self.assertEqual(codigo, 0)
+        self.assertFalse((self.repo / "tools" / "modelquality").exists())
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertEqual(control["capabilities_habilitadas"], [])
+
+    def test_sin_disable_capability_provisiona_modelquality_como_siempre(self):
+        # Regresión/backward compat (R5): sin el flag nuevo, comportamiento
+        # idéntico a antes de que este flag existiera.
+        codigo = main(
+            [
+                "--destino",
+                str(self.repo),
+                "--nombre",
+                "proyecto-de-prueba",
+                "--stage",
+                "experiment",
+                "--execute",
+            ]
+        )
+        self.assertEqual(codigo, 0)
+        self.assertTrue((self.repo / "tools" / "modelquality" / "__init__.py").exists())
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertEqual(control["capabilities_habilitadas"], ["predictive_modeling"])
+
+    def test_sync_sin_reafirmar_disable_capability_reaprovisiona(self):
+        # R7: habilitar capability después vía sync -> assets aparecen sin
+        # romper el proyecto.
+        codigo = main(
+            [
+                "--destino",
+                str(self.repo),
+                "--nombre",
+                "proyecto-de-prueba",
+                "--stage",
+                "discovery",
+                "--disable-capability",
+                "predictive_modeling",
+                "--execute",
+            ]
+        )
+        self.assertEqual(codigo, 0)
+        self.assertFalse((self.repo / "tools" / "modelquality").exists())
+        _commit_todo(self.repo, "post install sin modelquality")
+
+        codigo = main(["sync", "--destino", str(self.repo), "--stage", "experiment", "--execute"])
+        self.assertEqual(codigo, 0)
+        self.assertTrue((self.repo / "tools" / "modelquality" / "__init__.py").exists())
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertEqual(control["capabilities_habilitadas"], ["predictive_modeling"])
+
+    def test_sync_reafirmando_disable_capability_no_crashea_y_sigue_excluido(self):
+        # Bug real ya corregido: antes de este fix, `regenerar_control`
+        # intentaba hashear un archivo deliberadamente no instalado y
+        # levantaba `FileNotFoundError`, rompiendo CUALQUIER sync sobre un
+        # proyecto con una capability deshabilitada.
+        codigo = main(
+            [
+                "--destino",
+                str(self.repo),
+                "--nombre",
+                "proyecto-de-prueba",
+                "--stage",
+                "discovery",
+                "--disable-capability",
+                "predictive_modeling",
+                "--execute",
+            ]
+        )
+        self.assertEqual(codigo, 0)
+        _commit_todo(self.repo, "post install sin modelquality")
+
+        codigo = main(
+            [
+                "sync",
+                "--destino",
+                str(self.repo),
+                "--stage",
+                "experiment",
+                "--disable-capability",
+                "predictive_modeling",
+                "--execute",
+            ]
+        )
+        self.assertEqual(codigo, 0, "el sync no debe crashear al mantener la capability deshabilitada")
+        self.assertFalse((self.repo / "tools" / "modelquality").exists())
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertEqual(control["capabilities_habilitadas"], [])
+
+
 if __name__ == "__main__":
     unittest.main()
