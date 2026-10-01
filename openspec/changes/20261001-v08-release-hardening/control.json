@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "change_id": "20261001-v08-release-hardening",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-01T14:52:53Z",
+  "baseline": {
+    "commit": "8775b1ca2b10438235b28acd1a73ffa9371eb843",
+    "rama": "v0.8-dev",
+    "capturado_utc": "2026-10-01T14:52:53Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20261001-v08-release-hardening/proposal.md",
+      "openspec/changes/20261001-v08-release-hardening/tasks.md",
+      "openspec/changes/20261001-v08-release-hardening/spec.md",
+      "openspec/changes/20261001-v08-release-hardening/design.md",
+      "openspec/changes/20261001-v08-release-hardening/control.json",
+      "openspec/changes/20261001-v08-release-hardening/verification.md",
+      "docs/roadmap/v0.8.md",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/planner.py",
+      "tools/ds_init/cli.py",
+      "tools/ds_init/control.py",
+      "tools/ds_init/writer.py",
+      "tools/ds_init/tests/test_cli.py",
+      "tools/ds_init/tests/test_manifest.py",
+      "tools/ds_init/tests/test_control_file.py",
+      "tools/harmessi/doctor.py",
+      "tools/harmessi/tests/test_doctor.py",
+      "tools/datasources/runtime.py",
+      "tools/datasources/tests/test_runtime.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "6eaeb8a26287abb9f0fb0e4f3c2b5e0281a7fee3dadbea19d1ad45bc6093c3d5",
+      "registrado_utc": "2026-10-01T18:44:15Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-01",
+      "alcance_aprobado": "Change 5 - v08-release-hardening (docs/roadmap/v0.8.md, Casos A-K)",
+      "cita": "Apruebo explicitamente proposal.md, spec.md y design.md del Change 5 v08-release-hardening, con la decision de D5 resuelta: instalacion REAL, 100% local, sin red, de una dependencia pre-aprobada (los 13 puntos exigidos: paquete local A version exacta pre-aprobado, dentro del rango, exit_code 0 real, ausente antes, presente despues, ExecutionRecord real, approval/evidence ligada a la preaprobacion, sin paquetes inesperados, sin red, solo en el venv del proyecto, fuera de rango y no-aprobado producen STOP real sin instalar nada, y clausula de escape: si el entorno real de pip lo hace imposible sin tocar el contrato de M11, STOP y explicar por que, sin relajar la allowlist). Confirmo la estrategia de 3 fixtures combinados (autonomia combinada: autonomous+checkpoints+predictive_modeling=false+fuente externa+config layering+domain context+writer-Lead-runtime+tests+remediation+reporting, con human technical executions=0; adopcion+dependencia; source-neutral). Medicion de autonomia via auditoria post-hoc de control.sesiones/ExecutionRecords/evidence real, sin telemetria nueva, documentado honestamente como cobertura de ejecuciones validas por el runtime, no deteccion universal. Efficiency metrics descriptivas sin thresholds. Domain context (Caso J) solo compatibilidad, sin implementar domain-modeling/glossary manager/skill registry. Capabilities (Caso B) debe demostrar provisioning reducido real, no solo que Doctor diga N-A. Source integrity (Caso C) con fingerprint real pre/post y mensaje que nunca afirma causalidad. Adoption (Caso F) con bytes/hash iguales antes/despues. Config (Caso E) con las 4 clases explicitas. Budgets (Caso H) reusando codigo real sin reconstruir. Source-neutral (Caso D) deja explicito que SQLite no es backend privilegiado. Backward compatibility (Caso K) con scratch sin ninguna opcion nueva. Estrategia de regresion: tests dirigidos por fixture, reviewer transversal final, re-tests, UNA regresion completa final, lotes secuenciales si hace falta memoria. Reviewer enfocado en que la evidencia sostenga los requisitos, sin convertir WARN/FAIL en PASS, sin mocks triviales, limitaciones documentadas; bug real se corrige con mecanismo normal, feature faltante es STOP material. Veredicto unico READY/NOT READY FOR v0.8.0 RELEASE, sin publicar. Registro esta respuesta como mi aprobacion humana explicita. Aprobar proposal.md, spec.md y design.md por hash. Despues implementar/ejecutar Change 5 autonomamente: fixtures, directed tests, real smokes, reviewer, fixes, re-tests, full regression, verification, ds_guard gate, cierre, commit local. No volver a pedir aprobacion por D5. Maximo 2 ciclos writer-reviewer. STOP solamente ante feature faltante material, contradiccion del roadmap, dependencia nueva de Harmessi, backward compatibility rota sin solucion, bypass/exemption, remediation agotada, o reviewer que demuestre que la evidencia no sostiene el release. No push. No tag. No release."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "4bfdcce016de1167c3b9ef8809fcb5045c9c6c3e2a42e7699283446d491f2873",
+      "registrado_utc": "2026-10-01T18:44:16Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-01",
+      "alcance_aprobado": "Change 5 - v08-release-hardening (docs/roadmap/v0.8.md, Casos A-K)",
+      "cita": "Apruebo explicitamente proposal.md, spec.md y design.md del Change 5 v08-release-hardening, con la decision de D5 resuelta: instalacion REAL, 100% local, sin red, de una dependencia pre-aprobada (los 13 puntos exigidos: paquete local A version exacta pre-aprobado, dentro del rango, exit_code 0 real, ausente antes, presente despues, ExecutionRecord real, approval/evidence ligada a la preaprobacion, sin paquetes inesperados, sin red, solo en el venv del proyecto, fuera de rango y no-aprobado producen STOP real sin instalar nada, y clausula de escape: si el entorno real de pip lo hace imposible sin tocar el contrato de M11, STOP y explicar por que, sin relajar la allowlist). Confirmo la estrategia de 3 fixtures combinados (autonomia combinada: autonomous+checkpoints+predictive_modeling=false+fuente externa+config layering+domain context+writer-Lead-runtime+tests+remediation+reporting, con human technical executions=0; adopcion+dependencia; source-neutral). Medicion de autonomia via auditoria post-hoc de control.sesiones/ExecutionRecords/evidence real, sin telemetria nueva, documentado honestamente como cobertura de ejecuciones validas por el runtime, no deteccion universal. Efficiency metrics descriptivas sin thresholds. Domain context (Caso J) solo compatibilidad, sin implementar domain-modeling/glossary manager/skill registry. Capabilities (Caso B) debe demostrar provisioning reducido real, no solo que Doctor diga N-A. Source integrity (Caso C) con fingerprint real pre/post y mensaje que nunca afirma causalidad. Adoption (Caso F) con bytes/hash iguales antes/despues. Config (Caso E) con las 4 clases explicitas. Budgets (Caso H) reusando codigo real sin reconstruir. Source-neutral (Caso D) deja explicito que SQLite no es backend privilegiado. Backward compatibility (Caso K) con scratch sin ninguna opcion nueva. Estrategia de regresion: tests dirigidos por fixture, reviewer transversal final, re-tests, UNA regresion completa final, lotes secuenciales si hace falta memoria. Reviewer enfocado en que la evidencia sostenga los requisitos, sin convertir WARN/FAIL en PASS, sin mocks triviales, limitaciones documentadas; bug real se corrige con mecanismo normal, feature faltante es STOP material. Veredicto unico READY/NOT READY FOR v0.8.0 RELEASE, sin publicar. Registro esta respuesta como mi aprobacion humana explicita. Aprobar proposal.md, spec.md y design.md por hash. Despues implementar/ejecutar Change 5 autonomamente: fixtures, directed tests, real smokes, reviewer, fixes, re-tests, full regression, verification, ds_guard gate, cierre, commit local. No volver a pedir aprobacion por D5. Maximo 2 ciclos writer-reviewer. STOP solamente ante feature faltante material, contradiccion del roadmap, dependencia nueva de Harmessi, backward compatibility rota sin solucion, bypass/exemption, remediation agotada, o reviewer que demuestre que la evidencia no sostiene el release. No push. No tag. No release."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "c308278b54278c2b76a8a2a449edf61290bf35c18763f98b2f01a23f18f0a432",
+      "registrado_utc": "2026-10-01T18:44:18Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-01",
+      "alcance_aprobado": "Change 5 - v08-release-hardening (docs/roadmap/v0.8.md, Casos A-K)",
+      "cita": "Apruebo explicitamente proposal.md, spec.md y design.md del Change 5 v08-release-hardening, con la decision de D5 resuelta: instalacion REAL, 100% local, sin red, de una dependencia pre-aprobada (los 13 puntos exigidos: paquete local A version exacta pre-aprobado, dentro del rango, exit_code 0 real, ausente antes, presente despues, ExecutionRecord real, approval/evidence ligada a la preaprobacion, sin paquetes inesperados, sin red, solo en el venv del proyecto, fuera de rango y no-aprobado producen STOP real sin instalar nada, y clausula de escape: si el entorno real de pip lo hace imposible sin tocar el contrato de M11, STOP y explicar por que, sin relajar la allowlist). Confirmo la estrategia de 3 fixtures combinados (autonomia combinada: autonomous+checkpoints+predictive_modeling=false+fuente externa+config layering+domain context+writer-Lead-runtime+tests+remediation+reporting, con human technical executions=0; adopcion+dependencia; source-neutral). Medicion de autonomia via auditoria post-hoc de control.sesiones/ExecutionRecords/evidence real, sin telemetria nueva, documentado honestamente como cobertura de ejecuciones validas por el runtime, no deteccion universal. Efficiency metrics descriptivas sin thresholds. Domain context (Caso J) solo compatibilidad, sin implementar domain-modeling/glossary manager/skill registry. Capabilities (Caso B) debe demostrar provisioning reducido real, no solo que Doctor diga N-A. Source integrity (Caso C) con fingerprint real pre/post y mensaje que nunca afirma causalidad. Adoption (Caso F) con bytes/hash iguales antes/despues. Config (Caso E) con las 4 clases explicitas. Budgets (Caso H) reusando codigo real sin reconstruir. Source-neutral (Caso D) deja explicito que SQLite no es backend privilegiado. Backward compatibility (Caso K) con scratch sin ninguna opcion nueva. Estrategia de regresion: tests dirigidos por fixture, reviewer transversal final, re-tests, UNA regresion completa final, lotes secuenciales si hace falta memoria. Reviewer enfocado en que la evidencia sostenga los requisitos, sin convertir WARN/FAIL en PASS, sin mocks triviales, limitaciones documentadas; bug real se corrige con mecanismo normal, feature faltante es STOP material. Veredicto unico READY/NOT READY FOR v0.8.0 RELEASE, sin publicar. Registro esta respuesta como mi aprobacion humana explicita. Aprobar proposal.md, spec.md y design.md por hash. Despues implementar/ejecutar Change 5 autonomamente: fixtures, directed tests, real smokes, reviewer, fixes, re-tests, full regression, verification, ds_guard gate, cierre, commit local. No volver a pedir aprobacion por D5. Maximo 2 ciclos writer-reviewer. STOP solamente ante feature faltante material, contradiccion del roadmap, dependencia nueva de Harmessi, backward compatibility rota sin solucion, bypass/exemption, remediation agotada, o reviewer que demuestre que la evidencia no sostiene el release. No push. No tag. No release."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-01T18:44:29Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-01T21:23:32Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-01T21:23:33Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-01T21:23:36Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-01T18:44:48Z",
+      "cierre_utc": "2026-10-01T19:58:21Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-01T20:14:48Z",
+      "minutos_consumidos": 73.55,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-01T19:58:29Z",
+      "cierre_utc": "2026-10-01T21:23:44Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 12,
+        "max_roles": 3,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-02T03:58:29Z",
+      "minutos_consumidos": 85.25,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-01T21:16:28Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

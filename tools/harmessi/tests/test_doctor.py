@@ -6,6 +6,7 @@ instalación real, no un fixture artificial."""
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -896,6 +897,240 @@ class TestDoctorRegresionEsteRepositorio(unittest.TestCase):
         # de los 2 docs nuevos de Change 7, que todavía no están instalados
         # físicamente en este propio checkout (no son críticos).
         self.assertNotIn(checks.STATUS_FAIL, _statuses(resultados))
+
+
+class TestCheckFuentesExternasPermisosOs(unittest.TestCase):
+    """R17 de `spec.md`: `M12-FUENTE-EXTERNA-PERMISOS` es puramente
+    informativo (nunca FAIL/ERROR) y nunca muta la ruta externa (nunca
+    `chmod`/`icacls`)."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+        self.externo_dir = Path(tempfile.mkdtemp(prefix="harmessi_doctor_test_externo_m12_"))
+        self.archivo_externo = self.externo_dir / "fuente.csv"
+        self.archivo_externo.write_text("col_a\n1\n", encoding="utf-8")
+
+    def tearDown(self):
+        # Revertir cualquier atributo/permiso de solo lectura ANTES de
+        # borrar (Windows/POSIX rechazan unlink sobre una ruta read-only).
+        try:
+            if os.name == "nt":
+                subprocess.run(
+                    ["attrib", "-r", str(self.archivo_externo)], capture_output=True, text=True
+                )
+            else:
+                os.chmod(self.archivo_externo, 0o644)
+        except OSError:
+            pass
+        shutil.rmtree(self.repo, ignore_errors=True)
+        shutil.rmtree(self.externo_dir, ignore_errors=True)
+
+    def _declarar_fuente_externa(self, source_id: str, ruta: Path):
+        dir_harmessi = self.repo / ".harmessi"
+        dir_harmessi.mkdir(parents=True, exist_ok=True)
+        (dir_harmessi / "local-overrides.json").write_text(
+            json.dumps({"fuentes_externas": {source_id: {"path": str(ruta)}}}, indent=2),
+            encoding="utf-8",
+        )
+
+    def test_sin_fuentes_declaradas_devuelve_vacio(self):
+        resultados = doctor_mod._check_fuentes_externas_permisos_os(self.repo)
+        self.assertEqual(resultados, [])
+
+    def test_sin_fuentes_declaradas_no_aparece_en_ejecutar(self):
+        # Regresión/backward-compat (R17): sin M9 configurado, cero cambio
+        # de comportamiento -- el check no produce ningún resultado.
+        resultados, _ = doctor_mod.ejecutar(self.repo)
+        encontrados = [r for r in resultados if r.codigo == "M12-FUENTE-EXTERNA-PERMISOS"]
+        self.assertEqual(encontrados, [])
+
+    def test_ruta_marcada_read_only_por_el_os(self):
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        if os.name == "nt":
+            resultado_attrib = subprocess.run(
+                ["attrib", "+r", str(self.archivo_externo)], capture_output=True, text=True
+            )
+            self.assertEqual(resultado_attrib.returncode, 0)
+        else:
+            os.chmod(self.archivo_externo, 0o444)
+
+        resultados = doctor_mod._check_fuentes_externas_permisos_os(self.repo)
+        encontrados = [r for r in resultados if r.code == "M12-FUENTE-EXTERNA-PERMISOS"]
+        self.assertEqual(len(encontrados), 1)
+        self.assertEqual(encontrados[0].status, checks.STATUS_PASS)
+
+    def test_ruta_sin_marcar_read_only_reporta_warn(self):
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        resultados = doctor_mod._check_fuentes_externas_permisos_os(self.repo)
+        encontrados = [r for r in resultados if r.code == "M12-FUENTE-EXTERNA-PERMISOS"]
+        self.assertEqual(len(encontrados), 1)
+        self.assertEqual(encontrados[0].status, checks.STATUS_WARN)
+
+    def test_ruta_declarada_pero_inexistente_reporta_unknown_partial_warn(self):
+        ruta_inexistente = self.externo_dir / "no-existe.csv"
+        self._declarar_fuente_externa("clientes", ruta_inexistente)
+        resultados = doctor_mod._check_fuentes_externas_permisos_os(self.repo)
+        encontrados = [r for r in resultados if r.code == "M12-FUENTE-EXTERNA-PERMISOS"]
+        self.assertEqual(len(encontrados), 1)
+        self.assertEqual(encontrados[0].status, checks.STATUS_WARN)
+        self.assertIn("unknown/partial", encontrados[0].message)
+
+    def test_nunca_error_en_ningun_caso(self):
+        # Recorre los 3 escenarios (marcado, sin marcar, inexistente) y
+        # confirma que el nivel traducido por `ejecutar()` nunca es ERROR.
+        ruta_inexistente = self.externo_dir / "no-existe.csv"
+        self._declarar_fuente_externa("fuente_a", self.archivo_externo)
+        self._declarar_fuente_externa("fuente_b", ruta_inexistente)
+
+        resultados, _ = doctor_mod.ejecutar(self.repo)
+        encontrados = [r for r in resultados if r.codigo == "M12-FUENTE-EXTERNA-PERMISOS"]
+        self.assertGreaterEqual(len(encontrados), 1)
+        for r in encontrados:
+            self.assertNotEqual(r.nivel, doctor_mod.NIVEL_ERROR)
+
+
+class TestCheckOwnership5Vias(unittest.TestCase):
+    """Tests de `_check_ownership_5_vias` (R21 de B5 + R12 de M10, T6 de
+    `20260930-project-extension-and-installer-integration`): categorías (1)
+    archivo preexistente del usuario y (3)/(4) project config/local override
+    soportados -- NO duplica (2)/(5), ya cubiertas por
+    `_check_archivos_administrados`/`_check_hashes_drift`."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal(prefix="ownership_5_vias_")
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_instalacion_limpia_sin_adopcion_ni_m10_devuelve_vacio(self):
+        _instalar_harness_real(self.repo)
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_ownership_5_vias(self.repo, control_data)
+        self.assertEqual(resultados, [])
+
+    def test_archivo_preexistente_del_usuario_reporta_ownership_usuario(self):
+        # Adopción: un destino real del manifiesto (VERBATIM, no-MERGE) ya
+        # existe en el repo ANTES de instalar -- writer.instalar lo omite
+        # por colisión (R19), nunca entra al registro de hashes.
+        destino_colisionado = self.repo / "tools" / "ds_guard.py"
+        destino_colisionado.parent.mkdir(parents=True, exist_ok=True)
+        destino_colisionado.write_text("# archivo de usuario preexistente\n", encoding="utf-8")
+
+        _instalar_harness_real(self.repo)
+
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        rutas_administradas = {a.get("ruta") for a in control_data.get("archivos", [])}
+        self.assertNotIn("tools/ds_guard.py", rutas_administradas)
+
+        resultados = doctor_mod._check_ownership_5_vias(self.repo, control_data)
+        encontrados = [r for r in resultados if r.code == "HARMESSI-OWNERSHIP-USUARIO"]
+        self.assertEqual(len(encontrados), 1)
+        self.assertEqual(encontrados[0].status, checks.STATUS_PASS)
+        self.assertEqual(encontrados[0].subject, "tools/ds_guard.py")
+        # El contenido del usuario sigue intacto (nunca sobrescrito).
+        self.assertEqual(
+            destino_colisionado.read_text(encoding="utf-8"), "# archivo de usuario preexistente\n"
+        )
+
+    def test_managed_file_normal_no_duplica_ownership_usuario(self):
+        _instalar_harness_real(self.repo)
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_ownership_5_vias(self.repo, control_data)
+        encontrados = [r for r in resultados if r.code == "HARMESSI-OWNERSHIP-USUARIO"]
+        self.assertEqual(encontrados, [])
+
+    def test_project_config_presente_reporta_ownership_project_config(self):
+        _instalar_harness_real(self.repo)
+        harmessi_dir = self.repo / ".harmessi"
+        harmessi_dir.mkdir(parents=True, exist_ok=True)
+        (harmessi_dir / "project-config.json").write_text("{}", encoding="utf-8")
+
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_ownership_5_vias(self.repo, control_data)
+        encontrados = [r for r in resultados if r.code == "HARMESSI-OWNERSHIP-PROJECT-CONFIG"]
+        self.assertEqual(len(encontrados), 1)
+        self.assertEqual(encontrados[0].status, checks.STATUS_PASS)
+
+    def test_local_override_presente_reporta_ownership_local_override(self):
+        _instalar_harness_real(self.repo)
+        harmessi_dir = self.repo / ".harmessi"
+        harmessi_dir.mkdir(parents=True, exist_ok=True)
+        (harmessi_dir / "local-overrides.json").write_text("{}", encoding="utf-8")
+
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_ownership_5_vias(self.repo, control_data)
+        encontrados = [r for r in resultados if r.code == "HARMESSI-OWNERSHIP-LOCAL-OVERRIDE"]
+        self.assertEqual(len(encontrados), 1)
+        self.assertEqual(encontrados[0].status, checks.STATUS_PASS)
+
+
+class TestCheckArchivosAdministradosCapabilityAware(unittest.TestCase):
+    """M8 (hallazgo de hardening, Change 5): `_check_archivos_administrados`
+    no tenía ninguna noción de capabilities -- un asset deliberadamente no
+    provisionado por `predictive_modeling=false` se reportaba como
+    `HARMESSI-ARCHIVO-FALTANTE` (`WARN`), nunca como `N/A` (contradice R3/R6
+    de Change 4, que afirmaba esto ya estaba "Cumplido" basándose solo en el
+    test unitario de la función de filtro, sin confirmar que estuviera
+    wireada a Doctor)."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal(prefix="doctor_capability_")
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _instalar_con_capability_deshabilitada(self):
+        config = _config_base(self.repo)
+        config["capabilities_habilitadas"] = []
+        plan = construir_plan(
+            PERFIL, self.repo, config, stage="experiment", capabilities_habilitadas=frozenset()
+        )
+        return ds_init_writer.instalar(plan, self.repo, config)
+
+    def test_modelquality_faltante_por_capability_reporta_na_no_warn(self):
+        self._instalar_con_capability_deshabilitada()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+
+        codigos_por_destino = {
+            r.subject: r.code for r in resultados if r.subject and "modelquality" in r.subject
+        }
+        self.assertEqual(len(codigos_por_destino), 3)
+        for codigo in codigos_por_destino.values():
+            self.assertEqual(codigo, "HARMESSI-CAPABILITY-DISABLED")
+        self.assertTrue(all(r.status == checks.STATUS_NA for r in resultados if "modelquality" in (r.subject or "")))
+        # Nunca FAIL/WARN para estos destinos.
+        self.assertFalse(
+            any(
+                "modelquality" in (r.subject or "") and r.status in (checks.STATUS_FAIL, checks.STATUS_WARN)
+                for r in resultados
+            )
+        )
+
+    def test_instalacion_normal_sigue_reportando_ok_para_modelquality(self):
+        # Regresión/backward compat: sin deshabilitar nada, los 3 archivos
+        # están presentes -> ni siquiera aparecen en los resultados (la
+        # función solo reporta lo que falta).
+        _instalar_harness_real(self.repo)
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertFalse(any("modelquality" in (r.subject or "") for r in resultados))
+
+    def test_control_json_legacy_sin_capabilities_habilitadas_sigue_reportando_warn(self):
+        # Backward compat explícita (R5): un `control.json` de ANTES de este
+        # fix (sin la clave `capabilities_habilitadas`) no puede distinguir
+        # "deshabilitado a propósito" de "falta de verdad" -- debe seguir
+        # comportándose EXACTAMENTE como antes (WARN, nunca N/A por
+        # inferencia), aunque el archivo realmente no esté.
+        self._instalar_con_capability_deshabilitada()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        del control_data["capabilities_habilitadas"]
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        codigos = {r.subject: r.code for r in resultados if r.subject and "modelquality" in r.subject}
+        self.assertEqual(len(codigos), 3)
+        for codigo in codigos.values():
+            self.assertEqual(codigo, "HARMESSI-ARCHIVO-FALTANTE")
 
 
 if __name__ == "__main__":

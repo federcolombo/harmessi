@@ -40,6 +40,7 @@ def generar_control(
     archivos_aplicados: list,
     fecha_utc: Optional[str] = None,
     installation_stage: Optional[str] = None,
+    capabilities_habilitadas=None,
 ) -> dict:
     """Arma el archivo de control de una instalación exitosa y lo escribe en
     `<destino>/.ds_init/control.json` (creando el directorio `.ds_init/` si
@@ -68,6 +69,14 @@ def generar_control(
       Si es `None` (default), la clave se OMITE por completo del dict — forma
       legacy preservada byte a byte para cualquier caller que no pase este
       parámetro.
+    - `capabilities_habilitadas`: opcional (M8, Change 4/Change 5 -- hallazgo
+      de hardening: sin esto persistido, Doctor no puede distinguir "no
+      provisionado porque la capability está deshabilitada" de "falta de
+      verdad"). Iterable de strings o `None`. Si no es `None`, se agrega la
+      clave `"capabilities_habilitadas"` (lista ordenada) al dict resultante.
+      Si es `None` (default), la clave se OMITE por completo -- forma legacy
+      preservada byte a byte para cualquier caller que no pase este
+      parámetro (R5: sin esta opción, comportamiento idéntico a antes).
     """
     destino = Path(destino)
 
@@ -97,6 +106,8 @@ def generar_control(
     }
     if installation_stage is not None:
         control["installation_stage"] = installation_stage
+    if capabilities_habilitadas is not None:
+        control["capabilities_habilitadas"] = sorted(capabilities_habilitadas)
 
     dir_control = destino / DIR_CONTROL
     dir_control.mkdir(parents=True, exist_ok=True)
@@ -115,6 +126,7 @@ def regenerar_control(
     perfil: Optional[str] = None,
     stage: Optional[str] = None,
     installation_stage: Optional[str] = None,
+    capabilities_habilitadas=None,
 ) -> dict:
     """Recalcula y reescribe `<destino>/.ds_init/control.json` a partir de un
     `control_previo` ya existente, para recalibrar `harness_version` y
@@ -140,6 +152,18 @@ def regenerar_control(
       `None` (default), se preserva `control_previo.get("installation_stage")`
       — nunca se borra un valor existente por el solo hecho de omitir este
       parámetro.
+    - `capabilities_habilitadas` (solo keyword, opcional, M8 -- hallazgo de
+      hardening de Change 5, bug real: sin esto, `regenerar_control`
+      recalculaba `archivos` vía `manifest_para_perfil`/
+      `manifest_para_perfil_y_stage` SIN filtrar por capabilities, incluyendo
+      entradas deliberadamente no instaladas -- `sha256_de_archivo` sobre un
+      archivo inexistente levantaba `FileNotFoundError`, haciendo que
+      CUALQUIER `sync` sobre un proyecto con una capability deshabilitada
+      rompiera por completo). Mismo criterio de herencia que
+      `installation_stage`: si es `None` (default), se preserva
+      `control_previo.get("capabilities_habilitadas")` -- nunca se pierde un
+      valor existente por el solo hecho de omitir este parámetro. Si se pasa
+      explícitamente (incluida una lista vacía), ese valor gana.
 
     Comportamiento:
     - `configuracion` se preserva exactamente igual a la de `control_previo`
@@ -163,11 +187,27 @@ def regenerar_control(
     - No introduce escritura atómica nueva: reutiliza el mismo patrón
       no-atómico de `generar_control` (escritura directa con `open`/`write`).
     """
-    from .manifest import manifest_para_perfil, manifest_para_perfil_y_stage
+    from .manifest import (
+        ORDEN_STAGES,
+        manifest_para_perfil,
+        manifest_para_perfil_stage_y_capabilities,
+        manifest_para_perfil_y_stage,
+    )
 
     perfil_efectivo = perfil or control_previo["perfil"]
 
-    if stage is None:
+    capabilities_efectivas = (
+        capabilities_habilitadas
+        if capabilities_habilitadas is not None
+        else control_previo.get("capabilities_habilitadas")
+    )
+
+    if capabilities_efectivas is not None:
+        stage_efectivo_capabilities = stage if stage is not None else ORDEN_STAGES[-1]
+        entradas = manifest_para_perfil_stage_y_capabilities(
+            perfil_efectivo, stage_efectivo_capabilities, capabilities_efectivas
+        )
+    elif stage is None:
         entradas = manifest_para_perfil(perfil_efectivo)
     else:
         entradas = manifest_para_perfil_y_stage(perfil_efectivo, stage)
@@ -187,4 +227,5 @@ def regenerar_control(
         archivos_aplicados,
         fecha_utc=control_previo.get("fecha_utc"),
         installation_stage=installation_stage_efectivo,
+        capabilities_habilitadas=capabilities_efectivas,
     )

@@ -1,5 +1,5 @@
 {
-  "harness_version": "0.7.0",
+  "harness_version": "0.8.0",
   "perfil": "python-jupyter-data",
   "fecha_utc": "2026-09-09T18:08:09Z",
   "configuracion": {
@@ -27,11 +27,11 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/SKILL.md",
-      "sha256": "f9d709718f88f96c77df7e9cc6bb024f405210b4c1b874b106e30633d179b029"
+      "sha256": "939c0542d27a0b7e6a20a1278a1a7c78f7b7c4427f472996ba10df8e9f71394e"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/sdd.md",
-      "sha256": "93fdc2d672413cc274b1f874ceef4a9b3154c1af43de95f58c8748e6c9d53d8a"
+      "sha256": "e808a2022d1f4a8cbf6587f97c8324ef785ad94309fca4f278285aa2423d17e7"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/verificador.md",
@@ -71,7 +71,7 @@
     },
     {
       "ruta": "tools/ds_guard.py",
-      "sha256": "56cfbbf5fc03b0f98e1d7574fea05fb1f3891f38fc46570224f40e3e0ca31dcf"
+      "sha256": "38629f317597eb2cc16bccaa44ccd433e75d93be64ba9a6b74cb277ea859372a"
     },
     {
       "ruta": "tools/dsguard/__init__.py",
@@ -87,7 +87,7 @@
     },
     {
       "ruta": "tools/dsguard/sdd.py",
-      "sha256": "2afd9bf8087e3bc95167447df7be910bfa5d7ecef3d2d26575333ea41c27d883"
+      "sha256": "cfce8321669cf8bb9d9f65ab8d75202751e04b7ea66dc5f9df38b3aa5f4e82c4"
     },
     {
       "ruta": "tools/dsguard/decision.py",
@@ -155,7 +155,7 @@
     },
     {
       "ruta": "tools/dsguard/pathguard.py",
-      "sha256": "582e0e12b8a15b54903d6e75f6d9e7437f9d142b832fc3d2ebb9771f1aac7d81"
+      "sha256": "718184eab77e8a32c2f3a66bf01ef703e1c8b15c3bafb3302e6387fffcb596a9"
     },
     {
       "ruta": "tools/dsguard/hook_rutas.py",
@@ -200,6 +200,34 @@
     {
       "ruta": "tools/nbrunner/manifest.py",
       "sha256": "43ac431a9aeafb361253f5fe6c9a2c284af4e64121ca6f07f9af9569f845a0c9"
+    },
+    {
+      "ruta": "tools/leadrun/__init__.py",
+      "sha256": "9bc575df023cc87542fafdc7d37bf9238c090268b82eec88c933119fc7bf0a81"
+    },
+    {
+      "ruta": "tools/leadrun/core.py",
+      "sha256": "f3a252a57cf34f97d1dd9c48f48332bc70f0526f3f9fb7ba6f87ab82e8465283"
+    },
+    {
+      "ruta": "tools/leadrun/allowlist.py",
+      "sha256": "2c4ab9f6106df06134eef0b1c1d03f4c160cc958918ac5a8ec946ee3ba135832"
+    },
+    {
+      "ruta": "tools/leadrun/scripts.py",
+      "sha256": "95f335f241caf6b02532c22ef1397a78acf312cdb8579727634437b6bd691b90"
+    },
+    {
+      "ruta": "tools/leadrun/notebooks.py",
+      "sha256": "0fbfb0dff482ae5401f95cb5377e7fe5ec46d670868bc7160d329ea9894f9f1c"
+    },
+    {
+      "ruta": "tools/leadrun/runtime.py",
+      "sha256": "593d13c12941bc9119c13999c75501f9594f8b2c34360ecd41ba168e97b1c9b5"
+    },
+    {
+      "ruta": "tools/notebook_runner.py",
+      "sha256": "ae5a501b3069cf94ae92b5ca43bb964f85919ecc8ca5b4cd533bbc72c4155d27"
     },
     {
       "ruta": "tools/tests/test_harness_smoke.py",
@@ -351,43 +379,87 @@
     },
     {
       "ruta": "tools/datacontracts/__init__.py",
-      "sha256": "cb27333d4bd3f065a9c0b408896e0534dfb69f2c1a966af43aef36605eb5d9e4"
+      "sha256": "364683643e8805099193be5c73a997036c78e6b4619babb594d7a277c2fa2c3e"
     },
     {
       "ruta": "tools/datacontracts/core.py",
-      "sha256": "84add0c43746145192d1cc3065b56cfa1537bb0439e3b70e7f489bf967f58d18"
+      "sha256": "ca6b7f7fc0c81c94fd1ee0bef891a6e163372d146914b8775e6ec4e2059e8f8a"
     },
     {
       "ruta": "tools/datacontracts/validation.py",
-      "sha256": "1c931818c29a909b27ade4ee5757f57ea1f08fec2d04a2e0e321e17bfb527044"
+      "sha256": "b666199bdd536685e33bbce18f4658198d8df9e1a64d0c34c24751b645ba192b"
     },
     {
       "ruta": "tools/datacontracts/evolution.py",
-      "sha256": "bd2805eb7c50dcebb14c265f55045914e0f456a2350e6635789330cae753e82c"
+      "sha256": "dd7fb1b56a562e383b9b87cc8fe6a745c7377b49ac2323a1dbf1c68ab141d33b"
+    },
+    {
+      "ruta": "tools/autonomy/__init__.py",
+      "sha256": "7b6498c64520a5b3fac684bb85ee8546a17c1a6ca47c87e67d44f8b83fc39062"
+    },
+    {
+      "ruta": "tools/autonomy/core.py",
+      "sha256": "71a9011e02842d4ef2c7239c228f31024cc44b0b545cdac75fa0a2ab0a0e959a"
+    },
+    {
+      "ruta": "tools/autonomy/policy.py",
+      "sha256": "a0fa0c4b1a86896ed4a85051b73f03272c131b13bc850fa5ef372d3e06f04a50"
+    },
+    {
+      "ruta": "tools/datasources/__init__.py",
+      "sha256": "11c853de2edba1e99f27df7ad654d1db3577464ae4d38df3dbc8f35345c62915"
+    },
+    {
+      "ruta": "tools/datasources/core.py",
+      "sha256": "0da0f51df8aa00af6ec3a6dc616d41ca55930024f410be8816f7ab11a1159161"
+    },
+    {
+      "ruta": "tools/datasources/scan.py",
+      "sha256": "3345f0043dd80c6fb06dbb56811b5ee51cb401bbfc3d5ae6ddd4c9723452ed5e"
+    },
+    {
+      "ruta": "tools/datasources/registry.py",
+      "sha256": "f153e03da66d1a49b2b3b268822a34fd50b132af963ef739716eabe4c50c7b09"
+    },
+    {
+      "ruta": "tools/datasources/runtime.py",
+      "sha256": "dd7aab751f067ad1e62d11c061037f23a0f250b0b98e302afb45806c6ccfca7c"
+    },
+    {
+      "ruta": "tools/datasources/profile_bridge.py",
+      "sha256": "6930ff20da3bb4e22c0d56b498e722555a1834c27d89dfcd571fc048073cc183"
+    },
+    {
+      "ruta": "tools/datasources/file_observer.py",
+      "sha256": "8850fb606b285defc6ef44d29db23dc90892b1b95ebf54e8f17a795ff8d5a46c"
+    },
+    {
+      "ruta": "tools/datacontracts/legacy_wording.py",
+      "sha256": "85ce9d3ffa50291b242a7a96c8ed09020cd0a9b2f2cc8ce0bb2ebfe5ad7c2af5"
     },
     {
       "ruta": "tools/modelquality/__init__.py",
-      "sha256": "af6fd0755525479f45386556426ce07b76c0006a9063aba1d1df44b46190115a"
+      "sha256": "1211ac69ff27b4c75101b966db40167001a7d8f74d113f99655d755ebd50bf71"
     },
     {
       "ruta": "tools/modelquality/core.py",
-      "sha256": "2108b1cb66f1bac2ef625b06d8fcfcf24a622f75fb4feefdf61f7c7ac8ab3108"
+      "sha256": "6789dde747e4f190845ee9c6e04edc618cd5880a14fde1c3bdefa2592875de09"
     },
     {
       "ruta": "tools/modelquality/validation.py",
-      "sha256": "165af18f36bc133ab2992538ebdb7c87c9cd0ef2c4213490f6c59b51acad0198"
+      "sha256": "2bf0e3639698b5ba661a63ccb41a48eb3d094ee991e7c56d9e3eb5c94357264b"
     },
     {
       "ruta": "tools/qualityevidence/__init__.py",
-      "sha256": "0e2eba4d40a167aaabb85345cc584fff2e267f397e2edd11977ee928d98b3996"
+      "sha256": "fe0939cbec953eb1b6a5428c86bea6fb504ac8b3a4071c3c99b888d1c773ab6c"
     },
     {
       "ruta": "tools/qualityevidence/core.py",
-      "sha256": "5a795a5793c380ca190cadb138b0ce52dbc1a42d0bfc04608231748eb5bad44f"
+      "sha256": "96e812874a1b064c77649952a41fea9c54ece6099943c9b78f713b56427c6e05"
     },
     {
       "ruta": "tools/qualityevidence/evidence.py",
-      "sha256": "2508562b0a213f7ee4b998c3aec35d63bbe854245bb06ab44183086df8daba9c"
+      "sha256": "39ec3e863047c15ffc7a0fbc86564da4af3f60655bc1b2055ddb195aba05b913"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/eda.md",

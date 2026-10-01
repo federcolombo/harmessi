@@ -37,6 +37,16 @@ TRATAMIENTOS_VALIDOS = (VERBATIM, PLANTILLA, GENERADO, MERGE)
 # se confunden ni se escriben implícitamente entre sí).
 ORDEN_STAGES = ("discovery", "experiment", "production_candidate", "production")
 
+# Vocabulario cerrado de capabilities conocidas (M8, Change 4:
+# `20260930-project-extension-and-installer-integration`, R1-R2 de su
+# `spec.md`). Único eje con contenido real a excluir hoy: `predictive_modeling`
+# (`data_analysis`/`reporting` quedan documentados como vocabulario reservado,
+# sin entradas que los declaren todavía). Usado por `cli.py` (Change 5,
+# hallazgo de hardening: la función de filtro ya existía pero no estaba
+# wireada a ningún flag real del instalador) para resolver el default "todas
+# habilitadas" -- backward compatible, cero cambio si nadie deshabilita nada.
+CAPABILITIES_CONOCIDAS = ("predictive_modeling",)
+
 # Mapeo explícito entre el identificador público de perfil (el que se escribe
 # en `--perfil` / el default de la CLI, con guiones, R2) y el nombre real del
 # directorio del perfil bajo `profiles/` (con guion bajo — no se renombra).
@@ -81,6 +91,12 @@ class EntradaManifiesto:
       incluye esta entrada (uno de `ORDEN_STAGES`, default `"discovery"` --
       compatible hacia atrás: cualquier construcción existente sin este kwarg
       sigue funcionando igual, clasificada `discovery`, R3 de `spec.md`).
+    - `capabilities`: dominios de trabajo (eje ortogonal a `stage_minimo`) a
+      los que esta entrada es exclusiva (por defecto `()`, sin filtro: la
+      entrada aplica sin importar qué capabilities tenga habilitadas el
+      proyecto -- compatible hacia atrás, R1/R5 de `spec.md` Change
+      `20260930-project-extension-and-installer-integration`). Vocabulario
+      inicial: `"predictive_modeling"`.
     """
 
     fuente: Optional[str]
@@ -89,6 +105,7 @@ class EntradaManifiesto:
     descripcion: str = ""
     perfiles: tuple = field(default_factory=tuple)
     stage_minimo: str = "discovery"
+    capabilities: tuple = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         if self.tratamiento not in TRATAMIENTOS_VALIDOS:
@@ -123,6 +140,14 @@ def _dir_templates(perfil: str) -> str:
 # `20260909-inicializador-harness-datos`. Las plantillas viven en
 # `profiles/<perfil>/templates/*.tmpl`; su ruta destino es la ruta final en el
 # repo instalado, sin el sufijo `.tmpl`.
+#
+# Auditoría de `capabilities` (Change `20260930-project-extension-and-
+# installer-integration`, R2): únicas entradas exclusivas de modelado
+# predictivo son `tools/modelquality/*` (ModelQualityPolicy/métricas/baseline
+# de modelo). `readiness.py`, `mlops_foundations.py`, `mlops_evidence.py`,
+# `qualityevidence/*` y `holdout_guard.py` son MLOps/calidad/holdout
+# genéricos (aplican a cualquier pipeline de datos, no solo a modelos
+# predictivos) -- no se marcan.
 MANIFEST: tuple = (
     EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/agent_python_data_engineer.md.tmpl",
@@ -405,6 +430,55 @@ MANIFEST: tuple = (
         descripcion="Schema del manifest de corridas, sin rutas prohibidas hardcodeadas",
     ),
     EntradaManifiesto(
+        fuente="tools/leadrun/__init__.py",
+        tratamiento=VERBATIM,
+        destino="tools/leadrun/__init__.py",
+        descripcion="Paquete del runtime de ejecución controlada del Lead (v0.8 Change 2)",
+        stage_minimo="experiment",
+    ),
+    EntradaManifiesto(
+        fuente="tools/leadrun/core.py",
+        tratamiento=VERBATIM,
+        destino="tools/leadrun/core.py",
+        descripcion="Tipos base del runtime de ejecución (ExecutionRequest/ExecutionRecord, catálogo EXEC-*, v0.8 Change 2)",
+        stage_minimo="experiment",
+    ),
+    EntradaManifiesto(
+        fuente="tools/leadrun/allowlist.py",
+        tratamiento=VERBATIM,
+        destino="tools/leadrun/allowlist.py",
+        descripcion="Reconocimiento puro de la forma de un comando (script/pytest/notebook/cli_diagnostic, v0.8 Change 2)",
+        stage_minimo="experiment",
+    ),
+    EntradaManifiesto(
+        fuente="tools/leadrun/scripts.py",
+        tratamiento=VERBATIM,
+        destino="tools/leadrun/scripts.py",
+        descripcion="Ejecución de script/pytest vía subprocess.run, sin volver a evaluar la allowlist (v0.8 Change 2)",
+        stage_minimo="experiment",
+    ),
+    EntradaManifiesto(
+        fuente="tools/leadrun/notebooks.py",
+        tratamiento=VERBATIM,
+        destino="tools/leadrun/notebooks.py",
+        descripcion="Composición de tools.nbrunner.* para ejecutar un manifest de notebook desde el runtime del Lead (v0.8 Change 2)",
+        stage_minimo="experiment",
+    ),
+    EntradaManifiesto(
+        fuente="tools/leadrun/runtime.py",
+        tratamiento=VERBATIM,
+        destino="tools/leadrun/runtime.py",
+        descripcion="Orquestador único que produce y persiste ExecutionRecord bajo .harmessi/executions/ (v0.8 Change 2)",
+        stage_minimo="experiment",
+    ),
+    EntradaManifiesto(
+        fuente="tools/notebook_runner.py",
+        tratamiento=VERBATIM,
+        destino="tools/notebook_runner.py",
+        descripcion="CLI de nivel superior 'run --manifest' que cierra el gap del audit de notebook-runner (v0.8 Change 2)",
+        stage_minimo="experiment",
+    ),
+    EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/smoke_test_generico.py.tmpl",
         tratamiento=GENERADO,
         destino="tools/tests/test_harness_smoke.py",
@@ -656,22 +730,102 @@ MANIFEST: tuple = (
         stage_minimo="discovery",
     ),
     EntradaManifiesto(
+        fuente="tools/autonomy/__init__.py",
+        tratamiento=VERBATIM,
+        destino="tools/autonomy/__init__.py",
+        descripcion="Paquete de contrato de autonomia (v0.8), sin logica",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
+        fuente="tools/autonomy/core.py",
+        tratamiento=VERBATIM,
+        destino="tools/autonomy/core.py",
+        descripcion="Contrato neutral de autonomia (modos autonomous/supervised, POLICY_TABLE/resolve_action, catalogos STOP/LIMIT, codigos AUTONOMY-*, roles, ApprovalRef/PolicyApproval, PreApprovedDecision), solo stdlib (v0.8 Change 0)",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
+        fuente="tools/autonomy/policy.py",
+        tratamiento=VERBATIM,
+        destino="tools/autonomy/policy.py",
+        descripcion="Politica de autonomia de guardrails.json (parse_autonomy_policy fail-closed, fuentes selladas, resolve_methodological_decision), solo stdlib y core; recibe guard_policy_version_max del llamador (v0.8 Change 0)",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
+        fuente="tools/datasources/__init__.py",
+        tratamiento=VERBATIM,
+        destino="tools/datasources/__init__.py",
+        descripcion="Paquete de acceso neutral a fuentes de datos (v0.8 Change 1), sin logica",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
+        fuente="tools/datasources/core.py",
+        tratamiento=VERBATIM,
+        destino="tools/datasources/core.py",
+        descripcion="Tipos neutrales de fuentes (SourceRef/SourceCapabilities/ObservationRequest/SourceObservation/FieldObservation/SourceProvenance/SourceError), registro unico de codigos SOURCE-*, solo stdlib, sin ramificar por source_kind/tecnologia (v0.8 Change 1)",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
+        fuente="tools/datasources/scan.py",
+        tratamiento=VERBATIM,
+        destino="tools/datasources/scan.py",
+        descripcion="Escaneo por patron de secretos y localizadores fisicos (scan_secrets/scan_locators), puro sobre dicts, best-effort (v0.8 Change 1)",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
+        fuente="tools/datasources/registry.py",
+        tratamiento=VERBATIM,
+        destino="tools/datasources/registry.py",
+        descripcion="Validacion estatica y pura del registro .harmessi/sources.json y resolucion estatica del observer, sin importar codigo del proyecto (v0.8 Change 1)",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
+        fuente="tools/datasources/runtime.py",
+        tratamiento=VERBATIM,
+        destino="tools/datasources/runtime.py",
+        descripcion="Capa de I/O e importlib: observe_source (orden R16), compare_fingerprint, persistencia atomica en .harmessi/observations/; access_check inyectado, no importa autonomy/pathguard (v0.8 Change 1)",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
+        fuente="tools/datasources/profile_bridge.py",
+        tratamiento=VERBATIM,
+        destino="tools/datasources/profile_bridge.py",
+        descripcion="Puente profile.json (ds_profile) -> SourceObservation neutral, puro sobre dicts, no importa ds_profile (v0.8 Change 1)",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
+        fuente="tools/datasources/file_observer.py",
+        tratamiento=VERBATIM,
+        destino="tools/datasources/file_observer.py",
+        descripcion="Unico observer incluido por Harmessi (archivos locales via ds_profile), import perezoso de ds_profile dentro de funciones (v0.8 Change 1)",
+        stage_minimo="experiment",
+    ),
+    EntradaManifiesto(
+        fuente="tools/datacontracts/legacy_wording.py",
+        tratamiento=VERBATIM,
+        destino="tools/datacontracts/legacy_wording.py",
+        descripcion="Catalogo LEGACY_PROFILE de mensajes v0.7 verbatim, usado por validate_contract_observation con wording=LEGACY_PROFILE (v0.8 Change 1)",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
         fuente="tools/modelquality/__init__.py",
         tratamiento=VERBATIM,
         destino="tools/modelquality/__init__.py",
         descripcion="Paquete de politicas de calidad de modelo (v0.7 Change 2), sin logica",
+        capabilities=("predictive_modeling",),
     ),
     EntradaManifiesto(
         fuente="tools/modelquality/core.py",
         tratamiento=VERBATIM,
         destino="tools/modelquality/core.py",
         descripcion="Politicas neutrales de calidad de modelo (ModelQualityPolicy/MetricRequirement/EvaluationContext/ObservedMetric/BaselineReference), solo stdlib (v0.7 Change 2)",
+        capabilities=("predictive_modeling",),
     ),
     EntradaManifiesto(
         fuente="tools/modelquality/validation.py",
         tratamiento=VERBATIM,
         destino="tools/modelquality/validation.py",
         descripcion="Evaluacion determinista de ModelQualityPolicy contra metricas ya reportadas, codigos QUALITY-*, produce dsguard.checks.CheckResult (v0.7 Change 2)",
+        capabilities=("predictive_modeling",),
     ),
     EntradaManifiesto(
         fuente="tools/qualityevidence/__init__.py",
@@ -777,6 +931,15 @@ EXCLUSIONES_PERMANENTES: tuple = (
     "tools/dsimpact/tests/test_scan_findings.py",
     "tools/dsimpact/tests/test_cli.py",
     "tools/dsimpact/tests/test_readonly.py",
+    "tools/leadrun/tests/__init__.py",
+    "tools/leadrun/tests/test_core.py",
+    "tools/leadrun/tests/test_allowlist.py",
+    "tools/leadrun/tests/test_scripts.py",
+    "tools/leadrun/tests/test_notebooks.py",
+    "tools/leadrun/tests/test_runtime.py",
+    "tools/tests/test_v08_leadrun_neutrality.py",
+    "tools/tests/test_ds_guard_exec.py",
+    "tools/tests/test_notebook_runner.py",
 )
 
 
@@ -827,4 +990,30 @@ def manifest_para_perfil_y_stage(perfil: str, stage: str) -> list:
         entrada
         for entrada in entradas
         if ORDEN_STAGES.index(entrada.stage_minimo) <= limite
+    ]
+
+
+def manifest_para_perfil_stage_y_capabilities(
+    perfil: str, stage: str, capabilities_habilitadas
+) -> list:
+    """Como `manifest_para_perfil_y_stage(perfil, stage)`, pero además filtra
+    por `capabilities` (eje ortogonal a `stage_minimo`, R2/R4 de `spec.md`
+    Change `20260930-project-extension-and-installer-integration`): conserva
+    solo las entradas cuyo `capabilities` sea `()` (sin filtro, siempre
+    aplica) o un subconjunto de `capabilities_habilitadas` (iterable de
+    strings, p. ej. `{"predictive_modeling"}` o `set()`).
+
+    Wrapper puro y aditivo: llama a `manifest_para_perfil_y_stage` sin
+    modificarla (R2, D1 de `design.md`) y compone el filtro de capabilities
+    por encima -- nunca sustituye el filtro de stage (R4: ambos ejes se
+    intersectan). Cualquier llamador existente que siga usando
+    `manifest_para_perfil`/`manifest_para_perfil_y_stage` sin capabilities no
+    ve ningún cambio de comportamiento (R5)."""
+    capabilities_habilitadas = frozenset(capabilities_habilitadas)
+    entradas = manifest_para_perfil_y_stage(perfil, stage)
+    return [
+        entrada
+        for entrada in entradas
+        if not entrada.capabilities
+        or set(entrada.capabilities) <= capabilities_habilitadas
     ]

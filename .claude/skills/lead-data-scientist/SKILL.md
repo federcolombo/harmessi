@@ -140,6 +140,14 @@ edición en curso.
   exacto. Nunca se excede el cupo.
 - **Unidad de cupo**: el cupo de subagentes cuenta roles distintos convocados; reinvocar el mismo
   rol consume el límite de intentos, pero no agrega otro subagente al cupo.
+- **`max_concurrent_subagents` (v0.8 Change 3, límite honesto/best-effort, distinto del cupo de
+  arriba):** si el proyecto declara `autonomy.budgets.max_concurrent_subagents` en
+  `.claude/guardrails.json`, el Lead autorreporta cada convocatoria/cierre de subagente
+  (`ds_guard session note --tipo subagente --evento abrir|cerrar`, `tools/dsguard/sdd.py`) y
+  consulta el conteo actual contra ese máximo ANTES de convocar uno nuevo; si ya está en el máximo,
+  no convoca y lo reporta como límite alcanzado. Es autorreportado, cooperativo, **sin enforcement
+  técnico real** — un Lead que omite el autorreporte no queda bloqueado por ningún mecanismo del
+  harness (mismo criterio honesto que el resto de los límites de este documento).
 - **Límite de intentos**: 2 reinvocaciones del mismo subagente sobre la misma tarea tras un
   resultado insatisfactorio; agotadas, el Lead para y consulta. No confundir con `maxTurns` del
   frontmatter de cada agente, que es un límite interno del subagente. Además del contador agregado
@@ -150,8 +158,9 @@ edición en curso.
   fuera del repositorio del proyecto; tocar algo fuera de la lista requiere aprobación nueva.
 - **Cierre**: todas las tareas acordadas terminadas y verificadas → checkpoint de cierre → fin.
 - **Pausa**: tope de tiempo con trabajo en curso; intentos agotados; decisión metodológica o de
-  negocio no aprobada; archivo fuera de los autorizados; holdout o dataset sellado; o hace falta
-  ejecutar algo que ningún agente puede correr en esta versión.
+  negocio no aprobada; archivo fuera de los autorizados; holdout o dataset sellado; o un STOP
+  material (catálogo de 12, `docs/roadmap/v0.8.md`/`tools/autonomy/core.py`, p. ej. dependencia
+  nueva, secreto requerido, acceso sellado) encontrado durante la ejecución.
 
 ## Exploración antes de editar
 
@@ -182,6 +191,27 @@ Un campo que no corresponda se escribe **"no aplica" con su justificación**, nu
 *"Decisión aprobada: no aplica; esta consulta metodológica precede a la decisión"*. El
 `data-science-reviewer` no corre comandos: si hay que revisar un diff real, el Lead corre `git diff`
 él mismo y pega el contenido en el campo 2.
+
+## Eficiencia writer → Lead (adenda post-cierre 2026-09-30, sin cambiar roles)
+
+El writer sigue sin ejecutar; el Lead sigue siendo el único ejecutor. Dentro de eso:
+
+- **Por default, el writer completa una unidad de trabajo coherente** (definida en
+  `proposal.md`/`tasks.md`, nunca inventada a mitad de camino por el writer) antes del handoff al
+  Lead para ejecutar/verificar — no ejecutar después de cada microtarea. La spec/tasks puede exigir
+  ejecución intermedia cuando tenga valor real: migración delicada, dependencia entre pasos, riesgo
+  alto, debugging, checkpoint técnico explícito — tampoco se arman batches gigantes sin ningún
+  feedback intermedio.
+- **Handoffs Lead → writer compactos**: priorizan error relevante, traceback reducido, diff, rutas,
+  IDs, resultados de tests — nunca reenviar un archivo completo que el writer ya leyó, salvo que
+  haya cambiado materialmente. Reusar `ds_profile`/`SourceObservation`/summaries/manifests/evidence
+  ya existente en vez de releer una fuente grande para reconstruir contexto ya disponible.
+- **Métricas de observación** (`ds_guard session efficiency --change-id <id>`):
+  `writer_lead_cycles`, `remediation_cycles`, `executions_count`,
+  `execution_duration_total_seconds` — derivadas de evidencia ya existente
+  (`control["sesiones"]`/`control["remediaciones"]`, y una referencia liviana a los
+  `ExecutionRecord` de `ds_guard exec ...`, sin duplicarlos). Son observación para Change 5, **nunca
+  un gate**: no se optimizan a costa de saltear validación o al `data-science-reviewer`.
 
 ## Checkpoint de cierre o pausa
 

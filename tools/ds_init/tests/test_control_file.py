@@ -284,5 +284,107 @@ class TestInstallationStageOpcional(unittest.TestCase):
         self.assertEqual(rutas_obtenidas, rutas_esperadas)
 
 
+class TestCapabilitiesHabilitadas(unittest.TestCase):
+    """M8 (hallazgo de hardening, Change 5): `capabilities_habilitadas` se
+    persiste en `control.json` (`generar_control`) y se preserva/aplica
+    correctamente en `regenerar_control` (bug real encontrado: sin esto,
+    `regenerar_control` recalculaba `archivos` sin filtrar por capabilities,
+    y `sha256_de_archivo` sobre un archivo deliberadamente no instalado
+    rompía con `FileNotFoundError`)."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_generar_control_sin_capabilities_omite_la_clave(self):
+        config = _config_base(self.repo)
+        plan = construir_plan(PERFIL, self.repo, config)
+        writer.instalar(plan, self.repo, config)
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertNotIn("capabilities_habilitadas", control)
+
+    def test_generar_control_con_capabilities_persiste_lista_ordenada(self):
+        config = _config_base(self.repo)
+        config["capabilities_habilitadas"] = ["predictive_modeling"]
+        plan = construir_plan(
+            PERFIL, self.repo, config, stage="experiment", capabilities_habilitadas=frozenset({"predictive_modeling"})
+        )
+        writer.instalar(plan, self.repo, config)
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertEqual(control["capabilities_habilitadas"], ["predictive_modeling"])
+
+    def test_generar_control_con_capability_deshabilitada_excluye_modelquality(self):
+        config = _config_base(self.repo)
+        config["capabilities_habilitadas"] = []
+        plan = construir_plan(PERFIL, self.repo, config, stage="experiment", capabilities_habilitadas=frozenset())
+        resultado = writer.instalar(plan, self.repo, config)
+        self.assertNotIn("tools/modelquality/__init__.py", resultado.aplicados)
+        self.assertFalse((self.repo / "tools" / "modelquality").exists())
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertEqual(control["capabilities_habilitadas"], [])
+
+    def test_regenerar_control_sin_pasar_capabilities_preserva_lo_previo(self):
+        config = _config_base(self.repo)
+        config["capabilities_habilitadas"] = []
+        plan = construir_plan(PERFIL, self.repo, config, stage="experiment", capabilities_habilitadas=frozenset())
+        writer.instalar(plan, self.repo, config)
+        control_previo = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertEqual(control_previo["capabilities_habilitadas"], [])
+
+        # Sin pasar `capabilities_habilitadas` explícito: NO crashea (bug
+        # real ya corregido) y preserva el valor previo (lista vacía ->
+        # modelquality sigue excluido del recálculo de `archivos`).
+        control_nuevo = control_mod.regenerar_control(self.repo, control_previo, stage="experiment")
+        self.assertEqual(control_nuevo["capabilities_habilitadas"], [])
+        rutas = {entrada["ruta"] for entrada in control_nuevo["archivos"]}
+        self.assertNotIn("tools/modelquality/__init__.py", rutas)
+
+    def test_regenerar_control_con_capabilities_explicitas_las_usa(self):
+        config = _config_base(self.repo)
+        config["capabilities_habilitadas"] = []
+        plan = construir_plan(PERFIL, self.repo, config, stage="experiment", capabilities_habilitadas=frozenset())
+        writer.instalar(plan, self.repo, config)
+        self.assertFalse((self.repo / "tools" / "modelquality").exists())
+
+        # Re-habilitar (mismo flujo real que `_main_sync`: primero
+        # `writer.instalar` con un plan que SÍ incluye las entradas de la
+        # capability -- eso es lo que las crea en disco -- recién DESPUÉS
+        # `regenerar_control` recalcula el set acumulado completo).
+        plan_habilitado = construir_plan(
+            PERFIL, self.repo, config, stage="experiment", capabilities_habilitadas=frozenset({"predictive_modeling"})
+        )
+        writer.instalar(plan_habilitado, self.repo, config)
+        self.assertTrue((self.repo / "tools" / "modelquality" / "__init__.py").exists())
+
+        control_previo = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        control_nuevo = control_mod.regenerar_control(
+            self.repo, control_previo, stage="experiment", capabilities_habilitadas=["predictive_modeling"]
+        )
+        self.assertEqual(control_nuevo["capabilities_habilitadas"], ["predictive_modeling"])
+        rutas = {entrada["ruta"] for entrada in control_nuevo["archivos"]}
+        self.assertIn("tools/modelquality/__init__.py", rutas)
+
+    def test_regenerar_control_sin_que_los_archivos_existan_aun_lanza_filenotfounderror(self):
+        # Caso de control explícito (comportamiento YA ESPERADO, no un bug):
+        # `regenerar_control` SOLO recalcula hashes de archivos que de verdad
+        # están en disco -- si se le pide recalcular con una capability
+        # habilitada cuyos archivos nunca se instalaron (p. ej. alguien llama
+        # a `regenerar_control` sin haber corrido antes `writer.instalar` con
+        # el plan correspondiente), falla alto y explícito en vez de mentir
+        # con un hash inexistente.
+        config = _config_base(self.repo)
+        config["capabilities_habilitadas"] = []
+        plan = construir_plan(PERFIL, self.repo, config, stage="experiment", capabilities_habilitadas=frozenset())
+        writer.instalar(plan, self.repo, config)
+        control_previo = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+
+        with self.assertRaises(FileNotFoundError):
+            control_mod.regenerar_control(
+                self.repo, control_previo, stage="discovery", capabilities_habilitadas=["predictive_modeling"]
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

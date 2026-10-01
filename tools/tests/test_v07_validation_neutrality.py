@@ -6,11 +6,19 @@ módulo.
 
 Verifica (R1 de `spec.md`):
 - `tools/datacontracts/validation.py` importa únicamente: stdlib permitida + `dsguard`
-  (para `dsguard.checks`) + import relativo sibling `from . import core` +
+  (para `dsguard.checks`) + `datasources` (paquete completo, SIN restricción de
+  símbolo -- excepción de dependencia de v0.8 Change 1 / M1, ver regla 11 de
+  `ARCHITECTURE.md` y R2 de
+  `openspec/changes/20260928-source-neutral-data-access/spec.md`: el evaluador único
+  evalúa sobre `SourceObservation`) + imports relativos sibling `from . import core` y
+  `from . import legacy_wording` (este último también parte de la excepción de M1) +
   `ds_profile.holdout_guard.verificar_permitido` (EXACTAMENTE ese único símbolo, de ese
   único módulo -- nunca `ds_profile.report`/`.column_stats`/`.fingerprint`/`.sampling`/
   `.quality_flags`/`.schema`/`.io_readers`, ni el paquete completo `ds_profile` sin
-  calificar).
+  calificar; a diferencia de `datasources`, que sí queda permitido sin calificar).
+  Esta ampliación es puntual (la única excepción de dependencia aprobada por M1), no
+  una relajación general de la frontera: cualquier otro paquete de `tools/` sigue
+  prohibido.
 - Ningún import de pandas, numpy, ni ningún otro paquete de `tools/`.
 - Regresión: `tools/datacontracts/core.py` (Change 0) sigue solo-stdlib.
 - Sanity: los detectores detectan violaciones reales de prueba (no pasan en vacío).
@@ -31,13 +39,16 @@ CORE_DATACONTRACTS = "tools/datacontracts/core.py"
 # el import relativo (`.`) y `ds_profile` se validan aparte, con reglas más estrictas
 # (ver `_violaciones_frontera_validation`).
 IMPORTS_STDLIB_PERMITIDOS = {"__future__", "json", "pathlib", "typing", "sys", "datetime"}
-IMPORTS_RAIZ_PERMITIDOS = IMPORTS_STDLIB_PERMITIDOS | {"dsguard", "ds_profile", "."}
+# `datasources` se agrega por la excepción de dependencia de v0.8 Change 1 / M1 (paquete
+# completo permitido, sin restricción de símbolo -- ver ARCHITECTURE.md regla 11).
+IMPORTS_RAIZ_PERMITIDOS = IMPORTS_STDLIB_PERMITIDOS | {"dsguard", "ds_profile", "datasources", "."}
 
 # Único símbolo de `ds_profile` que `validation.py` puede importar (design.md, decisión 3).
 _DS_PROFILE_PERMITIDO = ("ds_profile.holdout_guard", "verificar_permitido")
 
-# Único import relativo permitido: el sibling `core` de `tools/datacontracts`.
-_RELATIVO_PERMITIDO = ".core"
+# Imports relativos permitidos: el sibling `core` de `tools/datacontracts`, y desde v0.8
+# Change 1 / M1 también `.legacy_wording` (misma excepción de dependencia).
+_RELATIVOS_PERMITIDOS = {".core", ".legacy_wording"}
 
 CORE_IMPORTS_PERMITIDOS = {"__future__", "dataclasses", "hashlib", "json", "re", "typing"}
 
@@ -88,12 +99,13 @@ def _nombres_importados_de_ds_profile(ruta_absoluta: Path) -> list:
 def _violaciones_frontera_validation(ruta_absoluta: Path) -> list:
     """Nombres/símbolos importados por `ruta_absoluta` que violan la frontera de
     imports de `validation.py` (R1): fuera del set de raíces permitidas, un import
-    relativo que no sea el sibling `core`, o cualquier símbolo de `ds_profile` que no
-    sea exactamente `ds_profile.holdout_guard.verificar_permitido`."""
+    relativo que no sea alguno de los siblings `core`/`legacy_wording`, o cualquier
+    símbolo de `ds_profile` que no sea exactamente
+    `ds_profile.holdout_guard.verificar_permitido`."""
     violaciones: list = []
     for raiz, nombre in _todos_los_imports(ruta_absoluta):
         if raiz == ".":
-            if nombre != _RELATIVO_PERMITIDO:
+            if nombre not in _RELATIVOS_PERMITIDOS:
                 violaciones.append(nombre)
             continue
         if raiz == "ds_profile":
@@ -120,7 +132,9 @@ class TestValidationFronteraDeImports(unittest.TestCase):
             [],
             f"tools/datacontracts/validation.py importa fuera de la frontera permitida por R1 "
             f"(stdlib {sorted(IMPORTS_STDLIB_PERMITIDOS)} + dsguard.checks + "
-            f"ds_profile.holdout_guard.verificar_permitido + sibling .core): {violaciones}",
+            f"datasources (paquete completo, excepción M1) + "
+            f"ds_profile.holdout_guard.verificar_permitido + siblings .core/.legacy_wording): "
+            f"{violaciones}",
         )
 
     def test_validation_no_importa_pandas_numpy_ni_otros_paquetes_de_tools(self):
@@ -187,7 +201,9 @@ class TestSanityDeLosDetectores(unittest.TestCase):
                 "from pathlib import Path\n"
                 "from dsguard import checks\n"
                 "from ds_profile.holdout_guard import verificar_permitido\n"
-                "from . import core as datacontracts_core\n",
+                "from datasources import core as datasources_core\n"
+                "from . import core as datacontracts_core\n"
+                "from . import legacy_wording\n",
             )
             self.assertEqual(_violaciones_frontera_validation(limpio), [])
 
@@ -195,6 +211,14 @@ class TestSanityDeLosDetectores(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             ruta = self._escribir(tmp, "a.py", "import json\nimport pandas\n")
             self.assertEqual(_violaciones_frontera_validation(ruta), ["pandas"])
+
+    def test_detecta_import_de_paquete_no_autorizado_pese_a_excepcion_datasources(self):
+        """La excepción de M1 (`datasources` permitido) es puntual: cualquier otro
+        paquete no autorizado (p. ej. `modelquality`) sigue detectándose como
+        violación."""
+        with tempfile.TemporaryDirectory() as tmp:
+            ruta = self._escribir(tmp, "h.py", "import json\nimport modelquality\n")
+            self.assertEqual(_violaciones_frontera_validation(ruta), ["modelquality"])
 
     def test_detecta_import_pandas_anidado_en_funcion(self):
         with tempfile.TemporaryDirectory() as tmp:

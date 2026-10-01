@@ -13,6 +13,15 @@ from . import repo as repo_mod
 from . import scope
 from .core import Finding, ahora_utc, escribir_control, hash_lf_v1, minutos_restantes, parsear_utc
 
+# `tools/` ya está en `sys.path` en todo contexto real donde `dsguard.sdd` se
+# importa (CLI: `ds_guard.py:23`; tests: `sys.path.insert(0, tools/)` antes de
+# `from dsguard import sdd`) -- mismo patrón que `tools/leadrun/runtime.py`
+# usa para `from dsguard import checks as dsguard_checks`, aplicado acá para
+# el paquete hermano `autonomy` (v0.8 Change 3, `20260930-autonomous-sdd-and-
+# remediation`). Sin tocar `tools/autonomy/core.py` (Change 0, cerrado): solo
+# se consumen sus constantes/funciones ya existentes.
+from autonomy import core as autonomy_core
+
 # --- Estados y transiciones ----------------------------------------------------
 
 ESTADOS_VALIDOS = {
@@ -675,7 +684,11 @@ def session_start(
         "deadline_utc": deadline_dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "minutos_consumidos": 0.0,
         "resultado": None,
-        "subagentes": {},
+        # v0.8 Change 3 (R13-R14 de spec.md, D6 de design.md): contador
+        # autorreportado por el Lead, sin enforcement técnico real -- un Lead
+        # que omite el autorreporte no es detectado por este mecanismo. Ver
+        # `session_note(tipo="subagente", ...)` y `limite_subagentes_alcanzado`.
+        "subagentes": {"conteo": 0},
         "tareas": [],
         "roles": [],
         "reintentos": 0,
@@ -697,13 +710,39 @@ def session_note(
     cambio_aplicado: Optional[str] = None,
     resultado: Optional[str] = None,
     max_intentos_remediacion: int = 2,
+    evento: Optional[str] = None,
 ) -> dict:
-    if tipo not in ("planificada", "reintento", "ronda"):
+    """Ver también `tipo == "subagente"` (v0.8 Change 3, R13-R14 de `spec.md`,
+    D6 de `design.md`): autorreportado por el Lead, sin enforcement técnico
+    real -- un Lead que omite el autorreporte no es detectado por este
+    mecanismo. `evento` (`"abrir"|"cerrar"`) solo aplica cuando
+    `tipo == "subagente"`; se agrega al final de la firma, con default `None`,
+    para no romper ningún llamador existente que no lo pase."""
+    if tipo not in ("planificada", "reintento", "ronda", "subagente"):
         raise ValueError(f"tipo de nota inválido: {tipo!r}")
     activa = _sesion_activa(control)
     if activa is None:
         raise SesionAusenteError("No hay sesión activa: 'session note' requiere una sesión abierta")
-    if tipo == "reintento":
+    if tipo == "subagente":
+        if evento not in ("abrir", "cerrar"):
+            raise ValueError(f"evento de nota de subagente inválido: {evento!r}")
+        subagentes = activa.get("subagentes")
+        if not isinstance(subagentes, dict):
+            # Formato viejo (`{}` sin usar, o ausente) -- se re-arranca en la
+            # forma nueva sin pisar un valor real si ya lo hubiera.
+            subagentes = {"conteo": 0}
+        conteo = subagentes.get("conteo", 0)
+        if evento == "abrir":
+            subagentes["conteo"] = conteo + 1
+        else:
+            if conteo <= 0:
+                raise ValueError(
+                    "No hay subagentes abiertos registrados: 'cerrar' sin una "
+                    "apertura previa no se admite (no baja de 0)"
+                )
+            subagentes["conteo"] = conteo - 1
+        activa["subagentes"] = subagentes
+    elif tipo == "reintento":
         if remediation_tipo is not None:
             # Bounded remediation (R11-R18): si `remediation_note` rehúsa
             # (ventana agotada, tipo inválido, etc.), no se toca nada -- ni la
@@ -820,6 +859,7 @@ def session_status(control: dict) -> dict:
         "roles": activa.get("roles"),
         "reintentos": activa.get("reintentos"),
         "rondas_revision": activa.get("rondas_revision"),
+        "subagentes": (activa.get("subagentes") or {}).get("conteo", 0),
         "findings": [f.to_dict() for f in findings],
     }
 
@@ -845,3 +885,551 @@ def session_close(control: dict, estado_final: str) -> dict:
     restantes = minutos_restantes(activa)
     activa["resultado"] = "dentro_de_presupuesto" if restantes >= 0 else "excedida"
     return activa
+
+
+# --- Autonomía v0.8 Change 3 (`20260930-autonomous-sdd-and-remediation`) ------
+#
+# `approval_mode` (control["aprobacion_modo"]), checkpoints de negocio
+# (control["decisiones_preaprobadas"]) y presupuesto agregado entre sesiones.
+# Compone `tools.autonomy.core` (Change 0, cerrado) sin tocarlo: solo se leen
+# sus constantes/funciones de validación ya existentes (`validate_pre_approved`,
+# `CODE_PREAPPROVED_INVALID`, `CODE_LIMIT_AGGREGATE_BUDGET`). Ver D1-D2/D4 de
+# `openspec/changes/20260930-autonomous-sdd-and-remediation/design.md`.
+
+APPROVAL_MODES = ("per_change", "checkpoints")
+APPROVAL_MODE_DEFAULT = "per_change"
+
+
+def resolver_approval_mode(control: dict) -> str:
+    """`control["aprobacion_modo"]` -> `"per_change"` | `"checkpoints"` (R1 de
+    `spec.md`). Ausente, `None` o cualquier valor que no sea exactamente
+    `"checkpoints"` resuelve `"per_change"` -- el default de hoy, sin excepción
+    ni error: esta función solo *lee*, nunca valida/rechaza un valor mal
+    formado (eso, si hace falta, es responsabilidad de un gate aparte, fuera
+    de esta invocación)."""
+    valor = control.get("aprobacion_modo")
+    if valor == "checkpoints":
+        return "checkpoints"
+    return APPROVAL_MODE_DEFAULT
+
+
+_RE_CHECKPOINT_BULLET = re.compile(
+    r"^-\s+\*\*(?P<id>[^*]+)\*\*:\s*(?P<resumen>.+?)\s*—\s*alcance:\s*(?P<alcance>.+?)"
+    r"\s*—\s*aprobacion:\s*(?P<change_id>[0-9]{8}-[a-z0-9][a-z0-9-]*)/proposal\.md@"
+    r"(?P<hash>[0-9a-f]{64})\s*$"
+)
+
+
+def parsear_checkpoints_de_propuesta(texto: str) -> tuple:
+    """Checkpoints de negocio (`## Checkpoints de negocio` de `proposal.md`,
+    condicional a `approval_mode: checkpoints`, R3-R4 de `spec.md`; D2 de
+    `design.md`) -> `(checkpoints_validos, hallazgos)`.
+
+    `checkpoints_validos` es una `list[dict]`, cada elemento con la forma
+    EXACTA de `PreApprovedDecision.to_dict()` (`approval_ref`, `decision_type`,
+    `scope`, `summary`) y `decision_type == "business_checkpoint"`, ya
+    validado sin hallazgos por `tools.autonomy.core.validate_pre_approved`
+    (sin tocar esa función). `hallazgos` es `list[Finding]` (este módulo, no
+    `PolicyFinding`) -- uno por cada bullet que no parseó o que parseó pero no
+    validó; nunca se agrega el checkpoint correspondiente a
+    `checkpoints_validos` en esos casos (sin checkpoint fantasma, ver riesgo
+    de `design.md`).
+
+    Se devuelve una tupla en vez de solo la lista (decisión de implementación
+    de esta invocación, T1): un checkpoint mal formado no debe desaparecer en
+    silencio -- el llamador (CLI, fuera de esta invocación) decide qué hacer
+    con `hallazgos` (típicamente: rechazar la aprobación de la propuesta).
+
+    Formato de bullet (uno por línea, ajustado durante esta invocación --
+    el ejemplo ilustrativo de D2 de `design.md` (`... — tipo:
+    business_checkpoint`) no incluye `change_id`, pero `ApprovalRef`/
+    `_validar_ref` de `tools.autonomy.core` lo exige como uno de los 3
+    campos obligatorios (`artefacto`, `change_id`, `hash`) -- con el
+    formato literal de D2, ningún checkpoint podría pasar nunca
+    `validate_pre_approved` sin hallazgos. Corregido acá agregando
+    `change_id` explícito al bullet; detalle completo en `tasks.md` §T1 de
+    este Change, sin reabrir el hash aprobado de `design.md`):
+
+        - **<id>**: <resumen> — alcance: <ruta1>, <ruta2> — aprobacion:
+          <change_id>/proposal.md@<hash-sha256>
+
+    Ejemplo real (hash de relleno de 64 hex, no uno real de este repo):
+
+        - **budget-sprint3**: Aprobar el tope de presupuesto agregado del
+          sprint 3 — alcance: tools/dsguard/sdd.py, tools/tests/test_lifecycle.py
+          — aprobacion: 20260930-autonomous-sdd-and-remediation/proposal.md@
+          0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
+
+    `id` no es una clave aparte de `PreApprovedDecision` (no existe en
+    `to_dict()`): se embebe como prefijo de `summary` (`"<id>: <resumen>"`),
+    sin inventar un campo nuevo fuera del vocabulario ya validado por
+    `validate_pre_approved`. `artefacto` es siempre el literal `"proposal.md"`
+    (nunca se lee del bullet: `validate_pre_approved`/`_scope_item_detail` ya
+    lo exige así, R3 de `spec.md`).
+    """
+    seccion = _contenido_de_seccion(texto, "## Checkpoints de negocio")
+    checkpoints_validos: list = []
+    hallazgos: list = []
+    if not seccion:
+        return checkpoints_validos, hallazgos
+
+    ubicacion = "proposal.md#Checkpoints de negocio"
+    for linea in seccion.splitlines():
+        linea = linea.strip()
+        if not linea or not linea.startswith("-"):
+            continue
+        m = _RE_CHECKPOINT_BULLET.match(linea)
+        if not m:
+            hallazgos.append(
+                Finding(
+                    autonomy_core.CODE_PREAPPROVED_INVALID,
+                    f"Bullet de checkpoint con formato ambiguo/incompleto: {linea!r}",
+                    ubicacion,
+                )
+            )
+            continue
+
+        alcance = [item.strip() for item in m.group("alcance").split(",") if item.strip()]
+        candidato = {
+            "approval_ref": {
+                "artefacto": "proposal.md",
+                "change_id": m.group("change_id"),
+                "hash": m.group("hash"),
+            },
+            "decision_type": "business_checkpoint",
+            "scope": alcance,
+            "summary": f"{m.group('id').strip()}: {m.group('resumen').strip()}",
+        }
+        hallazgos_validacion = autonomy_core.validate_pre_approved(
+            candidato, known_types=("business_checkpoint",)
+        )
+        if hallazgos_validacion:
+            for h in hallazgos_validacion:
+                hallazgos.append(
+                    Finding(
+                        h.code,
+                        f"Checkpoint inválido en '{h.path}': {h.detail_key}",
+                        ubicacion,
+                    )
+                )
+            continue
+
+        checkpoints_validos.append(candidato)
+
+    return checkpoints_validos, hallazgos
+
+
+def presupuesto_agregado(control: dict) -> dict:
+    """Vista derivada pura (sin I/O, sin escritura) sobre `control["sesiones"]`
+    (R10, R12, R12a de `spec.md`; D4 de `design.md`) --
+
+        {"minutos_consumidos_totales": float, "sesiones_totales": int,
+         "sesiones_abiertas": int}
+
+    Para una sesión cerrada, usa su `minutos_consumidos` ya persistido (igual
+    que `session_close` lo dejó). Para la sesión activa (`estado_final ==
+    "activa"`, a lo sumo una, `_sesion_activa`), calcula sus minutos
+    consumidos hasta el momento con la MISMA lógica que ya usa
+    `session_status` (`inicio_utc` vía `parsear_utc`, contra el momento
+    actual vía `parsear_utc(ahora_utc())`) -- no se duplica con una copia
+    ligeramente distinta.
+
+    `sesiones_totales = len(control.get("sesiones", []))`: ya satisface R12a
+    (reapertura tras `pausada_bloqueada` consume una nueva unidad de
+    `max_sessions`) sin ingeniería adicional -- decisión congelada de D4 de
+    `design.md`, ver ahí el razonamiento completo. Esta función no llama a
+    `session_start` ni lo modifica: una consulta nunca infla el conteo.
+    """
+    sesiones = control.get("sesiones", [])
+    minutos_totales = 0.0
+    sesiones_abiertas = 0
+    ahora = parsear_utc(ahora_utc())
+
+    for sesion in sesiones:
+        if sesion.get("estado_final") == "activa":
+            sesiones_abiertas += 1
+            inicio = parsear_utc(sesion["inicio_utc"])
+            minutos_totales += (ahora - inicio).total_seconds() / 60.0
+        else:
+            minutos_totales += sesion.get("minutos_consumidos", 0.0) or 0.0
+
+    return {
+        "minutos_consumidos_totales": minutos_totales,
+        "sesiones_totales": len(sesiones),
+        "sesiones_abiertas": sesiones_abiertas,
+    }
+
+
+def chequear_limite_agregado(control: dict, config_budgets: Optional[dict]) -> list:
+    """Compara `presupuesto_agregado(control)` contra `config_budgets`
+    (`{"aggregate_minutes": ..., "max_sessions": ...}`, ambas claves
+    opcionales -- ausente = sin límite en ese eje; `config_budgets` puede ser
+    `None`, equivalente a `{}`) y devuelve una lista de `Finding` con código
+    `AUTONOMY-LIMIT-AGGREGATE-BUDGET` (`tools.autonomy.core.
+    CODE_LIMIT_AGGREGATE_BUDGET`, ya reservado por Change 0, reutilizado tal
+    cual -- ningún código nuevo) cuando el consumo agregado ya alcanzó o
+    superó el límite configurado en cualquiera de los dos ejes (tiempo,
+    cantidad de sesiones).
+
+    Agotar este límite produce `checkpoint_resumable`, NUNCA STOP ni
+    aprobación automática (R11 de `spec.md`, cita textual). Esta función es
+    puramente informativa: no lanza excepción, no escribe nada en `control`,
+    no impide `session_start` ni ningún otro llamado -- decidir qué hacer con
+    el `Finding` devuelto (p. ej. negarse a abrir una sesión nueva) es
+    responsabilidad exclusiva del llamador (CLI, fuera de esta invocación).
+    Su firma no tiene ningún parámetro de "usuario"/"aprobado_por": no puede
+    pedir aprobación humana, ni implícita ni explícitamente.
+    """
+    findings: list = []
+    agregado = presupuesto_agregado(control)
+    config_budgets = config_budgets or {}
+
+    limite_minutos = config_budgets.get("aggregate_minutes")
+    if limite_minutos is not None and agregado["minutos_consumidos_totales"] >= limite_minutos:
+        findings.append(
+            Finding(
+                autonomy_core.CODE_LIMIT_AGGREGATE_BUDGET,
+                f"Presupuesto agregado de tiempo alcanzado/excedido: "
+                f"{agregado['minutos_consumidos_totales']:.1f} min >= {limite_minutos} min",
+            )
+        )
+
+    limite_sesiones = config_budgets.get("max_sessions")
+    if limite_sesiones is not None and agregado["sesiones_totales"] >= limite_sesiones:
+        findings.append(
+            Finding(
+                autonomy_core.CODE_LIMIT_AGGREGATE_BUDGET,
+                f"Cantidad de sesiones ({agregado['sesiones_totales']}) alcanzó/superó "
+                f"el máximo agregado configurado ({limite_sesiones})",
+            )
+        )
+
+    return findings
+
+
+def limite_subagentes_alcanzado(control: dict, max_concurrentes: Optional[int]) -> bool:
+    """`True` si el conteo autorreportado de subagentes concurrentes
+    (`activa["subagentes"]["conteo"]`, poblado por `session_note(
+    tipo="subagente", evento="abrir"|"cerrar")`) ya alcanzó o superó
+    `max_concurrentes` (v0.8 Change 3, R13-R14 de `spec.md`, D6 de
+    `design.md`). Autorreportado por el Lead, sin enforcement técnico real --
+    un Lead que omite el autorreporte no es detectado por este mecanismo:
+    esta función es solo la consulta que un llamador (CLI/Lead, fuera de esta
+    invocación) haría ANTES de invocar el tool `Agent`; no bloquea nada por
+    sí sola, no escribe nada en `control`.
+
+    `False` sin sesión activa, o si `max_concurrentes is None` (sin límite
+    configurado) -- en cualquier otro caso ("hay sesión activa" Y "hay límite
+    configurado"), `True` solo si el conteo ya llegó al máximo.
+    """
+    if max_concurrentes is None:
+        return False
+    activa = _sesion_activa(control)
+    if activa is None:
+        return False
+    conteo = (activa.get("subagentes") or {}).get("conteo", 0)
+    return conteo >= max_concurrentes
+
+
+# --- M11: pre-aprobación de dependencias del proyecto (adenda post-cierre ----
+# 2026-09-30, "Corrección y adenda post-cierre" de
+# `docs/roadmap/v0.8.md`) -------------------------------------------------
+#
+# Extiende, sin reabrirlo, el STOP `new_dependency` (STOP 4, `tools.autonomy.
+# core.STOP_CATALOG`) y el mecanismo de `approval_mode: checkpoints` (M7).
+# `STOP_CATALOG`/`POLICY_TABLE` de `tools.autonomy.core` NO se tocan: la
+# clasificación vive acá y solo los consulta. Esto NO es una vía de
+# instalación de dependencias -- solo clasifica si una solicitud dispara STOP
+# o no (M11, congelado en el roadmap).
+
+# Código nuevo y legítimo (a diferencia de los checkpoints de negocio, que
+# reutilizan `autonomy_core.CODE_PREAPPROVED_INVALID`): una dependencia
+# pre-aprobada no es un `PreApprovedDecision` (M11 no crea un tipo de "decisión"
+# por dependencia, la trazabilidad de la aprobación humana ya la da el hash de
+# `proposal.md` completo al aprobarlo, no una `ApprovalRef` por dependencia
+# individual) -- por eso no existía ningún código previo para bullets de
+# dependencias mal formados.
+CODE_DEPENDENCY_PREAPPROVAL_INVALID = "SDD-DEPENDENCY-PREAPPROVAL-INVALID"
+
+_RE_DEPENDENCY_BULLET = re.compile(r"^-\s*(?P<nombre>[^:]*?)\s*:\s*(?P<rango>.+?)\s*$")
+
+# Operadores de comparación soportados, en el mismo orden en que deben
+# probarse (`>=`/`<=` antes que `>`/`<` para no matchear el prefijo corto).
+_OPERADORES_RANGO = (">=", "<=", "==", "!=", ">", "<")
+
+
+def _parsear_version(version: str) -> tuple:
+    """`"1.2.0"` -> `(1, 2, 0)`. Lanza `ValueError` si algún componente no es
+    un entero no negativo, o si `version` está vacía. Sin soporte de sufijos
+    tipo `rc1`/`post1`/`dev0` -- simplificación deliberada, solo-stdlib, para
+    no agregar una dependencia nueva a Harmessi (p. ej. `packaging`)."""
+    version = version.strip()
+    if not version:
+        raise ValueError("version_vacia")
+    partes = version.split(".")
+    componentes = []
+    for parte in partes:
+        if not parte.isdigit():
+            raise ValueError(f"componente_no_entero:{parte!r}")
+        componentes.append(int(parte))
+    return tuple(componentes)
+
+
+def _parsear_rango_version(rango: str) -> list:
+    """Parser MÍNIMO y solo-stdlib de rangos tipo PEP 440 simplificado:
+    `>=`, `<=`, `>`, `<`, `==`, `!=`, combinados con coma (p. ej.
+    `>=1.2,<2`). Cada versión se parsea como tupla de enteros separados por
+    `.` (`_parsear_version`), sin soporte de sufijos tipo `rc1`/`post1` --
+    limitación deliberada (ver `_parsear_version`).
+
+    Devuelve `list[tuple[str, tuple[int, ...]]]` (operador, tupla de
+    versión). Lanza `ValueError` (capturado por el llamador,
+    `_version_satisface_rango`) si `rango` está vacío, si algún término no
+    tiene un operador soportado, o si la versión de algún término no
+    parsea."""
+    rango = rango.strip()
+    if not rango:
+        raise ValueError("rango_vacio")
+    terminos = []
+    for termino in rango.split(","):
+        termino = termino.strip()
+        if not termino:
+            raise ValueError("termino_vacio")
+        operador_encontrado = None
+        for operador in _OPERADORES_RANGO:
+            if termino.startswith(operador):
+                operador_encontrado = operador
+                break
+        if operador_encontrado is None:
+            raise ValueError(f"operador_no_soportado:{termino!r}")
+        version_texto = termino[len(operador_encontrado):]
+        terminos.append((operador_encontrado, _parsear_version(version_texto)))
+    return terminos
+
+
+def _rellenar_a_igual_longitud(a: tuple, b: tuple) -> tuple:
+    """`(a, b)` con ceros a la derecha para que tengan la misma longitud
+    (`"1.2"` == `"1.2.0"`)."""
+    n = max(len(a), len(b))
+    a2 = a + (0,) * (n - len(a))
+    b2 = b + (0,) * (n - len(b))
+    return a2, b2
+
+
+def _comparar_versiones(a: tuple, b: tuple) -> int:
+    """-1/0/1, rellenando a igual longitud antes de comparar."""
+    a2, b2 = _rellenar_a_igual_longitud(a, b)
+    if a2 < b2:
+        return -1
+    if a2 > b2:
+        return 1
+    return 0
+
+
+def _version_satisface_rango(version: str, rango: str) -> bool:
+    """`True` si `version` (p. ej. `"1.5"`) satisface todos los términos de
+    `rango` (p. ej. `">=1.2,<2"`). `False` (fail-closed, nunca lanza) si
+    `version` o `rango` no son parseables por
+    `_parsear_version`/`_parsear_rango_version`."""
+    try:
+        version_tupla = _parsear_version(version)
+        terminos = _parsear_rango_version(rango)
+    except ValueError:
+        return False
+    for operador, version_rango in terminos:
+        cmp = _comparar_versiones(version_tupla, version_rango)
+        if operador == ">=" and not (cmp >= 0):
+            return False
+        if operador == "<=" and not (cmp <= 0):
+            return False
+        if operador == ">" and not (cmp > 0):
+            return False
+        if operador == "<" and not (cmp < 0):
+            return False
+        if operador == "==" and not (cmp == 0):
+            return False
+        if operador == "!=" and not (cmp != 0):
+            return False
+    return True
+
+
+def parsear_dependencias_preaprobadas(texto: str) -> tuple:
+    """Sección `## Dependencias pre-aprobadas` de `proposal.md` (M11) ->
+    `(dependencias_validas, hallazgos)`.
+
+    `dependencias_validas` es `list[dict]`, cada elemento
+    `{"nombre": str, "rango": str}` -- SIN un tipo `PreApprovedDecision` (M11
+    no reutiliza ese tipo: es una lista simple de dependencias, no una
+    decisión con `approval_ref`, ver comentario de módulo arriba).
+    `hallazgos` es `list[Finding]` con código
+    `CODE_DEPENDENCY_PREAPPROVAL_INVALID`, uno por bullet mal formado (sin
+    `:`, nombre vacío, rango vacío o no parseable por
+    `_parsear_rango_version`) -- nunca se agrega la dependencia
+    correspondiente a `dependencias_validas` en esos casos (sin dependencia
+    fantasma, mismo criterio que `parsear_checkpoints_de_propuesta`).
+
+    Formato de bullet (uno por línea, ejemplo):
+
+        - package-a: >=1.2,<2
+
+    Sección ausente (o vacía) -> `([], [])`, sin error."""
+    seccion = _contenido_de_seccion(texto, "## Dependencias pre-aprobadas")
+    dependencias_validas: list = []
+    hallazgos: list = []
+    if not seccion:
+        return dependencias_validas, hallazgos
+
+    ubicacion = "proposal.md#Dependencias pre-aprobadas"
+    for linea in seccion.splitlines():
+        linea = linea.strip()
+        if not linea or not linea.startswith("-"):
+            continue
+        m = _RE_DEPENDENCY_BULLET.match(linea)
+        if not m:
+            hallazgos.append(
+                Finding(
+                    CODE_DEPENDENCY_PREAPPROVAL_INVALID,
+                    f"Bullet de dependencia con formato ambiguo/incompleto (sin ':'): {linea!r}",
+                    ubicacion,
+                )
+            )
+            continue
+        nombre = m.group("nombre").strip()
+        rango = m.group("rango").strip()
+        if not nombre:
+            hallazgos.append(
+                Finding(
+                    CODE_DEPENDENCY_PREAPPROVAL_INVALID,
+                    f"Bullet de dependencia con nombre vacío: {linea!r}",
+                    ubicacion,
+                )
+            )
+            continue
+        if not rango:
+            hallazgos.append(
+                Finding(
+                    CODE_DEPENDENCY_PREAPPROVAL_INVALID,
+                    f"Bullet de dependencia con rango vacío: {linea!r}",
+                    ubicacion,
+                )
+            )
+            continue
+        try:
+            _parsear_rango_version(rango)
+        except ValueError as exc:
+            hallazgos.append(
+                Finding(
+                    CODE_DEPENDENCY_PREAPPROVAL_INVALID,
+                    f"Bullet de dependencia con rango no parseable ({exc}): {linea!r}",
+                    ubicacion,
+                )
+            )
+            continue
+        dependencias_validas.append({"nombre": nombre, "rango": rango})
+
+    return dependencias_validas, hallazgos
+
+
+def clasificar_dependencia(nombre: str, version: str, dependencias_preaprobadas: list) -> str:
+    """Clasifica una solicitud de dependencia del proyecto (M11): `"no_stop"`
+    si `nombre` figura EXACTO (case-sensitive) en `dependencias_preaprobadas`
+    y `version` satisface el `rango` de esa entrada; en cualquier otro caso
+    (nombre no listado, versión fuera de rango, o `version` no parseable)
+    devuelve el código STOP de `new_dependency`
+    (`tools.autonomy.core.STOP_CATALOG`, buscado programáticamente -- nunca
+    hardcodeado). Función PURA: no escribe nada, no lanza excepción por una
+    versión rara (fail-closed: la trata como "no satisface")."""
+    for entrada in dependencias_preaprobadas or []:
+        if entrada.get("nombre") == nombre:
+            if _version_satisface_rango(version, entrada.get("rango", "")):
+                return "no_stop"
+            break
+    # Búsqueda sobre el símbolo PÚBLICO `STOP_CATALOG` (no
+    # `autonomy_core._stop_code`, privado por convención -- hallazgo de
+    # revisión, corregido: cruzaba el límite de encapsulamiento del módulo
+    # sin necesidad, ya que `STOP_CATALOG` alcanza y es parte del contrato
+    # público de `tools.autonomy.core`, Change 0, sin tocarlo).
+    return next(e.code for e in autonomy_core.STOP_CATALOG if e.key == "new_dependency")
+
+
+def _canonicalizar_nombre_paquete(nombre: str) -> str:
+    """PEP 503: normaliza `-`/`_`/`.` a `-` y pasa a minúsculas, para que
+    `"My-Package"`, `"my_package"`, `"my.package"` comparen igual sin
+    autorizar nunca un paquete DISTINTO (R36)."""
+    return re.sub(r"[-_.]+", "-", nombre).lower()
+
+
+# Patrón de un nombre de distribución PyPI simple (R35): letras/dígitos/
+# '-'/'_'/'.', empieza y termina con alfanumérico, sin URL/path/extras/
+# espacios/metacaracteres. Deliberadamente estricto: cualquier forma no
+# cubierta acá (URL, path, `file:`, `git+...`, `name @ ...`, `pkg[extra]`,
+# múltiples paquetes separados por espacio/coma, metacaracteres de shell)
+# se rechaza por NO matchear, no por una lista de denylist -- allowlist
+# positiva, más robusta que enumerar cada forma prohibida. Ninguno de los
+# caracteres prohibidos por R35 (`/`, `\`, espacio, `@`, `[`, `]`, `:`,
+# `;`, `&`, `|`, backtick, `$`, `(`, `)`, `<`, `>`, salto de línea) está en
+# la clase `[A-Za-z0-9._-]`, así que quedan excluidos por construcción, no
+# por chequeo explícito.
+_PATRON_NOMBRE_PAQUETE_SIMPLE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$")
+
+
+def validar_forma_nombre_paquete(nombre: str) -> bool:
+    """`True` solo si `nombre` es un nombre de distribución PyPI simple (R35):
+    sin URL (`http://`, `https://`, cualquier `://`), sin path (`/` o `\\`),
+    sin `file:`, sin VCS (`git+...`, `hg+...`, `svn+...`, `bzr+...`), sin
+    direct reference (`name @ url`, es decir sin espacio ni `@`), sin extras
+    (`package[extra]`, es decir sin `[`/`]`), sin múltiples paquetes (sin
+    espacios/comas), sin metacaracteres de shell (`;`, `&`, `|`, `` ` ``,
+    `$`, `(`, `)`, `<`, `>`, salto de línea). Fail-closed: cualquier `nombre`
+    que no sea `str`, esté vacío, o no matchee EXACTAMENTE
+    `_PATRON_NOMBRE_PAQUETE_SIMPLE` devuelve `False`."""
+    if not isinstance(nombre, str) or not nombre:
+        return False
+    return bool(_PATRON_NOMBRE_PAQUETE_SIMPLE.match(nombre))
+
+
+# --- Métricas de eficiencia writer -> Lead (adenda post-cierre 2026-09-30, ---
+# punto 3 de "Corrección y adenda post-cierre" de `docs/roadmap/v0.8.md`) ----
+#
+# Vistas derivadas puras sobre datos ya existentes en `control.json` (más la
+# referencia liviana de ejecuciones, aditiva, poblada por `ds_guard.py`) --
+# observación para Change 5, nunca gate numérico.
+
+def calcular_metricas_eficiencia(control: dict) -> dict:
+    """`{"writer_lead_cycles": int, "remediation_cycles": int,
+    "executions_count": int, "execution_duration_total_seconds": float}`.
+
+    - `writer_lead_cycles`: suma de `len(tareas)` de todas las sesiones --
+      cada tarea registrada (`session_note(tipo="planificada", tarea=...)`)
+      ya representa un ciclo writer -> Lead completo.
+    - `remediation_cycles`: suma de intentos ya registrados en la ventana
+      vigente (última) de cada remediación de `control["remediaciones"]`.
+    - `executions_count`/`execution_duration_total_seconds`: derivados de
+      `control["metricas_eficiencia"]["ejecuciones"]` (referencias livianas
+      pobladas por `ds_guard.py` tras cada ejecución gobernada exitosa con
+      `record`). Ausente (Change/`control.json` anterior a este fix, o
+      ninguna ejecución gobernada corrida todavía) -> `0`/`0.0`, sin romper
+      backward compatibility.
+
+    Función PURA: sin I/O, sin escritura."""
+    sesiones = control.get("sesiones", [])
+    writer_lead_cycles = sum(len(s.get("tareas", []) or []) for s in sesiones)
+
+    remediaciones = control.get("remediaciones", [])
+    remediation_cycles = 0
+    for r in remediaciones:
+        ventanas = r.get("ventanas") or [{}]
+        remediation_cycles += len(ventanas[-1].get("intentos", []) or [])
+
+    ejecuciones = control.get("metricas_eficiencia", {}).get("ejecuciones", [])
+    executions_count = len(ejecuciones)
+    execution_duration_total_seconds = sum(
+        float(e.get("duration_seconds", 0.0) or 0.0) for e in ejecuciones
+    )
+
+    return {
+        "writer_lead_cycles": writer_lead_cycles,
+        "remediation_cycles": remediation_cycles,
+        "executions_count": executions_count,
+        "execution_duration_total_seconds": execution_duration_total_seconds,
+    }

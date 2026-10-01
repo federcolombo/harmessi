@@ -27,7 +27,7 @@ from pathlib import Path
 from . import control as control_mod
 from . import legacy as legacy_mod
 from . import writer
-from .manifest import ORDEN_STAGES, raiz_repo_origen
+from .manifest import CAPABILITIES_CONOCIDAS, ORDEN_STAGES, manifest_para_perfil_y_stage, raiz_repo_origen
 from .planner import construir_plan, formatear_plan
 from .preflight import DestinoInvalidoError, validar_destino
 from .version import HARNESS_VERSION
@@ -70,6 +70,17 @@ def construir_parser() -> argparse.ArgumentParser:
     parser.add_argument("--venv-dir", default=".venv", help="Directorio del entorno virtual del proyecto destino (default: .venv, solo 'install').")
     parser.add_argument("--integrar-claude", action="store_true", help="Integra un bloque delimitado en un CLAUDE.md ya existente (R9, solo 'install').")
     parser.add_argument(
+        "--disable-capability",
+        action="append",
+        choices=list(CAPABILITIES_CONOCIDAS),
+        default=None,
+        metavar="CAPABILITY",
+        help="Deshabilita una capability (M8, repetible) -- ninguna entrada del manifiesto "
+        "declarada bajo esa capability se provisiona. Default: todas las capabilities "
+        f"conocidas ({CAPABILITIES_CONOCIDAS}) habilitadas, comportamiento idéntico a no pasar "
+        "este flag. Válido para 'install' y 'sync'.",
+    )
+    parser.add_argument(
         "--stage",
         choices=list(ORDEN_STAGES),
         default=None,
@@ -99,6 +110,36 @@ def _contexto_placeholders(nombre, notebooks_dir, venv_dir) -> dict:
     }
 
 
+def _imprimir_omitidos(omitidos, perfil: str, stage: str) -> None:
+    """Mensaje de colisión enriquecido (R20 de B5): para cada destino omitido
+    por colisión con un archivo ya existente en el destino, informa además
+    tipo de conflicto (tratamiento que Harmessi quería aplicar), el asset
+    (descripción de la `EntradaManifiesto`) y las alternativas soportadas.
+    Nunca mueve/renombra nada -- solo imprime más información sobre una
+    decisión (no sobrescribir) que `writer.py` ya tomó."""
+    entradas_por_destino = {
+        e.destino: e for e in manifest_para_perfil_y_stage(perfil, stage)
+    }
+    print("Omitidos (ya existían en el destino, sin sobrescribir):")
+    for ruta_relativa in omitidos:
+        entrada = entradas_por_destino.get(ruta_relativa)
+        print(f"  {ruta_relativa}")
+        if entrada is not None:
+            print(
+                f"    tipo de conflicto: archivo ya existe (Harmessi quería aplicar "
+                f"tratamiento {entrada.tratamiento!r})"
+            )
+            if entrada.descripcion:
+                print(f"    asset que Harmessi quería instalar: {entrada.descripcion}")
+            print(
+                "    alternativas: si es intencional, el archivo del usuario queda intacto "
+                "(nunca se sobrescribe); para customizar en vez de reemplazar, usá project "
+                "config/local override (M10, .harmessi/project-config.json / "
+                ".harmessi/local-overrides.json) si esa entrada lo soporta; resolución manual "
+                "si hace falta reconciliar a mano."
+            )
+
+
 def _main_install(parser: argparse.ArgumentParser, args: argparse.Namespace, destino: Path) -> int:
     if not args.nombre:
         parser.error("--nombre es obligatorio para 'install'")
@@ -117,6 +158,8 @@ def _main_install(parser: argparse.ArgumentParser, args: argparse.Namespace, des
         print(f"[ABORTADO] {exc}", file=sys.stderr)
         return 1
 
+    capabilities_habilitadas = frozenset(CAPABILITIES_CONOCIDAS) - frozenset(args.disable_capability or [])
+
     config = {
         "perfil": PERFIL_MVP,
         "nombre": args.nombre,
@@ -126,9 +169,10 @@ def _main_install(parser: argparse.ArgumentParser, args: argparse.Namespace, des
         "integrar_claude": args.integrar_claude,
         "stage": stage,
         "placeholders": _contexto_placeholders(args.nombre, args.notebooks_dir, args.venv_dir),
+        "capabilities_habilitadas": sorted(capabilities_habilitadas),
     }
 
-    plan = construir_plan(PERFIL_MVP, destino, config, stage=stage)
+    plan = construir_plan(PERFIL_MVP, destino, config, stage=stage, capabilities_habilitadas=capabilities_habilitadas)
     print(formatear_plan(plan))
 
     if args.execute:
@@ -142,9 +186,7 @@ def _main_install(parser: argparse.ArgumentParser, args: argparse.Namespace, des
             f"aplicado(s), {len(resultado.omitidos)} omitido(s) por colisión existente."
         )
         if resultado.omitidos:
-            print("Omitidos (ya existían en el destino, sin sobrescribir):")
-            for ruta_relativa in resultado.omitidos:
-                print(f"  {ruta_relativa}")
+            _imprimir_omitidos(resultado.omitidos, PERFIL_MVP, stage)
         print(f"Archivo de control: {resultado.control_path}")
         return 0
 
@@ -196,6 +238,8 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
     notebooks_dir = configuracion_previa.get("notebooks_dir")
     venv_dir = configuracion_previa.get("venv_dir")
 
+    capabilities_habilitadas = frozenset(CAPABILITIES_CONOCIDAS) - frozenset(args.disable_capability or [])
+
     config = {
         "perfil": perfil,
         "nombre": nombre,
@@ -205,9 +249,10 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
         "integrar_claude": False,
         "stage": target,
         "placeholders": _contexto_placeholders(nombre, notebooks_dir, venv_dir),
+        "capabilities_habilitadas": sorted(capabilities_habilitadas),
     }
 
-    plan = construir_plan(perfil, destino, config, stage=target)
+    plan = construir_plan(perfil, destino, config, stage=target, capabilities_habilitadas=capabilities_habilitadas)
     print(formatear_plan(plan))
 
     if not args.execute:
@@ -233,7 +278,12 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
     try:
         control_recien_escrito = json.loads(ruta_control.read_text(encoding="utf-8"))
         control_mod.regenerar_control(
-            destino, control_recien_escrito, perfil=perfil, stage=target, installation_stage=target
+            destino,
+            control_recien_escrito,
+            perfil=perfil,
+            stage=target,
+            installation_stage=target,
+            capabilities_habilitadas=capabilities_habilitadas,
         )
     except Exception as exc:  # noqa: BLE001 - fallo real, nunca debe pasar desapercibido
         print(
@@ -253,9 +303,7 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
         f"archivo(s) aplicado(s), {len(resultado.omitidos)} omitido(s) por colisión existente."
     )
     if resultado.omitidos:
-        print("Omitidos (ya existían en el destino, sin sobrescribir):")
-        for ruta_relativa in resultado.omitidos:
-            print(f"  {ruta_relativa}")
+        _imprimir_omitidos(resultado.omitidos, perfil, target)
     print(f"Archivo de control: {resultado.control_path}")
     return 0
 

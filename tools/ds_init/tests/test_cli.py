@@ -766,5 +766,206 @@ class TestCliScratchInstallsImportanSinError(unittest.TestCase):
         self._assert_importa_sin_error()
 
 
+class TestAdopcionProyectoExistente(unittest.TestCase):
+    """Test end-to-end de adopción (R19 de B5, T6 de
+    `20260930-project-extension-and-installer-integration`): instala sobre
+    un repo git con código/archivos de usuario preexistentes y working tree
+    limpio -- confirma 0 archivos de usuario sobrescritos, que esos destinos
+    no entran al registro de hashes, y que la instalación en su conjunto no
+    lanza ninguna excepción (no exige proyecto vacío)."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_instalacion_sobre_repo_con_codigo_de_usuario_preexistente(self):
+        # Código/brief de usuario preexistente, en rutas que colisionan con
+        # el manifiesto real de Harmessi (VERBATIM y PLANTILLA, no-MERGE).
+        contenido_ds_guard = "# proyecto propio del usuario, no tocar\n"
+        ruta_ds_guard = self.repo / "tools" / "ds_guard.py"
+        ruta_ds_guard.parent.mkdir(parents=True, exist_ok=True)
+        ruta_ds_guard.write_text(contenido_ds_guard, encoding="utf-8")
+
+        contenido_agente = "---\nname: python-data-engineer\n---\n# version propia del usuario\n"
+        ruta_agente = self.repo / ".claude" / "agents" / "python-data-engineer.md"
+        ruta_agente.parent.mkdir(parents=True, exist_ok=True)
+        ruta_agente.write_text(contenido_agente, encoding="utf-8")
+
+        # Algún archivo de "brief"/código de negocio, sin relación con
+        # Harmessi -- confirma que un repo con proyecto real ya andando
+        # tampoco es rechazado (no exige proyecto vacío, R19).
+        ruta_brief = self.repo / "docs" / "brief.md"
+        ruta_brief.parent.mkdir(parents=True, exist_ok=True)
+        ruta_brief.write_text("# Brief del proyecto del usuario\n", encoding="utf-8")
+
+        subprocess.run(["git", "-C", str(self.repo), "add", "."], check=True)
+        subprocess.run(
+            ["git", "-C", str(self.repo), "commit", "-m", "proyecto de usuario preexistente"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            codigo = main(
+                [
+                    "--destino",
+                    str(self.repo),
+                    "--nombre",
+                    "proyecto-de-prueba",
+                    "--stage",
+                    "experiment",
+                    "--execute",
+                ]
+            )
+        # (d) la instalación no lanza ninguna excepción y completa con éxito.
+        self.assertEqual(codigo, 0, stdout.getvalue())
+
+        # (a) el contenido de usuario preexistente sigue exactamente igual,
+        # 0 bytes sobrescritos.
+        self.assertEqual(ruta_ds_guard.read_text(encoding="utf-8"), contenido_ds_guard)
+        self.assertEqual(ruta_agente.read_text(encoding="utf-8"), contenido_agente)
+        self.assertEqual(ruta_brief.read_text(encoding="utf-8"), "# Brief del proyecto del usuario\n")
+
+        # (b) el mensaje de colisión enriquecido (R20) menciona la ruta.
+        salida = stdout.getvalue()
+        self.assertIn("tools/ds_guard.py", salida)
+        self.assertIn(".claude/agents/python-data-engineer.md", salida)
+        self.assertIn("tipo de conflicto", salida)
+
+        # (c) ninguno de los dos destinos colisionados entra al registro de
+        # hashes de `.ds_init/control.json` (categoría 1 de ownership,
+        # nunca administrado por Harmessi).
+        control_data = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        rutas_administradas = {a.get("ruta") for a in control_data.get("archivos", [])}
+        self.assertNotIn("tools/ds_guard.py", rutas_administradas)
+        self.assertNotIn(".claude/agents/python-data-engineer.md", rutas_administradas)
+
+        # El archivo ajeno al manifiesto (brief.md) ni siquiera participa del
+        # plan -- Harmessi nunca lo tocó ni lo registró.
+        self.assertNotIn("docs/brief.md", rutas_administradas)
+
+
+class TestCliDisableCapability(unittest.TestCase):
+    """M8 (hallazgo de hardening, Change 5): `manifest_para_perfil_stage_y_
+    capabilities` (Change 4) existía y estaba testeada a nivel unitario,
+    pero ningún llamador real la invocaba -- `--disable-capability` nunca
+    existió como flag de la CLI real, dejando el filtro de capabilities
+    completamente inalcanzable desde una instalación de verdad. Corregido:
+    `cli.py` ahora expone el flag y lo wirea a `construir_plan`/
+    `control.generar_control`/`regenerar_control`."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_disable_capability_predictive_modeling_no_provisiona_modelquality(self):
+        codigo = main(
+            [
+                "--destino",
+                str(self.repo),
+                "--nombre",
+                "proyecto-de-prueba",
+                "--stage",
+                "experiment",
+                "--disable-capability",
+                "predictive_modeling",
+                "--execute",
+            ]
+        )
+        self.assertEqual(codigo, 0)
+        self.assertFalse((self.repo / "tools" / "modelquality").exists())
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertEqual(control["capabilities_habilitadas"], [])
+
+    def test_sin_disable_capability_provisiona_modelquality_como_siempre(self):
+        # Regresión/backward compat (R5): sin el flag nuevo, comportamiento
+        # idéntico a antes de que este flag existiera.
+        codigo = main(
+            [
+                "--destino",
+                str(self.repo),
+                "--nombre",
+                "proyecto-de-prueba",
+                "--stage",
+                "experiment",
+                "--execute",
+            ]
+        )
+        self.assertEqual(codigo, 0)
+        self.assertTrue((self.repo / "tools" / "modelquality" / "__init__.py").exists())
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertEqual(control["capabilities_habilitadas"], ["predictive_modeling"])
+
+    def test_sync_sin_reafirmar_disable_capability_reaprovisiona(self):
+        # R7: habilitar capability después vía sync -> assets aparecen sin
+        # romper el proyecto.
+        codigo = main(
+            [
+                "--destino",
+                str(self.repo),
+                "--nombre",
+                "proyecto-de-prueba",
+                "--stage",
+                "discovery",
+                "--disable-capability",
+                "predictive_modeling",
+                "--execute",
+            ]
+        )
+        self.assertEqual(codigo, 0)
+        self.assertFalse((self.repo / "tools" / "modelquality").exists())
+        _commit_todo(self.repo, "post install sin modelquality")
+
+        codigo = main(["sync", "--destino", str(self.repo), "--stage", "experiment", "--execute"])
+        self.assertEqual(codigo, 0)
+        self.assertTrue((self.repo / "tools" / "modelquality" / "__init__.py").exists())
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertEqual(control["capabilities_habilitadas"], ["predictive_modeling"])
+
+    def test_sync_reafirmando_disable_capability_no_crashea_y_sigue_excluido(self):
+        # Bug real ya corregido: antes de este fix, `regenerar_control`
+        # intentaba hashear un archivo deliberadamente no instalado y
+        # levantaba `FileNotFoundError`, rompiendo CUALQUIER sync sobre un
+        # proyecto con una capability deshabilitada.
+        codigo = main(
+            [
+                "--destino",
+                str(self.repo),
+                "--nombre",
+                "proyecto-de-prueba",
+                "--stage",
+                "discovery",
+                "--disable-capability",
+                "predictive_modeling",
+                "--execute",
+            ]
+        )
+        self.assertEqual(codigo, 0)
+        _commit_todo(self.repo, "post install sin modelquality")
+
+        codigo = main(
+            [
+                "sync",
+                "--destino",
+                str(self.repo),
+                "--stage",
+                "experiment",
+                "--disable-capability",
+                "predictive_modeling",
+                "--execute",
+            ]
+        )
+        self.assertEqual(codigo, 0, "el sync no debe crashear al mantener la capability deshabilitada")
+        self.assertFalse((self.repo / "tools" / "modelquality").exists())
+        control = json.loads((self.repo / ".ds_init" / "control.json").read_text(encoding="utf-8"))
+        self.assertEqual(control["capabilities_habilitadas"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

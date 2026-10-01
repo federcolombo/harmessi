@@ -20,6 +20,7 @@ from tools.ds_init.manifest import (
     PerfilDesconocidoError,
     manifest_para_perfil,
     manifest_para_perfil_y_stage,
+    manifest_para_perfil_stage_y_capabilities,
     resolver_dir_perfil,
 )
 
@@ -225,6 +226,101 @@ class TestBundlesProgressivos(unittest.TestCase):
         self.assertEqual(mapa[self.OPERATIONS].tratamiento, PLANTILLA)
         self.assertEqual(mapa[self.PRODUCTION_READINESS].stage_minimo, "production_candidate")
         self.assertEqual(mapa[self.OPERATIONS].stage_minimo, "production")
+
+
+class TestCapabilities(unittest.TestCase):
+    """Tests del Change `20260930-project-extension-and-installer-
+    integration` (M8, R1-R5): campo `capabilities` en `EntradaManifiesto` y
+    `manifest_para_perfil_stage_y_capabilities`. Corre contra los datos fijos
+    del propio paquete (R14)."""
+
+    STAGE_MAXIMO = "production"
+    MODELQUALITY = (
+        "tools/modelquality/__init__.py",
+        "tools/modelquality/core.py",
+        "tools/modelquality/validation.py",
+    )
+
+    def test_entrada_sin_capabilities_explicito_default_vacio(self):
+        entrada = EntradaManifiesto(fuente="algo.md", tratamiento=VERBATIM, destino="algo-nueva2.md")
+        self.assertEqual(entrada.capabilities, ())
+
+    def test_entradas_modelquality_declaran_predictive_modeling(self):
+        mapa = {e.destino: e for e in MANIFEST}
+        for destino in self.MODELQUALITY:
+            self.assertEqual(mapa[destino].capabilities, ("predictive_modeling",))
+
+    def test_paridad_manifest_para_perfil_y_stage_no_cambia(self):
+        # Sin declarar capabilities en ninguna llamada, el comportamiento de
+        # la función existente es idéntico a antes de este Change (R5).
+        for stage in ORDEN_STAGES:
+            entradas = manifest_para_perfil_y_stage(PERFIL, stage)
+            limite = ORDEN_STAGES.index(stage)
+            esperado = [
+                e for e in MANIFEST if ORDEN_STAGES.index(e.stage_minimo) <= limite
+            ]
+            self.assertEqual({e.destino for e in entradas}, {e.destino for e in esperado})
+
+    def test_capabilities_deshabilitadas_excluye_modelquality(self):
+        destinos = {
+            e.destino
+            for e in manifest_para_perfil_stage_y_capabilities(
+                PERFIL, self.STAGE_MAXIMO, set()
+            )
+        }
+        for destino in self.MODELQUALITY:
+            self.assertNotIn(destino, destinos)
+
+    def test_capabilities_habilitadas_incluye_modelquality(self):
+        sin_filtro = {e.destino for e in manifest_para_perfil_y_stage(PERFIL, self.STAGE_MAXIMO)}
+        con_filtro = {
+            e.destino
+            for e in manifest_para_perfil_stage_y_capabilities(
+                PERFIL, self.STAGE_MAXIMO, {"predictive_modeling"}
+            )
+        }
+        self.assertEqual(con_filtro, sin_filtro)
+        for destino in self.MODELQUALITY:
+            self.assertIn(destino, con_filtro)
+
+    def test_entradas_sin_capabilities_declarado_siempre_aparecen(self):
+        destinos_sin_capability = {
+            e.destino for e in MANIFEST if not e.capabilities
+        }
+        for capabilities_habilitadas in (set(), {"predictive_modeling"}, {"otra_cosa"}):
+            destinos = {
+                e.destino
+                for e in manifest_para_perfil_stage_y_capabilities(
+                    PERFIL, self.STAGE_MAXIMO, capabilities_habilitadas
+                )
+            }
+            self.assertTrue(destinos_sin_capability <= destinos)
+
+    def test_filtro_stage_y_capabilities_dan_resultados_distintos(self):
+        # Filtrar solo por stage (discovery) da un resultado distinto de
+        # filtrar solo por capabilities (todo el stage máximo sin
+        # predictive_modeling) -- confirma que son ejes independientes (R4).
+        solo_stage = {e.destino for e in manifest_para_perfil_y_stage(PERFIL, "discovery")}
+        solo_capabilities = {
+            e.destino
+            for e in manifest_para_perfil_stage_y_capabilities(
+                PERFIL, self.STAGE_MAXIMO, set()
+            )
+        }
+        self.assertNotEqual(solo_stage, solo_capabilities)
+
+    def test_filtro_stage_y_capabilities_componen_sin_romper(self):
+        # Combinar ambos filtros (stage=discovery, capabilities deshabilitadas)
+        # es subconjunto de filtrar solo por stage=discovery (R4: intersección,
+        # nunca sustitución).
+        solo_stage = {e.destino for e in manifest_para_perfil_y_stage(PERFIL, "discovery")}
+        combinado = {
+            e.destino
+            for e in manifest_para_perfil_stage_y_capabilities(PERFIL, "discovery", set())
+        }
+        self.assertTrue(combinado <= solo_stage)
+        for destino in self.MODELQUALITY:
+            self.assertNotIn(destino, combinado)
 
 
 if __name__ == "__main__":

@@ -69,8 +69,13 @@ abreviado y completo — nacen en `propuesta_pendiente`; el abreviado no salta d
    datos) revisa el diff antes de que se ejecute nada; solo informa hallazgos, no cambia estados.
    Invocación planificada de `python-data-engineer` que corre después (haya o no reviewer, haya o
    no hallazgos): si hay hallazgos los corrige (reinvocación correctiva, cuenta intento); en
-   cualquier caso deja `estado: en_verificacion`. El usuario ejecuta y trae el output al chat (el
-   estado permanece en `en_verificacion`). Delegación de cierre (invocación planificada, no
+   cualquier caso deja `estado: en_verificacion`. La ejecución y verificación quedan en curso a
+   cargo del Lead: ejecuta el código/tests/notebooks vía `ds_guard exec script|pytest|notebook`
+   (runtime gobernado, Change 2, `tools/leadrun/`), sujeto a `approval_mode`/la política de
+   autonomía vigente (`autonomous`: el Lead ejecuta sin pedir aprobación por corrida; `supervised`:
+   exige aprobación humana registrada antes de ejecutar, o el humano ejecuta directamente — mismo
+   contrato de `docs/roadmap/v0.8.md`, tabla "Un runtime, dos políticas"), sin que el estado cambie
+   mientras tanto. Delegación de cierre (invocación planificada, no
    reintento): agrega la sección de verificación a `tasks.md` con la evidencia real y pasa
    `estado: cerrada`. Checkpoint de cierre en el chat. El archivo permanece en
    `openspec/changes/<id>/` (§9).
@@ -103,8 +108,9 @@ mismo. Orden de verificación: **reviewer antes de ejecutar, metodólogo despué
    haya o no haya hallazgos: si los hay, los corrige (esa parte es reinvocación correctiva y
    cuenta contra el límite de intentos); en cualquier caso, es quien deja
    `estado: en_verificacion` — nunca el reviewer, nunca el usuario.
-9. El usuario ejecuta y trae el output. El estado permanece en `en_verificacion` — nadie lo cambia
-   en este paso.
+9. El Lead ejecuta vía el runtime gobernado (`ds_guard exec script|pytest|notebook`, Change 2),
+   sujeto a `approval_mode`/la política de autonomía vigente. El estado permanece en
+   `en_verificacion` mientras la ejecución está en curso — nadie lo cambia en este paso.
 10. `metodologo` revisa resultados y conclusiones **cuando requieran interpretación
     metodológica** — es una segunda invocación planificada del mismo rol, no un reintento.
 11. Cierre: invocación planificada crea `verification.md` con la evidencia real (nace acá, no
@@ -123,10 +129,16 @@ revisión de borrador (máx. 2, antes de aprobar) y distinto de una invocación 
 | `aprobada_diseño` | Alcance aprobado; spec/design aún requieren ajuste | Solo completo, y solo si la aprobación no fue conjunta |
 | `aprobada_implementacion` | Todo aprobado (o, en abreviado, alcance confirmado en el chat) | Ambas |
 | `en_implementacion` | `python-data-engineer` trabajando | Ambas |
-| `en_verificacion` | Implementación terminada y, si hubo revisión de código, ya incorporada. Esperando que el usuario ejecute y traiga el output. Lo fija siempre `python-data-engineer`, en la invocación planificada que corre después de la revisión (haya o no hallazgos) — nunca el reviewer, nunca el usuario | Ambas |
+| `en_verificacion` | Implementación terminada y, si hubo revisión de código, ya incorporada. Ejecución y verificación en curso a cargo del Lead, vía el runtime gobernado (`ds_guard exec ...`, Change 2), sujeto a `approval_mode`/la política de autonomía. Lo fija siempre `python-data-engineer`, en la invocación planificada que corre después de la revisión (haya o no hallazgos) — nunca el reviewer, nunca el usuario | Ambas |
 | `cerrada` | `verification.md` (o su sección en `tasks.md`) completo con evidencia real | Ambas |
 | `descartada` | Usuario rechazó definitivamente el borrador; motivo breve en `proposal.md` | Ambas |
-| `pausada_bloqueada` | Tope de tiempo, intentos agotados, 2 rondas de revisión sin acuerdo, decisión no aprobada, archivo fuera de alcance, holdout/dataset sellado, o ejecución que ningún agente puede correr | Ambas, desde cualquier estado salvo `cerrada`/`descartada` |
+| `pausada_bloqueada` | Tope de tiempo, intentos agotados, 2 rondas de revisión sin acuerdo, decisión no aprobada, archivo fuera de alcance, u holdout/dataset sellado | Ambas, desde cualquier estado salvo `cerrada`/`descartada` |
+
+**Nota — `approval_mode`:** todo el flujo de §6 en adelante corresponde a `approval_mode:
+per_change` (el default, comportamiento descripto en este documento sin cambios). Existe una
+alternativa opt-in, `approval_mode: checkpoints`, que habilita continuación automática entre
+checkpoints de negocio pre-aprobados en `proposal.md` — no se desarrolla acá; ver
+`docs/roadmap/v0.8.md` y el `control.json`/`proposal.md` del Change que la declare.
 
 **Evidencia de aprobación** (nunca un "sí" sin más): usuario, fecha, alcance aprobado, y
 referencia a la versión de los artefactos aprobada. Si el usuario responde "sí" refiriéndose
