@@ -487,3 +487,40 @@ usarse para fuentes de datos porque ya lo ocupa `tools/providers`.
 (adapter declarado, capacidades, fuente sellada por `source_id`, evidencia sin secretos) pero no
 intercepta un script que abre su propia conexión. Es el mismo tipo de límite que §5 y que el
 enforcement best-effort de `Bash`/`PowerShell`.
+
+## 7. Dirección arquitectónica planificada para v0.10 (roles ≠ skills ≠ runtime, NO implementada)
+
+Registrado 2026-10-01 (feedback externo, preservado como línea de evolución -- ver `v0.10.md`,
+"Composable Engineering & Data Science Skills", para el desglose completo de candidatas y
+principios). **Nada de esta sección existe todavía en el código**; es dirección, no contrato.
+
+Separación conceptual que Harmessi preserva hacia v0.10: **Agent/Role** (quién trabaja y con qué
+permisos -- Lead, writer, reviewer, metodólogo, ya estables en §2) ≠ **Skill** (cómo abordar
+metodológicamente una clase de problema -- pequeña, componible, seleccionada por el Lead según la
+tarea) ≠ **Runtime/Tool** (qué se ejecuta determinísticamente y deja evidencia -- `tools/leadrun/`,
+ya implementado). Harmessi no crea un agente nuevo por cada capacidad nueva, ni convierte al Lead en
+un mega-agente con toda la metodología embebida.
+
+Principios ya fijados para cuando esto se implemente (no se negocian en el SDD que lo implemente,
+solo su alcance/nombres exactos):
+
+- una skill NO obtiene permisos adicionales por existir -- los permisos vienen del rol/runtime
+  (regla 1 de §3 sigue aplicando sin excepción);
+- una skill NO bypassa STOP, NO instala dependencias por su cuenta (fuera del mecanismo gobernado ya
+  existente, regla 10 de §3), NO cambia governance;
+- composición de skills observable/trazable cuando afecte un Change (mismo principio que evidence/
+  `ExecutionRecord` ya exige para ejecución);
+- skills específicas de un proyecto deberían poder existir sin modificar el core de Harmessi (mismo
+  principio que M6/adapters de `tools/datasources`, regla 11).
+
+Candidata prioritaria de este catálogo futuro: `domain-modeling` (lenguaje de dominio compartido del
+proyecto -- términos, definiciones, unidad de análisis, invariantes, ambigüedades que requieren
+decisión humana). Separación obligatoria, ya registrada en `v0.10.md`, para cuando se implemente:
+domain model/glossary (qué significa un concepto) ≠ decision ledger (por qué se tomó una decisión,
+ya existente, `tools/dsguard/decision.py`) ≠ Data Contract (qué estructura/evidencia esperamos de
+los datos, ya existente, `tools/datacontracts/`) -- nunca se mezclan. El domain model es propiedad
+del PROYECTO, nunca branding ni conocimiento hardcodeado del harness.
+
+Antes de implementar cualquier skill de este catálogo: auditar qué capacidades ya existen en Lead/
+reviewer/metodólogo/SDD/`tools/dsimpact`/tests/remediation -- no duplicar una capacidad ya presente
+solo porque tenga otro nombre.
