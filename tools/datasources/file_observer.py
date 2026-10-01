@@ -62,7 +62,16 @@ class FileObserver:
     """Observer sobre un archivo local (CSV/Parquet vía `ds_profile`).
 
     `options`:
-      - `path` (str, obligatorio): ruta REPO-RELATIVA al archivo.
+      - `path` (str, obligatorio salvo `ruta_externa_absoluta`): ruta
+        REPO-RELATIVA al archivo.
+      - `ruta_externa_absoluta` (str, opcional, M9): ruta ABSOLUTA a un
+        archivo FUERA del repo, para fuentes externas file-backed de solo
+        lectura (R6-R9). Inyectada por el llamador (nunca leída por este
+        observer desde `.harmessi/local-overrides.json` -- ver D2 de
+        `design.md`). Si está presente, tiene prioridad sobre `path` y NO
+        pasa por el guard de holdout (ese guard es para rutas dentro del
+        repo); el enforcement de solo lectura de una fuente externa lo hace
+        `pathguard.py` a nivel de intercepción de herramientas (R7).
       - `max_filas_exactas`/`max_mb_exactos`/`top_n`/`seed` (opcionales):
         kwargs de `ds_profile.report.generar_perfil`, con sus mismos
         defaults si no vienen.
@@ -87,42 +96,64 @@ class FileObserver:
         return {"facets": facets, "operations": ["read"]}
 
     def observe(self, request: dict) -> dict:
-        """Corre `ds_profile.report.generar_perfil` sobre `options['path']`
-        (tras el guard de holdout) y devuelve `profile_to_observation(...)
-        .to_dict()` con `provenance` reemplazada por los datos reales de este
-        observer. La ruta nunca aparece en el resultado."""
-        if self._repo_root is None:
-            raise RuntimeError(
-                "FileObserver.observe: falta repo_root. Construí el observer con "
-                "file_observer.factory_with_repo_root(repo_root)(source_id, options) "
-                "(recomendado) o incluí la clave interna '_repo_root' en options."
-            )
-        repo_root = Path(self._repo_root)
-
-        ruta_relativa = self.options.get("path")
-        if not isinstance(ruta_relativa, str) or not ruta_relativa:
-            raise RuntimeError("FileObserver.observe: options['path'] es obligatorio (str, ruta repo-relativa).")
-
+        """Corre `ds_profile.report.generar_perfil` sobre la ruta resuelta
+        (repo-relativa vía `options['path']`, tras el guard de holdout; o
+        externa vía `options['ruta_externa_absoluta']`, M9, sin ese guard) y
+        devuelve `profile_to_observation(...).to_dict()` con `provenance`
+        reemplazada por los datos reales de este observer. La ruta nunca
+        aparece en el resultado."""
         try:
             from ds_profile import report as ds_report
-            from ds_profile import holdout_guard as ds_holdout_guard
         except ImportError as exc:
             raise RuntimeError(
                 "FileObserver.observe: falta el paquete 'ds_profile'. "
                 "Corré 'ds_init sync --stage experiment' para instalarlo."
             ) from exc
 
-        ruta_absoluta_local = repo_root / ruta_relativa
+        ruta_externa = self.options.get("ruta_externa_absoluta")
+        if isinstance(ruta_externa, str) and ruta_externa:
+            # M9: fuente externa file-backed de solo lectura (R6). El path
+            # YA viene resuelto por el llamador (inyectado, no importado --
+            # D2 de design.md) -- este observer NUNCA lee
+            # `.harmessi/local-overrides.json` por su cuenta. Se usa TAL
+            # CUAL, sin unirlo a `repo_root` ni pasar por
+            # `ds_holdout_guard.verificar_permitido` (ese guard es para
+            # rutas DENTRO del repo -- el enforcement de solo lectura de una
+            # fuente externa lo hace `pathguard.py` a nivel de intercepción
+            # de herramientas, R7, no acá).
+            ruta_absoluta_local = Path(ruta_externa)
+        else:
+            if self._repo_root is None:
+                raise RuntimeError(
+                    "FileObserver.observe: falta repo_root. Construí el observer con "
+                    "file_observer.factory_with_repo_root(repo_root)(source_id, options) "
+                    "(recomendado) o incluí la clave interna '_repo_root' en options."
+                )
+            repo_root = Path(self._repo_root)
 
-        permitido, _motivo = ds_holdout_guard.verificar_permitido(ruta_absoluta_local, repo_root)
-        if not permitido:
-            # El motivo de `verificar_permitido` puede incluir la ruta
-            # absoluta local (p. ej. caso "no resoluble"): no se propaga acá,
-            # solo la ruta repo-relativa que ya conocíamos.
-            raise RuntimeError(
-                f"FileObserver.observe: acceso denegado por guard de holdout a la ruta "
-                f"repo-relativa '{ruta_relativa}'."
-            )
+            ruta_relativa = self.options.get("path")
+            if not isinstance(ruta_relativa, str) or not ruta_relativa:
+                raise RuntimeError("FileObserver.observe: options['path'] es obligatorio (str, ruta repo-relativa).")
+
+            try:
+                from ds_profile import holdout_guard as ds_holdout_guard
+            except ImportError as exc:
+                raise RuntimeError(
+                    "FileObserver.observe: falta el paquete 'ds_profile'. "
+                    "Corré 'ds_init sync --stage experiment' para instalarlo."
+                ) from exc
+
+            ruta_absoluta_local = repo_root / ruta_relativa
+
+            permitido, _motivo = ds_holdout_guard.verificar_permitido(ruta_absoluta_local, repo_root)
+            if not permitido:
+                # El motivo de `verificar_permitido` puede incluir la ruta
+                # absoluta local (p. ej. caso "no resoluble"): no se propaga acá,
+                # solo la ruta repo-relativa que ya conocíamos.
+                raise RuntimeError(
+                    f"FileObserver.observe: acceso denegado por guard de holdout a la ruta "
+                    f"repo-relativa '{ruta_relativa}'."
+                )
 
         kwargs_perfil = dict(_DEFAULTS_GENERAR_PERFIL)
         for clave in kwargs_perfil:

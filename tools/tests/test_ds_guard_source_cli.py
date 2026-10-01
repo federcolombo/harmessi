@@ -66,6 +66,36 @@ _OBSERVER_OK_CODIGO = (
     "    return _Obs()\n"
 )
 
+_OBSERVER_ECO_REPO_ROOT_CODIGO = (
+    "def factory(source_id, options):\n"
+    "    class _Obs:\n"
+    "        def capabilities(self):\n"
+    "            return {'facets': {'row_count': ['exact']}, 'operations': []}\n"
+    "        def observe(self, request):\n"
+    "            repo_root_recibido = bool(options.get('_repo_root'))\n"
+    "            return {\n"
+    "                'dataset': {'row_count': {'value': 1 if repo_root_recibido else 0, 'exactness': 'exact'}},\n"
+    "                'fields': [],\n"
+    "            }\n"
+    "    return _Obs()\n"
+)
+
+_OBSERVER_ECO_RUTA_EXTERNA_CODIGO = (
+    "def factory(source_id, options):\n"
+    "    class _Obs:\n"
+    "        def capabilities(self):\n"
+    "            return {'facets': {'row_count': ['exact']}, 'operations': []}\n"
+    "        def observe(self, request):\n"
+    "            import pathlib\n"
+    "            ruta = options.get('ruta_externa_absoluta')\n"
+    "            existe = bool(ruta) and pathlib.Path(ruta).is_file()\n"
+    "            return {\n"
+    "                'dataset': {'row_count': {'value': 1 if existe else 0, 'exactness': 'exact'}},\n"
+    "                'fields': [],\n"
+    "            }\n"
+    "    return _Obs()\n"
+)
+
 _OBSERVER_DECOY_CODIGO = (
     "import pathlib\n"
     "pathlib.Path(__file__).with_name('importado.marker').write_text('importado', encoding='utf-8')\n"
@@ -189,6 +219,58 @@ class TestSourceObserve(_BaseRepoGit):
         self.assertIn("SOURCE-SEALED", codigos)
         # El observer señuelo no se importó: no dejó su marcador en disco.
         self.assertFalse((self.repo / "importado.marker").exists())
+
+    def test_repo_root_se_inyecta_siempre_gap_pre_existente(self):
+        """Regresión del gap pre-existente (T4a): antes del fix, ninguna
+        fuente file-backed real recibía `_repo_root` en `options`, así que
+        `FileObserver.observe()` hubiera roto con RuntimeError. Este observer
+        de prueba reporta `row_count=1` solo si recibió `_repo_root`."""
+        (self.repo / "observer_eco_repo_root.py").write_text(
+            _OBSERVER_ECO_REPO_ROOT_CODIGO, encoding="utf-8"
+        )
+        _escribir_registro(
+            self.repo, _fuente_customers(observer="observer_eco_repo_root:factory")
+        )
+        r = _correr_ds_guard(
+            ["source", "observe", "--source-id", "customers", "--json"], self.repo
+        )
+        self.assertEqual(r.returncode, 0, r.stderr)
+        payload = json.loads(r.stdout)
+        directorio_obs = self.repo / ".harmessi" / "observations" / payload["observation_id"]
+        observado = json.loads((directorio_obs / "observation.json").read_text(encoding="utf-8"))
+        self.assertEqual(observado["dataset"]["row_count"]["value"], 1)
+
+    def test_fuentes_externas_en_local_overrides_se_usa(self):
+        """M9: con `fuentes_externas` declarado en local-overrides.json, la
+        observación usa la ruta externa -- algo imposible sin el fix de
+        `cmd_source_observe` (sin `ruta_externa_absoluta` inyectada, este
+        observer de prueba reportaría row_count=0)."""
+        externo_dir = self.repo.parent / "externo_fuera_del_repo_cli"
+        externo_dir.mkdir(exist_ok=True)
+        ruta_externa = externo_dir / "externo.csv"
+        ruta_externa.write_text("id,nombre\n1,ana\n", encoding="utf-8")
+        try:
+            (self.repo / "observer_eco_ruta_externa.py").write_text(
+                _OBSERVER_ECO_RUTA_EXTERNA_CODIGO, encoding="utf-8"
+            )
+            _escribir_registro(
+                self.repo, _fuente_customers(observer="observer_eco_ruta_externa:factory")
+            )
+            _escribir_json(
+                self.repo,
+                ".harmessi/local-overrides.json",
+                {"fuentes_externas": {"customers": {"path": str(ruta_externa)}}},
+            )
+            r = _correr_ds_guard(
+                ["source", "observe", "--source-id", "customers", "--json"], self.repo
+            )
+            self.assertEqual(r.returncode, 0, r.stderr)
+            payload = json.loads(r.stdout)
+            directorio_obs = self.repo / ".harmessi" / "observations" / payload["observation_id"]
+            observado = json.loads((directorio_obs / "observation.json").read_text(encoding="utf-8"))
+            self.assertEqual(observado["dataset"]["row_count"]["value"], 1)
+        finally:
+            shutil.rmtree(externo_dir, ignore_errors=True)
 
     def test_guardrails_corrupto_deniega(self):
         (self.repo / "observer_decoy.py").write_text(_OBSERVER_DECOY_CODIGO, encoding="utf-8")

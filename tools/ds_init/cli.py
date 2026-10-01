@@ -27,7 +27,7 @@ from pathlib import Path
 from . import control as control_mod
 from . import legacy as legacy_mod
 from . import writer
-from .manifest import ORDEN_STAGES, raiz_repo_origen
+from .manifest import ORDEN_STAGES, manifest_para_perfil_y_stage, raiz_repo_origen
 from .planner import construir_plan, formatear_plan
 from .preflight import DestinoInvalidoError, validar_destino
 from .version import HARNESS_VERSION
@@ -99,6 +99,36 @@ def _contexto_placeholders(nombre, notebooks_dir, venv_dir) -> dict:
     }
 
 
+def _imprimir_omitidos(omitidos, perfil: str, stage: str) -> None:
+    """Mensaje de colisión enriquecido (R20 de B5): para cada destino omitido
+    por colisión con un archivo ya existente en el destino, informa además
+    tipo de conflicto (tratamiento que Harmessi quería aplicar), el asset
+    (descripción de la `EntradaManifiesto`) y las alternativas soportadas.
+    Nunca mueve/renombra nada -- solo imprime más información sobre una
+    decisión (no sobrescribir) que `writer.py` ya tomó."""
+    entradas_por_destino = {
+        e.destino: e for e in manifest_para_perfil_y_stage(perfil, stage)
+    }
+    print("Omitidos (ya existían en el destino, sin sobrescribir):")
+    for ruta_relativa in omitidos:
+        entrada = entradas_por_destino.get(ruta_relativa)
+        print(f"  {ruta_relativa}")
+        if entrada is not None:
+            print(
+                f"    tipo de conflicto: archivo ya existe (Harmessi quería aplicar "
+                f"tratamiento {entrada.tratamiento!r})"
+            )
+            if entrada.descripcion:
+                print(f"    asset que Harmessi quería instalar: {entrada.descripcion}")
+            print(
+                "    alternativas: si es intencional, el archivo del usuario queda intacto "
+                "(nunca se sobrescribe); para customizar en vez de reemplazar, usá project "
+                "config/local override (M10, .harmessi/project-config.json / "
+                ".harmessi/local-overrides.json) si esa entrada lo soporta; resolución manual "
+                "si hace falta reconciliar a mano."
+            )
+
+
 def _main_install(parser: argparse.ArgumentParser, args: argparse.Namespace, destino: Path) -> int:
     if not args.nombre:
         parser.error("--nombre es obligatorio para 'install'")
@@ -142,9 +172,7 @@ def _main_install(parser: argparse.ArgumentParser, args: argparse.Namespace, des
             f"aplicado(s), {len(resultado.omitidos)} omitido(s) por colisión existente."
         )
         if resultado.omitidos:
-            print("Omitidos (ya existían en el destino, sin sobrescribir):")
-            for ruta_relativa in resultado.omitidos:
-                print(f"  {ruta_relativa}")
+            _imprimir_omitidos(resultado.omitidos, PERFIL_MVP, stage)
         print(f"Archivo de control: {resultado.control_path}")
         return 0
 
@@ -253,9 +281,7 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
         f"archivo(s) aplicado(s), {len(resultado.omitidos)} omitido(s) por colisión existente."
     )
     if resultado.omitidos:
-        print("Omitidos (ya existían en el destino, sin sobrescribir):")
-        for ruta_relativa in resultado.omitidos:
-            print(f"  {ruta_relativa}")
+        _imprimir_omitidos(resultado.omitidos, perfil, target)
     print(f"Archivo de control: {resultado.control_path}")
     return 0
 

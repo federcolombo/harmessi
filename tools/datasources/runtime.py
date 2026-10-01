@@ -217,6 +217,7 @@ def observe_source(
     source_id: str,
     request: Any,
     access_check: Optional[Callable[[str, str], tuple]],
+    options_extra: Optional[dict] = None,
 ) -> tuple:
     """Observa `source_id` según el registro de `repo_root`. Orden
     OBLIGATORIO (R16, D8): registro -> `access_check` (antes de importar) ->
@@ -232,14 +233,20 @@ def observe_source(
     `access_check` es `None`, lanza, o deniega, se corta ANTES de tocar el
     observer.
 
+    `options_extra` (opcional, M9): claves que se agregan a las `options` que
+    se pasan al `factory` del observer SOLO si el registro no las declaraba ya
+    (`setdefault`, nunca pisa lo que el registro declara explícitamente). Se
+    usa para inyectar infraestructura como `_repo_root` o
+    `ruta_externa_absoluta` sin que `datasources` conozca de dónde vienen.
+
     Devuelve `(SourceObservation | None, list[CheckResult])`. Nunca lanza."""
     try:
-        return _observe_source_interno(repo_root, source_id, request, access_check)
+        return _observe_source_interno(repo_root, source_id, request, access_check, options_extra)
     except Exception as exc:  # noqa: BLE001 - red de seguridad final
         return None, [checks.resultado_de_excepcion(core.CODE_OBSERVER_ERROR, exc)]
 
 
-def _observe_source_interno(repo_root, source_id, request, access_check) -> tuple:
+def _observe_source_interno(repo_root, source_id, request, access_check, options_extra=None) -> tuple:
     # --- Paso 1: registro ---------------------------------------------------
     data, resultados_registro = load_registry(repo_root)
     if data is None:
@@ -286,7 +293,11 @@ def _observe_source_interno(repo_root, source_id, request, access_check) -> tupl
     try:
         mod = importlib.import_module(modulo_nombre)
         factory = getattr(mod, callable_nombre)
-        observer = factory(source_id, dict(source_ref.options))
+        options_efectivas = dict(source_ref.options)
+        if options_extra:
+            for clave, valor in options_extra.items():
+                options_efectivas.setdefault(clave, valor)  # NUNCA pisa una clave que el registro ya declaró
+        observer = factory(source_id, options_efectivas)
     except Exception as exc:  # noqa: BLE001
         return None, [_error_observer(exc)]
 

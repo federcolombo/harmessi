@@ -1352,6 +1352,42 @@ def clasificar_dependencia(nombre: str, version: str, dependencias_preaprobadas:
     return next(e.code for e in autonomy_core.STOP_CATALOG if e.key == "new_dependency")
 
 
+def _canonicalizar_nombre_paquete(nombre: str) -> str:
+    """PEP 503: normaliza `-`/`_`/`.` a `-` y pasa a minúsculas, para que
+    `"My-Package"`, `"my_package"`, `"my.package"` comparen igual sin
+    autorizar nunca un paquete DISTINTO (R36)."""
+    return re.sub(r"[-_.]+", "-", nombre).lower()
+
+
+# Patrón de un nombre de distribución PyPI simple (R35): letras/dígitos/
+# '-'/'_'/'.', empieza y termina con alfanumérico, sin URL/path/extras/
+# espacios/metacaracteres. Deliberadamente estricto: cualquier forma no
+# cubierta acá (URL, path, `file:`, `git+...`, `name @ ...`, `pkg[extra]`,
+# múltiples paquetes separados por espacio/coma, metacaracteres de shell)
+# se rechaza por NO matchear, no por una lista de denylist -- allowlist
+# positiva, más robusta que enumerar cada forma prohibida. Ninguno de los
+# caracteres prohibidos por R35 (`/`, `\`, espacio, `@`, `[`, `]`, `:`,
+# `;`, `&`, `|`, backtick, `$`, `(`, `)`, `<`, `>`, salto de línea) está en
+# la clase `[A-Za-z0-9._-]`, así que quedan excluidos por construcción, no
+# por chequeo explícito.
+_PATRON_NOMBRE_PAQUETE_SIMPLE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$")
+
+
+def validar_forma_nombre_paquete(nombre: str) -> bool:
+    """`True` solo si `nombre` es un nombre de distribución PyPI simple (R35):
+    sin URL (`http://`, `https://`, cualquier `://`), sin path (`/` o `\\`),
+    sin `file:`, sin VCS (`git+...`, `hg+...`, `svn+...`, `bzr+...`), sin
+    direct reference (`name @ url`, es decir sin espacio ni `@`), sin extras
+    (`package[extra]`, es decir sin `[`/`]`), sin múltiples paquetes (sin
+    espacios/comas), sin metacaracteres de shell (`;`, `&`, `|`, `` ` ``,
+    `$`, `(`, `)`, `<`, `>`, salto de línea). Fail-closed: cualquier `nombre`
+    que no sea `str`, esté vacío, o no matchee EXACTAMENTE
+    `_PATRON_NOMBRE_PAQUETE_SIMPLE` devuelve `False`."""
+    if not isinstance(nombre, str) or not nombre:
+        return False
+    return bool(_PATRON_NOMBRE_PAQUETE_SIMPLE.match(nombre))
+
+
 # --- Métricas de eficiencia writer -> Lead (adenda post-cierre 2026-09-30, ---
 # punto 3 de "Corrección y adenda post-cierre" de `docs/roadmap/v0.8.md`) ----
 #

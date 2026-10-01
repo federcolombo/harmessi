@@ -81,6 +81,12 @@ class EntradaManifiesto:
       incluye esta entrada (uno de `ORDEN_STAGES`, default `"discovery"` --
       compatible hacia atrás: cualquier construcción existente sin este kwarg
       sigue funcionando igual, clasificada `discovery`, R3 de `spec.md`).
+    - `capabilities`: dominios de trabajo (eje ortogonal a `stage_minimo`) a
+      los que esta entrada es exclusiva (por defecto `()`, sin filtro: la
+      entrada aplica sin importar qué capabilities tenga habilitadas el
+      proyecto -- compatible hacia atrás, R1/R5 de `spec.md` Change
+      `20260930-project-extension-and-installer-integration`). Vocabulario
+      inicial: `"predictive_modeling"`.
     """
 
     fuente: Optional[str]
@@ -89,6 +95,7 @@ class EntradaManifiesto:
     descripcion: str = ""
     perfiles: tuple = field(default_factory=tuple)
     stage_minimo: str = "discovery"
+    capabilities: tuple = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         if self.tratamiento not in TRATAMIENTOS_VALIDOS:
@@ -123,6 +130,14 @@ def _dir_templates(perfil: str) -> str:
 # `20260909-inicializador-harness-datos`. Las plantillas viven en
 # `profiles/<perfil>/templates/*.tmpl`; su ruta destino es la ruta final en el
 # repo instalado, sin el sufijo `.tmpl`.
+#
+# Auditoría de `capabilities` (Change `20260930-project-extension-and-
+# installer-integration`, R2): únicas entradas exclusivas de modelado
+# predictivo son `tools/modelquality/*` (ModelQualityPolicy/métricas/baseline
+# de modelo). `readiness.py`, `mlops_foundations.py`, `mlops_evidence.py`,
+# `qualityevidence/*` y `holdout_guard.py` son MLOps/calidad/holdout
+# genéricos (aplican a cualquier pipeline de datos, no solo a modelos
+# predictivos) -- no se marcan.
 MANIFEST: tuple = (
     EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/agent_python_data_engineer.md.tmpl",
@@ -786,18 +801,21 @@ MANIFEST: tuple = (
         tratamiento=VERBATIM,
         destino="tools/modelquality/__init__.py",
         descripcion="Paquete de politicas de calidad de modelo (v0.7 Change 2), sin logica",
+        capabilities=("predictive_modeling",),
     ),
     EntradaManifiesto(
         fuente="tools/modelquality/core.py",
         tratamiento=VERBATIM,
         destino="tools/modelquality/core.py",
         descripcion="Politicas neutrales de calidad de modelo (ModelQualityPolicy/MetricRequirement/EvaluationContext/ObservedMetric/BaselineReference), solo stdlib (v0.7 Change 2)",
+        capabilities=("predictive_modeling",),
     ),
     EntradaManifiesto(
         fuente="tools/modelquality/validation.py",
         tratamiento=VERBATIM,
         destino="tools/modelquality/validation.py",
         descripcion="Evaluacion determinista de ModelQualityPolicy contra metricas ya reportadas, codigos QUALITY-*, produce dsguard.checks.CheckResult (v0.7 Change 2)",
+        capabilities=("predictive_modeling",),
     ),
     EntradaManifiesto(
         fuente="tools/qualityevidence/__init__.py",
@@ -962,4 +980,30 @@ def manifest_para_perfil_y_stage(perfil: str, stage: str) -> list:
         entrada
         for entrada in entradas
         if ORDEN_STAGES.index(entrada.stage_minimo) <= limite
+    ]
+
+
+def manifest_para_perfil_stage_y_capabilities(
+    perfil: str, stage: str, capabilities_habilitadas
+) -> list:
+    """Como `manifest_para_perfil_y_stage(perfil, stage)`, pero además filtra
+    por `capabilities` (eje ortogonal a `stage_minimo`, R2/R4 de `spec.md`
+    Change `20260930-project-extension-and-installer-integration`): conserva
+    solo las entradas cuyo `capabilities` sea `()` (sin filtro, siempre
+    aplica) o un subconjunto de `capabilities_habilitadas` (iterable de
+    strings, p. ej. `{"predictive_modeling"}` o `set()`).
+
+    Wrapper puro y aditivo: llama a `manifest_para_perfil_y_stage` sin
+    modificarla (R2, D1 de `design.md`) y compone el filtro de capabilities
+    por encima -- nunca sustituye el filtro de stage (R4: ambos ejes se
+    intersectan). Cualquier llamador existente que siga usando
+    `manifest_para_perfil`/`manifest_para_perfil_y_stage` sin capabilities no
+    ve ningún cambio de comportamiento (R5)."""
+    capabilities_habilitadas = frozenset(capabilities_habilitadas)
+    entradas = manifest_para_perfil_y_stage(perfil, stage)
+    return [
+        entrada
+        for entrada in entradas
+        if not entrada.capabilities
+        or set(entrada.capabilities) <= capabilities_habilitadas
     ]

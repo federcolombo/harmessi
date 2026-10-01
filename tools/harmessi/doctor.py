@@ -22,6 +22,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -748,6 +749,181 @@ def _check_guardrails_json(destino: Path) -> list:
     ]
 
 
+def _check_fuentes_externas_permisos_os(destino: Path) -> list:
+    """Diagnóstico de solo lectura, NUNCA reparación (R17): para cada fuente
+    externa declarada en `.harmessi/local-overrides.json` (M9/M10), reporta
+    si el sistema operativo TAMBIÉN parece protegerla contra escritura. En
+    POSIX usa `os.access(ruta, os.W_OK)` (observable de forma confiable); en
+    Windows usa el atributo `FILE_ATTRIBUTE_READONLY` (`os.stat_result.
+    st_file_attributes`, solo disponible en Windows) -- documentado
+    explícitamente como una señal PARCIAL, nunca una garantía completa de
+    ACL. Si no se puede determinar (ruta inexistente, error de I/O al
+    consultar, o plataforma sin la señal disponible), reporta
+    `OS read-only guarantee: unknown/partial` como `WARN`, nunca como error
+    ni como falso PASS. Sin ninguna fuente declarada, devuelve `[]` (Doctor
+    no reporta nada para esta categoría -- comportamiento hoy, sin M9
+    configurado, es cero cambio). Nunca muta nada (ni `chmod` ni `icacls`)."""
+    fuentes = pathguard.leer_fuentes_externas_declaradas(destino)
+    if not fuentes:
+        return []
+
+    resultados = []
+    for source_id, declaracion in fuentes.items():
+        if not isinstance(declaracion, dict):
+            continue
+        ruta_str = declaracion.get("path")
+        if not isinstance(ruta_str, str) or not ruta_str:
+            continue
+        ruta = Path(ruta_str)
+
+        if not ruta.exists():
+            resultados.append(
+                checks.CheckResult(
+                    checks.STATUS_WARN,
+                    "M12-FUENTE-EXTERNA-PERMISOS",
+                    f"Fuente externa {source_id!r} declarada read-only, pero la ruta no existe: "
+                    "OS read-only guarantee: unknown/partial.",
+                    subject=source_id,
+                )
+            )
+            continue
+
+        try:
+            if os.name == "nt":
+                try:
+                    atributos = ruta.stat().st_file_attributes
+                except (OSError, AttributeError):
+                    resultados.append(
+                        checks.CheckResult(
+                            checks.STATUS_WARN,
+                            "M12-FUENTE-EXTERNA-PERMISOS",
+                            f"Fuente externa {source_id!r}: no se pudo consultar el atributo de "
+                            "solo lectura de Windows. OS read-only guarantee: unknown/partial.",
+                            subject=source_id,
+                        )
+                    )
+                    continue
+                if atributos & stat.FILE_ATTRIBUTE_READONLY:
+                    resultados.append(
+                        checks.CheckResult(
+                            checks.STATUS_PASS,
+                            "M12-FUENTE-EXTERNA-PERMISOS",
+                            f"Fuente externa {source_id!r}: atributo de solo lectura de Windows "
+                            "activo (NO es una garantía completa de ACL -- ver documentación M12).",
+                            subject=source_id,
+                        )
+                    )
+                else:
+                    resultados.append(
+                        checks.CheckResult(
+                            checks.STATUS_WARN,
+                            "M12-FUENTE-EXTERNA-PERMISOS",
+                            f"Fuente externa {source_id!r}: el atributo de solo lectura de Windows "
+                            "no está activo. OS read-only guarantee: unknown/partial -- la "
+                            "protección de solo lectura depende únicamente de pathguard (Harmessi).",
+                            subject=source_id,
+                        )
+                    )
+            else:
+                escribible = os.access(ruta, os.W_OK)
+                if not escribible:
+                    resultados.append(
+                        checks.CheckResult(
+                            checks.STATUS_PASS,
+                            "M12-FUENTE-EXTERNA-PERMISOS",
+                            f"Fuente externa {source_id!r}: permisos POSIX no permiten escritura "
+                            "para el usuario actual.",
+                            subject=source_id,
+                        )
+                    )
+                else:
+                    resultados.append(
+                        checks.CheckResult(
+                            checks.STATUS_WARN,
+                            "M12-FUENTE-EXTERNA-PERMISOS",
+                            f"Fuente externa {source_id!r}: el usuario actual tiene permiso de "
+                            "escritura OS sobre esta ruta -- la protección de solo lectura depende "
+                            "únicamente de pathguard (Harmessi), no del sistema operativo.",
+                            subject=source_id,
+                        )
+                    )
+        except OSError:
+            resultados.append(
+                checks.CheckResult(
+                    checks.STATUS_WARN,
+                    "M12-FUENTE-EXTERNA-PERMISOS",
+                    f"Fuente externa {source_id!r}: error al consultar permisos. "
+                    "OS read-only guarantee: unknown/partial.",
+                    subject=source_id,
+                )
+            )
+    return resultados
+
+
+def _check_ownership_5_vias(destino: Path, control_data: Optional[dict]) -> list:
+    """Ownership de 5 vías (R21 de B5 + R12 de M10): reporta EXPLÍCITAMENTE
+    las categorías (1) archivo preexistente del usuario y (3)/(4) project
+    config/local override soportados -- las categorías (2) managed file y
+    (5) drift YA las cubren `_check_archivos_administrados`/
+    `_check_hashes_drift`, este check NO las duplica."""
+    resultados = []
+
+    if control_data is not None:
+        perfil = control_data.get("perfil")
+        installation_stage = control_data.get("installation_stage")
+        rutas_administradas = {
+            a.get("ruta") for a in control_data.get("archivos", []) if isinstance(a, dict)
+        }
+        try:
+            if installation_stage is not None:
+                entradas = manifest_mod.manifest_para_perfil_y_stage(perfil, installation_stage)
+            else:
+                entradas = manifest_mod.manifest_para_perfil(perfil)
+        except manifest_mod.PerfilDesconocidoError:
+            entradas = []
+
+        for entrada in entradas:
+            if entrada.destino == ".ds_init/control.json":
+                continue
+            if entrada.destino in rutas_administradas:
+                continue  # categoría (2)/(5), ya cubiertas por otros checks
+            ruta = destino / entrada.destino
+            if ruta.exists():
+                resultados.append(
+                    checks.CheckResult(
+                        checks.STATUS_PASS,
+                        "HARMESSI-OWNERSHIP-USUARIO",
+                        f"{entrada.destino}: archivo preexistente del usuario, Harmessi no lo "
+                        "administra (omitido por colisión en la instalación, nunca sobrescrito).",
+                        subject=entrada.destino,
+                    )
+                )
+
+    ruta_project_config = destino / ".harmessi" / "project-config.json"
+    if ruta_project_config.exists():
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_PASS,
+                "HARMESSI-OWNERSHIP-PROJECT-CONFIG",
+                "project-config.json presente: customización de proyecto soportada (M10).",
+                subject=".harmessi/project-config.json",
+            )
+        )
+
+    ruta_local_override = destino / ".harmessi" / "local-overrides.json"
+    if ruta_local_override.exists():
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_PASS,
+                "HARMESSI-OWNERSHIP-LOCAL-OVERRIDE",
+                "local-overrides.json presente: override local soportado (M10).",
+                subject=".harmessi/local-overrides.json",
+            )
+        )
+
+    return resultados
+
+
 def _check_coherencia_version(control_data: Optional[dict]) -> list:
     if control_data is None:
         return [
@@ -1090,6 +1266,9 @@ def ejecutar(destino) -> tuple:
         SECCION_HARMESSI, "HARMESSI-ARCHIVOS-ESPERADOS", _check_archivos_administrados, destino, control_data
     )
     resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-DRIFT", _check_hashes_drift, destino, control_data)
+    resultados += _ejecutar_check(
+        SECCION_HARMESSI, "HARMESSI-OWNERSHIP", _check_ownership_5_vias, destino, control_data
+    )
     resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-AGENTE", _check_agents, destino, control_data)
     resultados += _ejecutar_check(
         SECCION_HARMESSI, "HARMESSI-SKILL", _check_skill_lead_data_scientist, destino
@@ -1101,6 +1280,9 @@ def ejecutar(destino) -> tuple:
     resultados += resultados_settings
     resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-HOOKS", _check_hooks, destino, settings_data)
     resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-GUARDRAILS-JSON", _check_guardrails_json, destino)
+    resultados += _ejecutar_check(
+        SECCION_HARMESSI, "M12-FUENTE-EXTERNA-PERMISOS", _check_fuentes_externas_permisos_os, destino
+    )
     resultados += _ejecutar_check(
         SECCION_HARMESSI, "HARMESSI-VERSION", _check_coherencia_version, control_data
     )

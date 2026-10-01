@@ -416,25 +416,68 @@ portable); layering de configuración `managed defaults → project config → l
 effective config` (M10, `permiso efectivo = policy humana ∩ project config ∩ local override`,
 fail-closed, mismo principio ya en vigor para M2). **M7 ya está implementada** (Change 3,
 `20260930-autonomous-sdd-and-remediation`, cerrado -- `tools/dsguard/sdd.py`/`tools/ds_guard.py`,
-regla 10 de §3 arriba documenta la excepción real de dependencias que introdujo). **M8-M10 siguen
-sin implementar** (Change 4, sin SDD todavía); cuando se implementen, el inventario pasa a §2 y las
-reglas a §3, mismo patrón que Change 1/Change 2.
+regla 10 de §3 arriba documenta la excepción real de dependencias que introdujo). **M8-M10 ya están
+implementadas** (Change 4, `20260930-project-extension-and-installer-integration` -- ver "Implementado
+en Change 4" más abajo).
 
-**Adenda 2026-09-30 (costos residuales, NO implementada -- planificación, no código).** Dos
-decisiones materiales más (M11-M12), sin reabrir Changes 0-2 ni los artefactos aprobados por hash de
-Change 3 (ya cerrado): pre-aprobación de dependencias del proyecto (M11 -- extiende
-`approval_mode: checkpoints` de M7/Change 3 y el STOP ya existente `new_dependency`, sin modificar
-`tools/autonomy/core.py`; auditado que `tools/leadrun/` no tiene hoy ninguna primitiva gobernada de
-instalación, así que M11 es solo clasificación STOP/no-STOP, sin ninguna vía de instalación real);
-integridad detectiva de fuentes externas read-only (M12 -- fingerprint tamaño+`mtime`/hash opcional
-antes/después de una ejecución gobernada de Change 2, mapeado al STOP ya existente `data_loss_risk`,
-sin STOP nuevo ni cambios a `tools/leadrun/core.py`/`runtime.py`; diagnóstico de permisos OS de solo
-lectura en `harmessi doctor`, nunca mutación). Dos correcciones puntuales ya aplicadas sobre Change
-3 (cerrado) sin reabrir sus artefactos aprobados: `aggregate_minutes` pasó a ser LIMIT efectivo
+**Adenda 2026-09-30 (costos residuales).** Dos decisiones materiales más (M11-M12), sin reabrir
+Changes 0-2 ni los artefactos aprobados por hash de Change 3 (ya cerrado): pre-aprobación de
+dependencias del proyecto (M11 -- extiende `approval_mode: checkpoints` de M7/Change 3 y el STOP ya
+existente `new_dependency`, sin modificar `tools/autonomy/core.py`); integridad detectiva de fuentes
+externas read-only (M12 -- fingerprint tamaño+`mtime` antes/después de una ejecución gobernada de
+Change 2, mapeado al STOP ya existente `data_loss_risk`, sin STOP nuevo ni cambios a
+`tools/leadrun/core.py`/`runtime.py`; diagnóstico de permisos OS de solo lectura en `harmessi
+doctor`, nunca mutación). **M11-M12 ya están implementadas** (Change 4 -- ver "Implementado en Change
+4" más abajo). Dos correcciones puntuales ya aplicadas sobre Change 3 (cerrado) sin reabrir sus
+artefactos aprobados: `aggregate_minutes` pasó a ser LIMIT efectivo
 (`tools/ds_guard.py::cmd_session_start`, documentado en `openspec/decisions/ledger.jsonl` y en
-`verification.md` de ese Change); las otras dos (M11 modelado, eficiencia writer→Lead) quedan para
-implementación correctiva inmediata bajo el mismo criterio -- ninguna de las dos toca la
-clasificación core/adapter de este documento por sí sola.
+`verification.md` de ese Change); eficiencia writer→Lead, modelada en la misma adenda.
+
+**Resolución M11 2026-09-30 (aditiva, confirmada por el autor -- implementada en Change 4).**
+Auditado: `tools/leadrun/` no tenía ninguna primitiva gobernada de instalación. En vez de dejar M11
+como "solo clasificación, sin vía de instalación real", Change 4 agregó una 5ª forma cerrada
+`dependency_install` al vocabulario público de Change 2 (`EXECUTION_FORMS`), reutilizando
+`scripts.ejecutar_script`/`runtime.ejecutar` de punta a punta (mismo camino que ya usa
+`cli_diagnostic`, `code_hash=None`) -- ninguna de las 4 formas/campos/funciones existentes cambió de
+comportamiento; verificado por diff dirigido (`tools/tests/test_v08_change4_leadrun_diff.py`): los 4
+suites de `tools/leadrun/tests/` pasan sin una sola línea editada. Guardas de contrato: intérprete
+`.venv` construido por el runtime, nunca recibido libre (`cmd_dependency_install` resuelve vía
+`launcher_common.resolver_venv_dir`/`ruta_interprete_venv`, normalizado con
+`leadrun.allowlist.normalizar_interprete`); identidad de paquete validada/canonicalizada (PEP 503,
+`sdd.validar_forma_nombre_paquete`/`sdd._canonicalizar_nombre_paquete`), rechazo explícito de
+URL/path/VCS/extras/múltiples paquetes; el rango aprobado nunca llega a pip -- solo versión exacta,
+verificada contra el rango (`dependencias_efectivas`, compone M10) antes de construir el comando;
+evidencia de entorno pre/post vía `importlib.metadata`, sin dependencia nueva; `--no-deps`
+obligatorio, transitivas nunca autoinstaladas. El gate de aprobación por-ejecución genérico
+(`_resolver_aprobacion_exec`, el mismo que usan `script`/`pytest`/`notebook`) no aplica a esta forma
+(`_ejecutar_exec_comun(..., omitir_gate_por_artefacto=True)`): la autorización puntual ya la da la
+clasificación (`sdd.clasificar_dependencia`) antes de construir el `ExecutionRequest`, evitando que
+`supervised` quede bloqueado siempre por falta de un mecanismo de aprobación-por-artefacto aplicable a
+un par nombre/versión (hallazgo real de implementación, corregido). Texto completo: `spec.md` R24-R41
+y `design.md` D7-D8 de `openspec/changes/20260930-project-extension-and-installer-integration/`.
+
+**Implementado en Change 4 (`20260930-project-extension-and-installer-integration`).** M8
+(`tools/ds_init/manifest.py::capabilities`/`manifest_para_perfil_stage_y_capabilities`, vocabulario
+inicial `predictive_modeling` sobre `tools/modelquality/*`); M9 (`tools/datasources/file_observer.py`
+gana la opción `ruta_externa_absoluta` inyectada por el llamador, sin import nuevo hacia
+`tools.dsguard`/`tools.ds_guard`; `tools/datasources/runtime.py::observe_source` gana
+`options_extra`, aditivo, `setdefault` nunca pisa una clave ya declarada por el registro; enforcement
+de solo lectura en `tools/dsguard/pathguard.py` -- `leer_fuentes_externas_declaradas` (pública) +
+excepción de lectura SOLO para `Read`/`Grep` sobre una ruta externa declarada en
+`.harmessi/local-overrides.json`, `Write`/`Edit`/`NotebookEdit` siguen denegados sin cambio de código
+sobre cualquier ruta fuera del repo); M10 (`tools/ds_guard.py::resolver_project_config`/
+`resolver_local_override`/`resolver_modo_efectivo`, unión-de-restricciones fail-closed sobre
+`.harmessi/project-config.json`/`.harmessi/local-overrides.json`, sin tocar `pathguard.py` más allá
+del lector puntual de M9); M11 (ver resolución arriba); M12 (fingerprint tamaño+`mtime` compuesto en
+`_ejecutar_exec_comun`, evidencia local en `.harmessi/executions/<id>/fingerprints.json`; diagnóstico
+de permisos OS en `tools/harmessi/doctor.py::_check_fuentes_externas_permisos_os`, solo lectura;
+helper cooperativo de output roots, `resolver_output_roots`/`ds_guard output-roots list`); B5/adopción
+(mensaje de colisión enriquecido en `tools/ds_init/cli.py::_imprimir_omitidos`, sin tocar
+`planner.py`/`preflight.py`; ownership de 5 vías en `tools/harmessi/doctor.py::_check_ownership_5_vias`,
+complementa sin duplicar `_check_archivos_administrados`/`_check_hashes_drift`). Ninguna pieza importa
+`tools.autonomy`/`tools.datasources.core`/`tools.leadrun.core`/`tools.leadrun.runtime` de forma nueva
+fuera de los puntos ya documentados arriba; cuando este Change cierre, este inventario pasa a §2 y
+las reglas a §3, mismo patrón que Change 1/Change 2.
 
 **Vocabulario.** "Adapter" ya tiene dos acepciones en este documento (§2.2: hooks de Claude Code;
 `tools/providers`: proveedores de IA). El adapter de fuente sería una tercera; "provider" no debe

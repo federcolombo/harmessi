@@ -35,7 +35,7 @@ from typing import Any, Optional
 # ---------------------------------------------------------------------------
 
 # Formas de comando reconocidas por `allowlist.evaluar_comando` (R4/R8).
-EXECUTION_FORMS = ("script", "pytest", "notebook", "cli_diagnostic")
+EXECUTION_FORMS = ("script", "pytest", "notebook", "cli_diagnostic", "dependency_install")
 
 EXECUTED_BY_VALUES = ("lead", "human")
 EXECUTION_MODES = ("autonomous", "supervised")

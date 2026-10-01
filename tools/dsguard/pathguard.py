@@ -205,6 +205,62 @@ def resolver_ruta_relativa(ruta_bruta: str, repo_root: Path) -> tuple:
     return relativo.as_posix(), True
 
 
+def leer_fuentes_externas_declaradas(repo_root: Path) -> dict:
+    """Lee `.harmessi/local-overrides.json` -> `fuentes_externas` (M9,
+    Change 4/T4). Lector PROPIO y mínimo (no importa `tools/ds_guard.py` --
+    regla 11 de `ARCHITECTURE.md`, dirección de dependencias): archivo
+    ausente, no-JSON, o raíz que no es un dict -> `{}` (sin fuentes
+    declaradas), nunca lanza -- mismo criterio fail-closed que el resto de
+    este módulo. Devuelve el sub-dict `fuentes_externas` tal cual si es un
+    dict, `{}` en cualquier otro caso (incluida su ausencia).
+
+    Público (sin `_`, T5 de Change 4): reusado también por
+    `tools/harmessi/doctor.py` (R17, diagnóstico de permisos OS) para no
+    duplicar este lector ni cruzar la convención de encapsulamiento accediendo
+    a un símbolo privado de otro módulo."""
+    ruta = repo_root / ".harmessi" / "local-overrides.json"
+    try:
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(datos, dict):
+        return {}
+    fuentes = datos.get("fuentes_externas")
+    return fuentes if isinstance(fuentes, dict) else {}
+
+
+def _es_ruta_externa_declarada_read_only(ruta_bruta: str, repo_root: Path) -> bool:
+    """`True` si `ruta_bruta` (ya resuelta como FUERA del repo, ver
+    `resolver_ruta_relativa`) coincide con el `path` de alguna entrada de
+    `fuentes_externas` declarada en `.harmessi/local-overrides.json` (M9).
+    Comparación por ruta ABSOLUTA resuelta (`Path.resolve()`, sigue
+    symlinks, mismo criterio que `resolver_ruta_relativa`), case-insensitive
+    (mismo criterio que `_matchea_patrones` -- NTFS/APFS). Fail-closed: si
+    `ruta_bruta` no resuelve (`OSError`/`RuntimeError`/`ValueError`), o si no
+    hay ninguna fuente declarada, devuelve `False` (nunca autoriza por
+    default)."""
+    try:
+        resuelta = Path(ruta_bruta).resolve()
+    except (OSError, RuntimeError, ValueError):
+        return False
+    resuelta_norm = str(resuelta).casefold()
+
+    fuentes = leer_fuentes_externas_declaradas(repo_root)
+    for declaracion in fuentes.values():
+        if not isinstance(declaracion, dict):
+            continue
+        path_declarado = declaracion.get("path")
+        if not isinstance(path_declarado, str) or not path_declarado:
+            continue
+        try:
+            declarado_resuelto = Path(path_declarado).resolve()
+        except (OSError, RuntimeError, ValueError):
+            continue
+        if str(declarado_resuelto).casefold() == resuelta_norm:
+            return True
+    return False
+
+
 def _matchea_patrones(ruta_relativa_posix: str, patrones) -> bool:
     """Comparación case-insensitive (mismo criterio que
     `nbrunner.manifest._colisiona`: en NTFS/APFS case-insensitive, un
@@ -272,6 +328,8 @@ def _evaluar_ruta_estructurada(
 
     ruta_relativa, dentro_del_repo = resolver_ruta_relativa(ruta_bruta, repo_root)
     if not dentro_del_repo:
+        if tool_name == "Read" and _es_ruta_externa_declarada_read_only(ruta_bruta, repo_root):
+            return True, f"Fuente externa de solo lectura declarada (M9): {ruta_bruta!r}."
         return False, f"Ruta fuera del repositorio o no resoluble: {ruta_bruta!r}."
 
     es_escritura = tool_name in _TOOLS_ESCRITURA
@@ -317,6 +375,8 @@ def _evaluar_grep(tool_input: dict, config: ConfigGuardrails, repo_root: Path) -
 
     ruta_relativa, dentro_del_repo = resolver_ruta_relativa(ruta_bruta, repo_root)
     if not dentro_del_repo:
+        if _es_ruta_externa_declarada_read_only(ruta_bruta, repo_root):
+            return True, f"Fuente externa de solo lectura declarada (M9): {ruta_bruta!r}."
         return False, f"Ruta fuera del repositorio o no resoluble: {ruta_bruta!r}."
 
     patrones_secretos = SECRETOS_HARDCODEADOS + config.secretos_extra

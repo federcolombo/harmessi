@@ -159,7 +159,7 @@ def _validar_manifest_en_memoria(manifest_str: str) -> Tuple[bool, str]:
 
 
 # ---------------------------------------------------------------------------
-# Reconocimiento de las 4 formas (R8)
+# Reconocimiento de las 5 formas (R8)
 # ---------------------------------------------------------------------------
 
 
@@ -227,6 +227,32 @@ def _evaluar_forma_cli_diagnostic(argv: Tuple[str, ...]) -> Tuple[bool, str]:
     return False, "no matchea ninguna variante de cli_diagnostic"
 
 
+_PATRON_DEPENDENCY_INSTALL_SPEC = re.compile(r'^[^=\s]+==[^=\s]+$')
+
+
+def _evaluar_forma_dependency_install(argv: Tuple[str, ...]) -> Tuple[bool, str]:
+    """`-m pip install --no-deps <nombre>==<versión>` -- patrón CERRADO de 6
+    tokens totales (argv[0] es el intérprete, ya validado aparte por
+    `evaluar_comando`). Esta función solo reconoce la FORMA sintáctica (un
+    único token final con la forma 'algo==algo', sin espacios): la validación
+    semántica real de nombre/versión (PEP 503, rango aprobado) vive en
+    `tools/dsguard/sdd.py`/`tools/ds_guard.py`, ANTES de que el comando
+    llegue acá (R25 de spec.md) -- mismo principio ya establecido por R9 de
+    Change 2 ('allowlist.py no decide autorización semántica'). El patrón
+    cerrado de 6 tokens y comparación LITERAL (no un regex laxo sobre todo
+    el comando) es la defensa: ningún flag extra, ninguna ruta, ningún
+    segundo paquete puede colarse sin agregar o cambiar un token, lo que
+    rompe la longitud exacta o la comparación literal de abajo."""
+    if len(argv) != 6:
+        return False, "se esperaban exactamente 6 tokens (intérprete -m pip install --no-deps <nombre>==<versión>)"
+    if tuple(argv[1:5]) != ("-m", "pip", "install", "--no-deps"):
+        return False, "no matchea '-m pip install --no-deps'"
+    spec = argv[5]
+    if not _PATRON_DEPENDENCY_INSTALL_SPEC.match(spec):
+        return False, f"{spec!r} no matchea el patrón <nombre>==<versión> (un solo '==', sin espacios)"
+    return True, ""
+
+
 # ---------------------------------------------------------------------------
 # Función pública
 # ---------------------------------------------------------------------------
@@ -256,8 +282,9 @@ def evaluar_comando(
        de `hook_validar_comando.py:46-51`) y comparado por igualdad exacta
        contra `interprete_autorizado` (que el llamador ya entrega
        normalizado, spec.md R8). Si no coincide, rechazo inmediato.
-    3. Las 4 formas, en orden (a) script, (b) pytest, (c) notebook,
-       (d) cli_diagnostic — la primera que matchea gana.
+    3. Las 5 formas, en orden (a) script, (b) pytest, (c) notebook,
+       (d) cli_diagnostic, (e) dependency_install — la primera que matchea
+       gana.
     """
     if isinstance(argv_o_texto, str):
         if core.contiene_metacaracter_prohibido(argv_o_texto):
@@ -317,5 +344,10 @@ def evaluar_comando(
     if ok:
         return True, "cli_diagnostic", ""
     motivos.append(f"cli_diagnostic: {motivo}")
+
+    ok, motivo = _evaluar_forma_dependency_install(argv)
+    if ok:
+        return True, "dependency_install", ""
+    motivos.append(f"dependency_install: {motivo}")
 
     return False, None, "ninguna forma reconocida — " + "; ".join(motivos)

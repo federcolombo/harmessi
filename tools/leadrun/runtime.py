@@ -295,6 +295,11 @@ def ejecutar(
             # Mismo `subprocess.run` que `script` (R7: `code_hash=None`
             # siempre para esta forma, sin excepción).
             crudo = scripts.ejecutar_script(request, repo_root)
+        elif request.command_form == "dependency_install":
+            # Mismo `subprocess.run` que `cli_diagnostic`/`script` (R24:
+            # `code_hash=None` siempre para esta forma -- no hay un único
+            # archivo canónico que hashear, mismo motivo que `cli_diagnostic`).
+            crudo = scripts.ejecutar_script(request, repo_root)
         elif request.command_form == "notebook":
             crudo, code_hash = _ejecutar_forma_notebook(request, repo_root, control_data or {})
         else:

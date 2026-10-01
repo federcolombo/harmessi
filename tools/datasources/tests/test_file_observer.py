@@ -173,3 +173,46 @@ def test_factory_con_repo_root_en_options(tmp_path):
     obs = file_observer.factory("customers", {"path": ruta_csv_relativa, "_repo_root": str(repo_root)})
     resultado = obs.observe({})
     assert resultado["source_id"] == "customers"
+
+
+# ---------------------------------------------------------------------------
+# M9: ruta_externa_absoluta
+# ---------------------------------------------------------------------------
+
+
+def test_ruta_externa_absoluta_se_usa_directo_sin_guard_de_holdout(tmp_path):
+    # Archivo FUERA de cualquier repo, sin _repo_root ni guardrails.json: si
+    # pasara por ds_holdout_guard.verificar_permitido, esto fallaría (no hay
+    # repo_root ni .claude/guardrails.json resolubles para esta ruta).
+    externo_dir = tmp_path / "externo_fuera_del_repo"
+    externo_dir.mkdir()
+    ruta_externa = externo_dir / "externo.csv"
+    _crear_csv(ruta_externa)
+
+    obs = file_observer.factory("customers", {"ruta_externa_absoluta": str(ruta_externa)})
+    resultado = obs.observe({})
+    assert resultado["source_id"] == "customers"
+
+
+def test_sin_ruta_externa_absoluta_comportamiento_repo_relativo_sigue_igual(tmp_path):
+    repo_root = _crear_repo(tmp_path)
+    ruta_csv_relativa = "data/customers.csv"
+    _crear_csv(repo_root / ruta_csv_relativa)
+
+    obs = file_observer.factory_with_repo_root(repo_root)("customers", {"path": ruta_csv_relativa})
+    resultado = obs.observe({})
+    assert resultado["source_id"] == "customers"
+
+
+def test_ruta_externa_absoluta_portabilidad_no_aparece_en_resultado(tmp_path):
+    externo_dir = tmp_path / "externo_fuera_del_repo"
+    externo_dir.mkdir()
+    ruta_externa = externo_dir / "externo.csv"
+    _crear_csv(ruta_externa)
+
+    obs = file_observer.factory("customers", {"ruta_externa_absoluta": str(ruta_externa)})
+    resultado = obs.observe({})
+
+    texto = json.dumps(resultado)
+    assert str(ruta_externa) not in texto
+    assert str(externo_dir) not in texto

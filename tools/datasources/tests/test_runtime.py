@@ -211,6 +211,38 @@ def _factory_sensible(source_id, options):
     return _ObserverSensible()
 
 
+class _ObserverEcoOptions:
+    """Observer de prueba que devuelve las `options` recibidas como
+    `native_type` de un campo (única vía disponible para que un test
+    externo a la clausura inspeccione qué `options` llegaron al factory sin
+    tocar variables globales)."""
+
+    def __init__(self, options):
+        self._options = dict(options)
+
+    def capabilities(self):
+        return {"facets": {"row_count": ["exact"]}, "operations": []}
+
+    def observe(self, request):
+        import json as _json
+
+        return {
+            "dataset": {"row_count": {"value": 1, "exactness": "exact"}},
+            "fields": [
+                {
+                    "name": "eco",
+                    "type_family": "string",
+                    "native_type": _json.dumps(self._options, sort_keys=True),
+                    "facets": {},
+                }
+            ],
+        }
+
+
+def _factory_eco_options(source_id, options):
+    return _ObserverEcoOptions(options)
+
+
 # ---------------------------------------------------------------------------
 # load_registry / check_registry
 # ---------------------------------------------------------------------------
@@ -539,6 +571,70 @@ def test_observe_source_sensitive_omite_facetas():
             o["facet"] == "value_range" and o["field"] == "edad"
             for o in persistido["omitted_facets"]
         )
+
+
+# ---------------------------------------------------------------------------
+# observe_source: options_extra (M9)
+# ---------------------------------------------------------------------------
+
+
+def test_observe_source_sin_options_extra_comportamiento_igual_que_antes():
+    """Backward compat explícito: no pasar `options_extra` (default None) se
+    comporta exactamente igual que antes de esta tarea."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        _escribir_registro(tmp_path, _fuente())
+        observation, resultados = runtime.observe_source(
+            tmp, "customers", {"source_id": "customers"}, _access_check_permite
+        )
+        assert observation is not None
+        assert not any(r.status == checks.STATUS_FAIL for r in resultados)
+
+
+def test_observe_source_options_extra_rellena_clave_faltante():
+    import json as _json
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        _escribir_registro(
+            tmp_path, _fuente(observer="tools.datasources.tests.test_runtime:_factory_eco_options")
+        )
+        observation, resultados = runtime.observe_source(
+            tmp,
+            "customers",
+            {"source_id": "customers"},
+            _access_check_permite,
+            options_extra={"_repo_root": "valor_inyectado"},
+        )
+        assert observation is not None
+        campo_eco = [c for c in observation.fields if c.name == "eco"][0]
+        options_recibidas = _json.loads(campo_eco.native_type)
+        assert options_recibidas.get("_repo_root") == "valor_inyectado"
+
+
+def test_observe_source_options_extra_nunca_pisa_clave_ya_declarada():
+    import json as _json
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        _escribir_registro(
+            tmp_path,
+            _fuente(
+                observer="tools.datasources.tests.test_runtime:_factory_eco_options",
+                options={"_repo_root": "valor_del_registro"},
+            ),
+        )
+        observation, resultados = runtime.observe_source(
+            tmp,
+            "customers",
+            {"source_id": "customers"},
+            _access_check_permite,
+            options_extra={"_repo_root": "valor_extra_que_no_debe_ganar"},
+        )
+        assert observation is not None
+        campo_eco = [c for c in observation.fields if c.name == "eco"][0]
+        options_recibidas = _json.loads(campo_eco.native_type)
+        assert options_recibidas.get("_repo_root") == "valor_del_registro"
 
 
 # ---------------------------------------------------------------------------

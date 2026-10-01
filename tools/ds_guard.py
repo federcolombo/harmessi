@@ -16,11 +16,16 @@ Solo biblioteca estándar. No instala ni importa nada fuera de `tools/dsguard`.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import importlib.metadata as importlib_metadata
 import json
 import sys
 from pathlib import Path
+from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import launcher_common  # noqa: E402 -- solo-stdlib, ya usado por los lanzadores de hooks (T3b-2, M11 dependency install: R27/R34).
 
 # La consola/pipe que invoca este CLI puede estar en una codificación distinta
 # de UTF-8 (p. ej. cp1252 en Windows). Forzamos stdout/stderr a UTF-8 real para
@@ -43,6 +48,7 @@ from dsguard import (  # noqa: E402
     mlops_evidence,
     mlops_foundations,
     notebooks,
+    pathguard,
     readiness,
     repo,
     scientific_validity,
@@ -542,6 +548,163 @@ def _resolver_budgets(repo_root: Path) -> dict:
     return resultado
 
 
+# --- config layering (v0.8 Change 4: 20260930-project-extension-and-
+# installer-integration, M10) -----------------------------------------------
+#
+# R10-R13 de spec.md, D3 de design.md: tres capas explícitas `managed
+# defaults -> project config -> local machine overrides -> effective config`,
+# compuestas ACÁ (nunca en `tools/dsguard/pathguard.py` ni en
+# `tools/autonomy/policy.py` -- esos dos siguen siendo la única fuente de la
+# policy humana, el techo de toda restricción) -- mismo patrón de composición
+# externa que `_resolver_budgets` arriba, aplicado a dos archivos nuevos:
+#   - `.harmessi/project-config.json`: versionado en git, customización de
+#     proyecto compartida por todo el equipo.
+#   - `.harmessi/local-overrides.json`: NO versionado (entrada sugerida en
+#     `.gitignore` del manifiesto), restricciones propias de esta máquina.
+# Ninguno de los dos archivos existe todavía en ningún proyecto real -- su
+# AUSENCIA TOTAL es el caso normal/esperado (proyecto sin ninguna capa
+# configurada, cero cambio de comportamiento), no un error. Un archivo
+# presente pero corrupto (no-JSON, o JSON cuya raíz no es un objeto) degrada
+# en silencio a "capa vacía" por el mismo motivo -- un archivo mal formado no
+# debe impedir que el resto de Harmessi funcione (a diferencia de
+# `_BUDGET_DEFAULTS`/R9, acá no hay un caso de "valor individual inválido"
+# reservado: cada consumidor de estas capas valida sus propias claves).
+#
+# Principio general de layering para que otros consumidores lo reusen
+# (dependencias de M11/T3, fuentes externas de M9/T4, cualquier restricción
+# nueva futura): cualquier capa nueva de restricción lee estas MISMAS capas
+# vía `resolver_project_config`/`resolver_local_override` y aplica SU PROPIA
+# lógica de intersección fail-closed sobre la clave que le corresponda --
+# este módulo no centraliza el schema completo de todas las claves posibles
+# de `project-config.json`/`local-overrides.json`, cada consumidor documenta
+# las suyas (p. ej. `dependencias_efectivas` de R26 documenta su propia clave
+# de restricción de dependencias, separada de `mode` que resuelve acá).
+
+def _leer_capa_json(ruta: Path) -> dict:
+    """Lector genérico fail-closed de una capa de config M10. Ausencia total
+    del archivo -> `{}` (caso normal, no un error). Archivo presente pero no
+    es JSON válido, o su raíz no es un objeto (`dict`) -- p. ej. una lista o
+    un escalar en la raíz -- -> también `{}`, degradación silenciosa, misma
+    razón que la ausencia total: un archivo corrupto no debe bloquear nada
+    por sí solo. No usa `pathguard.cargar_config` (ese lee `guardrails.json`
+    específicamente, con su propio schema versionado `ConfigGuardrails`) --
+    `project-config.json`/`local-overrides.json` son JSON simple sin ese
+    contrato, de ahí un lector propio y deliberadamente más permisivo."""
+    if not ruta.exists():
+        return {}
+    try:
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(datos, dict):
+        return {}
+    return datos
+
+
+def resolver_project_config(repo_root: Path) -> dict:
+    """Capa `project config` (R10): `.harmessi/project-config.json`,
+    versionado en git. Ver `_leer_capa_json` para la semántica fail-closed de
+    ausencia/corrupción."""
+    return _leer_capa_json(Path(repo_root) / ".harmessi" / "project-config.json")
+
+
+def resolver_local_override(repo_root: Path) -> dict:
+    """Capa `local machine overrides` (R10): `.harmessi/local-overrides.json`,
+    NO versionado (propio de esta máquina). Ver `_leer_capa_json` para la
+    semántica fail-closed de ausencia/corrupción."""
+    return _leer_capa_json(Path(repo_root) / ".harmessi" / "local-overrides.json")
+
+
+def resolver_modo_efectivo(modo_policy_humana: str, project_config: dict, local_override: dict) -> str:
+    """Resuelve el `mode` efectivo (R11: fail-closed, `permiso_efectivo =
+    policy_humana ∩ project_config ∩ local_override` -- un override SOLO
+    restringe, nunca amplía).
+
+    Implementación: "cualquier capa que declare `mode: supervised` gana" --
+    equivalente a tomar, entre `modo_policy_humana` y cualquier valor
+    reconocido declarado en `project_config`/`local_override`, el MÁS
+    RESTRICTIVO del vocabulario cerrado `{"autonomous", "supervised"}` (hoy
+    el único par posible; `"supervised"` es estrictamente más restrictivo que
+    `"autonomous"`). Equivale a una intersección: el resultado nunca es más
+    permisivo que `modo_policy_humana` ni que ninguna capa que declare
+    `"supervised"` válidamente.
+
+    Precedencia entre `project_config` y `local_override`: NO IMPORTA cuál de
+    las dos declara `"supervised"` -- cualquiera de las dos alcanza para
+    restringir (ninguna capa puede "cancelar" la restricción de la otra; ese
+    sería justo el caso de ampliación prohibido por R11). Por eso este
+    método, a propósito, no usa una precedencia de "una capa tapa a la otra"
+    -- usa unión de restricciones, que es la única semántica consistente con
+    "solo restringe, nunca amplía" cuando hay más de una capa inferior.
+
+    Given/When/Then exacto de R11: policy humana `supervised` + local
+    override que declara `mode: autonomous` -> el modo efectivo sigue siendo
+    `supervised` (el intento de ampliación se ignora en esa clave). Policy
+    humana `autonomous` + local override `mode: supervised` -> efectivo
+    `supervised` (restricción válida, se aplica).
+
+    Valores desconocidos/no-string en la clave `"mode"` de cualquier capa
+    (p. ej. `123`, `null`, `"algo-no-reconocido"`) se ignoran por completo --
+    fail-closed: solo un valor reconocido del vocabulario cerrado puede
+    restringir, nunca se interpreta nada ambiguo como restricción válida. Si
+    ninguna capa declara un `"mode"` reconocido, el efectivo es
+    `modo_policy_humana` sin cambios (backward compatible con un proyecto sin
+    ninguna capa M10 configurada)."""
+    vocabulario_reconocido = {"autonomous", "supervised"}
+
+    candidatos = [modo_policy_humana]
+    for capa in (project_config, local_override):
+        valor = capa.get("mode")
+        if isinstance(valor, str) and valor in vocabulario_reconocido:
+            candidatos.append(valor)
+
+    if "supervised" in candidatos:
+        return "supervised"
+    return modo_policy_humana
+
+
+def resolver_output_roots(repo_root: Path) -> list:
+    """Output roots declarados (R18, M12) -- UNIÓN (no intersección: es una
+    declaración aditiva/cooperativa, no una restricción de algo pre-existente
+    como M11) de `project-config.json` y `local-overrides.json`, clave
+    `output_roots` (lista de strings). Deduplicado, orden estable (primero
+    project config, después local override, sin repetir). `[]` si ninguna
+    capa declara nada -- backward compat total (comportamiento hoy: nadie
+    consulta esto, cero cambio). Control COOPERATIVO, no sandbox: no
+    intercepta escrituras, no reemplaza pathguard ni el fingerprint pre/post
+    -- documentado explícitamente acá y en la ayuda del CLI nuevo."""
+    vistos: list = []
+    for capa in (resolver_project_config(repo_root), resolver_local_override(repo_root)):
+        raices = capa.get("output_roots")
+        if isinstance(raices, list):
+            for r in raices:
+                if isinstance(r, str) and r and r not in vistos:
+                    vistos.append(r)
+    return vistos
+
+
+def cmd_output_roots_list(args: argparse.Namespace) -> int:
+    """`ds_guard output-roots list` (R18): imprime los output roots
+    declarados vía `resolver_output_roots` -- puramente informativo, control
+    COOPERATIVO, no sandbox (no intercepta escrituras, no reemplaza
+    pathguard ni el fingerprint pre/post de M12)."""
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    raices = resolver_output_roots(repo_root)
+    if args.json:
+        print(json.dumps({"output_roots": raices}, ensure_ascii=False))
+    else:
+        if raices:
+            for r in raices:
+                print(r)
+        else:
+            print("(sin output roots declarados)")
+    return 0
+
+
 # --- session ----------------------------------------------------------------
 
 def cmd_session_start(args: argparse.Namespace) -> int:
@@ -793,6 +956,295 @@ def cmd_session_efficiency(args: argparse.Namespace) -> int:
 # bloquea nada por sí sola -- análogo a `session aggregate`). Lee
 # `control["dependencias_preaprobadas"]` (poblado por `cmd_approve` cuando el
 # Change está en `approval_mode: checkpoints`).
+
+def dependencias_efectivas(control: dict, repo_root: Path) -> list:
+    """`dependencias_efectivas` (R26): `control['dependencias_preaprobadas']`
+    restringido por `project-config.json`/`local-overrides.json` (M10, T2) --
+    nunca ampliado. Ambas capas (si declaran algo bajo la clave
+    `'dependencias_preaprobadas'`, misma forma que `control`: lista de
+    `{"nombre": str, "rango": str}`) solo pueden ACOTAR: una entrada de
+    `control['dependencias_preaprobadas']` sobrevive al resultado final SOLO
+    si, para cada capa que declare ALGO bajo esa clave, existe una entrada
+    correspondiente (mismo nombre canonicalizado) en esa capa -- si una capa
+    no declara la clave en absoluto, no restringe nada (backward compat,
+    mismo criterio que `resolver_modo_efectivo`). El RANGO final de una
+    entrada que sobrevive es la entrada de `control` tal cual (esta función
+    NO intenta intersectar dos rangos numéricos entre capas -- decisión
+    documentada: eso queda fuera de alcance de este Change, una capa inferior
+    puede como mucho EXCLUIR una dependencia completa, no angostar su rango a
+    un subrango -- si hiciera falta angostar rango en el futuro es una
+    extensión aparte). Nombres comparados vía `sdd._canonicalizar_nombre_paquete`
+    en ambos lados."""
+    dependencias_control = control.get("dependencias_preaprobadas", [])
+
+    capas = (resolver_project_config(repo_root), resolver_local_override(repo_root))
+    sets_restriccion = []
+    for capa in capas:
+        valor = capa.get("dependencias_preaprobadas")
+        if isinstance(valor, list):
+            sets_restriccion.append(
+                {
+                    sdd._canonicalizar_nombre_paquete(entrada.get("nombre", ""))
+                    for entrada in valor
+                    if isinstance(entrada, dict)
+                }
+            )
+
+    if not sets_restriccion:
+        return dependencias_control
+
+    resultado = []
+    for entrada in dependencias_control:
+        nombre_canonico = sdd._canonicalizar_nombre_paquete(entrada.get("nombre", ""))
+        if all(nombre_canonico in permitidos for permitidos in sets_restriccion):
+            resultado.append(entrada)
+    return resultado
+
+
+def _construir_spec_pip(nombre: str, version: str) -> str:
+    """`'<nombre>==<versión>'`, el único token final que acepta
+    `allowlist._evaluar_forma_dependency_install` (R24/R37: pin exacto, el
+    rango aprobado NUNCA se serializa hacia pip -- acá ya se recibió una
+    `version` exacta, no un rango)."""
+    return f"{nombre}=={version}"
+
+
+def _capturar_evidencia_entorno(nombre: str) -> dict:
+    """Snapshot best-effort vía `importlib.metadata` (stdlib, sin dependencia
+    nueva, R33/R38): versión previa instalada de `nombre` (`None` si no
+    estaba instalado) + el set de nombres de distribuciones instaladas (para
+    comparar pre/post, R39). Nunca lanza: cualquier error de
+    `importlib.metadata` se trata como 'no determinable' (versión previa
+    `None`, set vacío) -- no bloquea la instalación por un problema de
+    lectura del entorno."""
+    try:
+        version_previa = importlib_metadata.version(nombre)
+    except importlib_metadata.PackageNotFoundError:
+        version_previa = None
+    except Exception:  # noqa: BLE001 - best-effort, nunca bloquea
+        version_previa = None
+
+    try:
+        distribuciones = {d.name for d in importlib_metadata.distributions() if d.name}
+    except Exception:  # noqa: BLE001 - best-effort
+        distribuciones = set()
+
+    return {"version_previa": version_previa, "distribuciones": distribuciones}
+
+
+def cmd_dependency_install(args: argparse.Namespace) -> int:
+    """`ds_guard dependency install --change-id <id> --nombre <n> --version
+    <v>` (M11, T3b-2 de 20260930-project-extension-and-installer-
+    integration): clasifica ANTES de construir cualquier `ExecutionRequest`
+    (R25), resuelve el intérprete del `.venv` del proyecto (R27/R34),
+    construye el comando cerrado de 6 tokens (R24/R37) y lo ejecuta vía
+    `_ejecutar_exec_comun` con `omitir_gate_por_artefacto=True` (reuso del
+    runtime gobernado de Change 2, sin pasar por el gate de aprobación-por-
+    artefacto genérico -- fix aplicado por el Lead tras el reporte del
+    writer: sin esto, `supervised` quedaba denegado siempre, ver docstring
+    de `_ejecutar_exec_comun`).
+
+    Nota de diseño (deviación documentada respecto del pseudocódigo del
+    encargo, ver reporte final): `approval_override` solo se construye como
+    dict cuando el modo efectivo es `"supervised"` -- en `"autonomous"` se
+    deja `None`. Motivo: `leadrun_core.ExecutionRecord` (Change 2, no
+    tocado) exige `approval is None` cuando `mode == "autonomous"`
+    (invariante ya usado por las otras 3 formas: en autonomous, `_resolver_
+    aprobacion_exec` siempre devuelve `approval=None`) -- pasar el dict de
+    `dependency_preapproval` incondicionalmente rompería esa invariante y
+    haría fallar CADA instalación en modo autonomous (el caso de uso
+    principal de M11), vía una excepción capturada silenciosamente por
+    `leadrun_runtime.ejecutar` (`record=None`, `LEADRUN-RUNTIME` FAIL)."""
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+
+    # R35: forma del nombre, ANTES de canonicalizar/clasificar.
+    if not sdd.validar_forma_nombre_paquete(args.nombre):
+        print(
+            f"Nombre de paquete inválido o con forma no soportada: {args.nombre!r} "
+            "(sin URL/path/VCS/extras/múltiples paquetes/metacaracteres).",
+            file=sys.stderr,
+        )
+        return 2
+
+    nombre_canonico = sdd._canonicalizar_nombre_paquete(args.nombre)
+
+    # R26: dependencias_efectivas, con nombres canonicalizados en ambos
+    # lados antes de clasificar (R36 -- clasificar_dependencia en sí NO
+    # canonicaliza, recibe los valores ya canonicalizados).
+    deps_efectivas = dependencias_efectivas(control, repo_root)
+    deps_efectivas_canonicas = [
+        {"nombre": sdd._canonicalizar_nombre_paquete(d.get("nombre", "")), "rango": d.get("rango", "")}
+        for d in deps_efectivas
+        if isinstance(d, dict)
+    ]
+
+    # R25: clasificación ANTES de construir cualquier ExecutionRequest.
+    clasificacion = sdd.clasificar_dependencia(nombre_canonico, args.version, deps_efectivas_canonicas)
+    if clasificacion != "no_stop":
+        print(
+            f"Dependencia rechazada (clasificación: {clasificacion}): "
+            f"{args.nombre}=={args.version} no está pre-aprobada dentro del rango vigente.",
+            file=sys.stderr,
+        )
+        return 2
+
+    # R27/R34: intérprete construido por el runtime, NUNCA recibido libre
+    # (este subcomando no tiene ningún flag --interpreter). Normalizado acá
+    # mismo (`leadrun_allowlist.normalizar_interprete`): a diferencia de
+    # `exec script/pytest/notebook` (donde el LLAMADOR humano/Lead ya pasa
+    # `--interpreter` normalizado por convención, ver
+    # `tools/tests/test_ds_guard_exec.py`), acá es `ds_guard.py` quien
+    # construye el intérprete, así que es quien debe normalizarlo antes de
+    # usarlo como `request.interpreter` -- si no, `evaluar_comando` compara
+    # `argv[0]` YA normalizado internamente contra un `interprete_autorizado`
+    # sin normalizar y rechaza por "intérprete no autorizado" pese a ser la
+    # misma ruta (bug encontrado por test, corregido acá).
+    leadrun_allowlist_mod = _importar_perezoso("leadrun", "allowlist")
+    if leadrun_allowlist_mod is None:
+        print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
+        return 3
+    venv_dir = launcher_common.resolver_venv_dir(repo_root)
+    interprete = launcher_common.ruta_interprete_venv(repo_root, venv_dir)
+    interprete_str = leadrun_allowlist_mod.normalizar_interprete(str(interprete))
+
+    # R24/R37: argv fijo de 6 tokens, versión EXACTA (nunca el rango).
+    spec = _construir_spec_pip(args.nombre, args.version)
+    argv = [interprete_str, "-m", "pip", "install", "--no-deps", spec]
+
+    # `modo` (para el ExecutionRecord) sin pasar por el gate de aprobación-
+    # por-artefacto genérico (R25 ya autorizó esta acción puntual).
+    modo, error_modo = _resolver_modo_autonomia(repo_root)
+    if error_modo:
+        print(f"No se pudo resolver el modo de autonomía: {error_modo}", file=sys.stderr)
+        return 2
+
+    # R28: approval compuesto acá, referencia a la pre-aprobación (sin
+    # ApprovalRef nueva por instalación individual) -- solo en modo
+    # supervised, ver docstring de esta función.
+    approval_override = None
+    if modo == "supervised":
+        approval_override = {
+            "tipo": "dependency_preapproval",
+            "dependencia": {"nombre": args.nombre, "version": args.version},
+            "declarado_en": "proposal.md",
+        }
+
+    # R38: evidencia de entorno PRE-instalación.
+    evidencia_pre = _capturar_evidencia_entorno(args.nombre)
+
+    artefacto = f"dependency:{nombre_canonico}"
+    # `hash_comando` no se usa para ningún gate de aprobación en este
+    # subcomando (ver `approval_override` arriba) -- se pasa igual a
+    # `_ejecutar_exec_comun` porque su firma lo exige, con un valor
+    # determinista y trazable (no un placeholder vacío).
+    hash_comando = hashlib.sha256(spec.encode("utf-8")).hexdigest()
+
+    # `_ejecutar_exec_comun` arma el `ExecutionRequest` a partir de
+    # `args.interpreter`/`args.timeout` -- este subcomando no expone esos
+    # flags al usuario (R31/R34), se inyectan acá con el valor ya resuelto /
+    # el mismo default que ya usa `exec script` (`--timeout`, default 600).
+    args.interpreter = interprete_str
+    args.timeout = getattr(args, "timeout", None) or 600
+
+    info_salida: dict = {}
+    codigo_salida = _ejecutar_exec_comun(
+        args,
+        repo_root,
+        control,
+        control_path,
+        "dependency_install",
+        argv,
+        artefacto,
+        hash_comando,
+        approval_override=approval_override,
+        omitir_gate_por_artefacto=True,
+        modo_resuelto=modo,
+        info_salida=info_salida,
+    )
+
+    # R29/R38/R39 (hallazgo del reviewer T8, ciclo 2, corregido): antes, un
+    # `codigo_salida != 0` retornaba ACÁ MISMO, saltando por completo la
+    # revalidación (R29), la detección de instalaciones inesperadas (R39) y
+    # la persistencia de evidencia (R38) -- exactamente el caso donde esa
+    # evidencia importa más (una instalación que falló a mitad de camino,
+    # posiblemente con efectos secundarios, es la que más necesita quedar
+    # documentada para revisión humana). Ninguno de R38/R39/`tasks.md`
+    # condiciona esta captura al éxito de la instalación. Ahora se captura
+    # SIEMPRE que hubo una ejecución real (`record is not None` -- si
+    # `_ejecutar_exec_comun` rechazó la solicitud ANTES de ejecutar nada,
+    # por allowlist o infraestructura, no hay nada que capturar/persistir),
+    # y el exit code devuelto al final sigue siendo el real de la
+    # instalación, nunca enmascarado como éxito.
+    record = info_salida.get("record")
+    resultado_r29 = "ok"
+    inesperadas: list = []
+    if record is not None:
+        evidencia_post = _capturar_evidencia_entorno(args.nombre)
+        if codigo_salida != 0:
+            resultado_r29 = "instalacion_fallida"
+        elif evidencia_post["version_previa"] != args.version:
+            resultado_r29 = "version_no_coincide"
+            print(
+                f"ADVERTENCIA (R29): versión efectivamente instalada "
+                f"({evidencia_post['version_previa']!r}) no coincide con la solicitada "
+                f"({args.version!r}) -- evidencia para revisión humana, instalación YA "
+                "aplicada, no se revierte.",
+                file=sys.stderr,
+            )
+
+        # R39: diferencia inesperada en el set de distribuciones instaladas
+        # (más allá del propio paquete solicitado) -- reportada como
+        # `CheckResult(kind=technical_error)`, SIN STOP nuevo.
+        esperado = evidencia_pre["distribuciones"] | {nombre_canonico}
+        inesperadas = sorted(
+            {sdd._canonicalizar_nombre_paquete(d) for d in evidencia_post["distribuciones"]}
+            - {sdd._canonicalizar_nombre_paquete(d) for d in esperado}
+        )
+        if inesperadas:
+            resultado_check_r39 = checks.CheckResult(
+                checks.STATUS_WARN,
+                "DEPENDENCY-UNEXPECTED-INSTALL",
+                f"--no-deps no evitó instalaciones adicionales inesperadas: {inesperadas} -- "
+                "evidencia para revisión humana, sin STOP nuevo (R39).",
+                kind=checks.KIND_TECHNICAL_ERROR,
+            )
+            _imprimir_check_results([resultado_check_r39], args.json, "dependency install (R39)")
+
+        # R38: evidencia de entorno pre/post persistida, trazable junto a la
+        # referencia de `ExecutionRecord` ya existente (R28).
+        referencia_preaprobacion = approval_override or {
+            "tipo": "dependency_preapproval",
+            "dependencia": {"nombre": args.nombre, "version": args.version},
+            "declarado_en": "proposal.md",
+        }
+        evidencia = {
+            "paquete": args.nombre,
+            "version_previa": evidencia_pre["version_previa"],
+            "version_solicitada": args.version,
+            "version_posterior": evidencia_post["version_previa"],
+            "resultado": resultado_r29,
+            "distribuciones_inesperadas": inesperadas,
+            "referencia_preaprobacion": referencia_preaprobacion,
+            "execution_id": record["execution_id"],
+            "duration_seconds": record["duration_seconds"],
+            "exit_code": record["exit_code"],
+        }
+        ruta_evidencia = (
+            repo_root / ".harmessi" / "executions" / record["execution_id"] / "dependency_evidence.json"
+        )
+        ruta_evidencia.parent.mkdir(parents=True, exist_ok=True)
+        core.escribir_texto_atomico(
+            ruta_evidencia,
+            json.dumps(evidencia, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+        )
+
+    return codigo_salida
+
 
 def cmd_dependency_classify(args: argparse.Namespace) -> int:
     try:
@@ -1293,6 +1745,56 @@ def _registrar_evidencia_calidad(
 # patrón de composición que `_access_check_real` (Change 1 T6): imports
 # perezosos, fail-closed, nunca lanza.
 
+def _resolver_modo_autonomia(repo_root: Path) -> tuple:
+    """`(modo, error_motivo)`. `error_motivo` es `None` si se resolvió
+    correctamente (incluido el caso 'autonomy no declarada -> supervised por
+    default'); un string no vacío si hubo un fallo de infraestructura real
+    (guardrails.json ilegible/corrupto/versión no soportada, o 'autonomy'
+    declarada pero `tools.autonomy` no instalado) -- en ese caso `modo` es
+    `"supervised"` (fail-closed) pero el llamador debe tratarlo como un
+    fallo bloqueante, no como un 'supervised normal'. Extraído de la primera
+    mitad de `_resolver_aprobacion_exec` (Change 2/3) como refactor puro,
+    sin cambiar su comportamiento externo -- reusado acá por
+    `cmd_dependency_install` (R25: no pasa por el gate de aprobación-por-
+    artefacto genérico, pero sí necesita `modo` para el `ExecutionRecord` y
+    para no ocultar un fallo real de infraestructura)."""
+    pathguard_mod = _importar_perezoso("dsguard", "pathguard")
+    if pathguard_mod is None:
+        return "supervised", "tools.dsguard.pathguard no disponible: denegado (fail-closed)"
+
+    try:
+        pathguard_mod.cargar_config(repo_root)
+    except pathguard_mod.ConfigGuardrailsError as exc:
+        return "supervised", f"guardrails.json inválido o versión no soportada: {exc}"
+
+    ruta_config = Path(repo_root) / pathguard_mod.RUTA_CONFIG_RELATIVA
+    guardrails_dict: dict = {}
+    if ruta_config.exists():
+        try:
+            guardrails_dict = json.loads(ruta_config.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            return "supervised", f"guardrails.json ilegible: {type(exc).__name__}"
+        if not isinstance(guardrails_dict, dict):
+            return "supervised", "guardrails.json no contiene un objeto JSON: denegado"
+
+    if "autonomy" not in guardrails_dict:
+        modo = "supervised"
+    else:
+        autonomy_mod = _importar_perezoso("autonomy", "policy")
+        autonomy_core_mod = _importar_perezoso("autonomy", "core")
+        if autonomy_mod is None or autonomy_core_mod is None:
+            return "supervised", (
+                "guardrails.json declara 'autonomy' pero tools.autonomy no está "
+                "instalado en este stage: denegado (fail-closed)"
+            )
+        policy, _hallazgos = autonomy_mod.parse_autonomy_policy(
+            guardrails_dict, pathguard_mod.POLICY_VERSION_MAX
+        )
+        modo = policy.mode
+
+    return modo, None
+
+
 def _resolver_aprobacion_exec(repo_root: Path, control_data: dict, artefacto: str, hash_comando: str):
     """Devuelve `(permitido, executed_by, mode, approval, motivo)` (R12/R14).
 
@@ -1308,39 +1810,9 @@ def _resolver_aprobacion_exec(repo_root: Path, control_data: dict, artefacto: st
       `nbrunner.manifest.validar_aprobacion`, `modo="execute"` siempre).
     - Nunca lanza (fail-closed ante cualquier error inesperado)."""
     try:
-        pathguard_mod = _importar_perezoso("dsguard", "pathguard")
-        if pathguard_mod is None:
-            return False, None, "supervised", None, "tools.dsguard.pathguard no disponible: denegado (fail-closed)"
-
-        try:
-            pathguard_mod.cargar_config(repo_root)
-        except pathguard_mod.ConfigGuardrailsError as exc:
-            return False, None, "supervised", None, f"guardrails.json inválido o versión no soportada: {exc}"
-
-        ruta_config = Path(repo_root) / pathguard_mod.RUTA_CONFIG_RELATIVA
-        guardrails_dict: dict = {}
-        if ruta_config.exists():
-            try:
-                guardrails_dict = json.loads(ruta_config.read_text(encoding="utf-8"))
-            except (OSError, ValueError) as exc:
-                return False, None, "supervised", None, f"guardrails.json ilegible: {type(exc).__name__}"
-            if not isinstance(guardrails_dict, dict):
-                return False, None, "supervised", None, "guardrails.json no contiene un objeto JSON: denegado"
-
-        if "autonomy" not in guardrails_dict:
-            modo = "supervised"
-        else:
-            autonomy_mod = _importar_perezoso("autonomy", "policy")
-            autonomy_core_mod = _importar_perezoso("autonomy", "core")
-            if autonomy_mod is None or autonomy_core_mod is None:
-                return False, None, "supervised", None, (
-                    "guardrails.json declara 'autonomy' pero tools.autonomy no está "
-                    "instalado en este stage: denegado (fail-closed)"
-                )
-            policy, _hallazgos = autonomy_mod.parse_autonomy_policy(
-                guardrails_dict, pathguard_mod.POLICY_VERSION_MAX
-            )
-            modo = policy.mode
+        modo, error_modo = _resolver_modo_autonomia(repo_root)
+        if error_modo is not None:
+            return False, None, modo, None, error_modo
 
         autonomy_core_mod = _importar_perezoso("autonomy", "core")
         if autonomy_core_mod is None:
@@ -1380,6 +1852,47 @@ def _leadrun_modulos():
     return leadrun_core, leadrun_allowlist, leadrun_runtime
 
 
+def _capturar_fingerprints_fuentes_externas(repo_root: Path) -> dict:
+    """Fingerprint tamaño+mtime de TODAS las fuentes declaradas en
+    `fuentes_externas` (M9/M10, `.harmessi/local-overrides.json`) -- R14 de
+    M12 (`20260930-project-extension-and-installer-integration`). Sin hash de
+    contenido en esta versión (deuda explícita documentada, R14 lo permite:
+    "nunca por default"). `{}` si no hay ninguna fuente declarada (cero
+    overhead). Cada entrada: `{"existe": True, "size": int, "mtime": float}`
+    si el archivo existe y es legible; `{"existe": False}` si no (el archivo
+    desapareció -- también es información relevante para R15)."""
+    fuentes = pathguard.leer_fuentes_externas_declaradas(repo_root)
+    resultado: dict = {}
+    for source_id, declaracion in fuentes.items():
+        if not isinstance(declaracion, dict):
+            continue
+        ruta_str = declaracion.get("path")
+        if not isinstance(ruta_str, str) or not ruta_str:
+            continue
+        ruta = Path(ruta_str)
+        try:
+            if not ruta.exists():
+                resultado[source_id] = {"existe": False}
+                continue
+            stat = ruta.stat()
+            resultado[source_id] = {"existe": True, "size": stat.st_size, "mtime": stat.st_mtime}
+        except OSError:
+            resultado[source_id] = {"existe": False}
+    return resultado
+
+
+def _comparar_fingerprints(pre: dict, post: dict) -> list:
+    """Compara fingerprints pre/post (R15): devuelve una lista de
+    `(source_id, detalle_str)` para cada fuente cuyo fingerprint cambió
+    (tamaño, mtime, o existencia). Vacía si no hubo ningún cambio."""
+    discrepancias = []
+    for source_id, valor_pre in pre.items():
+        valor_post = post.get(source_id, {"existe": False})
+        if valor_pre != valor_post:
+            discrepancias.append((source_id, f"antes={valor_pre!r} despues={valor_post!r}"))
+    return discrepancias
+
+
 def _ejecutar_exec_comun(
     args: argparse.Namespace,
     repo_root: Path,
@@ -1389,12 +1902,62 @@ def _ejecutar_exec_comun(
     argv: list,
     artefacto: str,
     hash_comando,
+    approval_override: "Optional[dict]" = None,
+    omitir_gate_por_artefacto: bool = False,
+    modo_resuelto: "Optional[str]" = None,
+    info_salida: "Optional[dict]" = None,
 ) -> int:
     """Pasos 4-9 comunes a `exec script|pytest|notebook` (ver encargo del
     Lead): construye el `ExecutionRequest`, evalúa la allowlist (defensa en
     profundidad #1: si rechaza, exit 2 SIN evaluar aprobación ni ejecutar),
     resuelve la aprobación (`_resolver_aprobacion_exec`) y, si está
-    permitido, delega en `leadrun.runtime.ejecutar`."""
+    permitido, delega en `leadrun.runtime.ejecutar`.
+
+    `approval_override`/`omitir_gate_por_artefacto` (T3b-2, M11 `dependency
+    install`, R25/R28 -- corrección post-reporte del hallazgo #3 del writer:
+    el gate por-artefacto de `_resolver_aprobacion_exec` exige, en
+    `supervised`, una aprobación humana registrada vía `nbrunner_manifest.
+    validar_aprobacion` para `artefacto` -- mecanismo pensado para archivos
+    reales del repo (`cmd_approve` exige que `artefacto` exista como archivo
+    bajo `change_dir`), no aplicable a un par nombre/versión de dependencia.
+    Sin este bypass, `dependency install` quedaría denegado SIEMPRE en
+    `supervised`, aunque la dependencia esté pre-aprobada y clasifique
+    `no_stop` -- contradice R25 ("la clasificación autoriza la acción").
+    Cuando `omitir_gate_por_artefacto=True`: NO se llama a
+    `_resolver_aprobacion_exec` en absoluto (ni su rama de aprobación humana
+    ni su rama autonomous) -- en cambio, `modo` se resuelve vía
+    `_resolver_modo_autonomia` (mismo helper, sin la rama de aprobación-por-
+    artefacto), `executed_by` queda fijo en `"lead"` (esta forma nunca la
+    ejecuta un humano) y `approval` es directamente `approval_override` (el
+    llamador, `cmd_dependency_install`, ya decidió su contenido -- `None` en
+    autonomous por la invariante de `ExecutionRecord`, el dict de
+    `dependency_preapproval` en supervised). Un error de infraestructura real
+    de `_resolver_modo_autonomia` (guardrails.json corrupto, `tools.autonomy`
+    no instalado) SIGUE bloqueando (exit 2), no se oculta. Ningún call site
+    existente (`cmd_exec_script`/`cmd_exec_pytest`/`cmd_exec_notebook`) pasa
+    `omitir_gate_por_artefacto=True` -- default `False`, cero cambio de
+    comportamiento para esas 3 formas (que siguen pasando por el gate
+    genérico completo, incluida la rama de aprobación humana en
+    supervised).
+
+    `modo_resuelto` (hallazgo #3 del reviewer T8, corregido): cuando
+    `omitir_gate_por_artefacto=True` Y el llamador ya resolvió `modo` por su
+    cuenta (p. ej. `cmd_dependency_install`, que necesita conocerlo ANTES de
+    esta llamada para decidir el contenido de `approval_override`), se lo
+    pasa acá en vez de dejar que esta función lo vuelva a resolver -- evita
+    una doble llamada a `_resolver_modo_autonomia` y la ventana TOCTOU
+    teórica que eso abría (si `guardrails.json` cambiara entre ambas
+    resoluciones, `approval_override` podría quedar construido para un modo
+    distinto del que finalmente se usa). Si es `None` (default), se resuelve
+    acá como antes -- backward compatible.
+
+    `info_salida` (hallazgo #2 del reviewer T8, R38): dict mutable opcional
+    que el llamador provee para recibir de vuelta `{"record": ...}` (la
+    misma forma que `leadrun_runtime.ejecutar` devuelve) sin cambiar el tipo
+    de retorno de esta función (sigue siendo `int`, el exit code) -- usado
+    por `cmd_dependency_install` para persistir evidencia de entorno junto
+    al `execution_id` real (R38), sin tener que recalcularlo de forma
+    duplicada/frágil."""
     leadrun_core, leadrun_allowlist, leadrun_runtime = _leadrun_modulos()
     if leadrun_core is None:
         print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
@@ -1421,12 +1984,32 @@ def _ejecutar_exec_comun(
         print(f"Comando rechazado por la allowlist: {motivo_forma}", file=sys.stderr)
         return 2
 
-    permitido_aprob, executed_by, modo, approval, motivo_aprob = _resolver_aprobacion_exec(
-        repo_root, control, artefacto, hash_comando
-    )
-    if not permitido_aprob:
-        print(f"Aprobación denegada: {motivo_aprob}", file=sys.stderr)
-        return 2
+    if omitir_gate_por_artefacto:
+        if modo_resuelto is not None:
+            modo = modo_resuelto
+        else:
+            modo, error_modo = _resolver_modo_autonomia(repo_root)
+            if error_modo is not None:
+                print(f"Aprobación denegada: {error_modo}", file=sys.stderr)
+                return 2
+        executed_by = "lead"
+        approval = approval_override
+    else:
+        permitido_aprob, executed_by, modo, approval, motivo_aprob = _resolver_aprobacion_exec(
+            repo_root, control, artefacto, hash_comando
+        )
+        if not permitido_aprob:
+            print(f"Aprobación denegada: {motivo_aprob}", file=sys.stderr)
+            return 2
+
+        if approval_override is not None:
+            approval = approval_override
+
+    # Fingerprint pre-ejecución de fuentes externas declaradas (R14 de M12,
+    # `20260930-project-extension-and-installer-integration`): captura ANTES
+    # de invocar el runtime, compuesto acá mismo (no toca `tools/leadrun/`).
+    # `{}` (cero overhead) si no hay ninguna fuente declarada.
+    fingerprints_pre = _capturar_fingerprints_fuentes_externas(repo_root)
 
     resultado = leadrun_runtime.ejecutar(request, repo_root, executed_by, modo, approval, control)
 
@@ -1472,6 +2055,54 @@ def _ejecutar_exec_comun(
         )
         core.escribir_control(control_path, control)
 
+    # Fingerprint post-ejecución (R15 de M12): recalculado solo si había algo
+    # declarado (`fingerprints_pre` no vacío -- cero overhead si no hay
+    # fuentes externas declaradas). Si `tools.autonomy.core` no está
+    # disponible en este stage, se omite todo el chequeo de integridad --
+    # fail-open para este DIAGNÓSTICO post-hoc (no para la ejecución: la
+    # ejecución ya ocurrió, esto es evidencia adicional, no un gate).
+    if fingerprints_pre:
+        autonomy_core_mod = _importar_perezoso("autonomy", "core")
+        if autonomy_core_mod is not None:
+            fingerprints_post = _capturar_fingerprints_fuentes_externas(repo_root)
+            discrepancias = _comparar_fingerprints(fingerprints_pre, fingerprints_post)
+            if discrepancias and resultado.get("record") is not None:
+                codigo_data_loss_risk = next(
+                    e.code for e in autonomy_core_mod.STOP_CATALOG if e.key == "data_loss_risk"
+                )
+                for source_id, detalle in discrepancias:
+                    resultado["checks"].append(
+                        checks.CheckResult(
+                            checks.STATUS_FAIL,
+                            codigo_data_loss_risk,
+                            f"La fuente externa {source_id!r} cambió durante la ventana "
+                            f"gobernada de esta ejecución ({detalle}) -- evidencia para "
+                            "revisión humana, no una afirmación de causalidad (pudo "
+                            "cambiarla un proceso externo).",
+                        ).to_dict()
+                    )
+                # R16: evidencia LOCAL junto al `ExecutionRecord`, nunca
+                # portable (nunca en `DataContract`/`SourceObservation`).
+                execution_id = resultado["record"]["execution_id"]
+                ruta_fingerprints = (
+                    repo_root / ".harmessi" / "executions" / execution_id / "fingerprints.json"
+                )
+                ruta_fingerprints.parent.mkdir(parents=True, exist_ok=True)
+                core.escribir_texto_atomico(
+                    ruta_fingerprints,
+                    json.dumps(
+                        {
+                            "pre": fingerprints_pre,
+                            "post": fingerprints_post,
+                            "discrepancias": dict(discrepancias),
+                        },
+                        indent=2,
+                        sort_keys=True,
+                        ensure_ascii=False,
+                    )
+                    + "\n",
+                )
+
     # `resultado["checks"]` son dicts (`CheckResult.to_dict()`); se
     # reconstruyen como `CheckResult` para reusar `_imprimir_check_results`/
     # `checks.exit_code` sin duplicar esa lógica de formateo/exit code.
@@ -1496,6 +2127,9 @@ def _ejecutar_exec_comun(
         _imprimir_check_results(resultados_check, False, f"exec {command_form}")
         if resultado.get("record") is not None:
             print(f"\nexecution_id: {resultado['record']['execution_id']}")
+
+    if info_salida is not None:
+        info_salida["record"] = resultado.get("record")
 
     return checks.exit_code(resultados_check)
 
@@ -1736,8 +2370,19 @@ def cmd_source_observe(args: argparse.Namespace) -> int:
     if args.as_of is not None:
         request["as_of"] = args.as_of
 
+    options_extra = {"_repo_root": str(repo_root)}
+    local_override = resolver_local_override(repo_root)
+    fuentes_externas = local_override.get("fuentes_externas")
+    if isinstance(fuentes_externas, dict):
+        declaracion = fuentes_externas.get(args.source_id)
+        if isinstance(declaracion, dict):
+            ruta_externa = declaracion.get("path")
+            if isinstance(ruta_externa, str) and ruta_externa:
+                options_extra["ruta_externa_absoluta"] = ruta_externa
+
     observation, resultados = ds_runtime.observe_source(
-        repo_root, args.source_id, request, access_check=_access_check_real(repo_root)
+        repo_root, args.source_id, request, access_check=_access_check_real(repo_root),
+        options_extra=options_extra,
     )
 
     observation_id = None
@@ -3242,10 +3887,9 @@ def construir_parser() -> argparse.ArgumentParser:
     p_dependency = subparsers.add_parser(
         "dependency",
         help=(
-            "Clasificación de dependencias del proyecto pre-aprobadas (M11, "
-            "adenda post-cierre 2026-09-30 de 20260930-autonomous-sdd-and-"
-            "remediation). Solo clasificación STOP/no-STOP, sin vía de "
-            "instalación real."
+            "Clasificación (M11, Change 3) e instalación gobernada aditiva "
+            "(M11, resolución 2026-09-30, Change 4) de dependencias del "
+            "proyecto pre-aprobadas."
         ),
     )
     dependency_sub = p_dependency.add_subparsers(dest="subcomando", required=True)
@@ -3263,6 +3907,39 @@ def construir_parser() -> argparse.ArgumentParser:
     p_dependency_classify.add_argument("--version", required=True)
     p_dependency_classify.add_argument("--json", action="store_true")
     p_dependency_classify.set_defaults(func=cmd_dependency_classify)
+
+    p_dependency_install = dependency_sub.add_parser(
+        "install",
+        help=(
+            "Instala una dependencia del proyecto pre-aprobada (M11, resolución 2026-09-30): "
+            "clasifica (R25), resuelve el .venv del proyecto (R27/R34), construye el comando "
+            "cerrado -m pip install --no-deps <nombre>==<versión> (R24/R37) y lo ejecuta vía el "
+            "runtime gobernado de Change 2. Sin --interpreter, sin ningún flag libre de pip "
+            "(R31/R34)."
+        ),
+    )
+    p_dependency_install.add_argument("--change-id", required=True, dest="change_id")
+    p_dependency_install.add_argument("--nombre", required=True)
+    p_dependency_install.add_argument("--version", required=True)
+    p_dependency_install.add_argument("--json", action="store_true")
+    p_dependency_install.set_defaults(func=cmd_dependency_install)
+
+    p_output_roots = subparsers.add_parser(
+        "output-roots",
+        help=(
+            "Output roots declarados para que código del proyecto los consulte (R18, M12). "
+            "Control COOPERATIVO, no sandbox: informativo, no intercepta escrituras arbitrarias, "
+            "no reemplaza pathguard ni el fingerprint pre/post de fuentes externas."
+        ),
+    )
+    output_roots_sub = p_output_roots.add_subparsers(dest="subcomando", required=True)
+
+    p_output_roots_list = output_roots_sub.add_parser(
+        "list",
+        help="Imprime los output roots declarados en project-config.json/local-overrides.json (unión).",
+    )
+    p_output_roots_list.add_argument("--json", action="store_true")
+    p_output_roots_list.set_defaults(func=cmd_output_roots_list)
 
     p_source = subparsers.add_parser(
         "source",

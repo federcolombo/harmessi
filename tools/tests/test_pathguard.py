@@ -664,6 +664,124 @@ class TestEvaluarShell(unittest.TestCase):
         self.assertTrue(permitido)
 
 
+class TestFuentesExternasReadOnly(unittest.TestCase):
+    """M9 (Change 4/T4b), R7: excepción SOLO para `Read`/`Grep` sobre una
+    fuente externa declarada en `.harmessi/local-overrides.json`. El
+    bloqueo de escritura hacia rutas externas ya existe hoy sin tocar
+    nada (`resolver_ruta_relativa` las marca como fuera del repo) -- estos
+    tests confirman que la excepción nueva no lo afecta."""
+
+    def setUp(self):
+        self.repo = _crear_repo_temporal()
+        self.externo_dir = _crear_repo_temporal("pathguard_test_externo_m9_")
+        self.archivo_externo = self.externo_dir / "fuente.csv"
+        self.archivo_externo.write_text("col_a,col_b\n1,2\n", encoding="utf-8")
+        self.config = pathguard.ConfigGuardrails()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+        shutil.rmtree(self.externo_dir, ignore_errors=True)
+
+    def _declarar_fuente_externa(self, source_id: str, ruta: Path):
+        dir_harmessi = self.repo / ".harmessi"
+        dir_harmessi.mkdir(parents=True, exist_ok=True)
+        (dir_harmessi / "local-overrides.json").write_text(
+            json.dumps({"fuentes_externas": {source_id: {"path": str(ruta)}}}, indent=2),
+            encoding="utf-8",
+        )
+
+    def _evaluar(self, tool_name, tool_input):
+        payload = {"tool_name": tool_name, "tool_input": tool_input}
+        return pathguard.evaluar_tool_call(payload, self.config, self.repo)
+
+    def test_read_sobre_fuente_externa_declarada_permitido(self):
+        # Given una fuente externa declarada read-only
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        # When el Lead intenta leerla
+        permitido, motivo = self._evaluar("Read", {"file_path": str(self.archivo_externo)})
+        # Then se permite
+        self.assertTrue(permitido)
+        self.assertIn("Fuente externa de solo lectura", motivo)
+
+    def test_write_sobre_fuente_externa_declarada_denegado(self):
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        permitido, motivo = self._evaluar("Write", {"file_path": str(self.archivo_externo)})
+        self.assertFalse(permitido)
+        self.assertIn("fuera del repositorio", motivo)
+
+    def test_edit_sobre_fuente_externa_declarada_denegado(self):
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        permitido, _ = self._evaluar("Edit", {"file_path": str(self.archivo_externo)})
+        self.assertFalse(permitido)
+
+    def test_notebookedit_sobre_fuente_externa_declarada_denegado(self):
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        permitido, _ = self._evaluar("NotebookEdit", {"notebook_path": str(self.archivo_externo)})
+        self.assertFalse(permitido)
+
+    def test_read_sobre_ruta_externa_no_declarada_denegado(self):
+        # Se declara una fuente distinta de la que se intenta leer.
+        otra = self.externo_dir / "otra.csv"
+        otra.write_text("x\n", encoding="utf-8")
+        self._declarar_fuente_externa("clientes", otra)
+        permitido, motivo = self._evaluar("Read", {"file_path": str(self.archivo_externo)})
+        self.assertFalse(permitido)
+        self.assertIn("fuera del repositorio", motivo)
+
+    def test_read_sin_local_overrides_json_denegado(self):
+        # No hay .harmessi/local-overrides.json en absoluto: sin declaración,
+        # no hay excepción posible -- fail-closed.
+        permitido, motivo = self._evaluar("Read", {"file_path": str(self.archivo_externo)})
+        self.assertFalse(permitido)
+        self.assertIn("fuera del repositorio", motivo)
+
+    def test_read_con_local_overrides_json_corrupto_denegado(self):
+        dir_harmessi = self.repo / ".harmessi"
+        dir_harmessi.mkdir(parents=True, exist_ok=True)
+        (dir_harmessi / "local-overrides.json").write_text("{ esto no es json", encoding="utf-8")
+        permitido, motivo = self._evaluar("Read", {"file_path": str(self.archivo_externo)})
+        self.assertFalse(permitido)
+        self.assertIn("fuera del repositorio", motivo)
+
+    def test_grep_sobre_fuente_externa_declarada_permitido(self):
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        payload = {"tool_name": "Grep", "tool_input": {"pattern": "col_a", "path": str(self.archivo_externo)}}
+        permitido, motivo = pathguard.evaluar_tool_call(payload, self.config, self.repo)
+        self.assertTrue(permitido)
+        self.assertIn("Fuente externa de solo lectura", motivo)
+
+    def test_read_case_insensitive_en_casing_de_la_ruta_declarada(self):
+        # La ruta declarada en el override difiere en casing de la ruta
+        # solicitada (comportamiento esperado en Windows/NTFS).
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        ruta_otro_casing = str(self.archivo_externo).upper()
+        permitido, _ = self._evaluar("Read", {"file_path": ruta_otro_casing})
+        self.assertTrue(permitido)
+
+    def test_lector_fuentes_externas_sin_archivo_devuelve_vacio(self):
+        self.assertEqual(pathguard.leer_fuentes_externas_declaradas(self.repo), {})
+
+    def test_lector_fuentes_externas_json_invalido_devuelve_vacio(self):
+        dir_harmessi = self.repo / ".harmessi"
+        dir_harmessi.mkdir(parents=True, exist_ok=True)
+        (dir_harmessi / "local-overrides.json").write_text("no es json", encoding="utf-8")
+        self.assertEqual(pathguard.leer_fuentes_externas_declaradas(self.repo), {})
+
+    def test_lector_fuentes_externas_raiz_no_dict_devuelve_vacio(self):
+        dir_harmessi = self.repo / ".harmessi"
+        dir_harmessi.mkdir(parents=True, exist_ok=True)
+        (dir_harmessi / "local-overrides.json").write_text("[1, 2, 3]", encoding="utf-8")
+        self.assertEqual(pathguard.leer_fuentes_externas_declaradas(self.repo), {})
+
+    def test_ruta_dentro_del_repo_no_pasa_por_el_helper_de_fuentes_externas(self):
+        # Sanity: una ruta dentro del repo sigue su camino normal
+        # (`dentro_del_repo=True`), sin necesidad de ninguna declaración de
+        # fuente externa -- comportamiento existente, no afectado por M9.
+        permitido, motivo = self._evaluar("Read", {"file_path": "README.md"})
+        self.assertTrue(permitido)
+        self.assertNotIn("Fuente externa", motivo)
+
+
 class TestEvaluarToolCallGenerico(unittest.TestCase):
     def setUp(self):
         self.repo = _crear_repo_temporal()

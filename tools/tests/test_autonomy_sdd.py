@@ -408,5 +408,60 @@ class TestCalcularMetricasEficiencia(unittest.TestCase):
         self.assertEqual(metricas["execution_duration_total_seconds"], 0.0)
 
 
+# --- T3b-1 (Change 4, M11): canonicalización PEP 503 + validación de forma ---
+# de nombre de paquete (R35/R36). Funciones puras, sin dependencia de `control`.
+
+
+class TestCanonicalizarNombrePaquete(unittest.TestCase):
+    def test_variantes_de_separador_y_mayusculas_canonicalizan_igual(self):
+        esperado = "my-package"
+        self.assertEqual(sdd._canonicalizar_nombre_paquete("My-Package"), esperado)
+        self.assertEqual(sdd._canonicalizar_nombre_paquete("my_package"), esperado)
+        self.assertEqual(sdd._canonicalizar_nombre_paquete("my.package"), esperado)
+        self.assertEqual(sdd._canonicalizar_nombre_paquete("MY..PACKAGE"), esperado)
+
+
+class TestValidarFormaNombrePaquete(unittest.TestCase):
+    def test_nombre_simple_valido(self):
+        self.assertTrue(sdd.validar_forma_nombre_paquete("requests"))
+        self.assertTrue(sdd.validar_forma_nombre_paquete("my-package"))
+
+    def test_url_rechazada(self):
+        self.assertFalse(sdd.validar_forma_nombre_paquete("https://example.com/pkg"))
+        self.assertFalse(sdd.validar_forma_nombre_paquete("http://example.com/pkg"))
+
+    def test_path_rechazado(self):
+        self.assertFalse(sdd.validar_forma_nombre_paquete("./local/pkg"))
+        self.assertFalse(sdd.validar_forma_nombre_paquete("/abs/path"))
+        self.assertFalse(sdd.validar_forma_nombre_paquete("C:\\pkg"))
+
+    def test_file_uri_rechazada(self):
+        self.assertFalse(sdd.validar_forma_nombre_paquete("file:///path/to/pkg"))
+
+    def test_vcs_rechazado(self):
+        self.assertFalse(sdd.validar_forma_nombre_paquete("git+https://github.com/x/y.git"))
+
+    def test_direct_reference_rechazada(self):
+        self.assertFalse(sdd.validar_forma_nombre_paquete("pkg @ https://example.com/pkg.whl"))
+
+    def test_extras_rechazados(self):
+        self.assertFalse(sdd.validar_forma_nombre_paquete("pkg[extra]"))
+
+    def test_multiples_paquetes_rechazados(self):
+        self.assertFalse(sdd.validar_forma_nombre_paquete("pkg1 pkg2"))
+        self.assertFalse(sdd.validar_forma_nombre_paquete("pkg1,pkg2"))
+
+    def test_metacaracteres_de_shell_rechazados(self):
+        self.assertFalse(sdd.validar_forma_nombre_paquete("pkg;rm -rf /"))
+        self.assertFalse(sdd.validar_forma_nombre_paquete("pkg && echo x"))
+        self.assertFalse(sdd.validar_forma_nombre_paquete("pkg|cat"))
+        self.assertFalse(sdd.validar_forma_nombre_paquete("pkg$(whoami)"))
+
+    def test_vacio_none_no_string_rechazados(self):
+        self.assertFalse(sdd.validar_forma_nombre_paquete(""))
+        self.assertFalse(sdd.validar_forma_nombre_paquete(None))
+        self.assertFalse(sdd.validar_forma_nombre_paquete(123))
+
+
 if __name__ == "__main__":
     unittest.main()
