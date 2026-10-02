@@ -21,7 +21,7 @@ import importlib.metadata as importlib_metadata
 import json
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import NamedTuple, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -1795,8 +1795,22 @@ def _resolver_modo_autonomia(repo_root: Path) -> tuple:
     return modo, None
 
 
-def _resolver_aprobacion_exec(repo_root: Path, control_data: dict, artefacto: str, hash_comando: str):
+def _resolver_aprobacion_exec(
+    repo_root: Path,
+    control_data: dict,
+    artefacto: str,
+    hash_comando: str,
+    hash_legacy: "Optional[str]" = None,
+):
     """Devuelve `(permitido, executed_by, mode, approval, motivo)` (R12/R14).
+
+    `hash_legacy` (R9b/D5 de `20261002-exec-approval-registration`, solo
+    `exec script`): si la aprobación no es vigente con `hash_comando` (v2) y
+    la entrada MÁS RECIENTE del artefacto tiene `algoritmo == "sha256/lf/v1"`,
+    se acepta también `hash_legacy` (hash solo del contenido del script). Una
+    entrada v2 (u otra) con hash distinto NO cae al camino legacy. La
+    aprobación legacy se reporta solo por stderr; `approval` es el mismo dict
+    que la aprobación v2 (sin marca `legacy`).
 
     - `pathguard.cargar_config` inválido/versión no soportada -> denegado
       (fail-closed, mismo criterio que `_access_check_real`).
@@ -1832,6 +1846,21 @@ def _resolver_aprobacion_exec(repo_root: Path, control_data: dict, artefacto: st
             )
             if estado == "vigente":
                 return True, "human", modo, {"tipo": "human_manifest_aprobado"}, ""
+            if hash_legacy is not None:
+                reciente = nbrunner_manifest._aprobacion_mas_reciente(control_data or {}, artefacto)
+                if reciente is not None and reciente.get("algoritmo") == "sha256/lf/v1":
+                    _f_legacy, estado_legacy = nbrunner_manifest.validar_aprobacion(
+                        control_data or {}, artefacto, hash_legacy, modo="execute"
+                    )
+                    if estado_legacy == "vigente":
+                        print(
+                            "aprobación legacy (sha256/lf/v1): no liga argumentos; "
+                            "re-aprobar con 'ds_guard exec approve script'",
+                            file=sys.stderr,
+                        )
+                        # El aviso legacy va solo a stderr: `approval` no lleva marca `legacy`
+                        # (la suite preexistente de exec exige exactamente este dict).
+                        return True, "human", modo, {"tipo": "human_manifest_aprobado"}, ""
             return False, None, modo, None, f"aprobación {estado} para {artefacto!r}"
 
         return False, None, modo, None, f"composición de aprobación no soportada: {decision!r}"
@@ -1893,6 +1922,44 @@ def _comparar_fingerprints(pre: dict, post: dict) -> list:
     return discrepancias
 
 
+def _validar_request_exec(args: argparse.Namespace, command_form: str, argv: list, control: dict, timeout=None):
+    """Arma el `ExecutionRequest` y evalúa la allowlist (R6 de
+    `20261002-exec-approval-registration`). Devuelve `(request, codigo)`:
+    `codigo` es `None` si todo es válido; si no, ya se imprimió el mensaje a
+    stderr y `codigo` es el exit code (2). Compartido por
+    `_ejecutar_exec_comun` y `exec approve` (lo que el runtime rechazaría no
+    puede aprobarse). `timeout=None` usa `args.timeout` si existe, o 600
+    (default de `exec`) en `exec approve`, que no tiene `--timeout`."""
+    leadrun_core, leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
+    if leadrun_core is None:
+        print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
+        return None, 3
+
+    scope = tuple(control.get("alcance", {}).get("rutas_autorizadas", []))
+    if timeout is None:
+        timeout = getattr(args, "timeout", 600)
+
+    try:
+        request = leadrun_core.ExecutionRequest(
+            command_form=command_form,
+            interpreter=args.interpreter,
+            argv=tuple(argv),
+            scope=scope,
+            timeout_seconds=timeout,
+        )
+    except leadrun_core.ExecutionError as exc:
+        print(str(exc), file=sys.stderr)
+        return None, 2
+
+    permitido_forma, _forma, motivo_forma = leadrun_allowlist.evaluar_comando(
+        request.argv, request.scope, request.interpreter
+    )
+    if not permitido_forma:
+        print(f"Comando rechazado por la allowlist: {motivo_forma}", file=sys.stderr)
+        return None, 2
+    return request, None
+
+
 def _ejecutar_exec_comun(
     args: argparse.Namespace,
     repo_root: Path,
@@ -1906,6 +1973,7 @@ def _ejecutar_exec_comun(
     omitir_gate_por_artefacto: bool = False,
     modo_resuelto: "Optional[str]" = None,
     info_salida: "Optional[dict]" = None,
+    hash_legacy: "Optional[str]" = None,
 ) -> int:
     """Pasos 4-9 comunes a `exec script|pytest|notebook` (ver encargo del
     Lead): construye el `ExecutionRequest`, evalúa la allowlist (defensa en
@@ -1963,26 +2031,9 @@ def _ejecutar_exec_comun(
         print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
         return 3
 
-    scope = tuple(control.get("alcance", {}).get("rutas_autorizadas", []))
-
-    try:
-        request = leadrun_core.ExecutionRequest(
-            command_form=command_form,
-            interpreter=args.interpreter,
-            argv=tuple(argv),
-            scope=scope,
-            timeout_seconds=args.timeout,
-        )
-    except leadrun_core.ExecutionError as exc:
-        print(str(exc), file=sys.stderr)
-        return 2
-
-    permitido_forma, _forma, motivo_forma = leadrun_allowlist.evaluar_comando(
-        request.argv, request.scope, request.interpreter
-    )
-    if not permitido_forma:
-        print(f"Comando rechazado por la allowlist: {motivo_forma}", file=sys.stderr)
-        return 2
+    request, codigo_request = _validar_request_exec(args, command_form, argv, control, timeout=args.timeout)
+    if codigo_request is not None:
+        return codigo_request
 
     if omitir_gate_por_artefacto:
         if modo_resuelto is not None:
@@ -1996,7 +2047,7 @@ def _ejecutar_exec_comun(
         approval = approval_override
     else:
         permitido_aprob, executed_by, modo, approval, motivo_aprob = _resolver_aprobacion_exec(
-            repo_root, control, artefacto, hash_comando
+            repo_root, control, artefacto, hash_comando, hash_legacy
         )
         if not permitido_aprob:
             print(f"Aprobación denegada: {motivo_aprob}", file=sys.stderr)
@@ -2134,59 +2185,116 @@ def _ejecutar_exec_comun(
     return checks.exit_code(resultados_check)
 
 
-def cmd_exec_script(args: argparse.Namespace) -> int:
-    try:
-        repo_root = _repo_root()
-    except RuntimeError as e:
-        print(str(e), file=sys.stderr)
-        return 3
-    _change_dir_, _tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+ALGORITMO_EXEC_SCRIPT_V2 = "sha256/script-content+argv/v2"
 
-    leadrun_core, _leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
-    if leadrun_core is None:
-        print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
-        return 3
+
+class ExecSpec(NamedTuple):
+    """Resultado de un builder `_construir_exec_<forma>` (D1 de
+    `20261002-exec-approval-registration`): todo lo que `exec` y `exec
+    approve` necesitan para ejecutar / registrar la MISMA identidad.
+    `hash_legacy` solo aplica a script (R9b): hash histórico solo-contenido."""
+
+    forma: str
+    argv: list
+    artefacto: str
+    hash_comando: str
+    algoritmo: str
+    hash_legacy: "Optional[str]" = None
+
+
+class _ErrorExec(Exception):
+    """Error de construcción de un `ExecSpec`: mensaje para stderr + exit code."""
+
+    def __init__(self, mensaje: str, codigo: int = 2):
+        super().__init__(mensaje)
+        self.mensaje = mensaje
+        self.codigo = codigo
+
+
+def _modulos_leadrun_o_error():
+    modulos = _leadrun_modulos()
+    if modulos[0] is None:
+        raise _ErrorExec(_mensaje_paquete_no_instalado("leadrun", "experiment"), 3)
+    return modulos
+
+
+def _construir_exec_script(args: argparse.Namespace, repo_root: Path) -> ExecSpec:
+    """Builder puro de `exec script` (R9, M1: hash v2 contenido+argv)."""
+    leadrun_core, leadrun_allowlist, _rt = _modulos_leadrun_o_error()
 
     args_extra = list(args.script_args or [])
     if args_extra and args_extra[0] == "--":
         args_extra = args_extra[1:]
     argv = [args.interpreter, args.script, *args_extra]
 
-    artefacto = args.script
     try:
-        hash_comando = core.hash_lf_v1(Path(repo_root) / args.script)
+        hash_contenido = core.hash_lf_v1(Path(repo_root) / args.script)
     except (OSError, UnicodeDecodeError) as exc:
-        print(f"No se pudo calcular el hash del script {args.script!r}: {exc}", file=sys.stderr)
-        return 2
+        raise _ErrorExec(f"No se pudo calcular el hash del script {args.script!r}: {exc}", 2)
 
-    return _ejecutar_exec_comun(args, repo_root, control, control_path, "script", argv, artefacto, hash_comando)
+    ruta_script = Path(args.script)
+    if ruta_script.is_absolute():
+        try:
+            ruta_script = ruta_script.relative_to(Path(repo_root))
+        except ValueError:
+            pass  # fuera del repo: la allowlist lo rechaza igual; se hashea tal cual
+    identidad = {
+        "algorithm": ALGORITMO_EXEC_SCRIPT_V2,
+        "script": ruta_script.as_posix(),
+        "script_sha256": hash_contenido,
+        "argv": [leadrun_allowlist.normalizar_interprete(args.interpreter), args.script, *args_extra],
+    }
+    return ExecSpec(
+        forma="script",
+        argv=argv,
+        artefacto=args.script,
+        hash_comando=leadrun_core.content_sha256(identidad),
+        algoritmo=ALGORITMO_EXEC_SCRIPT_V2,
+        hash_legacy=hash_contenido,
+    )
 
 
-def cmd_exec_pytest(args: argparse.Namespace) -> int:
-    try:
-        repo_root = _repo_root()
-    except RuntimeError as e:
-        print(str(e), file=sys.stderr)
-        return 3
-    _change_dir_, _tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
-
-    leadrun_core, _leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
-    if leadrun_core is None:
-        print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
-        return 3
+def _construir_exec_pytest(args: argparse.Namespace, repo_root: Path) -> ExecSpec:
+    """Builder puro de `exec pytest` (R8): hash del argv canónico, sin cambios."""
+    leadrun_core, _al, _rt = _modulos_leadrun_o_error()
 
     flags_extra = list(args.pytest_args or [])
     if flags_extra and flags_extra[0] == "--":
         flags_extra = flags_extra[1:]
     argv = [args.interpreter, "-m", "pytest", *args.paths, *flags_extra]
 
-    artefacto = "pytest:" + "|".join(args.paths)
-    hash_comando = leadrun_core.content_sha256(list(argv))
+    return ExecSpec(
+        forma="pytest",
+        argv=argv,
+        artefacto="pytest:" + "|".join(args.paths),
+        hash_comando=leadrun_core.content_sha256(list(argv)),
+        algoritmo="sha256/argv-canonical-json",
+    )
 
-    return _ejecutar_exec_comun(args, repo_root, control, control_path, "pytest", argv, artefacto, hash_comando)
+
+def _construir_exec_notebook(args: argparse.Namespace, repo_root: Path) -> ExecSpec:
+    """Builder puro de `exec notebook` (R10): hash LF del manifest, sin cambios."""
+    _modulos_leadrun_o_error()
+
+    modo_flag = "--execute" if args.execute else "--dry-run"
+    argv = [args.interpreter, "tools/notebook_runner.py", "run", "--manifest", args.manifest, modo_flag]
+
+    try:
+        hash_comando = core.hash_lf_v1(Path(repo_root) / args.manifest)
+    except (OSError, UnicodeDecodeError) as exc:
+        raise _ErrorExec(f"No se pudo calcular el hash del manifest {args.manifest!r}: {exc}", 2)
+
+    return ExecSpec(
+        forma="notebook",
+        argv=argv,
+        artefacto=args.manifest,
+        hash_comando=hash_comando,
+        algoritmo="sha256/lf/v1",
+    )
 
 
-def cmd_exec_notebook(args: argparse.Namespace) -> int:
+def _cmd_exec_con_builder(args: argparse.Namespace, construir) -> int:
+    """Esqueleto común de `cmd_exec_*`: repo_root -> change -> builder -> ejecutar."""
     try:
         repo_root = _repo_root()
     except RuntimeError as e:
@@ -2194,22 +2302,133 @@ def cmd_exec_notebook(args: argparse.Namespace) -> int:
         return 3
     _change_dir_, _tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
-    leadrun_core, _leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
-    if leadrun_core is None:
-        print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
-        return 3
-
-    modo_flag = "--execute" if args.execute else "--dry-run"
-    argv = [args.interpreter, "tools/notebook_runner.py", "run", "--manifest", args.manifest, modo_flag]
-
-    artefacto = args.manifest
     try:
-        hash_comando = core.hash_lf_v1(Path(repo_root) / args.manifest)
-    except (OSError, UnicodeDecodeError) as exc:
-        print(f"No se pudo calcular el hash del manifest {args.manifest!r}: {exc}", file=sys.stderr)
-        return 2
+        spec = construir(args, repo_root)
+    except _ErrorExec as exc:
+        print(exc.mensaje, file=sys.stderr)
+        return exc.codigo
 
-    return _ejecutar_exec_comun(args, repo_root, control, control_path, "notebook", argv, artefacto, hash_comando)
+    return _ejecutar_exec_comun(
+        args, repo_root, control, control_path, spec.forma, spec.argv, spec.artefacto, spec.hash_comando,
+        hash_legacy=spec.hash_legacy,
+    )
+
+
+def cmd_exec_script(args: argparse.Namespace) -> int:
+    return _cmd_exec_con_builder(args, _construir_exec_script)
+
+
+def cmd_exec_pytest(args: argparse.Namespace) -> int:
+    return _cmd_exec_con_builder(args, _construir_exec_pytest)
+
+
+def cmd_exec_notebook(args: argparse.Namespace) -> int:
+    return _cmd_exec_con_builder(args, _construir_exec_notebook)
+
+
+# --- exec approve (20261002-exec-approval-registration) ----------------------
+
+def _registrar_aprobacion_exec(control: dict, control_path: Path, spec: ExecSpec, args: argparse.Namespace) -> dict:
+    """Agrega la entrada a `control["aprobaciones"]` (misma estructura que
+    `cmd_approve`, R11) y persiste con `core.escribir_control`. El hash sale
+    SIEMPRE del builder, nunca del humano (R2)."""
+    entrada = {
+        "artefacto": spec.artefacto,
+        "algoritmo": spec.algoritmo,
+        "hash": spec.hash_comando,
+        "registrado_utc": core.ahora_utc(),
+        "usuario": args.usuario,
+        "fecha_declarada": args.fecha,
+        "alcance_aprobado": args.alcance,
+        "cita": args.cita,
+    }
+    control.setdefault("aprobaciones", []).append(entrada)
+    core.escribir_control(control_path, control)
+    return entrada
+
+
+def _cmd_exec_approve_con_builder(args: argparse.Namespace, construir) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    error_usuario = core.validar_usuario_sin_email(args.usuario)
+    if error_usuario:
+        print(error_usuario, file=sys.stderr)
+        return 2
+    _change_dir_, _tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+
+    try:
+        spec = construir(args, repo_root)
+    except _ErrorExec as exc:
+        print(exc.mensaje, file=sys.stderr)
+        return exc.codigo
+
+    # Fail-closed (R12): mismo request + allowlist que el runtime; sin escritura si falla.
+    _request, codigo = _validar_request_exec(args, spec.forma, spec.argv, control)
+    if codigo is not None:
+        return codigo
+
+    entrada = _registrar_aprobacion_exec(control, control_path, spec, args)
+    print(f"artefacto: {entrada['artefacto']}")
+    print(f"algoritmo: {entrada['algoritmo']}")
+    print(f"hash: {entrada['hash']}")
+    return 0
+
+
+def cmd_exec_approve_script(args: argparse.Namespace) -> int:
+    return _cmd_exec_approve_con_builder(args, _construir_exec_script)
+
+
+def cmd_exec_approve_pytest(args: argparse.Namespace) -> int:
+    return _cmd_exec_approve_con_builder(args, _construir_exec_pytest)
+
+
+def cmd_exec_approve_notebook(args: argparse.Namespace) -> int:
+    return _cmd_exec_approve_con_builder(args, _construir_exec_notebook)
+
+
+# Argumentos semánticos compartidos por `exec <forma>` y `exec approve <forma>`
+# (D4): una sola definición para que no puedan divergir.
+
+def _agregar_args_exec_script(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--change-id", required=True, dest="change_id")
+    parser.add_argument("--interpreter", required=True)
+    parser.add_argument("--script", required=True)
+    parser.add_argument("script_args", nargs=argparse.REMAINDER, help="Argumentos del script, tras '--'.")
+
+
+_DESCRIPCION_EXEC_APPROVE = (
+    "Registra en control.json la aprobación de la ejecución EXACTA descrita por los mismos "
+    "argumentos que 'exec <forma>': el hash lo calcula la herramienta (nunca se suministra) y "
+    "cualquier cambio de target, flags, orden, script, argumentos o manifest invalida la "
+    "aprobación. Modelo de confianza: declaración humana registrada (usuario/fecha/alcance/"
+    "cita), sin autenticación criptográfica; no distingue humano de agente (deuda v0.10)."
+)
+
+
+def _agregar_args_exec_pytest(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--change-id", required=True, dest="change_id")
+    parser.add_argument("--interpreter", required=True)
+    parser.add_argument("--paths", required=True, nargs="+")
+    parser.add_argument("pytest_args", nargs=argparse.REMAINDER, help="Flags extra de pytest, tras '--'.")
+
+
+def _agregar_args_exec_notebook(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--change-id", required=True, dest="change_id")
+    parser.add_argument("--interpreter", required=True)
+    parser.add_argument("--manifest", required=True)
+    grupo = parser.add_mutually_exclusive_group()
+    grupo.add_argument("--dry-run", action="store_true", dest="dry_run")
+    grupo.add_argument("--execute", action="store_true", dest="execute")
+
+
+def _agregar_args_aprobacion_humana(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--usuario", required=True)
+    parser.add_argument("--fecha", required=True)
+    parser.add_argument("--alcance", required=True)
+    parser.add_argument("--cita", required=True)
 
 
 # --- source (v0.8 Change 1 T6: 20260928-source-neutral-data-access) ---------
@@ -3856,33 +4075,55 @@ def construir_parser() -> argparse.ArgumentParser:
     exec_sub = p_exec.add_subparsers(dest="subcomando", required=True)
 
     p_exec_script = exec_sub.add_parser("script", help="Ejecuta un script .py dentro del alcance autorizado del Change.")
-    p_exec_script.add_argument("--change-id", required=True, dest="change_id")
-    p_exec_script.add_argument("--interpreter", required=True)
-    p_exec_script.add_argument("--script", required=True)
+    _agregar_args_exec_script(p_exec_script)
     p_exec_script.add_argument("--timeout", type=int, default=600)
     p_exec_script.add_argument("--json", action="store_true")
-    p_exec_script.add_argument("script_args", nargs=argparse.REMAINDER, help="Argumentos del script, tras '--'.")
     p_exec_script.set_defaults(func=cmd_exec_script)
 
     p_exec_pytest = exec_sub.add_parser("pytest", help="Ejecuta pytest sobre rutas dentro del alcance autorizado del Change.")
-    p_exec_pytest.add_argument("--change-id", required=True, dest="change_id")
-    p_exec_pytest.add_argument("--interpreter", required=True)
-    p_exec_pytest.add_argument("--paths", required=True, nargs="+")
+    _agregar_args_exec_pytest(p_exec_pytest)
     p_exec_pytest.add_argument("--timeout", type=int, default=600)
     p_exec_pytest.add_argument("--json", action="store_true")
-    p_exec_pytest.add_argument("pytest_args", nargs=argparse.REMAINDER, help="Flags extra de pytest, tras '--'.")
     p_exec_pytest.set_defaults(func=cmd_exec_pytest)
 
     p_exec_notebook = exec_sub.add_parser("notebook", help="Ejecuta un notebook vía tools/notebook_runner.py, según un manifest.")
-    p_exec_notebook.add_argument("--change-id", required=True, dest="change_id")
-    p_exec_notebook.add_argument("--interpreter", required=True)
-    p_exec_notebook.add_argument("--manifest", required=True)
-    grupo_exec_notebook = p_exec_notebook.add_mutually_exclusive_group()
-    grupo_exec_notebook.add_argument("--dry-run", action="store_true", dest="dry_run")
-    grupo_exec_notebook.add_argument("--execute", action="store_true", dest="execute")
+    _agregar_args_exec_notebook(p_exec_notebook)
     p_exec_notebook.add_argument("--timeout", type=int, default=600)
     p_exec_notebook.add_argument("--json", action="store_true")
     p_exec_notebook.set_defaults(func=cmd_exec_notebook)
+
+    # exec approve {pytest,script,notebook} (20261002-exec-approval-registration)
+    p_exec_approve = exec_sub.add_parser(
+        "approve",
+        help="Registra la aprobación humana de una ejecución exacta (supervised).",
+        description=_DESCRIPCION_EXEC_APPROVE,
+    )
+    approve_sub = p_exec_approve.add_subparsers(dest="forma_aprobar", required=True)
+
+    p_ap_pytest = approve_sub.add_parser(
+        "pytest", help="Aprueba una ejecución exacta de pytest.", description=_DESCRIPCION_EXEC_APPROVE
+    )
+    _agregar_args_exec_pytest(p_ap_pytest)
+    _agregar_args_aprobacion_humana(p_ap_pytest)
+    p_ap_pytest.set_defaults(func=cmd_exec_approve_pytest)
+
+    p_ap_script = approve_sub.add_parser(
+        "script",
+        help="Aprueba una ejecución exacta de script (contenido + argv).",
+        description=_DESCRIPCION_EXEC_APPROVE,
+    )
+    _agregar_args_exec_script(p_ap_script)
+    _agregar_args_aprobacion_humana(p_ap_script)
+    p_ap_script.set_defaults(func=cmd_exec_approve_script)
+
+    p_ap_notebook = approve_sub.add_parser(
+        "notebook",
+        help="Aprueba la ejecución de un notebook según su manifest.",
+        description=_DESCRIPCION_EXEC_APPROVE,
+    )
+    _agregar_args_exec_notebook(p_ap_notebook)
+    _agregar_args_aprobacion_humana(p_ap_notebook)
+    p_ap_notebook.set_defaults(func=cmd_exec_approve_notebook)
 
     p_dependency = subparsers.add_parser(
         "dependency",

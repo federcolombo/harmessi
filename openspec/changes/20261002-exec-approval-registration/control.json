@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "change_id": "20261002-exec-approval-registration",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-02T14:15:14Z",
+  "baseline": {
+    "commit": "916727165d9c5b165bb8f7d67fd44d471bdac2e1",
+    "rama": "v0.9-dev",
+    "capturado_utc": "2026-10-02T14:15:14Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20261002-exec-approval-registration/proposal.md",
+      "openspec/changes/20261002-exec-approval-registration/tasks.md",
+      "openspec/changes/20261002-exec-approval-registration/spec.md",
+      "openspec/changes/20261002-exec-approval-registration/design.md",
+      "openspec/changes/20261002-exec-approval-registration/control.json",
+      "openspec/changes/20261002-exec-approval-registration/verification.md",
+      "docs/roadmap/v0.10.md",
+      "tools/ds_guard.py",
+      "tools/tests/test_ds_guard_exec_approve.py",
+      ".claude/skills/lead-data-scientist/sdd.md",
+      "tools/ds_init/profiles/python_jupyter_data/templates/sdd.md.tmpl",
+      ".ds_init/control.json",
+      "tools/tests/test_ds_guard_exec.py",
+      "tools/tests/test_ds_guard_dependency_install.py",
+      "tools/tests/test_ds_guard_budgets_cli.py",
+      "tools/tests/test_ds_guard_usuario_guard.py",
+      "tools/tests/test_ds_guard_source_cli.py",
+      "tools/tests/test_ds_guard_config_layering.py",
+      "tools/tests/test_ds_guard_contract_quality_cli.py",
+      "tools/tests/test_ds_guard_source_integrity.py",
+      "tools/tests/test_autonomy_sdd.py",
+      "tools/tests/test_remediation.py",
+      "tools/tests/test_decision.py",
+      "tools/tests/test_harness_smoke.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/tests/test_manifest_dsguard_parity.py",
+      "tools/leadrun/tests",
+      "tools/autonomy/tests"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "0a8201c537827f8fd52a0d1f40e57540207b9549b61dbbf3d099839031c89cce",
+      "registrado_utc": "2026-10-02T14:26:25Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "SDD corrective Change exec-approval-registration con M1 resuelta (script v2 + legacy reconocida), ejecuciones anticipadas autorizadas para este Change y Change 0",
+      "cita": "Apruebo el SDD correctivo 20261002-exec-approval-registration ... Este mensaje constituye mi aprobación humana explícita del alcance definido"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "31347bf8e799c4a216fce2523846b53895780152b34f9e834a8a20f0a6cbe189",
+      "registrado_utc": "2026-10-02T14:26:26Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "SDD corrective Change exec-approval-registration con M1 resuelta (script v2 + legacy reconocida), ejecuciones anticipadas autorizadas para este Change y Change 0",
+      "cita": "Apruebo el SDD correctivo 20261002-exec-approval-registration ... Este mensaje constituye mi aprobación humana explícita del alcance definido"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "87d2393e520520f3b2dd8e298d18ae2dad583f363c81788bc0702618f9023a3a",
+      "registrado_utc": "2026-10-02T14:26:27Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "SDD corrective Change exec-approval-registration con M1 resuelta (script v2 + legacy reconocida), ejecuciones anticipadas autorizadas para este Change y Change 0",
+      "cita": "Apruebo el SDD correctivo 20261002-exec-approval-registration ... Este mensaje constituye mi aprobación humana explícita del alcance definido"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_ds_guard_exec_approve.py|tools/tests/test_ds_guard_exec.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "85a4fee7b93fcb4b8d7df3fc446db5d36c6707259b178d191f62bb843cdd33a0",
+      "registrado_utc": "2026-10-02T14:34:38Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Corrida dirigida de tests del corrective Change (exec approve + suite exec preexistente)",
+      "cita": "Aprobación humana explícita registrada en la revisión del corrective Change 20261002-exec-approval-registration"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_ds_guard_exec_approve.py|tools/tests/test_ds_guard_exec.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "d59b10b3806d77c79012989e28fcc93c2dd5e47da12fd22e92241adad86c1517",
+      "registrado_utc": "2026-10-02T14:37:02Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Re-corrida diagnóstica (-rf --tb=line) de la misma corrida dirigida del corrective Change",
+      "cita": "Aprobación humana explícita registrada en la revisión del corrective Change 20261002-exec-approval-registration"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_ds_guard_dependency_install.py|tools/tests/test_ds_guard_budgets_cli.py|tools/tests/test_ds_guard_usuario_guard.py|tools/tests/test_ds_guard_source_cli.py|tools/tests/test_ds_guard_config_layering.py|tools/tests/test_ds_guard_contract_quality_cli.py|tools/tests/test_ds_guard_source_integrity.py|tools/tests/test_autonomy_sdd.py|tools/tests/test_remediation.py|tools/tests/test_decision.py|tools/tests/test_harness_smoke.py|tools/tests/test_architecture_boundaries.py|tools/tests/test_manifest_dsguard_parity.py|tools/leadrun/tests|tools/autonomy/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "7a64ea466d93f3b9445ca43caaae63683c1494d40063c75c4a5f155cea5799d5",
+      "registrado_utc": "2026-10-02T14:42:50Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Regresión relevante del corrective Change (suites ds_guard/leadrun/autonomy/boundaries)",
+      "cita": "Aprobación humana explícita registrada en la revisión del corrective Change 20261002-exec-approval-registration"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-02T14:26:46Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-02T14:26:47Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-02T14:26:49Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-02T14:51:39Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-02T14:53:10Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-02T14:26:48Z",
+      "cierre_utc": "2026-10-02T14:53:19Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 12,
+        "max_roles": 3,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-02T22:26:48Z",
+      "minutos_consumidos": 26.516666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "metricas_eficiencia": {
+    "ejecuciones": [
+      {
+        "execution_id": "pytest__012825227002",
+        "duration_seconds": 116.67199999999866,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__844831fcd4d0",
+        "duration_seconds": 117.85999999999876,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__65fa679096f9",
+        "duration_seconds": 105.3130000000001,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__e6ad19c39e13",
+        "duration_seconds": 122.6869999999999,
+        "command_form": "pytest"
+      }
+    ]
+  }
+}

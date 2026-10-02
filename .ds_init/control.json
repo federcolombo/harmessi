@@ -31,7 +31,7 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/sdd.md",
-      "sha256": "e808a2022d1f4a8cbf6587f97c8324ef785ad94309fca4f278285aa2423d17e7"
+      "sha256": "79ad4fce504305d3e9f392f556e3d3ae4ba67546f0c39d0823a8a15a9a925cd0"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/verificador.md",
@@ -71,7 +71,7 @@
     },
     {
       "ruta": "tools/ds_guard.py",
-      "sha256": "38629f317597eb2cc16bccaa44ccd433e75d93be64ba9a6b74cb277ea859372a"
+      "sha256": "4dc6990b63bdbadf3072ff7db9b6315fa7c28567647a7bdb0c8bea1ada9173b2"
     },
     {
       "ruta": "tools/dsguard/__init__.py",
