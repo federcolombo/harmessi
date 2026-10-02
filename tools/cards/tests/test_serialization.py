@@ -3,6 +3,7 @@ revision_id, `status` no persistido, `write_card` / `read_card`."""
 from __future__ import annotations
 
 import dataclasses
+import errno
 import hashlib
 import json
 import os
@@ -765,6 +766,138 @@ class TestEvaluateFile(unittest.TestCase):
         en_memoria = assess.evaluate(card, requisitos(), resolvers_frescos(), reloj)
         self.assertEqual(desde_archivo.a_dict(), en_memoria.a_dict())
         self.assertEqual(desde_archivo.card_status, assess.CARD_COMPLETE)
+
+
+# ---------------------------------------------------------------------------
+# write_card(exclusive=...) -- creación sin pisar (Change 1 data-cards, R3)
+# ---------------------------------------------------------------------------
+
+
+class TestWriteCardExclusive(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.dir = self._tmp.name
+        self.ruta = os.path.join(self.dir, "card.json")
+
+    def _bytes(self):
+        with open(self.ruta, "rb") as f:
+            return f.read()
+
+    def test_default_es_no_exclusivo_y_sobrescribe(self):
+        assess.write_card(self.ruta, card_completa(), clock=reloj)
+        assess.write_card(self.ruta, card_completa(title="v2"), clock=reloj)
+        self.assertEqual(assess.read_card(self.ruta).title, "v2")
+
+    def test_exclusive_false_explicito_sobrescribe(self):
+        assess.write_card(self.ruta, card_completa(), clock=reloj, exclusive=False)
+        assess.write_card(self.ruta, card_completa(title="v2"), clock=reloj, exclusive=False)
+        self.assertEqual(assess.read_card(self.ruta).title, "v2")
+
+    def test_exclusive_true_crea_cuando_no_existe(self):
+        resultado = assess.write_card(self.ruta, card_completa(), clock=reloj, exclusive=True)
+        self.assertEqual(str(resultado), self.ruta)
+        self.assertEqual(assess.read_card(self.ruta), card_completa())
+        self.assertEqual(os.listdir(self.dir), ["card.json"])
+
+    def test_exclusive_true_bytes_identicos_a_no_exclusivo(self):
+        otra = os.path.join(self.dir, "otra.json")
+        assess.write_card(self.ruta, card_completa(), clock=reloj, exclusive=True)
+        assess.write_card(otra, card_completa(), clock=reloj)
+        with open(otra, "rb") as f:
+            self.assertEqual(self._bytes(), f.read())
+
+    def test_segunda_vez_falla_con_io_error_y_no_toca_bytes(self):
+        assess.write_card(self.ruta, card_completa(), clock=reloj, exclusive=True)
+        antes = self._bytes()
+        self.assertEqual(
+            codigo_de(assess.write_card, self.ruta, card_completa(title="v2"), clock=reloj, exclusive=True),
+            core.CODE_IO_ERROR,
+        )
+        self.assertEqual(self._bytes(), antes)
+        self.assertEqual(os.listdir(self.dir), ["card.json"])  # sin .tmp
+
+    def test_exclusive_no_pisa_archivo_ajeno_preexistente(self):
+        with open(self.ruta, "wb") as f:
+            f.write(b"contenido ajeno")
+        self.assertEqual(
+            codigo_de(assess.write_card, self.ruta, card_completa(), clock=reloj, exclusive=True),
+            core.CODE_IO_ERROR,
+        )
+        self.assertEqual(self._bytes(), b"contenido ajeno")
+        self.assertEqual(os.listdir(self.dir), ["card.json"])
+
+    def test_no_deja_tmp_tras_exito(self):
+        assess.write_card(self.ruta, card_completa(), clock=reloj, exclusive=True)
+        self.assertFalse([n for n in os.listdir(self.dir) if n.endswith(".tmp")])
+
+    def test_card_invalida_no_escribe_en_modo_exclusivo(self):
+        invalida = card_completa(claims=(core.Claim("c1", "s", supports=("fantasma",)),))
+        self.assertEqual(
+            codigo_de(assess.write_card, self.ruta, invalida, clock=reloj, exclusive=True),
+            core.CODE_DANGLING_SUPPORT,
+        )
+        self.assertEqual(os.listdir(self.dir), [])
+
+    def test_card_invalida_no_pisa_existente_en_modo_exclusivo(self):
+        assess.write_card(self.ruta, card_completa(), clock=reloj, exclusive=True)
+        antes = self._bytes()
+        invalida = card_completa(claims=(core.Claim("c1", "s", supports=("fantasma",)),))
+        with self.assertRaises(core.CardError):
+            assess.write_card(self.ruta, invalida, clock=reloj, exclusive=True)
+        self.assertEqual(self._bytes(), antes)
+
+    def test_directorio_padre_inexistente_es_io_error_sin_residuos(self):
+        ruta = os.path.join(self.dir, "no_existe", "card.json")
+        self.assertEqual(
+            codigo_de(assess.write_card, ruta, card_completa(), clock=reloj, exclusive=True), core.CODE_IO_ERROR
+        )
+        self.assertEqual(os.listdir(self.dir), [])
+
+    def test_fallback_sin_hard_links_crea_y_no_pisa(self):
+        # El fallback solo ocurre con AttributeError / NotImplementedError u OSError
+        # con errno en `assess._ERRNO_SIN_HARDLINK`.
+        efectos = [
+            AttributeError("sin os.link"),
+            NotImplementedError("sin hard links"),
+        ] + [OSError(e, "sin hard links") for e in sorted(assess._ERRNO_SIN_HARDLINK)]
+        self.assertTrue(assess._ERRNO_SIN_HARDLINK)
+        for efecto in efectos:
+            with self.subTest(efecto=repr(efecto)):
+                ruta = os.path.join(self.dir, "fb.json")
+                with mock.patch.object(assess.os, "link", side_effect=efecto):
+                    assess.write_card(ruta, card_completa(), clock=reloj, exclusive=True)
+                    self.assertEqual(assess.read_card(ruta), card_completa())
+                    with open(ruta, "rb") as f:
+                        antes = f.read()
+                    self.assertEqual(
+                        codigo_de(assess.write_card, ruta, card_completa(title="v2"), clock=reloj, exclusive=True),
+                        core.CODE_IO_ERROR,
+                    )
+                with open(ruta, "rb") as f:
+                    self.assertEqual(f.read(), antes)
+                self.assertEqual(os.listdir(self.dir), ["fb.json"])
+                os.unlink(ruta)
+
+    def test_oserror_con_otro_errno_no_hace_fallback_y_no_crea_el_archivo(self):
+        for codigo_errno in (errno.EACCES, errno.EIO, errno.ENOSPC):
+            with self.subTest(errno=errno.errorcode.get(codigo_errno)):
+                self.assertNotIn(codigo_errno, assess._ERRNO_SIN_HARDLINK)
+                with mock.patch.object(assess.os, "link", side_effect=OSError(codigo_errno, "denegado")):
+                    self.assertEqual(
+                        codigo_de(assess.write_card, self.ruta, card_completa(), clock=reloj, exclusive=True),
+                        core.CODE_IO_ERROR,
+                    )
+                self.assertFalse(os.path.exists(self.ruta))
+                self.assertEqual(os.listdir(self.dir), [])  # tampoco deja .tmp
+
+    def test_oserror_sin_errno_no_hace_fallback(self):
+        with mock.patch.object(assess.os, "link", side_effect=OSError("sin errno")):
+            self.assertEqual(
+                codigo_de(assess.write_card, self.ruta, card_completa(), clock=reloj, exclusive=True),
+                core.CODE_IO_ERROR,
+            )
+        self.assertEqual(os.listdir(self.dir), [])
 
 
 if __name__ == "__main__":

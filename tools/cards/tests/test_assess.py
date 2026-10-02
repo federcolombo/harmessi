@@ -134,7 +134,7 @@ class TestImportsAssess(unittest.TestCase):
         with open(ruta, "r", encoding="utf-8") as f:
             arbol = ast.parse(f.read(), filename="assess.py")
         permitidos_abs = {
-            "__future__", "datetime", "hashlib", "json", "os", "re", "sys", "tempfile",
+            "__future__", "datetime", "errno", "hashlib", "json", "os", "re", "sys", "tempfile",
             "dataclasses", "pathlib", "typing", "core",
         }
         for tipo, nombre in _imports_de_modulo(arbol):

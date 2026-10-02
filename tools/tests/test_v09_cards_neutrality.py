@@ -253,13 +253,22 @@ class TestCardsSinDependenciasNoStdlib(unittest.TestCase):
         self.assertTrue({"core.py", "assess.py"} <= nombres, nombres)
 
     def test_ningun_modulo_de_cards_importa_fuera_de_stdlib(self):
+        # Hermanos permitidos por módulo (estrictos, sin comodines): `core` para todos;
+        # `assess` solo para datacard/resolvers; `resolvers` solo para datacard.
+        # Cada hermano vale como relativo (`from . import x`) y como fallback absoluto
+        # (`import x`) del import dual.
+        hermanos_por_modulo = {
+            "tools/cards/datacard.py": {"core", "assess", "resolvers"},
+            "tools/cards/resolvers.py": {"core", "assess"},
+        }
         violaciones = []
         for ruta in _modulos_cards():
             rel = ruta.relative_to(REPO_ORIGEN).as_posix()
-            permitidos = set(STDLIB) | {"core"}  # `core`: fallback del import dual
+            hermanos = hermanos_por_modulo.get(rel, {"core"})
+            permitidos = set(STDLIB) | hermanos
             if rel == ASSESS:
                 permitidos |= {"dsguard"}  # perezoso; verificado aparte
-            for v in _violaciones(_imports_todos(ruta), permitidos, {"core", "assess"}):
+            for v in _violaciones(_imports_todos(ruta), permitidos, hermanos):
                 violaciones.append(f"{rel}: {v}")
         self.assertEqual(violaciones, [], f"imports no-stdlib en tools/cards: {violaciones}")
 

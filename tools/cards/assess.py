@@ -21,6 +21,7 @@ calculable producen `unverifiable`, nunca `fresh`.
 from __future__ import annotations
 
 import datetime as _datetime
+import errno
 import hashlib
 import json
 import os
@@ -519,17 +520,50 @@ def _reloj_utc() -> str:
     return _datetime.datetime.now(_datetime.timezone.utc).strftime(core.TIMESTAMP_FORMAT)
 
 
+_ERRNO_SIN_HARDLINK = frozenset(
+    getattr(errno, nombre)
+    for nombre in ("EPERM", "ENOTSUP", "EOPNOTSUPP", "EXDEV")
+    if hasattr(errno, nombre)
+)
+
+
+def _publicar_sin_hardlink(tmp_nombre: str, destino: Path) -> None:
+    """Fallback de `write_card(exclusive=True)` sin hard links: `exists()` previo
+    + `os.replace` (ventana de carrera residual). Un error al consultar
+    `exists()` (p. ej. PermissionError) se convierte en `CardError`."""
+    try:
+        existe = destino.exists()
+    except OSError as exc:
+        raise CardError(core.CODE_IO_ERROR, f"no se pudo comprobar {destino.name}: {exc.__class__.__name__}") from exc
+    if existe:
+        raise CardError(core.CODE_IO_ERROR, f"{destino.name} ya existe; no se sobrescribe")
+    os.replace(tmp_nombre, destino)
+
+
 def write_card(
     path: Any,
     card: Any,
     clock: Optional[Callable[[], str]] = None,
     *,
     validate_body: Optional[Callable[[dict], list]] = None,
+    exclusive: bool = False,
 ) -> Path:
     """Escribe la Card de forma atómica (tempfile + `os.replace`) en `path`
     (explícito; el directorio padre debe existir). Valida con `validate_card`
     antes: con hallazgos -> `CardError` y NO escribe. JSON `indent=2`,
-    `sort_keys=True`, `ensure_ascii=False`, LF, `to_dict(con_revision=True)`."""
+    `sort_keys=True`, `ensure_ascii=False`, LF, `to_dict(con_revision=True)`.
+
+    `exclusive=True` (creación sin pisar): si `path` ya existe -> `CardError`
+    `CARD-IO-ERROR` y NO se sobrescribe. Sin carrera: se escribe el temporal y
+    se publica con `os.link(tmp, destino)` (falla si el destino existe); el
+    temporal se borra siempre. Solo si el filesystem no soporta hard links
+    (`AttributeError`, `NotImplementedError` u `OSError` con errno EPERM /
+    ENOTSUP / EOPNOTSUPP / EXDEV) se cae a un chequeo `exists()` previo +
+    `os.replace` (ventana de carrera residual, documentada); cualquier otro
+    `OSError` -> `CardError` `CARD-IO-ERROR` sin fallback. En FAT/exFAT o
+    shares sin hard links (Windows mapea EINVAL) la creación exclusiva falla
+    cerrada con `CARD-IO-ERROR`, sin fallback. Con `exclusive=False` (default) el comportamiento es el
+    histórico: `os.replace` sobrescribe."""
     reloj = clock if clock is not None else _reloj_utc
     hallazgos = core.validate_card(card, clock=reloj, validate_body=validate_body)
     if hallazgos:
@@ -547,8 +581,26 @@ def write_card(
             f.write(datos)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp_nombre, destino)
-        tmp_nombre = None
+        if not exclusive:
+            os.replace(tmp_nombre, destino)
+            tmp_nombre = None
+        else:
+            try:
+                os.link(tmp_nombre, destino)  # falla si el destino existe; el tmp se borra en `finally`
+            except FileExistsError as exc:
+                raise CardError(core.CODE_IO_ERROR, f"{destino.name} ya existe; no se sobrescribe") from exc
+            except (NotImplementedError, AttributeError):
+                _publicar_sin_hardlink(tmp_nombre, destino)
+                tmp_nombre = None
+            except OSError as exc:
+                # Solo los errores de "sin soporte de hard links" caen al fallback;
+                # cualquier otro OSError es un error de IO real (sin fallback).
+                if exc.errno not in _ERRNO_SIN_HARDLINK:
+                    raise CardError(
+                        core.CODE_IO_ERROR, f"no se pudo escribir {destino.name}: {exc.__class__.__name__}"
+                    ) from exc
+                _publicar_sin_hardlink(tmp_nombre, destino)
+                tmp_nombre = None
     except OSError as exc:
         raise CardError(core.CODE_IO_ERROR, f"no se pudo escribir {destino.name}: {exc.__class__.__name__}") from exc
     finally:

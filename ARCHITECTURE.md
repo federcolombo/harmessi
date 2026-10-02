@@ -276,7 +276,12 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
     `datasources`, `qualityevidence`, `modelquality`, `datacontracts`, `leadrun`, `reporting` ni
     `ds_init`: las referencias a evidencia son punteros (`kind` + `ref_id` + `content_sha256`) y su
     resolución se inyecta. Los helpers (`canonical_json`, `content_sha256`, patrón de ids, reglas de
-    identidad humana, forma de `ApprovalRef`) se duplican a propósito, con tests de paridad. No está en
+    identidad humana, forma de `ApprovalRef`) se duplican a propósito, con tests de paridad. Change 1 (`20261002-data-cards`) agrega `datacard.py` (Data Card = `CardEnvelope` con
+    `card_kind=data_card` y body cerrado; `assess` y `resolvers` son los únicos hermanos permitidos) y
+    `resolvers.py` (resolvers stdlib que releen `.harmessi/observations|quality` y archivos de contrato y
+    recomputan hashes con paridad testeada contra `datasources`/`datacontracts`/`qualityevidence`, sin
+    importarlos). Las Cards viven en `governance/cards/data/<card_id>.json`, project-owned y fuera del
+    manifest. No está en
     el manifest administrado hasta Change 4. Verificado por `tools/tests/test_v09_cards_neutrality.py`,
     `test_v09_cards_parity.py` y `test_v09_cards_inert.py`.
 
