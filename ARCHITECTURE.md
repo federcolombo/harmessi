@@ -270,6 +270,16 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
    `datacontracts`, `nbrunner`) importa `tools.leadrun`/`leadrun`, ni siquiera `ds_guard.py` a
    nivel de módulo. Verificado por `tools/tests/test_v08_leadrun_neutrality.py`.
 
+13. Familia `tools/cards` (v0.9 Change 0, `20261002-card-and-evidence-foundation`): `core.py` es solo-stdlib y no importa
+    `tools.*` ni hermanos; `assess.py` importa solo `core` y, de forma perezosa dentro de una función,
+    `dsguard.checks`. Ningún paquete existente importa `cards` y `cards` no importa `autonomy`,
+    `datasources`, `qualityevidence`, `modelquality`, `datacontracts`, `leadrun`, `reporting` ni
+    `ds_init`: las referencias a evidencia son punteros (`kind` + `ref_id` + `content_sha256`) y su
+    resolución se inyecta. Los helpers (`canonical_json`, `content_sha256`, patrón de ids, reglas de
+    identidad humana, forma de `ApprovalRef`) se duplican a propósito, con tests de paridad. No está en
+    el manifest administrado hasta Change 4. Verificado por `tools/tests/test_v09_cards_neutrality.py`,
+    `test_v09_cards_parity.py` y `test_v09_cards_inert.py`.
+
 Estas reglas ya se cumplen hoy (verificado, ver `tools/tests/test_architecture_boundaries.py`,
 Change 3) — este documento las hace explícitas, no las introduce de cero.
 
@@ -492,7 +502,11 @@ enforcement best-effort de `Bash`/`PowerShell`.
 
 Registrado 2026-10-01 (feedback externo, preservado como línea de evolución -- ver `v0.10.md`,
 "Composable Engineering & Data Science Skills", para el desglose completo de candidatas y
-principios). **Nada de esta sección existe todavía en el código**; es dirección, no contrato.
+principios). **Nada de esta sección existe todavía en el código salvo el contrato base de Change 0 (`tools/cards`: identidad, `EvidenceRef`,
+`HumanAttestation` declared/anchored, evaluación derivada `invalid > stale > incomplete > complete`); no hay
+Cards concretas, ni CLI/Doctor/capabilities (Change 4).** `anchored` significa estructuralmente coherente
+(con `ApprovalRef` válido), no verificado contra `control.json`/ledger; las aprobaciones de Harmessi son
+declaraciones humanas registradas bajo el modelo de confianza del harness, no firmas ni prueba de autoría.
 
 Separación conceptual que Harmessi preserva hacia v0.10: **Agent/Role** (quién trabaja y con qué
 permisos -- Lead, writer, reviewer, metodólogo, ya estables en §2) ≠ **Skill** (cómo abordar
