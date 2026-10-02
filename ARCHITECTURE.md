@@ -524,3 +524,15 @@ del PROYECTO, nunca branding ni conocimiento hardcodeado del harness.
 Antes de implementar cualquier skill de este catálogo: auditar qué capacidades ya existen en Lead/
 reviewer/metodólogo/SDD/`tools/dsimpact`/tests/remediation -- no duplicar una capacidad ya presente
 solo porque tenga otro nombre.
+
+## 8. Dirección arquitectónica planificada para v0.9 (Cards = vistas de governance, NO implementada)
+
+Registrado 2026-10-02 (ver `docs/roadmap/v0.9.md` para el alcance congelado). **Nada de esta sección
+existe todavía en el código**; es dirección, no contrato.
+
+Las Data Cards y Model Cards son **vistas de governance estructuradas y respaldadas por evidencia**:
+referencian artefactos existentes (v0.7 quality/contracts/drift, v0.8 `SourceObservation`/
+`SourceProvenance`/`ExecutionRecord`) y validan completitud, pero no generan evidencia ni cambian la
+autonomía. Distinguen evidencia observada/de sistema de `HumanAttestation`, que no satisface requisitos
+empíricos. La validación de Cards es un dominio de governance separado de la decisión de
+runtime/autonomía (no agrega STOP, no vive en `guardrails.json`).
