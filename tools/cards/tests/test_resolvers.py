@@ -736,10 +736,11 @@ CINCO_KINDS = {
 
 
 class TestDefaultResolvers(_Base):
-    def test_exactamente_los_cinco_kinds(self):
+    def test_exactamente_los_doce_kinds(self):
         mapa = resolvers.default_resolvers(self.repo)
-        self.assertEqual(set(mapa), CINCO_KINDS)
-        self.assertEqual(len(mapa), 5)
+        self.assertEqual(set(mapa), set(core.OBSERVED_KINDS) - {"report_artifact"})
+        self.assertTrue(CINCO_KINDS <= set(mapa))
+        self.assertEqual(len(mapa), 12)
         for kind, resolver in mapa.items():
             with self.subTest(kind=kind):
                 self.assertTrue(callable(resolver))
@@ -759,7 +760,8 @@ class TestDefaultResolvers(_Base):
 
     def test_los_demas_kinds_quedan_unverifiable(self):
         mapa = resolvers.default_resolvers(self.repo)
-        for kind in set(core.OBSERVED_KINDS) - CINCO_KINDS:
+        for kind in set(core.OBSERVED_KINDS) - set(mapa):
+            self.assertEqual(kind, "report_artifact")
             with self.subTest(kind=kind):
                 ref = core.EvidenceRef("ev1", kind, "x-1", H, T0)
                 self.assertEqual(assess.evaluar_evidencia(ref, mapa), assess.EV_UNVERIFIABLE)

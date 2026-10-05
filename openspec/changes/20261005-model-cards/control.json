@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "change_id": "20261005-model-cards",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-05T13:38:16Z",
+  "baseline": {
+    "commit": "4ee222c4b2b2c3322fa0c21fb40932131761e9ca",
+    "rama": "v0.9-dev",
+    "capturado_utc": "2026-10-05T13:38:16Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".harmessi/executions/*",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.10.md",
+      "docs/roadmap/v0.9.md",
+      "openspec/changes/20261005-model-cards/control.json",
+      "openspec/changes/20261005-model-cards/design.md",
+      "openspec/changes/20261005-model-cards/proposal.md",
+      "openspec/changes/20261005-model-cards/spec.md",
+      "openspec/changes/20261005-model-cards/tasks.md",
+      "openspec/changes/20261005-model-cards/verification.md",
+      "tools/autonomy/tests",
+      "tools/cards/assess.py",
+      "tools/cards/core.py",
+      "tools/cards/modelcard.py",
+      "tools/cards/resolvers.py",
+      "tools/cards/tests/test_assess.py",
+      "tools/cards/tests/test_attestation.py",
+      "tools/cards/tests/test_core.py",
+      "tools/cards/tests/test_datacard.py",
+      "tools/cards/tests/test_datacard_location.py",
+      "tools/cards/tests/test_evidence.py",
+      "tools/cards/tests/test_modelcard.py",
+      "tools/cards/tests/test_modelcard_location.py",
+      "tools/cards/tests/test_resolvers.py",
+      "tools/cards/tests/test_resolvers_model.py",
+      "tools/cards/tests/test_serialization.py",
+      "tools/datacontracts/tests",
+      "tools/datasources/tests",
+      "tools/leadrun/tests",
+      "tools/modelquality/tests",
+      "tools/qualityevidence/tests",
+      "tools/tests",
+      "tools/tests/test_v09_cards_neutrality.py",
+      "tools/tests/test_v09_datacards_inert.py",
+      "tools/tests/test_v09_datacards_parity.py",
+      "tools/tests/test_v09_modelcards_inert.py",
+      "tools/tests/test_v09_modelcards_parity.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ff494b8ea2c4531cb166b7bb41ea79f3dc7201d0e6a9653f65cc79c5470ebeb5",
+      "registrado_utc": "2026-10-05T15:18:18Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "SDD Change 2 model-cards con las 3 precisiones de contrato incorporadas (model_version file-safe e inyectivo; pin de Data Card sin herencia de governance; member semántico) y ejecuciones previstas",
+      "cita": "Apruebo explícitamente el SDD de 20261005-model-cards; el diseño está alineado con el roadmap de v0.9"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f7d1d187844dac8b162c45e329dce3b764f4d88c871f3a355d3f4b59edc68a8b",
+      "registrado_utc": "2026-10-05T15:18:19Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "SDD Change 2 model-cards con las 3 precisiones de contrato incorporadas (model_version file-safe e inyectivo; pin de Data Card sin herencia de governance; member semántico) y ejecuciones previstas",
+      "cita": "Apruebo explícitamente el SDD de 20261005-model-cards; el diseño está alineado con el roadmap de v0.9"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "fd8a19e46760a316b653cca47583ae2af1528912b66dd214a7c1650edfa873c4",
+      "registrado_utc": "2026-10-05T15:18:20Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "SDD Change 2 model-cards con las 3 precisiones de contrato incorporadas (model_version file-safe e inyectivo; pin de Data Card sin herencia de governance; member semántico) y ejecuciones previstas",
+      "cita": "Apruebo explícitamente el SDD de 20261005-model-cards; el diseño está alineado con el roadmap de v0.9"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_modelcard.py|tools/cards/tests/test_modelcard_location.py|tools/cards/tests/test_resolvers_model.py|tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py|tools/tests/test_v09_modelcards_parity.py|tools/tests/test_v09_modelcards_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "6647f0c626d55e73e56d5f56016869f6b0e77926b8b714010646834bbe4af239",
+      "registrado_utc": "2026-10-05T15:30:25Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 2 model-cards: dirigida inicial",
+      "cita": "Aprobación humana explícita del SDD de Change 2 20261005-model-cards"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_modelcard.py|tools/cards/tests/test_modelcard_location.py|tools/cards/tests/test_resolvers_model.py|tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py|tools/tests/test_v09_modelcards_parity.py|tools/tests/test_v09_modelcards_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "6647f0c626d55e73e56d5f56016869f6b0e77926b8b714010646834bbe4af239",
+      "registrado_utc": "2026-10-05T15:32:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 2 model-cards: dirigida tras fixes de tests",
+      "cita": "Aprobación humana explícita del SDD de Change 2 20261005-model-cards"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_modelcard.py|tools/cards/tests/test_modelcard_location.py|tools/cards/tests/test_resolvers_model.py|tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py|tools/tests/test_v09_modelcards_parity.py|tools/tests/test_v09_modelcards_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "6647f0c626d55e73e56d5f56016869f6b0e77926b8b714010646834bbe4af239",
+      "registrado_utc": "2026-10-05T15:37:04Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 2 model-cards: dirigida final tras review ciclo 1",
+      "cita": "Aprobación humana explícita del SDD de Change 2 20261005-model-cards"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "e52cb084631de881cefa90be3731f3a86e5891c228dcf71558bcd2ad195bd09d",
+      "registrado_utc": "2026-10-05T15:38:15Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 2 model-cards: regresión lote 1 tools/tests",
+      "cita": "Aprobación humana explícita del SDD de Change 2 20261005-model-cards"
+    },
+    {
+      "artefacto": "pytest:tools/modelquality/tests|tools/qualityevidence/tests|tools/datasources/tests|tools/datacontracts/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "cc923110784cd749ce5aa67c4d0cf74aaa8ac5b092717c1c4330a2cd1e1f6cab",
+      "registrado_utc": "2026-10-05T15:58:24Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 2 model-cards: regresión lote 2 modelquality qualityevidence datasources datacontracts",
+      "cita": "Aprobación humana explícita del SDD de Change 2 20261005-model-cards"
+    },
+    {
+      "artefacto": "pytest:tools/autonomy/tests|tools/leadrun/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "90182725bc12ae504caafe2c9c252304f4bc86cc11ab97c46aa1086496205cfb",
+      "registrado_utc": "2026-10-05T15:58:34Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 2 model-cards: regresión lote 3 autonomy leadrun",
+      "cita": "Aprobación humana explícita del SDD de Change 2 20261005-model-cards"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_modelcard.py|tools/cards/tests/test_modelcard_location.py|tools/cards/tests/test_resolvers_model.py|tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "eb1580a3b551a6de5cc5507cf96bc9a19455c856199ceb2f3d19e20100abfce4",
+      "registrado_utc": "2026-10-05T15:58:44Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 2 model-cards: regresión lote 4 tools/cards/tests (11 archivos)",
+      "cita": "Aprobación humana explícita del SDD de Change 2 20261005-model-cards"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-05T15:18:21Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-05T15:18:23Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-05T15:18:25Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-05T16:00:42Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-05T16:00:46Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-05T15:18:24Z",
+      "cierre_utc": "2026-10-05T16:00:47Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 12,
+        "max_roles": 3,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-05T23:18:24Z",
+      "minutos_consumidos": 42.38333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-05T15:21:49Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-05T15:33:28Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "metricas_eficiencia": {
+    "ejecuciones": [
+      {
+        "execution_id": "pytest__8ae5f2501145",
+        "duration_seconds": 54.28100000000086,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__551d68857c66",
+        "duration_seconds": 60.125,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__3b3cdd40b332",
+        "duration_seconds": 59.53100000000086,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__3f9a9ec8bc42",
+        "duration_seconds": 1185.0160000000014,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__4e9719df3765",
+        "duration_seconds": 5.483999999998559,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__a2974ab58c75",
+        "duration_seconds": 6.311999999999898,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__93ad07ea7a2e",
+        "duration_seconds": 69.48500000000058,
+        "command_form": "pytest"
+      }
+    ]
+  }
+}

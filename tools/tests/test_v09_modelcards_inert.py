@@ -1,18 +1,21 @@
-"""Tests de inercia de las Data Cards (v0.9 Change 1, `20261002-data-cards`,
-R1, R2, R29, R32, R37, R38 de `spec.md`).
+"""Tests de inercia de las Model Cards (v0.9 Change 2, `20261005-model-cards`,
+R1, R2, R32, R37, R38 de `spec.md`).
 
-- `resolvers.py` y `datacard.py` solo importan stdlib y hermanos `core`/`assess`
-  (+ `resolvers` de forma perezosa desde `datacard`): nunca `datasources`,
-  `qualityevidence`, `datacontracts`, `modelquality`, `autonomy`, `leadrun`,
-  `reporting`, `ds_init` ni `ds_guard` (R1).
-- `STOP_CATALOG`, `MANIFEST`, `CAPABILITIES_CONOCIDAS`, `EXCLUSIONES_PERMANENTES`
-  y `.ds_init/control.json` quedan intactos (R2, R38).
-- Ningún módulo de producción fuera de `tools/cards` importa `cards`.
-- Una Card escrita con `write_data_card` es project-owned: no altera
-  `control.json['archivos']` ni produce drift de Doctor (R29).
+- `modelcard.py` y `resolvers.py` solo importan stdlib y hermanos
+  `core`/`assess` (+ `resolvers` de forma perezosa desde `modelcard`): nunca
+  `modelquality`, `qualityevidence`, `datasources`, `datacontracts`, `autonomy`,
+  `leadrun`, `reporting`, `ds_init` ni `ds_guard` (R1).
+- `STOP_CATALOG`, `MANIFEST`, `CAPABILITIES_CONOCIDAS` quedan intactos (R2, R38).
+- `model_governance` / `data_cards` / `modelcard` no aparecen en `ds_init`,
+  `autonomy`, `harmessi`, `ds_guard` ni Doctor (R38).
+- `modelquality`, `qualityevidence`, `datasources` y `datacontracts` no importan
+  `cards`.
+- `OBSERVED_KINDS` conserva el orden de los 10 originales como prefijo (R3).
+- Una Model Card escrita con `write_model_card` es project-owned: no altera
+  `control.json['archivos']` ni produce drift de Doctor (R32).
 
 El snapshot de `STOP_CATALOG` replica el de `test_v09_cards_inert.py`: si se
-cambia un STOP, ese cambio debe ser deliberado y editar ambos snapshots.
+cambia un STOP, ese cambio debe ser deliberado y editar todos los snapshots.
 """
 from __future__ import annotations
 
@@ -24,7 +27,7 @@ import unittest
 from pathlib import Path
 
 from tools.autonomy import core as autonomy_core
-from tools.cards import core, datacard
+from tools.cards import core, modelcard
 from tools.ds_init import control as control_mod
 from tools.ds_init.manifest import CAPABILITIES_CONOCIDAS, EXCLUSIONES_PERMANENTES, MANIFEST
 
@@ -46,11 +49,25 @@ STOP_CATALOG_SNAPSHOT = (
     (12, "AUTONOMY-STOP-12", "bypass_needed"),
 )
 
+OBSERVED_KINDS_ORIGINALES = (
+    "source_observation",
+    "source_provenance",
+    "data_contract_result",
+    "quality_evidence",
+    "observed_metric",
+    "baseline_reference",
+    "drift_evidence",
+    "execution_record",
+    "report_artifact",
+    "harmessi_contract",
+)
+OBSERVED_KINDS_AGREGADOS_MODEL_CARDS = ("data_card", "model_quality_result", "model_quality_policy")
+
 PAQUETES_PROHIBIDOS = (
-    "datasources",
-    "qualityevidence",
-    "datacontracts",
     "modelquality",
+    "qualityevidence",
+    "datasources",
+    "datacontracts",
     "autonomy",
     "leadrun",
     "reporting",
@@ -64,7 +81,6 @@ PAQUETES_PROHIBIDOS = (
 # Hermanos permitidos por módulo (import dual relativo / suelto).
 HERMANOS_PERMITIDOS = {
     "resolvers.py": {"core", "assess"},
-    "datacard.py": {"core", "assess", "resolvers"},
     "modelcard.py": {"core", "assess", "resolvers"},
 }
 
@@ -73,12 +89,13 @@ _STDLIB_RESPALDO = {
     "os", "pathlib", "re", "sys", "tempfile", "typing", "unicodedata",
 }
 
-DIRECTORIOS_SIN_CAPABILITIES_FUTURAS = ("tools/ds_init", "tools/autonomy", "tools/harmessi")
-CAPABILITIES_FUTURAS = ("data_cards", "model_governance")
+DIRECTORIOS_SIN_NOMBRES_FUTUROS = ("tools/ds_init", "tools/autonomy", "tools/harmessi")
+NOMBRES_FUTUROS = ("model_governance", "data_cards", "modelcard")
+PAQUETES_QUE_NO_IMPORTAN_CARDS = ("modelquality", "qualityevidence", "datasources", "datacontracts")
 
-H = "a" * 64
 T0 = "2026-10-01T10:00:00Z"
 NOW = "2026-10-02T00:00:00Z"
+H = "a" * 64
 
 
 def _es_stdlib(nombre_raiz: str) -> bool:
@@ -107,7 +124,18 @@ def _py_de(directorio: Path, recursivo: bool = True) -> list:
     return [r for r in sorted(candidatos) if "__pycache__" not in r.parts]
 
 
-class TestImportsDeDatacardYResolvers(unittest.TestCase):
+def _importa_cards(importados: list) -> list:
+    ofensores = []
+    for nivel, modulo, nombres in importados:
+        segmentos = modulo.split(".") if modulo else []
+        if nivel == 0 and ("cards" in segmentos or (segmentos[-1:] == ["tools"] and "cards" in nombres)):
+            ofensores.append(f"{modulo} {nombres}")
+        elif nivel > 0 and ("cards" in segmentos or (modulo == "" and "cards" in nombres)):
+            ofensores.append(f"{'.' * nivel}{modulo} {nombres}")
+    return ofensores
+
+
+class TestImportsDeModelcardYResolvers(unittest.TestCase):
     def test_los_modulos_existen(self):
         for nombre in HERMANOS_PERMITIDOS:
             self.assertTrue((DIR_CARDS / nombre).is_file(), nombre)
@@ -117,7 +145,6 @@ class TestImportsDeDatacardYResolvers(unittest.TestCase):
             for nivel, modulo, nombres in _imports(DIR_CARDS / nombre):
                 with self.subTest(archivo=nombre, nivel=nivel, modulo=modulo, nombres=nombres):
                     if nivel > 0:
-                        # `from . import a, b` o `from .mod import x`
                         candidatos = set(nombres) if modulo == "" else {modulo.split(".")[0]}
                         self.assertTrue(candidatos <= permitidos, f"hermanos no permitidos: {candidatos - permitidos}")
                     else:
@@ -133,7 +160,23 @@ class TestImportsDeDatacardYResolvers(unittest.TestCase):
                 with self.subTest(archivo=nombre, modulo=modulo):
                     self.assertFalse(segmentos & set(PAQUETES_PROHIBIDOS), f"import prohibido: {modulo} {nombres}")
 
-    def test_sin_manipulacion_dinamica_de_imports_en_resolvers_y_datacard(self):
+    def test_resolvers_no_importa_modelcard_ni_datacard(self):
+        for nivel, modulo, nombres in _imports(DIR_CARDS / "resolvers.py"):
+            segmentos = set(modulo.split(".")) | set(nombres)
+            self.assertFalse(segmentos & {"modelcard", "datacard"}, f"resolvers importa una Card: {modulo} {nombres}")
+
+    def test_modelcard_importa_resolvers_solo_de_forma_perezosa(self):
+        arbol = ast.parse((DIR_CARDS / "modelcard.py").read_text(encoding="utf-8"))
+        a_nivel_modulo = []
+        for nodo in arbol.body:  # solo sentencias top-level (sin bajar a funciones)
+            if isinstance(nodo, ast.ImportFrom):
+                a_nivel_modulo.append((nodo.module or "", tuple(a.name for a in nodo.names)))
+            elif isinstance(nodo, ast.Import):
+                a_nivel_modulo.extend((a.name, ()) for a in nodo.names)
+        for modulo, nombres in a_nivel_modulo:
+            self.assertNotIn("resolvers", set(modulo.split(".")) | set(nombres))
+
+    def test_sin_manipulacion_dinamica_de_imports(self):
         for nombre in HERMANOS_PERMITIDOS:
             texto = (DIR_CARDS / nombre).read_text(encoding="utf-8")
             with self.subTest(archivo=nombre):
@@ -147,9 +190,6 @@ class TestImportsDeDatacardYResolvers(unittest.TestCase):
                 self.assertFalse(raices & {"socket", "urllib", "http", "requests", "subprocess", "ftplib", "smtplib"})
 
     def test_ningun_modulo_de_cards_importa_paquetes_prohibidos_salvo_assess_perezoso_de_dsguard(self):
-        """Foundation (Change 0): `assess` importa `dsguard.checks` de forma
-        perezosa (R1 de Change 0). Los demás módulos de producción de `tools/cards`
-        no importan ningún paquete prohibido."""
         for ruta in _py_de(DIR_CARDS, recursivo=False):
             for nivel, modulo, nombres in _imports(ruta):
                 segmentos = set(modulo.split(".")) | set(nombres)
@@ -166,62 +206,87 @@ class TestStopCatalogYMetadatosInmutables(unittest.TestCase):
         self.assertEqual(actual, STOP_CATALOG_SNAPSHOT)
         self.assertEqual(len(autonomy_core.STOP_CATALOG), 12)
 
+    def test_manifest_sin_cards_ni_governance(self):
+        destinos = [e.destino.replace("\\", "/") for e in MANIFEST]
+        self.assertTrue(destinos, "MANIFEST vacío: el test sería vacuo")
+        segmentos_prohibidos = {"cards", "governance"}
+        self.assertEqual([d for d in destinos if segmentos_prohibidos & set(d.split("/"))], [])
+        self.assertEqual([d for d in destinos if d.startswith(("tools/cards", "governance"))], [])
+
+    def test_capabilities_conocidas_sin_cambios(self):
+        self.assertEqual(CAPABILITIES_CONOCIDAS, ("predictive_modeling",))
+
+    def test_exclusiones_permanentes_sin_governance(self):
+        exclusiones = [e.replace("\\", "/") for e in EXCLUSIONES_PERMANENTES]
+        self.assertEqual([e for e in exclusiones if e.startswith("governance") or "governance/cards" in e], [])
+
+    def test_nombres_futuros_no_aparecen_en_ds_init_autonomy_harmessi(self):
+        encontrados = []
+        for directorio in DIRECTORIOS_SIN_NOMBRES_FUTUROS:
+            modulos = _py_de(REPO_ORIGEN / directorio)
+            self.assertTrue(modulos, f"{directorio} sin módulos: el test sería vacuo")
+            for ruta in modulos:
+                texto = ruta.read_text(encoding="utf-8")
+                for nombre in NOMBRES_FUTUROS:
+                    if nombre in texto:
+                        encontrados.append(f"{ruta.relative_to(REPO_ORIGEN).as_posix()}: {nombre}")
+        self.assertEqual(encontrados, [])
+
+    def test_nombres_futuros_no_aparecen_en_ds_guard_ni_doctor(self):
+        archivos = [REPO_ORIGEN / "tools" / "ds_guard.py", REPO_ORIGEN / "tools" / "harmessi" / "doctor.py"]
+        for ruta in archivos:
+            self.assertTrue(ruta.is_file(), ruta)
+            texto = ruta.read_text(encoding="utf-8")
+            for nombre in NOMBRES_FUTUROS:
+                with self.subTest(archivo=ruta.name, nombre=nombre):
+                    self.assertNotIn(nombre, texto)
+            with self.subTest(archivo=ruta.name, nombre="tools.cards"):
+                self.assertNotIn("tools.cards", texto)
+
     def test_ningun_stop_menciona_cards(self):
         for entrada in autonomy_core.STOP_CATALOG:
             with self.subTest(codigo=entrada.code):
                 self.assertNotIn("card", entrada.key.lower())
                 self.assertNotIn("card", entrada.code.lower())
 
-    def test_manifest_sin_cards_ni_governance(self):
-        destinos = [e.destino.replace("\\", "/") for e in MANIFEST]
-        self.assertTrue(destinos, "MANIFEST vacío: el test sería vacuo")
-        segmentos_prohibidos = {"cards", "governance"}
-        con_segmento = [d for d in destinos if segmentos_prohibidos & set(d.split("/"))]
-        self.assertEqual(con_segmento, [])
-        self.assertEqual([d for d in destinos if d.startswith(("tools/cards", "governance"))], [])
 
-    def test_capabilities_conocidas_sin_cambios(self):
-        self.assertEqual(CAPABILITIES_CONOCIDAS, ("predictive_modeling",))
+class TestObservedKindsExtensionAditiva(unittest.TestCase):
+    def test_los_diez_originales_son_prefijo_y_en_el_mismo_orden(self):
+        self.assertEqual(core.OBSERVED_KINDS[:10], OBSERVED_KINDS_ORIGINALES)
 
-    def test_data_cards_y_model_governance_no_aparecen(self):
-        encontrados = []
-        for directorio in DIRECTORIOS_SIN_CAPABILITIES_FUTURAS:
-            modulos = _py_de(REPO_ORIGEN / directorio)
-            self.assertTrue(modulos, f"{directorio} sin módulos: el test sería vacuo")
-            for ruta in modulos:
-                texto = ruta.read_text(encoding="utf-8")
-                for nombre in CAPABILITIES_FUTURAS:
-                    if nombre in texto:
-                        encontrados.append(f"{ruta.relative_to(REPO_ORIGEN).as_posix()}: {nombre}")
-        self.assertEqual(encontrados, [])
+    def test_los_agregados_de_model_cards_estan_presentes_al_final_del_prefijo_de_trece(self):
+        self.assertEqual(len(core.OBSERVED_KINDS), 13)
+        self.assertEqual(core.OBSERVED_KINDS[10:13], OBSERVED_KINDS_AGREGADOS_MODEL_CARDS)
 
-    def test_ds_guard_doctor_y_autonomy_no_mencionan_datacard_ni_resolvers_de_cards(self):
-        archivos = [REPO_ORIGEN / "tools" / "ds_guard.py", REPO_ORIGEN / "tools" / "harmessi" / "doctor.py"]
-        archivos += _py_de(REPO_ORIGEN / "tools" / "autonomy", recursivo=False)
-        for ruta in archivos:
-            texto = ruta.read_text(encoding="utf-8").lower()
-            with self.subTest(archivo=ruta.name):
-                self.assertNotIn("datacard", texto)
-                self.assertNotIn("tools.cards", texto)
+    def test_sin_duplicados(self):
+        self.assertEqual(len(set(core.OBSERVED_KINDS)), len(core.OBSERVED_KINDS))
 
-
-class TestGovernanceAunNoGestionado(unittest.TestCase):
-    def test_governance_cards_no_esta_en_control_json(self):
-        ruta = REPO_ORIGEN / ".ds_init" / "control.json"
-        if not ruta.is_file():
-            self.skipTest("el repo de origen no tiene .ds_init/control.json")
-        control = json.loads(ruta.read_text(encoding="utf-8"))
-        rutas = [str(e.get("ruta", "")).replace("\\", "/") for e in control.get("archivos", []) if isinstance(e, dict)]
-        self.assertTrue(rutas, "control.json sin archivos: el test sería vacuo")
-        self.assertEqual([r for r in rutas if r.startswith("governance/") or "governance/cards" in r], [])
-        self.assertNotIn("governance/cards", ruta.read_text(encoding="utf-8"))
-
-    def test_governance_cards_no_esta_en_exclusiones_permanentes(self):
-        exclusiones = [e.replace("\\", "/") for e in EXCLUSIONES_PERMANENTES]
-        self.assertEqual([e for e in exclusiones if e.startswith("governance") or "governance/cards" in e], [])
+    def test_cards_serializadas_con_kinds_originales_siguen_siendo_validas(self):
+        for kind in OBSERVED_KINDS_ORIGINALES:
+            with self.subTest(kind=kind):
+                ref = core.EvidenceRef("ev1", kind, "x-1", H, T0)
+                self.assertEqual(core.EvidenceRef.from_dict(ref.to_dict()), ref)
 
 
 class TestNingunModuloDeProduccionImportaCards(unittest.TestCase):
+    def test_paquetes_de_evidencia_de_v06_a_v08_no_importan_cards(self):
+        ofensores = []
+        revisados = 0
+        for paquete in PAQUETES_QUE_NO_IMPORTAN_CARDS:
+            directorio = REPO_ORIGEN / "tools" / paquete
+            modulos = [
+                r
+                for r in _py_de(directorio)
+                if "tests" not in r.relative_to(directorio).parts and not r.name.startswith("test_")
+            ]
+            self.assertTrue(modulos, f"{paquete} sin módulos: el test sería vacuo")
+            for ruta in modulos:
+                revisados += 1
+                for ofensor in _importa_cards(_imports(ruta)):
+                    ofensores.append(f"{paquete}/{ruta.name}: {ofensor}")
+        self.assertGreater(revisados, 4)
+        self.assertEqual(ofensores, [])
+
     def test_solo_tools_cards_importa_cards(self):
         ofensores = []
         revisados = 0
@@ -236,45 +301,31 @@ class TestNingunModuloDeProduccionImportaCards(unittest.TestCase):
                 importados = _imports(ruta)
             except SyntaxError:
                 continue
+            for ofensor in _importa_cards(importados):
+                ofensores.append(f"{relativa.as_posix()}: {ofensor}")
             for nivel, modulo, nombres in importados:
-                segmentos = modulo.split(".") if modulo else []
-                if nivel == 0 and ("cards" in segmentos or (segmentos[-1:] == ["tools"] and "cards" in nombres)):
-                    ofensores.append(f"{relativa.as_posix()}: {modulo} {nombres}")
-                elif nivel > 0 and ("cards" in segmentos or (modulo == "" and "cards" in nombres)):
-                    ofensores.append(f"{relativa.as_posix()}: {'.' * nivel}{modulo} {nombres}")
-                elif nivel == 0 and modulo in ("tools",) and "cards" in nombres:
+                if nivel == 0 and modulo == "tools" and "cards" in nombres:
                     ofensores.append(f"{relativa.as_posix()}: from tools import cards")
         self.assertGreater(revisados, 20, "el test sería vacuo")
         self.assertEqual(ofensores, [])
 
 
 # ---------------------------------------------------------------------------
-# R29: la Card es project-owned y no produce drift
+# R32: la Model Card es project-owned y no produce drift
 # ---------------------------------------------------------------------------
 
 
-def _card(card_id="clientes-card", titulo="Clientes"):
-    # Regla I3 de v0.8: ref_id de observación == f"{source_id}__{content_sha256[:12]}".
-    evidencia = core.EvidenceRef("obs-clientes", "source_observation", f"clientes__{H[:12]}", H, T0)
-    claim = core.Claim("c1", "fuente observada", supports=("obs-clientes",), requirement_id="source_principal")
+def _card(model_id="clasificador", version="1.0", titulo="Clasificador"):
     return core.CardEnvelope(
         schema_version=1,
-        card_kind="data_card",
+        card_kind="model_card",
         kind_schema_version=1,
-        card_id=card_id,
+        card_id=modelcard.model_card_id(model_id, version),
         title=titulo,
-        subject="clientes",
+        subject=model_id,
         created_at=T0,
         generated_at=T0,
-        evidence=(evidencia,),
-        attestations=(),
-        claims=(claim,),
-        body={
-            "description": "Tabla de clientes",
-            "source_refs": [
-                {"source_ref_id": "principal", "source_id": "clientes", "observation_evidence_id": "obs-clientes"}
-            ],
-        },
+        body={"model_id": model_id, "model_version": version, "description": "Clasificador de prueba"},
     )
 
 
@@ -282,7 +333,7 @@ def _reloj():
     return NOW
 
 
-class TestCardProjectOwned(unittest.TestCase):
+class TestModelCardProjectOwned(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
@@ -299,12 +350,14 @@ class TestCardProjectOwned(unittest.TestCase):
         )
         self.ruta_control = self.proyecto / ".ds_init" / "control.json"
 
-    def test_write_data_card_no_altera_control_json(self):
+    def test_write_model_card_no_altera_control_json(self):
         antes = self.ruta_control.read_bytes()
         control_antes = json.loads(antes.decode("utf-8"))
-        ruta = datacard.write_data_card(self.proyecto, _card(), clock=_reloj)
+        ruta = modelcard.write_model_card(self.proyecto, _card(), clock=_reloj)
         self.assertTrue(Path(ruta).is_file())
-        self.assertEqual(Path(ruta).relative_to(self.proyecto).as_posix(), "governance/cards/data/clientes-card.json")
+        self.assertEqual(
+            Path(ruta).relative_to(self.proyecto).as_posix(), "governance/cards/model/clasificador__1_0.json"
+        )
         self.assertEqual(self.ruta_control.read_bytes(), antes)
         control_despues = json.loads(self.ruta_control.read_text(encoding="utf-8"))
         self.assertEqual(control_despues["archivos"], control_antes["archivos"])
@@ -328,9 +381,9 @@ class TestCardProjectOwned(unittest.TestCase):
                 self.assertEqual(r.status, "PASS", f"{etapa}: {r.status} {getattr(r, 'message', '')}")
 
         _assert_sin_drift("sin card")
-        ruta = datacard.write_data_card(self.proyecto, _card(), clock=_reloj)
+        ruta = modelcard.write_model_card(self.proyecto, _card(), clock=_reloj)
         _assert_sin_drift("card creada")
-        datacard.write_data_card(self.proyecto, _card(titulo="Clientes v2"), replace=True, clock=_reloj)
+        modelcard.write_model_card(self.proyecto, _card(titulo="Clasificador v1 revisado"), replace=True, clock=_reloj)
         _assert_sin_drift("card editada")
         Path(ruta).unlink()
         _assert_sin_drift("card borrada")
@@ -346,22 +399,26 @@ class TestCardProjectOwned(unittest.TestCase):
         self.assertTrue(any(r.status != "PASS" for r in resultados))
 
     def test_card_invalida_no_crea_governance(self):
-        invalida = _card()
         malo = core.CardEnvelope(
             schema_version=1,
-            card_kind="data_card",
+            card_kind="model_card",
             kind_schema_version=1,
-            card_id="clientes-card",
+            card_id="clasificador__1_0",
             title="t",
-            subject="clientes",
+            subject="clasificador",
             created_at=T0,
             generated_at=T0,
-            body={},  # source_refs obligatorio ausente
+            body={},  # model_id / model_version / description obligatorios ausentes
         )
-        self.assertNotEqual(invalida.body, malo.body)
         with self.assertRaises(core.CardError):
-            datacard.write_data_card(self.proyecto, malo, clock=_reloj)
+            modelcard.write_model_card(self.proyecto, malo, clock=_reloj)
         self.assertFalse((self.proyecto / "governance").exists())
+
+    def test_importar_y_validar_no_crea_governance(self):
+        self.assertEqual(modelcard.validate_model_card(_card()), [])
+        modelcard.evaluate_model_card(_card(), self.proyecto, clock=_reloj)
+        self.assertFalse((self.proyecto / "governance").exists())
+        self.assertFalse((self.proyecto / ".harmessi").exists())
 
 
 if __name__ == "__main__":

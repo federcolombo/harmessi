@@ -53,6 +53,9 @@ OBSERVED_KINDS = (
     "execution_record",
     "report_artifact",
     "harmessi_contract",
+    "data_card",
+    "model_quality_result",
+    "model_quality_policy",
 )
 
 ATTESTATION_KINDS = ("declared", "anchored")

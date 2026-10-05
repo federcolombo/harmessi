@@ -254,12 +254,14 @@ class TestCardsSinDependenciasNoStdlib(unittest.TestCase):
 
     def test_ningun_modulo_de_cards_importa_fuera_de_stdlib(self):
         # Hermanos permitidos por módulo (estrictos, sin comodines): `core` para todos;
-        # `assess` solo para datacard/resolvers; `resolvers` solo para datacard.
+        # `assess` solo para datacard/modelcard/resolvers; `resolvers` solo para
+        # datacard/modelcard.
         # Cada hermano vale como relativo (`from . import x`) y como fallback absoluto
         # (`import x`) del import dual.
         hermanos_por_modulo = {
             "tools/cards/datacard.py": {"core", "assess", "resolvers"},
             "tools/cards/resolvers.py": {"core", "assess"},
+            "tools/cards/modelcard.py": {"core", "assess", "resolvers"},
         }
         violaciones = []
         for ruta in _modulos_cards():

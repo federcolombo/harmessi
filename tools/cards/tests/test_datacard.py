@@ -479,10 +479,8 @@ class TestCompletitudFuentes(BaseTmp):
 
     def test_resolvers_nunca_lanzan_y_rechazan_ids_con_componentes_de_ruta(self):
         mapa = resolvers.default_resolvers(self.raiz)
-        self.assertEqual(
-            set(mapa),
-            {"source_observation", "source_provenance", "harmessi_contract", "quality_evidence", "data_contract_result"},
-        )
+        # Conjunto vigente: todos los kinds observados salvo report_artifact (sin resolver)
+        self.assertEqual(set(mapa), set(core.OBSERVED_KINDS) - {"report_artifact"})
         for kind, resolver in mapa.items():
             with self.subTest(kind=kind, basura="None"):
                 self.assertEqual(resolver(None).state, assess.RES_UNVERIFIABLE)

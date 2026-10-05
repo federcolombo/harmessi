@@ -281,7 +281,12 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
     `resolvers.py` (resolvers stdlib que releen `.harmessi/observations|quality` y archivos de contrato y
     recomputan hashes con paridad testeada contra `datasources`/`datacontracts`/`qualityevidence`, sin
     importarlos). Las Cards viven en `governance/cards/data/<card_id>.json`, project-owned y fuera del
-    manifest. No está en
+    manifest. Change 2 (`20261005-model-cards`) agrega `modelcard.py` (Model Card = `CardEnvelope` con `card_kind=model_card`;
+    identidad `card_id = model_id__<model_version con '.'→'_'>`, una Card por versión de modelo) y amplía
+    `resolvers.py` con resolvers para `data_card`, `model_quality_result`, `model_quality_policy`,
+    `observed_metric`, `baseline_reference`, `drift_evidence` y `execution_record` (pin exacto, sin «latest»;
+    `member` semántico para entradas de métricas/baselines). Las Model Cards viven en
+    `governance/cards/model/<card_id>.json`. No está en
     el manifest administrado hasta Change 4. Verificado por `tools/tests/test_v09_cards_neutrality.py`,
     `test_v09_cards_parity.py` y `test_v09_cards_inert.py`.
 
