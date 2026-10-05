@@ -49,7 +49,7 @@ class TestCamposYKinds(unittest.TestCase):
         self.assertNotIn("class", ev.to_dict())
 
     def test_todos_los_kinds_observados_son_validos(self):
-        self.assertEqual(len(core.OBSERVED_KINDS), 13)
+        self.assertEqual(len(core.OBSERVED_KINDS), 16)
         for kind in core.OBSERVED_KINDS:
             with self.subTest(kind=kind):
                 self.assertEqual(hacer_ev(kind=kind).kind, kind)

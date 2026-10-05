@@ -286,7 +286,17 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
     `resolvers.py` con resolvers para `data_card`, `model_quality_result`, `model_quality_policy`,
     `observed_metric`, `baseline_reference`, `drift_evidence` y `execution_record` (pin exacto, sin «latest»;
     `member` semántico para entradas de métricas/baselines). Las Model Cards viven en
-    `governance/cards/model/<card_id>.json`. No está en
+    `governance/cards/model/<card_id>.json`.
+    Change 3 (`20261005-model-risk-responsible-ai`) agrega `govpolicy.py` (policy de governance como datos:
+    niveles `low/medium/high`, seis dimensiones, orden de fuerza único, policy base `harmessi-base` v1 con hash
+    congelado y merge monotónico fail-closed de endurecimientos) y `modelgov.py` (`ModelGovernanceAssessment`:
+    `card_kind=governance_assessment`, una evaluación por Model Card concreta, `risk_level` declarado por
+    atestación, completitud `governance_completeness` derivada con regla «todos los soportes aceptables y
+    frescos»). Vive en `governance/model-risk/<card_id>.json`. `complete` significa que los requisitos de la
+    policy están satisfechos; no equivale a aprobación ética, de justicia, seguridad ni cumplimiento.
+    La Foundation suma los kinds observados `model_card`, `governance_policy` y `evidence_document`
+    (este último acredita existencia e integridad de un documento, no su contenido).
+    No está en
     el manifest administrado hasta Change 4. Verificado por `tools/tests/test_v09_cards_neutrality.py`,
     `test_v09_cards_parity.py` y `test_v09_cards_inert.py`.
 

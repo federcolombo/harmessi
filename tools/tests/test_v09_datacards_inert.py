@@ -66,6 +66,8 @@ HERMANOS_PERMITIDOS = {
     "resolvers.py": {"core", "assess"},
     "datacard.py": {"core", "assess", "resolvers"},
     "modelcard.py": {"core", "assess", "resolvers"},
+    "govpolicy.py": {"core"},
+    "modelgov.py": {"core", "assess", "govpolicy", "resolvers"},
 }
 
 _STDLIB_RESPALDO = {

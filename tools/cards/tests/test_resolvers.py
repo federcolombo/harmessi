@@ -736,11 +736,11 @@ CINCO_KINDS = {
 
 
 class TestDefaultResolvers(_Base):
-    def test_exactamente_los_doce_kinds(self):
+    def test_exactamente_los_quince_kinds(self):
         mapa = resolvers.default_resolvers(self.repo)
         self.assertEqual(set(mapa), set(core.OBSERVED_KINDS) - {"report_artifact"})
         self.assertTrue(CINCO_KINDS <= set(mapa))
-        self.assertEqual(len(mapa), 12)
+        self.assertEqual(len(mapa), 15)
         for kind, resolver in mapa.items():
             with self.subTest(kind=kind):
                 self.assertTrue(callable(resolver))

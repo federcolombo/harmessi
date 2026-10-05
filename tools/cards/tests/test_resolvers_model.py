@@ -29,7 +29,20 @@ T0 = "2026-10-01T10:00:00Z"
 NOW = "2026-10-02T00:00:00Z"
 RELOJ_DT = lambda: datetime(2026, 10, 1, 10, 0, 0, tzinfo=timezone.utc)  # noqa: E731
 
-LOS_DOCE_KINDS = set(core.OBSERVED_KINDS) - {"report_artifact"}
+LOS_DOCE_KINDS = {
+    "source_observation",
+    "source_provenance",
+    "data_contract_result",
+    "quality_evidence",
+    "observed_metric",
+    "baseline_reference",
+    "drift_evidence",
+    "execution_record",
+    "harmessi_contract",
+    "data_card",
+    "model_quality_result",
+    "model_quality_policy",
+}
 KINDS_NUEVOS = {
     "data_card",
     "model_quality_result",
@@ -951,10 +964,14 @@ class TestExecutionRecord(_Base):
 
 
 class TestDefaultResolversModelo(_Base):
-    def test_exactamente_los_doce_kinds(self):
+    def test_exactamente_los_quince_kinds(self):
+        # Change 3 agregó 3 kinds observados: ahora son todos menos report_artifact.
         mapa = resolvers.default_resolvers(self.repo)
-        self.assertEqual(set(mapa), LOS_DOCE_KINDS)
-        self.assertEqual(len(mapa), 12)
+        esperados = set(core.OBSERVED_KINDS) - {"report_artifact"}
+        self.assertEqual(set(mapa), esperados)
+        self.assertEqual(len(mapa), 15)
+        self.assertEqual(len(core.OBSERVED_KINDS), 16)
+        self.assertTrue(LOS_DOCE_KINDS <= set(mapa))  # los 12 anteriores siguen incluidos
         self.assertTrue(KINDS_NUEVOS <= set(mapa))
         for kind, resolver in mapa.items():
             with self.subTest(kind=kind):

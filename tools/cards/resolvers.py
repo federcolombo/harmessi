@@ -47,11 +47,15 @@ KIND_OBSERVED_METRIC = "observed_metric"
 KIND_BASELINE_REFERENCE = "baseline_reference"
 KIND_DRIFT_EVIDENCE = "drift_evidence"
 KIND_EXECUTION_RECORD = "execution_record"
+KIND_MODEL_CARD = "model_card"
+KIND_GOVERNANCE_POLICY = "governance_policy"
+KIND_EVIDENCE_DOCUMENT = "evidence_document"
 
 SUBJECT_DATA_CONTRACT_EVALUATION = "data_contract_evaluation"
 SUBJECT_MODEL_QUALITY_EVALUATION = "model_quality_evaluation"
 
 _DIR_DATA_CARDS = "governance/cards/data"
+_DIR_MODEL_CARDS = "governance/cards/model"
 
 _RE_SOURCE_ID = r"[a-z0-9][a-z0-9_-]{0,63}"
 _RE_REF_OBSERVACION = re.compile(r"(" + _RE_SOURCE_ID + r")__([0-9a-f]{12})")
@@ -59,7 +63,8 @@ _RE_EVIDENCE_ID = re.compile(r"qe-\d{8}T\d{6}Z-[0-9a-f]{6}")
 _RE_CONTRATO_REF = re.compile(r"(" + _RE_SOURCE_ID + r")@(\d+\.\d+\.\d+)")
 _RE_SHA256 = re.compile(r"[0-9a-f]{64}")
 _RE_REF_DATA_CARD = re.compile(r"(" + _RE_SOURCE_ID + r")__([0-9a-f]{12})")
-_RE_DRIFT_ID = re.compile(r"dr-\d{8}T\d{6}Z-[0-9a-f]{6}")
+_RE_REF_MODEL_CARD = re.compile(r"(" + _RE_SOURCE_ID + r")__([0-9a-f]{12})")
+_RE_DRIFT_ID =re.compile(r"dr-\d{8}T\d{6}Z-[0-9a-f]{6}")
 _RE_REF_EJECUCION = re.compile(r"([a-z0-9][a-z0-9_-]*)__([0-9a-f]{12})")
 
 _DIR_HARMESSI = ".harmessi"
@@ -469,6 +474,151 @@ def data_card_resolver(repo_root: Any) -> Callable[[Any], Resolution]:
     return _envolver(_res)
 
 
+def model_card_resolver(repo_root: Any) -> Callable[[Any], Resolution]:
+    """Resolver `model_card` (R3-R5): identidad, existencia, integridad y revisión.
+    Espejo de `data_card_resolver` sobre `governance/cards/model`. No reevalúa la
+    Model Card ni resuelve su evidencia."""
+    raiz = _raiz(repo_root)
+
+    def _res(ref: Any) -> Resolution:
+        ref_id = _id_seguro(getattr(ref, "ref_id", None))
+        coincidencia = _RE_REF_MODEL_CARD.fullmatch(ref_id)
+        if coincidencia is None:
+            raise _NoVerificable("ref_id no cumple <card_id>__<hash12>")
+        card_id = coincidencia.group(1)
+        relativo = f"{_DIR_MODEL_CARDS}/{card_id}.json"
+        locator = getattr(ref, "locator", None)
+        if locator is not None and locator != relativo:
+            raise _NoVerificable("locator distinto de la ubicación canónica de la Model Card")
+        destino = raiz / relativo
+        if not _dentro_de(raiz, destino):
+            raise _NoVerificable("la Model Card sale de repo_root")
+        if not destino.exists():
+            raise _Ausente("Model Card ausente")
+        try:
+            if not destino.is_file():
+                raise _NoVerificable("no es un archivo")
+            if destino.stat().st_size > MAX_BYTES_LECTURA:
+                raise _NoVerificable("archivo excede el tamaño máximo")
+        except OSError as exc:
+            raise _NoVerificable(f"error de lectura ({type(exc).__name__})") from exc
+        card = assess.read_card(destino)  # CardError -> unverifiable (envoltorio)
+        if card.card_kind != "model_card":
+            raise _NoVerificable("card_kind distinto de 'model_card'")
+        if card.card_id != card_id:
+            raise _NoVerificable("card_id interno no coincide con ref_id")
+        return Resolution(assess.RES_FOUND, card.content_sha256(), "")
+
+    return _envolver(_res)
+
+
+def governance_policy_resolver(repo_root: Any) -> Callable[[Any], Resolution]:
+    """Resolver `governance_policy` (R56-R59): documento JSON de endurecimiento
+    en `ref.locator` (portable, dentro de repo_root); `policy_id` interno == `ref_id`.
+    Hash = `hash_document(datos)`. Ausente -> missing."""
+    raiz = _raiz(repo_root)
+
+    def _res(ref: Any) -> Resolution:
+        policy_id = _id_seguro(getattr(ref, "ref_id", None))
+        destino = _ruta_por_locator(raiz, ref)
+        datos = _leer_json(destino, raiz)
+        if datos.get("policy_id") != policy_id:
+            raise _NoVerificable("policy_id interno no coincide con ref_id")
+        return Resolution(assess.RES_FOUND, hash_document(datos), "")
+
+    return _envolver(_res)
+
+
+def leer_documento_json(repo_root: Any, locator: Any, max_bytes: Optional[int] = None) -> dict:
+    """Lee el documento JSON (objeto) de `locator` relativo a `repo_root`, con las
+    mismas validaciones de ruta que los resolvers (`_ruta_por_locator` y
+    `_leer_json`: portable, sin ':' ni '..', contenido en `repo_root` incluso
+    resolviendo symlinks, tope de tamaño, sin NaN/Infinity). `max_bytes` opcional
+    reduce el tope (no puede superar `MAX_BYTES_LECTURA`). Lanza SOLO `CardError`
+    (`CARD-IO-ERROR` ante cualquier problema de lectura/ruta/JSON): nunca
+    excepciones crudas ni internas.
+
+    NO aplica la exclusión de `data/` de `evidence_document_resolver`: lee solo
+    documentos JSON de policy indicados explícitamente por el llamador."""
+    try:
+        raiz = _raiz(repo_root)
+        tope = MAX_BYTES_LECTURA
+        if max_bytes is not None:
+            if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes < 1:
+                raise CardError(core.CODE_FIELD_INVALID, "leer_documento_json: max_bytes debe ser int >= 1")
+            tope = min(max_bytes, MAX_BYTES_LECTURA)
+        if not isinstance(locator, str):
+            raise CardError(core.CODE_FIELD_INVALID, "leer_documento_json: locator debe ser str")
+
+        class _Pin:  # contenedor mínimo con el atributo que usa `_ruta_por_locator`
+            pass
+
+        pin = _Pin()
+        pin.locator = locator
+        destino = _ruta_por_locator(raiz, pin)
+        if destino.is_file() and destino.stat().st_size > tope:
+            raise _NoVerificable("archivo excede el tamaño máximo")
+        return _leer_json(destino, raiz)
+    except CardError:
+        raise
+    except (_NoVerificable, _Ausente) as exc:
+        raise CardError(core.CODE_IO_ERROR, f"leer_documento_json: {exc}") from exc
+    except Exception as exc:  # fail-closed
+        raise CardError(core.CODE_IO_ERROR, f"leer_documento_json: error de lectura ({type(exc).__name__})") from exc
+
+
+def evidence_document_resolver(repo_root: Any) -> Callable[[Any], Resolution]:
+    """Resolver `evidence_document` (R45): archivo cualquiera del proyecto.
+
+    Este resolver demuestra existencia del documento, integridad de bytes,
+    identidad/pin y frescura/integridad según el resolver. NO demuestra que el
+    contenido sea correcto, que la metodología sea válida, que un análisis de
+    fairness sea bueno, que privacy/security estén resueltas ni que una
+    conclusión del documento sea verdadera. Harmessi solo puede afirmar
+    «existe evidencia documental íntegra vinculada a este requisito».
+
+    `ref_id` es un identificador lógico libre (patrón de ids de core); NO se usa
+    para construir rutas. `locator` es portable, relativo a `repo_root`. Lee BYTES
+    (≤ `MAX_BYTES_LECTURA`) y devuelve el sha256 hex de los bytes (sha256/bin/v1).
+    Ausente -> missing; directorio, symlink que escapa, ilegible o sin locator
+    -> unverifiable.
+
+    La evidencia documental debe vivir fuera de `data/`: un `locator` cuyo primer
+    segmento sea `data` (sin distinguir mayúsculas) es `unverifiable` y el
+    resolver nunca abre datos del proyecto."""
+    raiz = _raiz(repo_root)
+
+    def _res(ref: Any) -> Resolution:
+        ref_id = getattr(ref, "ref_id", None)
+        if not isinstance(ref_id, str) or re.fullmatch(core.ID_PATTERN, ref_id) is None:
+            raise _NoVerificable("ref_id no es un identificador lógico válido")
+        locator = getattr(ref, "locator", None)
+        if isinstance(locator, str):
+            crudos = [s for s in locator.split("/") if s not in ("", ".", "..")]
+            # Windows normaliza puntos/espacios finales (`data./x`, `data /x` abren `data/x`).
+            for s in crudos:
+                if s != s.rstrip(". ") or s != s.strip():
+                    raise _NoVerificable("segmento con punto/espacio al borde: locator no portable")
+            segmentos = [s.strip().rstrip(". ").strip() for s in crudos]
+            if segmentos and segmentos[0].lower() == "data":
+                raise _NoVerificable("documentos bajo data/ no son evidencia de governance")
+        destino = _ruta_por_locator(raiz, ref)
+        try:
+            if not destino.is_file():
+                raise _NoVerificable("no es un archivo")
+            if destino.stat().st_size > MAX_BYTES_LECTURA:
+                raise _NoVerificable("archivo excede el tamaño máximo")
+            with open(destino, "rb") as f:
+                datos = f.read(MAX_BYTES_LECTURA + 1)
+        except OSError as exc:
+            raise _NoVerificable(f"error de lectura ({type(exc).__name__})") from exc
+        if len(datos) > MAX_BYTES_LECTURA:
+            raise _NoVerificable("archivo excede el tamaño máximo")
+        return Resolution(assess.RES_FOUND, hashlib.sha256(datos).hexdigest(), "")
+
+    return _envolver(_res)
+
+
 def model_quality_result_resolver(repo_root: Any) -> Callable[[Any], Resolution]:
     """Resolver `model_quality_result` (R24): exige `subject_kind == "model_quality_evaluation"`."""
     return _resolver_calidad(repo_root, SUBJECT_MODEL_QUALITY_EVALUATION)
@@ -605,7 +755,7 @@ def execution_record_resolver(repo_root: Any) -> Callable[[Any], Resolution]:
 
 
 def default_resolvers(repo_root: Any) -> dict:
-    """Mapa `kind -> resolver` para 12 kinds. Solo `report_artifact` queda sin
+    """Mapa `kind -> resolver` para 15 kinds. Solo `report_artifact` queda sin
     resolver (-> `unverifiable` en `assess.evaluar_evidencia`).
     Lanza `CardError` solo si `repo_root` no es una ruta válida."""
     return {
@@ -621,4 +771,7 @@ def default_resolvers(repo_root: Any) -> dict:
         KIND_HARMESSI_CONTRACT: harmessi_contract_resolver(repo_root),
         KIND_QUALITY_EVIDENCE: quality_evidence_resolver(repo_root),
         KIND_DATA_CONTRACT_RESULT: data_contract_result_resolver(repo_root),
+        KIND_MODEL_CARD: model_card_resolver(repo_root),
+        KIND_GOVERNANCE_POLICY: governance_policy_resolver(repo_root),
+        KIND_EVIDENCE_DOCUMENT: evidence_document_resolver(repo_root),
     }

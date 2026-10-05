@@ -40,7 +40,7 @@ SCHEMA_VERSION = 1
 # Prefijo de claves de extensión (mismo patrón que datasources/datacontracts).
 EXTENSION_PREFIX = "x_"
 
-CARD_KINDS = ("data_card", "model_card")
+CARD_KINDS = ("data_card", "model_card", "governance_assessment")
 
 OBSERVED_KINDS = (
     "source_observation",
@@ -56,6 +56,9 @@ OBSERVED_KINDS = (
     "data_card",
     "model_quality_result",
     "model_quality_policy",
+    "model_card",
+    "governance_policy",
+    "evidence_document",
 )
 
 ATTESTATION_KINDS = ("declared", "anchored")

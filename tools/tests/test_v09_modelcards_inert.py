@@ -62,6 +62,7 @@ OBSERVED_KINDS_ORIGINALES = (
     "harmessi_contract",
 )
 OBSERVED_KINDS_AGREGADOS_MODEL_CARDS = ("data_card", "model_quality_result", "model_quality_policy")
+OBSERVED_KINDS_AGREGADOS_GOBERNANZA = ("model_card", "governance_policy", "evidence_document")
 
 PAQUETES_PROHIBIDOS = (
     "modelquality",
@@ -82,6 +83,8 @@ PAQUETES_PROHIBIDOS = (
 HERMANOS_PERMITIDOS = {
     "resolvers.py": {"core", "assess"},
     "modelcard.py": {"core", "assess", "resolvers"},
+    "govpolicy.py": {"core"},
+    "modelgov.py": {"core", "assess", "govpolicy", "resolvers"},
 }
 
 _STDLIB_RESPALDO = {
@@ -255,8 +258,9 @@ class TestObservedKindsExtensionAditiva(unittest.TestCase):
         self.assertEqual(core.OBSERVED_KINDS[:10], OBSERVED_KINDS_ORIGINALES)
 
     def test_los_agregados_de_model_cards_estan_presentes_al_final_del_prefijo_de_trece(self):
-        self.assertEqual(len(core.OBSERVED_KINDS), 13)
+        self.assertEqual(len(core.OBSERVED_KINDS), 16)
         self.assertEqual(core.OBSERVED_KINDS[10:13], OBSERVED_KINDS_AGREGADOS_MODEL_CARDS)
+        self.assertEqual(core.OBSERVED_KINDS[13:16], OBSERVED_KINDS_AGREGADOS_GOBERNANZA)
 
     def test_sin_duplicados(self):
         self.assertEqual(len(set(core.OBSERVED_KINDS)), len(core.OBSERVED_KINDS))

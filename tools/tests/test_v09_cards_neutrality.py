@@ -262,6 +262,8 @@ class TestCardsSinDependenciasNoStdlib(unittest.TestCase):
             "tools/cards/datacard.py": {"core", "assess", "resolvers"},
             "tools/cards/resolvers.py": {"core", "assess"},
             "tools/cards/modelcard.py": {"core", "assess", "resolvers"},
+            "tools/cards/govpolicy.py": {"core"},
+            "tools/cards/modelgov.py": {"core", "assess", "govpolicy", "resolvers"},
         }
         violaciones = []
         for ruta in _modulos_cards():

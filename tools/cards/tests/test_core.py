@@ -177,7 +177,7 @@ class TestSchemaVersion(unittest.TestCase):
 
 class TestEnvelope(unittest.TestCase):
     def test_card_kinds_reservados(self):
-        self.assertEqual(core.CARD_KINDS, ("data_card", "model_card"))
+        self.assertEqual(core.CARD_KINDS, ("data_card", "model_card", "governance_assessment"))
         self.assertEqual(hacer_card(card_kind="model_card").card_kind, "model_card")
         for valor in ("dataset_card", "", None, 3):
             with self.subTest(valor=valor):

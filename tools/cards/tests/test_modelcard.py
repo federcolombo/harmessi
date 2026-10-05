@@ -1600,19 +1600,21 @@ class TestSerializacionYEvaluacion(BaseMundo):
 
 
 class TestResolversMapa(BaseMundo):
-    def test_default_resolvers_cubre_doce_kinds_y_no_report_artifact(self):
+    def test_default_resolvers_cubre_quince_kinds_y_no_report_artifact(self):
         mapa = resolvers.default_resolvers(self.raiz)
         for kind in ("data_card", "model_quality_result", "model_quality_policy", "observed_metric",
-                     "baseline_reference", "drift_evidence", "execution_record"):
+                     "baseline_reference", "drift_evidence", "execution_record",
+                     "model_card", "governance_policy", "evidence_document"):
             self.assertIn(kind, mapa)
         self.assertNotIn("report_artifact", mapa)
-        self.assertEqual(len(mapa), 12)
+        self.assertEqual(len(mapa), 15)
 
     def test_resolvers_nunca_lanzan(self):
         mapa = resolvers.default_resolvers(self.raiz)
         pin = core.EvidenceRef("ev-x", "observed_metric", "x-inexistente", "d" * 64, T0, member="a@b", locator="x.json")
         for kind in ("data_card", "model_quality_result", "model_quality_policy", "observed_metric",
-                     "baseline_reference", "drift_evidence", "execution_record"):
+                     "baseline_reference", "drift_evidence", "execution_record",
+                     "model_card", "governance_policy", "evidence_document"):
             with self.subTest(kind=kind):
                 res = mapa[kind](dataclasses.replace(pin, kind=kind))
                 self.assertIn(res.state, assess.ESTADOS_RESOLUCION)
