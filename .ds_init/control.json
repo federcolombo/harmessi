@@ -71,7 +71,7 @@
     },
     {
       "ruta": "tools/ds_guard.py",
-      "sha256": "95f214088f4e1fcd17d71404aeaf3593ec8c8a19fcca680729f6ba8bb8f7269f"
+      "sha256": "35526143754dc6ef37a4362bcf39a9dd6d7b98cbba7963b760a5d2a8af414a54"
     },
     {
       "ruta": "tools/dsguard/__init__.py",
@@ -87,7 +87,7 @@
     },
     {
       "ruta": "tools/dsguard/sdd.py",
-      "sha256": "ed3751f5ee84c31f7c25736ca738eb5c52735d6705ac6963ae82a1c694d39002"
+      "sha256": "59082420d42b3f7c88435f954b530ceefe6905fd43e5c1dfccdd6aa1e7a45fdd"
     },
     {
       "ruta": "tools/dsguard/decision.py",
@@ -164,6 +164,14 @@
     {
       "ruta": "tools/dsguard/hook_launcher_rutas.py",
       "sha256": "3cd261a764216a550bead30e3359da3100f4b9685bf8cb7d11acd59d48ba8793"
+    },
+    {
+      "ruta": "tools/dsguard/guardrails_drift.py",
+      "sha256": "f4494342c6d10af742233b920b73915a9c5f133695921e15cfc4d776f4c007f1"
+    },
+    {
+      "ruta": "tools/dsguard/pep440_subset.py",
+      "sha256": "58de706d7ad35ea0708c82513013d9efefba191a925683b3aed5025e7268bfaa"
     },
     {
       "ruta": ".claude/guardrails.json",
