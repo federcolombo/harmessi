@@ -303,6 +303,16 @@
       "fecha_declarada": "2026-10-05",
       "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión final lote 1 tools/tests (tras ciclo 2)",
       "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_v08_change4_leadrun_diff.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "847de02e4b38728892d9d1d22c6652d560faba82410ebcec2e400a4ba6ebdffe",
+      "registrado_utc": "2026-10-06T14:38:18Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: confirmación post-commit del test de diff histórico",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
     }
   ],
   "transiciones": [
@@ -482,6 +492,11 @@
       {
         "execution_id": "pytest__e193fba2dfd3",
         "duration_seconds": 1276.5780000000004,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__e6ca58030263",
+        "duration_seconds": 3.1560000000008586,
         "command_form": "pytest"
       }
     ]

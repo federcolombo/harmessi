@@ -54,7 +54,9 @@ compara `tools/leadrun/allowlist.py` contra `HEAD` y su propio `setUpClass` docu
 vacío y el test se salta («limitación conocida de un test dirigido por diff de working tree»). Falla mientras el cambio no
 esté commiteado porque este Change modifica `allowlist.py` por diseño (R18/R35). La suite congelada
 `test_allowlist.py` (que ese test exige sin cambios) quedó intacta: los tests nuevos viven en `test_allowlist_operational.py`.
-Se reconfirma tras el commit local (ver addendum en el reporte de cierre).
+**Reconfirmado tras el commit local `67237f4`** (runtime gobernado, ejecución `pytest__e6ca58030263`):
+`test_v08_change4_leadrun_diff.py` → 2 passed, 4 skipped, 0 failed (el diff contra HEAD quedó vacío y los tests dependientes se
+saltan por diseño). Resultado efectivo de la regresión: 0 failed.
 
 ## Hallazgo de dogfooding durante la implementación
 Al usar el propio `## Alcance autorizado` para ejecutar la regresión, `pytest tools/tests` con solo `tools/tests/**`
