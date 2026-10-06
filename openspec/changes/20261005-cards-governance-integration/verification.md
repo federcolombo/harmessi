@@ -76,11 +76,17 @@ Regresión relevante, lotes SECUENCIALES (exit code real del `ExecutionRecord`):
 | 2 | modelquality, qualityevidence, datasources, datacontracts | 511 passed, 150 subtests |
 | 3 | autonomy, leadrun | 260 passed, 261 subtests |
 | 4 | `tools/cards/tests` | 1230 passed, 34 skipped, 2577 subtests |
-| 5 | ds_init, harmessi (Doctor), reporting | 1ª corrida: 1176 passed, 3 skipped, 2 failed (`test_manifest`: ver abajo); ds_init completo tras la enmienda: 180 passed |
+| 5 | ds_init, harmessi (Doctor), reporting | 1ª corrida (`pytest__e9d5ffb36e59`): 1176 passed, 3 skipped, 2 failed = 1181 tests = ds_init 180 + harmessi/reporting 1001 (colección). Rerun solo de ds_init tras la enmienda de `test_manifest` (`pytest__5c78828dd0ce`): 180 passed |
 
-Agregado: ≈4560 passed, 43 skipped, **0 failed** al cierre. Los 2 fallos del lote 5 eran premisas obsoletas de
-`test_manifest.py` («sin `capabilities` = sin filtro» y «`{predictive_modeling}` habilitadas = todo el manifiesto»), que
-con `capabilities_cualquiera` y opt-in default-off dejan de valer; se enmendaron preservando la intención (ver abajo).
+**Total único de la regresión (sin doble contar el rerun):** 1380 + 511 + 260 + 1230 + 1178 = **4559 passed**, 43 skipped
+(6 + 0 + 0 + 34 + 3), **0 failed** al cierre. El lote 5 final = 998 passed de harmessi+reporting (1176 − 178 passed de ds_init en
+la 1ª corrida; 998 + 3 skipped = 1001 tests colectados) + 180 passed de ds_init en el rerun (que incluye los 2 tests enmendados).
+Cuidado al sumar: la fila «180» del rerun NO incluye harmessi/reporting; sumar solo las cuatro primeras filas y 180 da 3561
+y omite los 998 passed de harmessi+reporting. Corrección post-cierre del 2026-10-06 (el reporte humano había dado «≈4560»
+sin desglosar el lote 5); los números salen de los `ExecutionRecord` y de un conteo por colección (`--collect-only`, sin
+re-ejecutar suites). Los 2 fallos del lote 5 eran premisas obsoletas de `test_manifest.py` («sin `capabilities` = sin filtro» y
+«`{predictive_modeling}` habilitadas = todo el manifiesto»), que con `capabilities_cualquiera` y opt-in default-off dejan de
+valer; se enmendaron preservando la intención (ver abajo).
 
 ## Proceso de revisión (2 ciclos, máximo)
 - **Ciclo 1** (2 revisores, partes A y B): 0 bloqueantes. Importantes corregidos: I1 Doctor emitía N/A por archivos opt-in
