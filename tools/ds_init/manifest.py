@@ -394,6 +394,18 @@ MANIFEST: tuple = (
         descripcion="Lanzador Python puro del hook de protección de rutas (sin bash, cross-platform)",
     ),
     EntradaManifiesto(
+        fuente="tools/dsguard/guardrails_drift.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/guardrails_drift.py",
+        descripcion="Drift de guardrails.json ignorando rutas mutables de autonomía (R25-R30; módulo solo-stdlib de dsguard)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/dsguard/pep440_subset.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/pep440_subset.py",
+        descripcion="Subconjunto de especificadores PEP 440 (módulo solo-stdlib de dsguard)",
+    ),
+    EntradaManifiesto(
         fuente=".claude/guardrails.json",
         tratamiento=VERBATIM,
         destino=".claude/guardrails.json",

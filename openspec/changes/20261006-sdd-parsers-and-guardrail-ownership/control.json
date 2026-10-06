@@ -1,0 +1,318 @@
+{
+  "schema_version": 1,
+  "change_id": "20261006-sdd-parsers-and-guardrail-ownership",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-06T17:49:00Z",
+  "baseline": {
+    "commit": "cb396891a1dc1d2f741198eb802aad5c69f47715",
+    "rama": "v0.9-dev",
+    "capturado_utc": "2026-10-06T17:49:00Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.10.md",
+      "docs/roadmap/v0.9.md",
+      "openspec/changes/20261006-sdd-parsers-and-guardrail-ownership/**",
+      "openspec/changes/20261006-sdd-parsers-and-guardrail-ownership/control.json",
+      "openspec/changes/20261006-sdd-parsers-and-guardrail-ownership/design.md",
+      "openspec/changes/20261006-sdd-parsers-and-guardrail-ownership/proposal.md",
+      "openspec/changes/20261006-sdd-parsers-and-guardrail-ownership/spec.md",
+      "openspec/changes/20261006-sdd-parsers-and-guardrail-ownership/tasks.md",
+      "openspec/changes/20261006-sdd-parsers-and-guardrail-ownership/verification.md",
+      "tools/autonomy/tests/**",
+      "tools/cards/approvals.py",
+      "tools/cards/tests/**",
+      "tools/datacontracts/tests/**",
+      "tools/datasources/tests/**",
+      "tools/ds_guard.py",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/tests/**",
+      "tools/dsguard/guardrails_drift.py",
+      "tools/dsguard/pep440_subset.py",
+      "tools/dsguard/sdd.py",
+      "tools/harmessi/doctor.py",
+      "tools/harmessi/tests/**",
+      "tools/leadrun/tests/**",
+      "tools/modelquality/tests/**",
+      "tools/qualityevidence/tests/**",
+      "tools/reporting/tests/**",
+      "tools/tests/**"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ecab3b7305a397b5d15ceb3dcdc5da11621e7746bbf957e724218e85055406d3",
+      "registrado_utc": "2026-10-06T17:50:54Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B (checkpoints no circulares, subset PEP 440, drift semántico de guardrails)"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "38a5bfcffa93aa1035db86bdf2b06c172de5dd76f6aefecc3c3804e245f3d2c3",
+      "registrado_utc": "2026-10-06T17:50:56Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B (checkpoints no circulares, subset PEP 440, drift semántico de guardrails)"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "38e5c7397746c6cd1d1085b814435fdbeb608187acf1703a1f768144a5a0e5c2",
+      "registrado_utc": "2026-10-06T17:50:57Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B (checkpoints no circulares, subset PEP 440, drift semántico de guardrails)"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_pep440_subset.py|tools/tests/test_dependency_versions_subset.py|tools/tests/test_sdd_checkpoints_approved.py|tools/tests/test_checkpoints_cli.py|tools/tests/test_guardrails_drift.py|tools/cards/tests/test_approvals.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "96e672594e2d56f58b9336e64dd121ca64eacd34d5bea7ddc00727f06a8a0fe2",
+      "registrado_utc": "2026-10-06T17:56:07Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership: dirigida inicial",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_guardrails_drift.py|tools/harmessi/tests/test_doctor_guardrails.py|tools/tests/test_v08_autonomy_neutrality.py|tools/tests/test_architecture_boundaries.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "df95a062eabd2273a5d8193acbe9bd38ac91af5fe92f41c8c7cdf3d5208f7277",
+      "registrado_utc": "2026-10-06T17:57:22Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership: dirigida 2",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9d3133ebda6cfefcdc4f520fdc62e03e12db45fae06545d134b5395b6afcd197",
+      "registrado_utc": "2026-10-06T18:00:32Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership: diagnostico regresion lote 1 tools/tests",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_pep440_subset.py|tools/tests/test_dependency_versions_subset.py|tools/tests/test_sdd_checkpoints_approved.py|tools/tests/test_checkpoints_cli.py|tools/tests/test_guardrails_drift.py|tools/harmessi/tests/test_doctor_guardrails.py|tools/cards/tests/test_approvals.py|tools/cards/tests/test_integration_hooks.py|tools/tests/test_autonomy_sdd.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "8021e62d0c8c1d77684a39d20012b7c9514b66521836047d21850c97269251bc",
+      "registrado_utc": "2026-10-06T18:06:58Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership: dirigida tras fixes ciclo 1",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9d3133ebda6cfefcdc4f520fdc62e03e12db45fae06545d134b5395b6afcd197",
+      "registrado_utc": "2026-10-06T18:12:00Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership: regresión final lote 1 tools/tests",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B"
+    },
+    {
+      "artefacto": "pytest:tools/modelquality/tests|tools/qualityevidence/tests|tools/datasources/tests|tools/datacontracts/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ea72af6491fa1f5566b372f1791040cf52d270ff59ee64bf964401da218d29c1",
+      "registrado_utc": "2026-10-06T18:36:45Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership: regresión final lote 2 modelquality qualityevidence datasources datacontracts",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B"
+    },
+    {
+      "artefacto": "pytest:tools/autonomy/tests|tools/leadrun/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "0083a2213a3aee8caf0ffeb6bb32b99615f8f63fffe6586208caad4e420d3f63",
+      "registrado_utc": "2026-10-06T18:36:54Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership: regresión final lote 3 autonomy leadrun",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "f5da7879e3ee99afbf94ec2bbaac404176136c155eef2703b29e7b14794e230c",
+      "registrado_utc": "2026-10-06T18:37:04Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership: regresión final lote 4 cards",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B"
+    },
+    {
+      "artefacto": "pytest:tools/ds_init/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ab419ffa99ee71dee9615e76f477f7cc6f5986283512db25aba46578c1143591",
+      "registrado_utc": "2026-10-06T18:39:18Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership: regresión final lote 5 ds_init",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B"
+    },
+    {
+      "artefacto": "pytest:tools/harmessi/tests|tools/reporting/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "7a33082af154a35082ce1cafc6de98a2790b25c245821e6c8df07375255273e2",
+      "registrado_utc": "2026-10-06T18:52:24Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership: regresión final lote 6 harmessi reporting",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_ds_guard_usuario_guard.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "a00612c22e0273c90ab62d6684648ba00ffc5da1821e1d8f3456754f2c2cedfb",
+      "registrado_utc": "2026-10-06T19:06:53Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership: re-ejecución archivo afectado por edición mid-run de ds_guard.py",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_cards_cli.py|tools/tests/test_checkpoints_cli.py|tools/tests/test_ds_guard_budgets_cli.py|tools/tests/test_ds_guard_config_layering.py|tools/tests/test_ds_guard_contract_quality_cli.py|tools/tests/test_ds_guard_dependency_install.py|tools/tests/test_ds_guard_exec.py|tools/tests/test_ds_guard_exec_approve.py|tools/tests/test_ds_guard_source_cli.py|tools/tests/test_ds_guard_source_integrity.py|tools/tests/test_ds_guard_usuario_guard.py|tools/tests/test_guardrails_drift.py|tools/tests/test_operational_budgets.py|tools/tests/test_operational_hook_guardrails.py|tools/tests/test_operational_inert.py|tools/tests/test_operational_scope.py|tools/tests/test_operational_session_recovery.py|tools/tests/test_sdd_checkpoints_approved.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "d46c53bd5e68f9838666b1ab02efc642c38ffa589d6039b0e4fe5c767c899d83",
+      "registrado_utc": "2026-10-06T19:07:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective B sdd-parsers-and-guardrail-ownership: re-ejecución final de archivos ds_guard/approve tras ultimas ediciones",
+      "cita": "Aprobación humana explícita del scope y las decisiones de Corrective B"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-06T17:50:58Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-06T17:50:59Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-06T17:51:02Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-06T19:20:47Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-06T19:21:04Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-06T17:51:01Z",
+      "cierre_utc": "2026-10-06T19:21:06Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 900,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-07T08:51:01Z",
+      "minutos_consumidos": 90.08333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-06T17:51:51Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-06T18:11:51Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "metricas_eficiencia": {
+    "ejecuciones": [
+      {
+        "execution_id": "pytest__60bcc5727d08",
+        "duration_seconds": 54.9220000000023,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__162c01829736",
+        "duration_seconds": 158.0470000000023,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__3d82ada9a288",
+        "duration_seconds": 275.78099999999904,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__49e142eaa6ee",
+        "duration_seconds": 1480.8439999999973,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__e7ce3470cbbe",
+        "duration_seconds": 6.063000000001921,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__2ecf1930702e",
+        "duration_seconds": 6.562000000001717,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__61f6018481b0",
+        "duration_seconds": 130.14100000000326,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__dd8fde3d4229",
+        "duration_seconds": 783.2969999999987,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__7ef08ac3c669",
+        "duration_seconds": 843.75,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__4a459a704f89",
+        "duration_seconds": 3.6570000000028813,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__3f66a1e8078c",
+        "duration_seconds": 766.9220000000023,
+        "command_form": "pytest"
+      }
+    ]
+  }
+}

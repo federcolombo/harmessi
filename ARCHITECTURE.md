@@ -33,6 +33,7 @@ otros la lógica de decisión vive mezclada con la lectura de stdin en el mismo 
 | `tools/dsguard/scientific_validity.py` | Scientific validity checks (v0.4 Change 0) |
 | `tools/dsguard/notebooks.py` | Diff de notebooks (no ejecuta nada) |
 | `tools/dsguard/status.py` | Status unificado (agrega los anteriores) |
+| `tools/dsguard/guardrails_drift.py`, `pep440_subset.py` | Módulos solo-stdlib de dsguard (drift semántico de `guardrails.json`; subconjunto PEP 440); `guardrails_drift.py` no importa `autonomy`: el llamador (doctor) inyecta `parse_autonomy_policy` |
 | `tools/dsimpact/*` (todo el paquete) | Impact preflight (v0.4 Change 1) |
 | `tools/ds_profile/*` (todo excepto lo que reusa `pathguard` como config) | Profiling de datasets |
 | `tools/nbrunner/core.py`, `execute.py`, `fsdiff.py`, `manifest.py` | Ejecución controlada de notebooks (invocada por el adapter, no es adapter en sí) |
@@ -526,6 +527,21 @@ Si ambas existen, el límite efectivo por eje es el MENOR; un valor inválido en
 alcanzan `checkpoint_resumable`/LIMIT (nunca STOP). El alcance de un Change se declara en `proposal.md`
 (`## Alcance autorizado`, aprobado por hash); `dir/**` significa el directorio y sus descendientes.
 `.harmessi/executions/**` y `openspec/decisions/ledger.jsonl` son outputs internos del harness, no scope funcional.
+
+### 6.2 Checkpoints no circulares, subset PEP 440 y drift semántico de guardrails (Corrective B de v0.9)
+
+- **Checkpoints.** El bullet de `## Checkpoints de negocio` se escribe `aprobacion: <change_id>/proposal.md@approved` (sin el hash del
+  propio proposal). Al aprobar `proposal.md`, `ds_guard approve` calcula el hash real una vez y lo materializa en
+  `control["decisiones_preaprobadas"]`; `@<64 hex>` legacy sigue aceptándose y 64 ceros se acepta sintácticamente pero NUNCA cuenta como
+  aprobado (aviso `deprecated`; `status` lo muestra `placeholder`). La resolución de «aprobación vigente» es UNA primitiva de dsguard
+  (`sdd.resolver_aprobacion_registrada`) compartida con `tools/cards/approvals.py`; no hay segundo resolver ni store.
+- **Versiones.** `tools/dsguard/pep440_subset.py` implementa un SUBSET documentado de PEP 440 (release, `aN/bN/rcN`, `.postN`, `.devN`, `+local`
+  solo en la versión consultada; incluye la exclusión de pre/post-releases de la misma release en `<V`/`>V`) y falla cerrado fuera de él.
+  No es PEP 440 completo ni usa `packaging`.
+- **Guardrails.** `.claude/guardrails.json` sigue siendo managed/protegido, pero Doctor compara SEMÁNTICAMENTE contra la plantilla
+  distribuida ignorando solo la lista cerrada de paths mutables (`version`, `autonomy.mode`, `autonomy.version`, `autonomy.budgets`,
+  `autonomy.limits`); cualquier otra clave (holdouts, data_raw, secretos_extra, write_scopes, excepciones, sealed_sources, source_access,
+  desconocidas) sigue marcando `HARMESSI-DRIFT`. `HARMESSI-AUTONOMY-CONFIG` valida los valores mutables (mutable ≠ válido).
 
 ## 7. Dirección arquitectónica planificada para v0.10 (roles ≠ skills ≠ runtime, NO implementada)
 

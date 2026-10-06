@@ -225,6 +225,9 @@ def cmd_status(args: argparse.Namespace) -> int:
         r for r in repo.files_out_of_scope(repo_root, rutas_autorizadas) if not scope.es_output_intrinseco(r)
     ]
 
+    # Verificación informativa de los checkpoints pre-aprobados (no cambia exit codes).
+    checkpoints_estado = sdd.verificar_checkpoints(repo_root, control) if control.get("decisiones_preaprobadas") else []
+
     if args.json:
         payload = {
             "change_id": args.change_id,
@@ -233,6 +236,7 @@ def cmd_status(args: argparse.Namespace) -> int:
             "discrepancia": discrepancia,
             "sesion": sesion_info,
             "fuera_de_alcance": fuera_de_alcance,
+            "checkpoints": checkpoints_estado,
         }
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
@@ -253,6 +257,10 @@ def cmd_status(args: argparse.Namespace) -> int:
             print("Archivos fuera de alcance (informativo):")
             for r in fuera_de_alcance:
                 print(f"  - {r}")
+        if checkpoints_estado:
+            print("Checkpoints:")
+            for c in checkpoints_estado:
+                print(f"  - [{c['estado']}] {c['summary']}: {c['detalle']}")
 
     return 0
 
@@ -334,8 +342,18 @@ def cmd_approve(args: argparse.Namespace) -> int:
     # Alcance autorizado (R22-R25 de 20261005-operational-autonomy-hardening):
     # válido en CUALQUIER approval_mode. Sección ausente o sin bullets -> no se
     # toca el alcance. Hallazgos -> exit 2 sin escribir nada (todo-o-nada).
+    # `proposal.md` se lee UNA sola vez (bytes): de esos mismos bytes salen el
+    # texto parseado y el hash (misma algoritmia que `core.hash_lf_v1`), así no
+    # hay ventana TOCTOU entre lo parseado y lo registrado.
+    hash_proposal = None
+    texto_proposal = None
     if "proposal.md" in args.artefacto:
-        texto_alcance = (change_dir / "proposal.md").read_text(encoding="utf-8")
+        crudo_proposal = (change_dir / "proposal.md").read_bytes()
+        decodificado = crudo_proposal.decode("utf-8-sig")
+        normalizado = decodificado.replace("\r\n", "\n").replace("\r", "\n")
+        hash_proposal = hashlib.sha256(normalizado.encode("utf-8")).hexdigest()
+        texto_proposal = normalizado
+        texto_alcance = texto_proposal
         declaradas, hallazgos_alcance = sdd.parsear_alcance_autorizado(texto_alcance)
         if hallazgos_alcance:
             print(core.formatear_findings_texto(hallazgos_alcance), file=sys.stderr)
@@ -364,12 +382,31 @@ def cmd_approve(args: argparse.Namespace) -> int:
     # aprobación de `proposal.md` completa (exit 2, no se escribe nada) en vez
     # de aceptar una lista de checkpoints parcialmente inválida.
     if "proposal.md" in args.artefacto and sdd.resolver_approval_mode(control) == "checkpoints":
-        texto_proposal = (change_dir / "proposal.md").read_text(encoding="utf-8")
-        checkpoints, hallazgos_checkpoints = sdd.parsear_checkpoints_de_propuesta(texto_proposal)
+        # `hash_proposal` (calculado arriba, una vez) sirve para la entrada de
+        # `aprobaciones` y para materializar `@approved` (D1-D4 del SDD).
+
+        def _resolver_approved(change_id_ref: str):
+            if change_id_ref == args.change_id:
+                return hash_proposal, "proposal.md de este Change"
+            res = sdd.resolver_aprobacion_registrada(repo_root, change_id_ref, "proposal.md")
+            if res.get("estado") == "verified":
+                return res.get("hash_vigente"), res.get("detalle", "")
+            return None, f"{res.get('estado')}: {res.get('detalle', '')}"
+
+        checkpoints, hallazgos_checkpoints = sdd.parsear_checkpoints_de_propuesta(
+            texto_proposal, change_id=args.change_id, resolver_approved=_resolver_approved
+        )
         if hallazgos_checkpoints:
             print(core.formatear_findings_texto(hallazgos_checkpoints), file=sys.stderr)
             return 2
         control["decisiones_preaprobadas"] = checkpoints
+        con_ceros = sdd.checkpoints_con_placeholder_cero(texto_proposal)
+        if con_ceros:
+            print(
+                "deprecated: checkpoints con hash de 64 ceros (placeholder, no verificable); "
+                "usar `@approved` o el hash real. ids: " + ", ".join(con_ceros),
+                file=sys.stderr,
+            )
 
         # Dependencias pre-aprobadas del proyecto (M11, adenda post-cierre
         # 2026-09-30 de `docs/roadmap/v0.8.md`): mismo criterio que los
@@ -387,7 +424,10 @@ def cmd_approve(args: argparse.Namespace) -> int:
     entradas = []
     for artefacto in args.artefacto:
         ruta = change_dir / artefacto
-        hash_valor = core.hash_lf_v1(ruta)
+        if artefacto == "proposal.md" and hash_proposal is not None:
+            hash_valor = hash_proposal  # mismo hash que se materializó en los checkpoints (sin releer)
+        else:
+            hash_valor = core.hash_lf_v1(ruta)
         entrada = {
             "artefacto": artefacto,
             "algoritmo": "sha256/lf/v1",

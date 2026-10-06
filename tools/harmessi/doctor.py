@@ -35,6 +35,7 @@ from tools.ds_init import legacy as legacy_mod
 from tools.ds_init import manifest as manifest_mod
 from tools.ds_init.version import HARNESS_VERSION
 from tools.dsguard import checks
+from tools.dsguard import guardrails_drift
 from tools.dsguard import maturity
 from tools.dsguard import pathguard
 
@@ -476,6 +477,46 @@ def _check_archivos_administrados(destino: Path, control_data: Optional[dict]) -
     return resultados
 
 
+RUTA_GUARDRAILS_JSON = ".claude/guardrails.json"
+
+
+def _drift_guardrails_json(ruta_abs: Path, ruta_rel) -> Optional["checks.CheckResult"]:
+    """Compara `.claude/guardrails.json` contra la plantilla ignorando las rutas mutables
+    (`guardrails_drift.RUTAS_MUTABLES`). `None` = sin drift. Ante cualquier error
+    (JSON ilegible, no-dict, baseline ilegible, excepción) devuelve un WARN fail-closed:
+    nunca reporta «sin drift» por no haber podido comparar."""
+    try:
+        baseline_ruta = manifest_mod.raiz_repo_origen() / RUTA_GUARDRAILS_JSON
+        if ruta_abs.resolve() == baseline_ruta.resolve():
+            # Destino == repo origen: el archivo ES la plantilla; no hay baseline
+            # independiente para comparar. Se conserva el WARN por hash (fail-closed).
+            return checks.CheckResult(
+                checks.STATUS_WARN,
+                "HARMESSI-DRIFT",
+                f"Modificado desde la instalación: {ruta_rel}",
+                subject=str(ruta_rel),
+            )
+        actual = json.loads(ruta_abs.read_text(encoding="utf-8"))
+        baseline = json.loads(baseline_ruta.read_text(encoding="utf-8"))
+        rutas = guardrails_drift.comparar(actual, baseline)
+    except Exception as exc:  # fail-closed
+        return checks.CheckResult(
+            checks.STATUS_WARN,
+            "HARMESSI-DRIFT",
+            f"Modificado desde la instalación: {ruta_rel} (no se pudo comparar con la plantilla: "
+            f"{type(exc).__name__})",
+            subject=str(ruta_rel),
+        )
+    if not rutas:
+        return None
+    return checks.CheckResult(
+        checks.STATUS_WARN,
+        "HARMESSI-DRIFT",
+        f"Modificado desde la instalación: {ruta_rel} (rutas: {', '.join(rutas)})",
+        subject=str(ruta_rel),
+    )
+
+
 def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
     if control_data is None:
         return [
@@ -525,6 +566,12 @@ def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
             )
             continue
         if hash_real != hash_esperado:
+            if str(ruta_rel).replace("\\", "/") == RUTA_GUARDRAILS_JSON:
+                # R25-R30: solo las rutas mutables declaradas no cuentan como drift.
+                resultado_guardrails = _drift_guardrails_json(ruta_abs, ruta_rel)
+                if resultado_guardrails is not None:
+                    resultados.append(resultado_guardrails)
+                continue
             resultados.append(
                 checks.CheckResult(
                     checks.STATUS_WARN,
@@ -538,7 +585,7 @@ def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
             checks.CheckResult(
                 checks.STATUS_PASS,
                 "HARMESSI-DRIFT",
-                "Ningún archivo administrado difiere de su hash registrado",
+                "Ningún archivo administrado difiere de su baseline registrado (guardrails.json se compara semánticamente)",
             )
         )
     return resultados
@@ -792,6 +839,79 @@ def _check_guardrails_json(destino: Path) -> list:
             "HARMESSI-GUARDRAILS-JSON",
             f"guardrails.json válido ({len(config.holdouts)} holdout(s), "
             f"{len(config.data_raw)} patrón(es) data_raw, {len(config.write_scopes)} write_scope(s))",
+            subject=str(ruta),
+        )
+    ]
+
+
+def _cargar_parse_policy():
+    """`parse_autonomy_policy` del propio Harmessi, o `None` si no es confiable. Primero
+    `tools.autonomy.policy`; el bare `autonomy.policy` solo si falla, y en ambos casos el
+    módulo debe vivir dentro de `manifest_mod.raiz_repo_origen()` (no un homónimo ajeno)."""
+    import importlib
+
+    raiz = manifest_mod.raiz_repo_origen().resolve()
+    for nombre in ("tools.autonomy.policy", "autonomy.policy"):
+        try:
+            modulo = importlib.import_module(nombre)
+            origen = Path(getattr(modulo, "__file__", "") or "").resolve()
+            origen.relative_to(raiz)
+        except Exception:
+            continue
+        funcion = getattr(modulo, "parse_autonomy_policy", None)
+        if callable(funcion):
+            return funcion
+    return None
+
+
+def _check_autonomy_config(destino: Path) -> list:
+    """Valida los VALORES de las rutas mutables de `autonomy` en `.claude/guardrails.json`
+    (R31): mutable no significa válido. Guardrails ausente/ilegible => N/A (lo reporta
+    HARMESSI-GUARDRAILS-JSON). Solo reporta; no aprueba ni afirma nada sobre seguridad."""
+    ruta = destino / pathguard.RUTA_CONFIG_RELATIVA
+    try:
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return [
+            checks.CheckResult(
+                checks.STATUS_NA,
+                "HARMESSI-AUTONOMY-CONFIG",
+                "guardrails.json ausente o ilegible: configuración de autonomía no evaluada",
+                subject=str(ruta),
+            )
+        ]
+    hallazgos, modo = guardrails_drift.evaluar_autonomia(
+        datos, pathguard.POLICY_VERSION_MAX, _cargar_parse_policy()
+    )
+    errores = [h for h in hallazgos if h["nivel"] == guardrails_drift.NIVEL_ERROR]
+    avisos = [h for h in hallazgos if h["nivel"] != guardrails_drift.NIVEL_ERROR]
+
+    def _listar(items):
+        return "; ".join(f"{h['code']} ({h['path'] or '-'}: {h['detail']})" for h in items)
+
+    if errores:
+        return [
+            checks.CheckResult(
+                checks.STATUS_FAIL,
+                "HARMESSI-AUTONOMY-CONFIG",
+                f"Configuración de autonomía inválida: {_listar(errores)}",
+                subject=str(ruta),
+            )
+        ]
+    if avisos:
+        return [
+            checks.CheckResult(
+                checks.STATUS_WARN,
+                "HARMESSI-AUTONOMY-CONFIG",
+                f"Configuración de autonomía con claves desconocidas: {_listar(avisos)}",
+                subject=str(ruta),
+            )
+        ]
+    return [
+        checks.CheckResult(
+            checks.STATUS_PASS,
+            "HARMESSI-AUTONOMY-CONFIG",
+            f"Configuración de autonomía sin hallazgos (modo efectivo: {modo})",
             subject=str(ruta),
         )
     ]
@@ -1612,6 +1732,7 @@ def ejecutar(destino) -> tuple:
     resultados += resultados_settings
     resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-HOOKS", _check_hooks, destino, settings_data)
     resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-GUARDRAILS-JSON", _check_guardrails_json, destino)
+    resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-AUTONOMY-CONFIG", _check_autonomy_config, destino)
     resultados += _ejecutar_check(
         SECCION_HARMESSI, "M12-FUENTE-EXTERNA-PERMISOS", _check_fuentes_externas_permisos_os, destino
     )
