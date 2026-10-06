@@ -3386,6 +3386,220 @@ def cmd_quality_drift(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- cards (Change 20261005-cards-governance-integration, R43-R52) ---------
+
+# Capability que habilita cada kind de Card (R45).
+_CARDS_CAPABILITY_DE_KIND = {"data": "data_cards", "model": "model_governance", "governance": "model_governance"}
+_CARDS_CODE_CAPABILITY_OFF = "CARDS-CAPABILITY-DISABLED"
+_CARDS_CODE_SIN_CARDS = "CARDS-NONE-FOUND"
+
+
+def _cards_leer_control(repo_root: Path) -> tuple:
+    """`(control|None, error|None)`: `.ds_init/control.json` si existe. Ilegible -> error."""
+    ruta = repo_root / ".ds_init" / "control.json"
+    if not ruta.is_file():
+        return None, None
+    datos, error = _cargar_json(str(ruta))
+    if error is not None:
+        return None, "no se pudo interpretar .ds_init/control.json"
+    return (datos if isinstance(datos, dict) else {}), None
+
+
+def _cards_nota(discovery_mod) -> str:
+    modelgov_mod = _importar_perezoso("cards", "modelgov")
+    nota = getattr(modelgov_mod, "NOTA_COMPLETENESS", None) if modelgov_mod is not None else None
+    return nota or discovery_mod.NOTA_COMPLETENESS_FALLBACK
+
+
+def _cards_resultados(pv, faltantes_cap: list, limpiar=None) -> list:
+    """CheckResult de la validación (los de cada Card + hallazgos de configuración WARN)."""
+    resultados: list = []
+    for kind in faltantes_cap:
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_NA, _CARDS_CODE_CAPABILITY_OFF,
+                f"cards {kind}: capability {_CARDS_CAPABILITY_DE_KIND[kind]} no habilitada; no se validan",
+            )
+        )
+    for reporte in pv.reports:
+        resultados.extend(reporte.check_results)
+    gov = pv.governance
+    if gov is not None:
+        _l = limpiar or (lambda t, *a: str(t))
+        for h in getattr(gov, "findings", ()) or ():
+            resultados.append(
+                checks.CheckResult(
+                    checks.STATUS_WARN, _l(getattr(h, "code", "GOVCFG"), None, 80),
+                    "governance project configuration finding", detail=_l(getattr(h, "detail", ""), None),
+                )
+            )
+    if not pv.reports and not faltantes_cap:
+        resultados.append(
+            checks.CheckResult(checks.STATUS_NA, _CARDS_CODE_SIN_CARDS, "no hay Cards de governance en las rutas conocidas")
+        )
+    return resultados
+
+
+def _cards_gating(discovery_mod, repo_root: Path, kinds_pedidos: list, explicito: bool) -> tuple:
+    """`(kinds_a_validar|None, kinds_deshabilitados, exit|None)`. Sin control.json no hay
+    gating (R45). Implícito (discovery): los kinds deshabilitados se omiten con N/A;
+    explícito (`--kind`/`--path`): kind deshabilitado -> exit 2."""
+    control, error = _cards_leer_control(repo_root)
+    if error is not None:
+        print(error, file=sys.stderr)
+        return None, [], 2
+    if control is None:
+        return (kinds_pedidos or None), [], None
+    cap = discovery_mod.estado_capabilities(control)
+    if cap["invalida"]:
+        for m in cap["invalida"]:
+            print(f"capabilities inválidas: {m}", file=sys.stderr)
+        return None, [], 2
+    kinds = kinds_pedidos or list(discovery_mod.KINDS)
+    habilitados = [k for k in kinds if _CARDS_CAPABILITY_DE_KIND[k] in cap["habilitadas"]]
+    apagados = [k for k in kinds if k not in habilitados]
+    if apagados and explicito:
+        for k in apagados:
+            print(f"capability {_CARDS_CAPABILITY_DE_KIND[k]} no habilitada: no se puede operar sobre Cards '{k}'", file=sys.stderr)
+        return None, apagados, 2
+    return habilitados, apagados, None
+
+
+def _cards_importar():
+    discovery_mod = _importar_perezoso("cards", "discovery")
+    if discovery_mod is None:
+        print(_mensaje_paquete_no_instalado("cards", "discovery"), file=sys.stderr)
+    return discovery_mod
+
+
+def _cards_gating_por_reportes(discovery_mod, repo_root: Path, pv) -> int:
+    """Gating de `--path`: según el kind real de cada Card validada. 0 ok, 2 deshabilitado."""
+    control, _error = _cards_leer_control(repo_root)
+    if _error:
+        # Fail-closed (cierre de revisión ciclo 2): un control ilegible no desactiva el gating.
+        print(f"cards: control de instalación ilegible: {_error}", file=sys.stderr)
+        return 2
+    if control is None:
+        return 0
+    cap = discovery_mod.estado_capabilities(control)
+    for r in pv.reports:
+        capacidad = _CARDS_CAPABILITY_DE_KIND.get(r.kind)
+        if capacidad is not None and capacidad not in cap["habilitadas"]:
+            print(f"capability {capacidad} no habilitada: no se puede operar sobre Cards '{r.kind}'", file=sys.stderr)
+            return 2
+    return 0
+
+
+def _cards_imprimir_humano(discovery_mod, pv, resultados: list, nota: str, titulo: str) -> None:
+    print(f"{titulo}\n")
+    for n in pv.notes:
+        print(f"Aviso: {n}")
+    for r in pv.reports:
+        print(f"[{r.kind}] {r.card_id or '(sin card_id)'}  revision={r.revision_id or '-'}  estado={r.status}  archivo={r.rel_path}")
+        pol = r.policy or {}
+        if r.kind == "governance":
+            print(f"    governance_completeness={r.status}  risk_level declarado={pol.get('declared_level')} efectivo={pol.get('effective_level')}")
+            politica = pol.get("policy") or {}
+            for lado in sorted(politica):
+                if isinstance(politica[lado], dict):
+                    print("    policy " + lado + ": " + ", ".join(f"{k}={politica[lado][k]}" for k in sorted(politica[lado])))
+            print(f"    configuración: {pol.get('config_state')}")
+        for req in r.requirements:
+            print(f"    requisito {req['requirement_id']} ({req['severity']}): {req['state']}")
+        for ev in r.evidence:
+            if ev["state"] != "fresh":
+                print(f"    evidencia {ev['evidence_id']}: {ev['state']}")
+        for an in r.anchors:
+            print(f"    atestación anchored {an['attestation_id']}: {an['state']} {an.get('detail') or ''}".rstrip())
+        for h in r.findings:
+            print(f"    hallazgo {h['code']} {h['path']}: {h['detail']}")
+    print()
+    _imprimir_check_results(resultados, False, "Resultados")
+    print(f"\nNota: {nota}")
+
+
+def _cards_emitir(discovery_mod, pv, resultados: list, como_json: bool, titulo: str, extra: Optional[dict] = None) -> None:
+    nota = _cards_nota(discovery_mod)
+    if como_json:
+        payload = {
+            "resultados": [r.to_dict() for r in resultados],
+            "cards": [discovery_mod.report_a_dict(r) for r in pv.reports],
+            "nota": nota,
+        }
+        if extra:
+            payload.update(extra)
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        _cards_imprimir_humano(discovery_mod, pv, resultados, nota, titulo)
+
+
+def cmd_cards_validate(args: argparse.Namespace) -> int:
+    """Valida Cards de governance (solo lectura, R44/R51)."""
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    discovery_mod = _cards_importar()
+    if discovery_mod is None:
+        return 3
+    kinds_pedidos = [args.kind] if args.kind else []
+    explicito = bool(args.kind or args.path)
+    kinds, apagados, salida = _cards_gating(discovery_mod, repo_root, kinds_pedidos, bool(args.kind))
+    if salida is not None:
+        return salida
+    if not args.path and kinds is not None and not kinds:
+        pv = discovery_mod.ProjectValidation(reports=(), governance=None, notes=())
+    else:
+        # Con --path el gating se aplica luego según el kind real de cada Card.
+        filtro = None if args.path else kinds
+        pv = discovery_mod.validar_proyecto(repo_root, kinds=filtro, paths=args.path or None)
+    if args.path and args.kind:
+        # M-2: `--kind` incompatible con el kind real de un `--path` es un error de uso.
+        for r in pv.reports:
+            if r.kind not in (args.kind, discovery_mod.KIND_DESCONOCIDO):
+                print(
+                    f"--kind {args.kind} es incompatible con el kind real ({r.kind}) de {r.rel_path}",
+                    file=sys.stderr,
+                )
+                return 2
+    if args.path:
+        salida = _cards_gating_por_reportes(discovery_mod, repo_root, pv)
+        if salida:
+            return salida
+    resultados = _cards_resultados(pv, [] if explicito else apagados, discovery_mod.limpiar_texto)
+    _cards_emitir(discovery_mod, pv, resultados, args.json, "Cards validate")
+    return checks.exit_code(resultados)
+
+
+def cmd_cards_report(args: argparse.Namespace) -> int:
+    """Valida y publica el reporte HTML de UNA Card con reporting.publish (R50)."""
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    discovery_mod = _cards_importar()
+    report_mod = _importar_perezoso("cards", "report")
+    if discovery_mod is None or report_mod is None:
+        print(_mensaje_paquete_no_instalado("cards", "discovery"), file=sys.stderr)
+        return 3
+    previo = discovery_mod.validar_proyecto(repo_root, paths=[args.path])
+    salida = _cards_gating_por_reportes(discovery_mod, repo_root, previo)
+    if salida:
+        return salida
+    try:
+        publicado, pv = report_mod.publicar_card(repo_root, args.path, out_dir=args.out_dir)
+    except ImportError:
+        print(_mensaje_paquete_no_instalado("reporting", "discovery"), file=sys.stderr)
+        return 3
+    resultados = _cards_resultados(pv, [], discovery_mod.limpiar_texto) + list(publicado.results)
+    _cards_emitir(discovery_mod, pv, resultados, args.json, "Cards report", extra={"out_dir": publicado.out_dir})
+    if not args.json and publicado.out_dir:
+        print(f"Reporte: {publicado.out_dir}")
+    return checks.exit_code(resultados)
+
+
 # --- archive --------------------------------------------------------------
 
 def cmd_archive(args: argparse.Namespace) -> int:
@@ -4518,6 +4732,25 @@ def construir_parser() -> argparse.ArgumentParser:
     p_quality_drift.add_argument("--current-label", default="current", dest="current_label")
     p_quality_drift.add_argument("--json", action="store_true")
     p_quality_drift.set_defaults(func=cmd_quality_drift)
+
+    p_cards = subparsers.add_parser(
+        "cards", help="Cards de governance (Data Card, Model Card, assessment): validación y reporte."
+    )
+    cards_sub = p_cards.add_subparsers(dest="subcomando", required=True)
+    p_cards_validate = cards_sub.add_parser(
+        "validate", help="Valida Cards por rutas conocidas o --path (solo lectura)."
+    )
+    p_cards_validate.add_argument("--path", action="append", default=[], help="Archivo de Card (repetible).")
+    p_cards_validate.add_argument("--kind", choices=["data", "model", "governance"], default=None)
+    p_cards_validate.add_argument("--json", action="store_true")
+    p_cards_validate.set_defaults(func=cmd_cards_validate)
+    p_cards_report = cards_sub.add_parser(
+        "report", help="Valida y publica el reporte de UNA Card (reporting.publish)."
+    )
+    p_cards_report.add_argument("--path", required=True)
+    p_cards_report.add_argument("--out-dir", default=None, dest="out_dir")
+    p_cards_report.add_argument("--json", action="store_true")
+    p_cards_report.set_defaults(func=cmd_cards_report)
 
     p_archive = subparsers.add_parser(
         "archive", help="Archiva un cambio cerrado de openspec/changes/ a openspec/archive/ (git mv)."

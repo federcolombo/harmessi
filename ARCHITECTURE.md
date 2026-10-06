@@ -579,3 +579,21 @@ referencian artefactos existentes (v0.7 quality/contracts/drift, v0.8 `SourceObs
 autonomía. Distinguen evidencia observada/de sistema de `HumanAttestation`, que no satisface requisitos
 empíricos. La validación de Cards es un dominio de governance separado de la decisión de
 runtime/autonomía (no agrega STOP, no vive en `guardrails.json`).
+
+### 8.1 Integración de Cards al producto (v0.9 Change 4, `20261005-cards-governance-integration`)
+
+- **Capabilities opt-in.** `CAPABILITIES_CONOCIDAS` conserva su semántica histórica (default-on, `predictive_modeling`);
+  `data_cards` y `model_governance` viven en `CAPABILITIES_OPT_IN` (default-off, `--enable-capability`).
+  `model_governance` exige `predictive_modeling` (validado por `validar_capabilities` en install, sync y Doctor). Con
+  flags de capability, `sync` parte del set persistido completo; sin ellos conserva el comportamiento v0.8.
+- **Provisioning.** `tools/cards` se distribuye como entradas VERBATIM capability-aware (campo `capabilities_cualquiera`
+  para los módulos compartidos); `tools/cards/tests` y `governance/` (project-owned, `EXCLUSIONES_PERMANENTES`) nunca. El
+  instalador no crea Cards, assessments ni hardening.
+- **Adaptadores** (únicos módulos de `tools/cards` que pueden importar `dsguard`/`reporting`/`ds_init`): `govconfig`
+  (configuración efectiva de governance y hardening ACTUAL), `approvals` (resolución real de `ApprovalRef` contra
+  `control.json`; prueba una aprobación registrada bajo el trust model, NO identidad criptográfica), `discovery`, `report`.
+  La Foundation sigue stdlib-only y recibe el verificador/contexto por parámetro.
+- **Superficie:** `ds_guard cards validate|report`, Doctor `HARMESSI-GOV-*` y reporting vía `tools/reporting`
+  (`report_kind="governance"`, `decision_scope="exploratory"`). `governance` en `REPORT_KINDS` es solo vocabulario: no
+  autoriza lectura de holdout ni equivale a `evaluation`/`model`.
+- **Autonomía intacta (D1/D5/D6):** un FAIL de `cards validate` o un ERROR de Doctor no es una decisión de ejecución.

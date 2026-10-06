@@ -223,6 +223,77 @@ def evaluar_evidencia(ref: Any, resolvers: Optional[Mapping]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Anclas (Change 4, R34, R37, R38): hook inyectable, sin conocer control.json
+# ---------------------------------------------------------------------------
+
+ANCHOR_VERIFIED = "verified"
+ANCHOR_STALE = "stale"
+ANCHOR_MISSING = "missing"
+ANCHOR_UNRESOLVABLE = "unresolvable"
+ESTADOS_ANCLA = (ANCHOR_VERIFIED, ANCHOR_STALE, ANCHOR_MISSING, ANCHOR_UNRESOLVABLE)
+
+CODE_ANCHOR_STALE = "ANCHOR-STALE"
+CODE_ANCHOR_MISSING = "ANCHOR-MISSING"
+CODE_ANCHOR_UNRESOLVABLE = "ANCHOR-UNRESOLVABLE"
+_CODIGO_DE_ANCLA = {
+    ANCHOR_STALE: CODE_ANCHOR_STALE,
+    ANCHOR_MISSING: CODE_ANCHOR_MISSING,
+    ANCHOR_UNRESOLVABLE: CODE_ANCHOR_UNRESOLVABLE,
+}
+
+
+def resolver_anclas(atestaciones: Any, anchor_verifier: Optional[Callable[[Any], Any]]) -> dict:
+    """`{attestation_id: (state, detail, change_id, artefacto, usuario, fecha_declarada)}`
+    para cada atestación `anchored`. Las `declared` NUNCA consultan el verificador (R38).
+    Sin verificador -> `{}` (comportamiento estructural de Changes 0-3). FAIL-CLOSED:
+    excepción o retorno sin `state` válido -> `unresolvable`."""
+    if anchor_verifier is None:
+        return {}
+    if not callable(anchor_verifier):
+        raise CardError(core.CODE_FIELD_INVALID, "anchor_verifier debe ser callable")
+    anclas: dict = {}
+    for a in atestaciones:
+        if getattr(a, "attestation_kind", None) != "anchored":
+            continue
+        try:
+            r = anchor_verifier(a)
+        except Exception:
+            r = None
+        estado = getattr(r, "state", None)
+        if not isinstance(estado, str) or estado not in ESTADOS_ANCLA:
+            anclas[a.attestation_id] = (ANCHOR_UNRESOLVABLE, "el verificador no devolvió una resolución válida", None, None, None, None)
+        else:
+            anclas[a.attestation_id] = (
+                estado,
+                str(getattr(r, "detail", "")),
+                getattr(r, "change_id", None),
+                getattr(r, "artefacto", None),
+                getattr(r, "usuario", None),
+                getattr(r, "fecha_declarada", None),
+            )
+    return anclas
+
+
+def hallazgos_anclas(anclas: dict) -> tuple:
+    """`Hallazgo` ANCHOR-STALE / ANCHOR-MISSING / ANCHOR-UNRESOLVABLE por ancla no verificada."""
+    return tuple(
+        Hallazgo(_CODIGO_DE_ANCLA[v[0]], f"$.attestations[{aid}]", v[1])
+        for aid, v in sorted(anclas.items())
+        if v[0] != ANCHOR_VERIFIED
+    )
+
+
+def anclas_a_tuple(anclas: dict) -> tuple:
+    """Tupla ordenada `(attestation_id, state, detail, change_id, artefacto, usuario, fecha_declarada)`."""
+    return tuple((aid, *v) for aid, v in sorted(anclas.items()))
+
+
+def anclas_a_dicts(anclas: tuple) -> list:
+    claves = ("attestation_id", "state", "detail", "change_id", "artefacto", "usuario", "fecha_declarada")
+    return [dict(zip(claves, a)) for a in anclas]
+
+
+# ---------------------------------------------------------------------------
 # CardAssessment
 # ---------------------------------------------------------------------------
 
@@ -244,8 +315,16 @@ class CardAssessment:
     hallazgos: tuple = ()
     sin_requisitos: bool = False
     card_id: str = ""
+    # Resolución de atestaciones `anchored` (solo con `anchor_verifier`); ver `resolver_anclas`.
+    anchors: tuple = ()
 
     def a_dict(self) -> dict:
+        d = self._a_dict_base()
+        if self.anchors:
+            d["anchors"] = anclas_a_dicts(self.anchors)
+        return d
+
+    def _a_dict_base(self) -> dict:
         return {
             "card_id": self.card_id,
             "card_status": self.card_status,
@@ -283,7 +362,8 @@ def _validar_requirements(requirements: Any) -> tuple:
 
 
 def _evaluar_requisito(
-    req: Requirement, card: CardEnvelope, estados_ev: dict, evidencias: dict, atestaciones: dict
+    req: Requirement, card: CardEnvelope, estados_ev: dict, evidencias: dict, atestaciones: dict,
+    anclas: Optional[dict] = None,
 ) -> tuple:
     """Devuelve `(state, detalle)` de un requisito (R24, R25, R29)."""
     claims = [c for c in card.claims if c.requirement_id == req.requirement_id]
@@ -317,7 +397,11 @@ def _evaluar_requisito(
         elif s in atestaciones:
             att = atestaciones[s]
             if acepta_att and _RANGO_ATESTACION[att.attestation_kind] >= rango_min:
-                vigentes.append(s)
+                ancla = anclas.get(s) if anclas else None
+                if ancla is None or ancla[0] == ANCHOR_VERIFIED:
+                    vigentes.append(s)
+                else:  # R37: ancla no verificada no satisface (ni se degrada a declared)
+                    no_vigentes.append(EV_STALE if ancla[0] == ANCHOR_STALE else EV_UNVERIFIABLE)
             else:
                 rechazados.append(s)
         else:
@@ -351,8 +435,10 @@ def evaluate(
     clock: Optional[Callable[[], str]] = None,
     *,
     validate_body: Optional[Callable[[dict], list]] = None,
+    anchor_verifier: Optional[Callable[[Any], Any]] = None,
 ) -> CardAssessment:
-    """Evalúa una Card contra `requirements` (R24-R30). No lee el reloj del
+    """Evalúa una Card contra `requirements` (R24-R30). `anchor_verifier` (R34,
+    opcional): verifica las atestaciones `anchored`; `None` = estructural. No lee el reloj del
     sistema: `clock` (inyectable) solo alimenta el chequeo de atestación futura
     de `validate_card`. Requirements duplicados o malformados -> `CardError`.
 
@@ -376,11 +462,12 @@ def evaluate(
     evidencias = {e.evidence_id: e for e in card.evidence}
     atestaciones = {a.attestation_id: a for a in card.attestations}
     estados_ev = {eid: evaluar_evidencia(e, resolvers) for eid, e in evidencias.items()}
+    anclas = resolver_anclas(card.attestations, anchor_verifier)
 
     requisitos = tuple(
         sorted(
             (
-                (r.requirement_id, r.severity, *_evaluar_requisito(r, card, estados_ev, evidencias, atestaciones))
+                (r.requirement_id, r.severity, *_evaluar_requisito(r, card, estados_ev, evidencias, atestaciones, anclas))
                 for r in reqs
             ),
             key=lambda t: t[0],
@@ -394,9 +481,10 @@ def evaluate(
         card_status=estado,
         requisitos=requisitos,
         evidencias=tuple(sorted(estados_ev.items(), key=lambda t: t[0])),
-        hallazgos=(),
+        hallazgos=hallazgos_anclas(anclas),
         sin_requisitos=sin_requisitos,
         card_id=card_id,
+        anchors=anclas_a_tuple(anclas),
     )
 
 
@@ -475,6 +563,13 @@ def a_check_results(assessment: CardAssessment) -> list:
             )
         ]
 
+    for h in assessment.hallazgos:  # hallazgos de ancla (R37): WARN
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_WARN, h.code, f"{_FRASE_GOVERNANCE}: anchor not verified at {h.path}",
+                detail=h.detail, subject=sujeto,
+            )
+        )
     for req_id, severidad, estado, detalle in assessment.requisitos:
         if estado == REQ_SATISFIED:
             continue
@@ -646,6 +741,7 @@ def evaluate_file(
     clock: Optional[Callable[[], str]] = None,
     *,
     validate_body: Optional[Callable[[dict], list]] = None,
+    anchor_verifier: Optional[Callable[[Any], Any]] = None,
 ) -> CardAssessment:
     """Evalúa la Card de `path` (explícito). Lee con `read_card`; si este lanza
     `CardError` (IO, JSON inválido, `status`/clave desconocida, pin mal
@@ -664,4 +760,4 @@ def evaluate_file(
             sin_requisitos=len(reqs) == 0,
             card_id="",
         )
-    return evaluate(card, reqs, resolvers, clock, validate_body=validate_body)
+    return evaluate(card, reqs, resolvers, clock, validate_body=validate_body, anchor_verifier=anchor_verifier)

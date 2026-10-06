@@ -26,7 +26,12 @@ from pathlib import Path
 from tools.autonomy import core as autonomy_core
 from tools.cards import core, datacard
 from tools.ds_init import control as control_mod
-from tools.ds_init.manifest import CAPABILITIES_CONOCIDAS, EXCLUSIONES_PERMANENTES, MANIFEST
+from tools.ds_init.manifest import (
+    CAPABILITIES_CONOCIDAS,
+    CAPABILITIES_OPT_IN,
+    EXCLUSIONES_PERMANENTES,
+    MANIFEST,
+)
 
 REPO_ORIGEN = Path(__file__).resolve().parents[2]
 DIR_CARDS = REPO_ORIGEN / "tools" / "cards"
@@ -76,6 +81,26 @@ _STDLIB_RESPALDO = {
 }
 
 DIRECTORIOS_SIN_CAPABILITIES_FUTURAS = ("tools/ds_init", "tools/autonomy", "tools/harmessi")
+# Enmiendas R75/R76 (Change 4, `20261005-cards-governance-integration`).
+ARCHIVOS_CAPABILITIES_PERMITIDOS = (
+    "tools/ds_init/manifest.py",
+    "tools/ds_init/cli.py",
+    "tools/harmessi/doctor.py",
+    "tools/ds_guard.py",
+)
+PREFIJOS_CAPABILITIES_PERMITIDOS = ("tools/ds_init/tests/", "tools/harmessi/tests/")
+IMPORTADORES_CARDS_PERMITIDOS = ("harmessi/doctor.py", "ds_guard.py")  # relativos a tools/
+ADAPTADORES_NUEVOS = ("approvals.py", "discovery.py", "report.py", "govconfig.py")
+PROHIBIDOS_ADAPTADORES = {
+    "autonomy", "leadrun", "modelquality", "qualityevidence", "datasources", "datacontracts",
+}
+DESTINOS_CARDS = tuple(
+    f"tools/cards/{n}.py"
+    for n in (
+        "__init__", "core", "assess", "resolvers", "approvals", "discovery",
+        "report", "datacard", "modelcard", "govpolicy", "modelgov", "govconfig",
+    )
+)
 CAPABILITIES_FUTURAS = ("data_cards", "model_governance")
 
 H = "a" * 64
@@ -153,6 +178,16 @@ class TestImportsDeDatacardYResolvers(unittest.TestCase):
         perezosa (R1 de Change 0). Los demás módulos de producción de `tools/cards`
         no importan ningún paquete prohibido."""
         for ruta in _py_de(DIR_CARDS, recursivo=False):
+            if ruta.name in ADAPTADORES_NUEVOS:
+                # Enmienda R76 (Change 4): los 4 adaptadores pueden importar
+                # dsguard/reporting/ds_init; siguen prohibidos los demás paquetes.
+                for nivel, modulo, nombres in _imports(ruta):
+                    segmentos = set(modulo.split(".")) | set(nombres)
+                    with self.subTest(archivo=ruta.name, modulo=modulo):
+                        self.assertFalse(
+                            segmentos & PROHIBIDOS_ADAPTADORES, f"import prohibido: {modulo} {nombres}"
+                        )
+                continue
             for nivel, modulo, nombres in _imports(ruta):
                 segmentos = set(modulo.split(".")) | set(nombres)
                 prohibidos = segmentos & set(PAQUETES_PROHIBIDOS)
@@ -174,32 +209,45 @@ class TestStopCatalogYMetadatosInmutables(unittest.TestCase):
                 self.assertNotIn("card", entrada.key.lower())
                 self.assertNotIn("card", entrada.code.lower())
 
-    def test_manifest_sin_cards_ni_governance(self):
+    def test_manifest_cards_exactos_y_sin_governance(self):
+        # Enmienda R75 (Change 4): tools/cards se distribuye, y SOLO estos 12 módulos.
         destinos = [e.destino.replace("\\", "/") for e in MANIFEST]
         self.assertTrue(destinos, "MANIFEST vacío: el test sería vacuo")
-        segmentos_prohibidos = {"cards", "governance"}
-        con_segmento = [d for d in destinos if segmentos_prohibidos & set(d.split("/"))]
-        self.assertEqual(con_segmento, [])
-        self.assertEqual([d for d in destinos if d.startswith(("tools/cards", "governance"))], [])
+        self.assertEqual(sorted(d for d in destinos if d.startswith("tools/cards")), sorted(DESTINOS_CARDS))
+        self.assertEqual([d for d in destinos if "governance" in d.split("/")], [])
+        self.assertEqual(
+            [d for d in destinos if "cards" in d.split("/") and d not in DESTINOS_CARDS], []
+        )
+        self.assertEqual([d for d in destinos if d.startswith("governance")], [])
 
     def test_capabilities_conocidas_sin_cambios(self):
         self.assertEqual(CAPABILITIES_CONOCIDAS, ("predictive_modeling",))
 
-    def test_data_cards_y_model_governance_no_aparecen(self):
+    def test_data_cards_y_model_governance_solo_en_lista_cerrada(self):
+        # Enmienda R75: permitido solo en la lista cerrada (manifest, cli, doctor,
+        # ds_guard y sus tests); `tools/autonomy/**` sin excepción.
         encontrados = []
         for directorio in DIRECTORIOS_SIN_CAPABILITIES_FUTURAS:
             modulos = _py_de(REPO_ORIGEN / directorio)
             self.assertTrue(modulos, f"{directorio} sin módulos: el test sería vacuo")
             for ruta in modulos:
+                relativa = ruta.relative_to(REPO_ORIGEN).as_posix()
+                if relativa in ARCHIVOS_CAPABILITIES_PERMITIDOS or relativa.startswith(
+                    PREFIJOS_CAPABILITIES_PERMITIDOS
+                ):
+                    continue
                 texto = ruta.read_text(encoding="utf-8")
                 for nombre in CAPABILITIES_FUTURAS:
                     if nombre in texto:
-                        encontrados.append(f"{ruta.relative_to(REPO_ORIGEN).as_posix()}: {nombre}")
+                        encontrados.append(f"{relativa}: {nombre}")
         self.assertEqual(encontrados, [])
 
-    def test_ds_guard_doctor_y_autonomy_no_mencionan_datacard_ni_resolvers_de_cards(self):
-        archivos = [REPO_ORIGEN / "tools" / "ds_guard.py", REPO_ORIGEN / "tools" / "harmessi" / "doctor.py"]
-        archivos += _py_de(REPO_ORIGEN / "tools" / "autonomy", recursivo=False)
+    def test_capabilities_opt_in(self):
+        self.assertEqual(CAPABILITIES_OPT_IN, ("data_cards", "model_governance"))
+
+    def test_autonomy_no_menciona_datacard_ni_cards(self):
+        # Enmienda R75: ds_guard.py y doctor.py ya pueden mencionar cards/datacard.
+        archivos = _py_de(REPO_ORIGEN / "tools" / "autonomy", recursivo=False)
         for ruta in archivos:
             texto = ruta.read_text(encoding="utf-8").lower()
             with self.subTest(archivo=ruta.name):
@@ -218,9 +266,11 @@ class TestGovernanceAunNoGestionado(unittest.TestCase):
         self.assertEqual([r for r in rutas if r.startswith("governance/") or "governance/cards" in r], [])
         self.assertNotIn("governance/cards", ruta.read_text(encoding="utf-8"))
 
-    def test_governance_cards_no_esta_en_exclusiones_permanentes(self):
+    def test_governance_esta_en_exclusiones_permanentes(self):
+        # Enmienda R10 (Change 4): `governance/` es project-owned; el instalador
+        # jamás despliega ahí.
         exclusiones = [e.replace("\\", "/") for e in EXCLUSIONES_PERMANENTES]
-        self.assertEqual([e for e in exclusiones if e.startswith("governance") or "governance/cards" in e], [])
+        self.assertIn("governance/", exclusiones)
 
 
 class TestNingunModuloDeProduccionImportaCards(unittest.TestCase):
@@ -233,6 +283,8 @@ class TestNingunModuloDeProduccionImportaCards(unittest.TestCase):
                 continue
             if "tests" in relativa.parts or ruta.name.startswith("test_"):
                 continue
+            if relativa.as_posix() in IMPORTADORES_CARDS_PERMITIDOS:
+                continue  # enmienda R75: lista cerrada (perezosos)
             revisados += 1
             try:
                 importados = _imports(ruta)

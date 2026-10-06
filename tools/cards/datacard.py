@@ -714,7 +714,13 @@ def _resolvers_por_defecto(repo_root: Any) -> dict:
         raise CardError(core.CODE_FIELD_INVALID, f"default_resolvers falló ({type(exc).__name__})") from exc
 
 
-def evaluate_data_card(card_or_path: Any, repo_root: Any, clock: Optional[Callable[[], str]] = None):
+def evaluate_data_card(
+    card_or_path: Any,
+    repo_root: Any,
+    clock: Optional[Callable[[], str]] = None,
+    *,
+    anchor_verifier: Optional[Callable[[Any], Any]] = None,
+):
     """Azúcar sobre `assess.evaluate`/`evaluate_file`: cablea `requirements_for`,
     `default_resolvers(repo_root)` y `body_validator_for`. Un archivo ilegible o
     una Card inválida -> `CardAssessment(card_status="invalid")`; nunca
@@ -734,7 +740,9 @@ def evaluate_data_card(card_or_path: Any, repo_root: Any, clock: Optional[Callab
     try:
         reqs = requirements_for(card)
         resolvers = _resolvers_por_defecto(repo_root)
-        return assess.evaluate(card, reqs, resolvers, clock, validate_body=body_validator_for(card))
+        return assess.evaluate(
+            card, reqs, resolvers, clock, validate_body=body_validator_for(card), anchor_verifier=anchor_verifier
+        )
     except CardError as exc:
         return assess.CardAssessment(
             card_status=assess.CARD_INVALID,

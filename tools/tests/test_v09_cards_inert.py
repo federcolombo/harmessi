@@ -23,7 +23,7 @@ import unittest
 from pathlib import Path
 
 from tools.autonomy import core as autonomy_core
-from tools.ds_init.manifest import CAPABILITIES_CONOCIDAS, MANIFEST
+from tools.ds_init.manifest import CAPABILITIES_CONOCIDAS, CAPABILITIES_OPT_IN, MANIFEST
 
 REPO_ORIGEN = Path(__file__).resolve().parents[2]
 
@@ -43,12 +43,35 @@ STOP_CATALOG_SNAPSHOT = (
     (12, "AUTONOMY-STOP-12", "bypass_needed"),
 )
 
-# Archivos/directorios que NO deben mencionar `cards` (subcadena, sin distinguir mayúsculas).
-ARCHIVOS_SIN_CARDS = (
+# Enmienda R75 (Change 4): lista cerrada de archivos que PUEDEN mencionar
+# `cards`/`data_cards`/`model_governance`. Cualquier otro archivo de ds_init,
+# harmessi y ds_guard sigue prohibido; `tools/autonomy/**` sin excepción.
+ARCHIVOS_CON_CARDS_PERMITIDO = (
     "tools/ds_guard.py",
     "tools/harmessi/doctor.py",
+    "tools/ds_init/manifest.py",
+    "tools/ds_init/cli.py",
+)
+PREFIJOS_CON_CARDS_PERMITIDO = (
+    "tools/ds_init/tests/",
+    "tools/harmessi/tests/",
 )
 DIRECTORIO_AUTONOMY = "tools/autonomy"
+
+DESTINOS_CARDS_PERMITIDOS = tuple(
+    f"tools/cards/{n}.py"
+    for n in (
+        "__init__", "core", "assess", "resolvers", "approvals", "discovery",
+        "report", "datacard", "modelcard", "govpolicy", "modelgov", "govconfig",
+    )
+)
+
+
+def _permitido_mencionar(ruta_relativa: str) -> bool:
+    return ruta_relativa in ARCHIVOS_CON_CARDS_PERMITIDO or ruta_relativa.startswith(
+        PREFIJOS_CON_CARDS_PERMITIDO
+    )
+
 
 # Directorios donde no deben aparecer los nombres de capabilities futuras.
 DIRECTORIOS_SIN_CAPABILITIES_FUTURAS = (
@@ -96,34 +119,49 @@ class TestStopCatalogInmutable(unittest.TestCase):
 
 
 class TestManifestYCapabilitiesInertes(unittest.TestCase):
-    def test_manifest_sin_destinos_bajo_tools_cards(self):
+    # Enmienda R75 (Change 4, `20261005-cards-governance-integration`): el
+    # manifiesto AHORA distribuye exactamente estos 12 módulos de tools/cards.
+    def test_manifest_destinos_bajo_tools_cards_son_exactamente_los_12_modulos(self):
         destinos = [e.destino.replace("\\", "/") for e in MANIFEST]
         self.assertTrue(destinos, "MANIFEST vacío: el test sería vacuo")
-        bajo_cards = [d for d in destinos if d.startswith("tools/cards")]
-        self.assertEqual(
-            bajo_cards,
-            [],
-            f"tools/cards no debe estar en MANIFEST en v0.9 Change 0 (R42; se instala en Change 4): {bajo_cards}",
-        )
+        bajo_cards = sorted(d for d in destinos if d.startswith("tools/cards"))
+        self.assertEqual(bajo_cards, sorted(DESTINOS_CARDS_PERMITIDOS))
+        for destino in bajo_cards:
+            self.assertNotIn("/tests/", destino)
 
-    def test_manifest_sin_destinos_que_mencionen_cards(self):
-        """Más estricto que lo anterior: ningún destino contiene un segmento `cards`."""
+    def test_manifest_sin_destinos_governance_ni_otros_que_mencionen_cards(self):
+        """Ningún destino tiene segmento `governance`; fuera de `tools/cards/`
+        ningún destino contiene un segmento `cards`."""
+        destinos = [e.destino.replace("\\", "/") for e in MANIFEST]
+        self.assertEqual([d for d in destinos if "governance" in d.split("/")], [])
         con_segmento = [
-            e.destino
-            for e in MANIFEST
-            if "cards" in e.destino.replace("\\", "/").split("/")
+            d for d in destinos if "cards" in d.split("/") and d not in DESTINOS_CARDS_PERMITIDOS
         ]
         self.assertEqual(con_segmento, [])
 
     def test_capabilities_conocidas_sin_cambios(self):
         self.assertEqual(CAPABILITIES_CONOCIDAS, ("predictive_modeling",))
 
+    def test_capabilities_opt_in(self):
+        self.assertEqual(CAPABILITIES_OPT_IN, ("data_cards", "model_governance"))
+
 
 class TestArchivosExistentesNoMencionanCards(unittest.TestCase):
-    def test_ds_guard_y_doctor_no_contienen_cards(self):
-        for ruta in ARCHIVOS_SIN_CARDS:
+    def test_ds_guard_y_doctor_son_los_unicos_que_importan_cards_en_esas_rutas(self):
+        # Enmienda R75: ds_guard.py y doctor.py PUEDEN mencionar `cards`
+        # (import perezoso); el resto de su directorio sigue prohibido
+        # (ver TestCapabilitiesFuturasAusentes y test_modulos_de_harmessi_sin_cards).
+        for ruta in ARCHIVOS_CON_CARDS_PERMITIDO:
             with self.subTest(archivo=ruta):
-                self.assertNotIn("cards", _leer(ruta).lower())
+                self.assertTrue((REPO_ORIGEN / ruta).is_file())
+
+    def test_modulos_de_harmessi_sin_cards(self):
+        for ruta in _py_de("tools/harmessi", recursivo=True):
+            relativa = ruta.relative_to(REPO_ORIGEN).as_posix()
+            if _permitido_mencionar(relativa):
+                continue
+            with self.subTest(archivo=relativa):
+                self.assertNotIn("cards", ruta.read_text(encoding="utf-8").lower())
 
     def test_autonomy_no_contiene_cards(self):
         modulos = _py_de(DIRECTORIO_AUTONOMY, recursivo=False)
@@ -141,14 +179,24 @@ class TestCapabilitiesFuturasAusentes(unittest.TestCase):
             self.assertTrue(modulos, f"{directorio} sin módulos: el test sería vacuo")
             for ruta in modulos:
                 texto = ruta.read_text(encoding="utf-8")
+                relativa = ruta.relative_to(REPO_ORIGEN).as_posix()
+                if _permitido_mencionar(relativa):
+                    continue
                 for nombre in CAPABILITIES_FUTURAS:
                     if nombre in texto:
-                        encontrados.append(f"{ruta.relative_to(REPO_ORIGEN).as_posix()}: {nombre}")
+                        encontrados.append(f"{relativa}: {nombre}")
         self.assertEqual(
             encontrados,
             [],
-            f"capabilities futuras (data_cards/model_governance) no deben aparecer todavía: {encontrados}",
+            f"data_cards/model_governance solo en la lista cerrada de archivos permitidos: {encontrados}",
         )
+
+    def test_autonomy_sin_capabilities_nuevas_sin_excepcion(self):
+        for ruta in _py_de(DIRECTORIO_AUTONOMY, recursivo=True):
+            texto = ruta.read_text(encoding="utf-8")
+            for nombre in CAPABILITIES_FUTURAS:
+                with self.subTest(archivo=ruta.name, nombre=nombre):
+                    self.assertNotIn(nombre, texto)
 
 
 if __name__ == "__main__":

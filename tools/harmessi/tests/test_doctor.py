@@ -556,6 +556,10 @@ class TestRetrofitChecksEngine(unittest.TestCase):
         # no que falte el archivo de madurez.
         maturity.project_init(self.repo, stage="experiment")
         resultados, _ = doctor_mod.ejecutar(self.repo)
+        # Change 20261005 (R55): `HARMESSI-GOV-CAPABILITY` es N/A por diseño con
+        # las capabilities opt-in deshabilitadas (default); se excluye `HARMESSI-GOV-*` (la fixture instala el manifiesto completo SIN filtrar por
+        # capabilities, por lo que además aparece `HARMESSI-GOV-INSTALLED-DISABLED`, N/A por diseño).
+        resultados = [r for r in resultados if not r.codigo.startswith("HARMESSI-GOV-")]
         self.assertEqual(_niveles(resultados) & {"N/A"}, set())
         texto = doctor_mod.formatear(resultados)
         self.assertNotIn("[N/A]", texto)

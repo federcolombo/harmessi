@@ -374,6 +374,24 @@ def _leer_control_json(destino: Path):
     ]
 
 
+def _capabilities_efectivas_de_control(control_data: Optional[dict]) -> frozenset:
+    """Capabilities habilitadas según `control.json` (única fuente, R12/R54).
+    Lista presente: literal. Ausente/no-lista (legacy): solo las históricas
+    (`CAPABILITIES_CONOCIDAS`); las opt-in quedan deshabilitadas."""
+    crudo = control_data.get("capabilities_habilitadas") if isinstance(control_data, dict) else None
+    if isinstance(crudo, list):
+        return frozenset(c for c in crudo if isinstance(c, str))
+    return frozenset(manifest_mod.CAPABILITIES_CONOCIDAS)
+
+
+def _entrada_solo_opt_in(entrada) -> bool:
+    """True si TODAS las capabilities de la entrada (`capabilities` o
+    `capabilities_cualquiera`) son opt-in (`CAPABILITIES_OPT_IN`)."""
+    opt_in = set(getattr(manifest_mod, "CAPABILITIES_OPT_IN", _GOV_OPT_IN_FALLBACK))
+    caps = set(entrada.capabilities) | set(getattr(entrada, "capabilities_cualquiera", ()) or ())
+    return bool(caps) and caps <= opt_in
+
+
 def _check_archivos_administrados(destino: Path, control_data: Optional[dict]) -> list:
     if control_data is None:
         return [
@@ -409,12 +427,10 @@ def _check_archivos_administrados(destino: Path, control_data: Optional[dict]) -
     # entrada cuyo `capabilities` no sea subconjunto de las habilitadas
     # nunca es "faltante de verdad": es `N/A -- capability not enabled`
     # (R3 de Change 4, implementado recién acá -- no estaba wireado).
-    capabilities_habilitadas_raw = control_data.get("capabilities_habilitadas")
-    capabilities_habilitadas = (
-        frozenset(capabilities_habilitadas_raw)
-        if isinstance(capabilities_habilitadas_raw, list)
-        else None
-    )
+    # Change 20261005 (R7/R12): el filtro es el helper único del manifiesto
+    # (`filtrar_entradas_por_capabilities`). Lista ausente (legacy) = capabilities
+    # históricas habilitadas y opt-in deshabilitadas; lista presente, literal.
+    capabilities_habilitadas = _capabilities_efectivas_de_control(control_data)
 
     resultados = []
     for entrada in entradas:
@@ -423,16 +439,18 @@ def _check_archivos_administrados(destino: Path, control_data: Optional[dict]) -
         ruta = destino / entrada.destino
         if ruta.exists():
             continue
-        if (
-            capabilities_habilitadas is not None
-            and entrada.capabilities
-            and not set(entrada.capabilities) <= capabilities_habilitadas
-        ):
+        if not manifest_mod.filtrar_entradas_por_capabilities([entrada], capabilities_habilitadas):
+            if _entrada_solo_opt_in(entrada):
+                # I1 (R78): tooling de una capability opt-in no habilitada: sin
+                # resultado por archivo; lo informa el N/A agregado HARMESSI-GOV-CAPABILITY.
+                continue
             resultados.append(
                 checks.CheckResult(
                     checks.STATUS_NA,
                     "HARMESSI-CAPABILITY-DISABLED",
-                    f"No provisionado: capability {list(entrada.capabilities)} no habilitada "
+                    "No provisionado: capability "
+                    f"{list(entrada.capabilities or getattr(entrada, 'capabilities_cualquiera', ()))} "
+                    "no habilitada "
                     f"-- {entrada.destino}",
                     subject=entrada.destino,
                 )
@@ -917,6 +935,10 @@ def _check_ownership_5_vias(destino: Path, control_data: Optional[dict]) -> list
                 continue
             if entrada.destino in rutas_administradas:
                 continue  # categoría (2)/(5), ya cubiertas por otros checks
+            if _entrada_solo_opt_in(entrada) and not manifest_mod.filtrar_entradas_por_capabilities(
+                [entrada], _capabilities_efectivas_de_control(control_data)
+            ):
+                continue  # I2: tooling de capability opt-in deshabilitada que quedó en disco
             ruta = destino / entrada.destino
             if ruta.exists():
                 resultados.append(
@@ -1093,6 +1115,286 @@ def _check_installation_stage_interno(destino: Path, control_data: Optional[dict
             f"installation_stage ({installation_stage!r}) cubre project_stage ({project_stage!r}).",
         )
     ]
+
+
+# --- GOVERNANCE (Change 20261005, R53-R58) ----------------------------------------
+
+_GOV_OPT_IN_FALLBACK = ("data_cards", "model_governance")
+_GOV_STAGES_NONE_WARN = frozenset({"production_candidate", "production"})
+# Archivo exclusivo de cada capability opt-in (el tooling compartido no sirve
+# para distinguir cuál está instalada).
+_GOV_TOOLING_EXCLUSIVO = {
+    "data_cards": "tools/cards/datacard.py",
+    "model_governance": "tools/cards/modelcard.py",
+}
+# Directorios conocidos (R19) y documento de hardening (R22) por capability.
+_GOV_DIRS_CONTENIDO = {
+    "data_cards": ("governance/cards/data",),
+    "model_governance": ("governance/cards/model", "governance/model-risk"),
+}
+_GOV_ARCHIVOS_CONTENIDO = {"model_governance": ("governance/policy/model-risk-hardening.json",)}
+_GOV_KINDS_POR_CAPABILITY = {"data_cards": ("data",), "model_governance": ("model", "governance")}
+_GOV_ANCHOR_NO_VERIFICADO = frozenset({"missing", "unresolvable", "stale"})
+_GOV_CODIGOS_ANCHOR = frozenset({"ANCHOR-STALE", "ANCHOR-MISSING", "ANCHOR-UNRESOLVABLE"})
+_GOV_FRASE = "card governance requirements not satisfied"
+_GOV_NOTA_COMPLETE = (
+    "complete ≠ éticamente aceptable/seguro/justo/compliant: solo indica que los requisitos "
+    "de la policy están satisfechos con soportes verificados"
+)
+
+
+def _gov_limpiar(valor, maximo: int = 120) -> str:
+    """Valor provisto por el usuario -> texto sin caracteres de control, truncado (R49)."""
+    texto = "".join(c if c.isprintable() else "?" for c in str(valor))
+    return texto if len(texto) <= maximo else texto[: maximo - 3] + "..."
+
+
+def _gov_hay_json(directorio: Path) -> bool:
+    try:
+        return any(e.name.endswith(".json") for e in directorio.iterdir())
+    except OSError:
+        return False
+
+
+def _gov_hay_contenido(destino: Path, capability: str) -> bool:
+    if any(_gov_hay_json(destino / d) for d in _GOV_DIRS_CONTENIDO.get(capability, ())):
+        return True
+    return any((destino / f).exists() for f in _GOV_ARCHIVOS_CONTENIDO.get(capability, ()))
+
+
+def _gov_project_stage(destino: Path) -> Optional[str]:
+    """`project_stage` como `_check_installation_stage`; cualquier problema -> None."""
+    try:
+        ruta = maturity.state_path(destino)
+        if not ruta.exists():
+            return None
+        return maturity.leer_estado(ruta).get("project_stage")
+    except Exception:  # noqa: BLE001 - sin madurez legible: la fila NONE queda en N/A
+        return None
+
+
+def _gov_ownership(control_data: Optional[dict]) -> list:
+    """R18: `archivos` no debe listar rutas bajo `governance/` (es del proyecto)."""
+    archivos = control_data.get("archivos") if isinstance(control_data, dict) else None
+    resultados = []
+    for entrada in archivos if isinstance(archivos, list) else []:
+        ruta = entrada.get("ruta") if isinstance(entrada, dict) else None
+        if not isinstance(ruta, str):
+            continue
+        normalizada = ruta.replace("\\", "/").lstrip("./")
+        if normalizada == "governance" or normalizada.startswith("governance/"):
+            resultados.append(
+                checks.CheckResult(
+                    checks.STATUS_WARN,
+                    "HARMESSI-GOV-OWNERSHIP",
+                    "control.json lista una ruta bajo governance/, que es contenido del proyecto "
+                    f"(no administrado por Harmessi): {_gov_limpiar(ruta)}",
+                    subject=_gov_limpiar(ruta),
+                )
+            )
+    return resultados
+
+
+def _gov_anchor_no_verificado(reporte) -> bool:
+    for ancla in getattr(reporte, "anchors", ()) or ():
+        if not isinstance(ancla, dict):
+            continue
+        estado = ancla.get("state") or (ancla.get("resolution") or {}).get("state")
+        if estado in _GOV_ANCHOR_NO_VERIFICADO:
+            return True
+    return any(
+        isinstance(h, dict) and h.get("code") in _GOV_CODIGOS_ANCHOR
+        for h in getattr(reporte, "findings", ()) or ()
+    )
+
+
+def _gov_resultados_de_reporte(reporte) -> list:
+    """Una Card/assessment ya validado -> filas de R55 (D11: Doctor lee el estado, no lo decide)."""
+    asesoramiento = reporte.kind == "governance"
+    sufijo = "ASSESSMENT" if asesoramiento else "CARD"
+    etiqueta = f"{reporte.kind} {_gov_limpiar(reporte.card_id)} ({_gov_limpiar(reporte.rel_path)})"
+    ruta = _gov_limpiar(reporte.rel_path)
+    estado = reporte.status
+    resultados = []
+    if estado == "complete":
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_PASS, f"HARMESSI-GOV-{sufijo}-COMPLETE", f"{etiqueta}: {_GOV_NOTA_COMPLETE}.", subject=ruta
+            )
+        )
+    elif estado in ("stale", "incomplete"):
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_WARN,
+                f"HARMESSI-GOV-{sufijo}-{estado.upper()}",
+                f"{etiqueta}: {_GOV_FRASE} (estado {estado}).",
+                subject=ruta,
+            )
+        )
+    else:  # invalid o estado no reconocido: no se puede confiar en el artefacto
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_FAIL,
+                "HARMESSI-GOV-CARD-INVALID",
+                f"{etiqueta}: {_GOV_FRASE}; artefacto inválido (estado {_gov_limpiar(estado)}).",
+                subject=ruta,
+            )
+        )
+    if _gov_anchor_no_verificado(reporte):
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_WARN,
+                "HARMESSI-GOV-ANCHOR-UNVERIFIED",
+                f"{etiqueta}: atestación anchored sin verificar (missing/unresolvable/stale): "
+                f"{_GOV_FRASE}.",
+                subject=ruta,
+            )
+        )
+    return resultados
+
+
+def _check_governance(destino: Path, control_data: Optional[dict]) -> list:
+    """`HARMESSI-GOV-*` (R53-R58, tabla R55). Solo lectura; capabilities solo desde
+    `control.json` (R12/R54); no toca drift ni el manifiesto (R56). Doctor lee el
+    estado ya derivado por `tools.cards` -- nunca lo decide (D11). ERROR queda para
+    configuración inválida, capabilities inválidas y artefactos `invalid`."""
+    resultados = _gov_ownership(control_data)
+    if control_data is None:
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_NA,
+                "HARMESSI-GOV-CAPABILITY",
+                "Sin control.json legible: no se pueden determinar las capabilities de governance.",
+            )
+        )
+        return resultados
+
+    crudo = control_data.get("capabilities_habilitadas")
+    habilitadas = _capabilities_efectivas_de_control(control_data)
+    opt_in = tuple(getattr(manifest_mod, "CAPABILITIES_OPT_IN", _GOV_OPT_IN_FALLBACK))
+    validas = tuple(getattr(manifest_mod, "CAPABILITIES_VALIDAS", manifest_mod.CAPABILITIES_CONOCIDAS + opt_in))
+
+    desconocidas = [c for c in (crudo if isinstance(crudo, list) else []) if c not in validas]
+    if desconocidas:
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_WARN,
+                "HARMESSI-GOV-CAPABILITY-UNKNOWN",
+                f"Capability(s) no reconocida(s) en control.json: {[_gov_limpiar(c) for c in desconocidas]} "
+                f"(válidas: {list(validas)}).",
+            )
+        )
+    mensajes_invalidas = manifest_mod.validar_capabilities(sorted(c for c in habilitadas if c in validas))
+    if mensajes_invalidas:
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_FAIL,
+                "HARMESSI-GOV-CAPABILITY-INVALID",
+                "Combinación de capabilities inválida: " + "; ".join(_gov_limpiar(m, 200) for m in mensajes_invalidas),
+            )
+        )
+
+    kinds_por_capability = {}
+    for capability in opt_in:
+        if capability in habilitadas:
+            if capability == "model_governance" and mensajes_invalidas:
+                continue  # combinación inválida: ya es ERROR, no se valida contenido
+            kinds_por_capability[capability] = _GOV_KINDS_POR_CAPABILITY.get(capability, ())
+            continue
+        tooling = _GOV_TOOLING_EXCLUSIVO.get(capability)
+        if tooling and (destino / tooling).exists():
+            resultados.append(
+                checks.CheckResult(
+                    checks.STATUS_NA,
+                    "HARMESSI-GOV-INSTALLED-DISABLED",
+                    f"Capability {capability!r} deshabilitada con su tooling presente (installed-but-disabled).",
+                    subject=tooling,
+                )
+            )
+        if _gov_hay_contenido(destino, capability):
+            resultados.append(
+                checks.CheckResult(
+                    checks.STATUS_NA,
+                    "HARMESSI-GOV-CONTENT-DISABLED",
+                    f"Hay contenido de governance en rutas conocidas pero la capability {capability!r} "
+                    "está deshabilitada: no se valida.",
+                )
+            )
+    if not any(c in habilitadas for c in opt_in):
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_NA,
+                "HARMESSI-GOV-CAPABILITY",
+                "Ninguna capability opt-in de governance (data_cards/model_governance) habilitada.",
+            )
+        )
+    if not kinds_por_capability:
+        return resultados
+
+    try:
+        from tools.cards import discovery  # import perezoso (R58)
+    except Exception as exc:  # noqa: BLE001 - tooling ausente/roto: WARN, nunca ERROR
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_WARN,
+                "HARMESSI-GOV-TOOLING",
+                f"No se pudo importar tools.cards (capability habilitada): {_gov_limpiar(repr(exc), 200)}",
+            )
+        )
+        return resultados
+
+    kinds = [k for ks in kinds_por_capability.values() for k in ks]
+    validacion = discovery.validar_proyecto(destino, kinds=kinds)
+
+    gobierno = getattr(validacion, "governance", None)
+    if "model_governance" in kinds_por_capability and gobierno is not None:
+        codigos = sorted({_gov_limpiar(getattr(h, "code", "?")) for h in getattr(gobierno, "findings", ())})
+        if gobierno.state == "invalid":
+            resultados.append(
+                checks.CheckResult(
+                    checks.STATUS_FAIL,
+                    "HARMESSI-GOV-CONFIG-INVALID",
+                    f"Hardening/capa local inválida o relajada ({', '.join(codigos) or 'sin detalle'}): "
+                    f"{_GOV_FRASE}.",
+                    subject=getattr(gobierno, "project_hardening_path", None),
+                )
+            )
+        elif gobierno.state == "unresolvable":
+            resultados.append(
+                checks.CheckResult(
+                    checks.STATUS_WARN,
+                    "HARMESSI-GOV-CONFIG-UNRESOLVABLE",
+                    f"Hardening presente pero no resoluble ({', '.join(codigos) or 'sin detalle'}): "
+                    f"{_GOV_FRASE}.",
+                    subject=getattr(gobierno, "project_hardening_path", None),
+                )
+            )
+
+    reportes = list(getattr(validacion, "reports", ()))
+    for capability, ks in kinds_por_capability.items():
+        if any(r.kind in ks for r in reportes):
+            continue
+        etapa = _gov_project_stage(destino)
+        if etapa in _GOV_STAGES_NONE_WARN:
+            resultados.append(
+                checks.CheckResult(
+                    checks.STATUS_WARN,
+                    "HARMESSI-GOV-NONE",
+                    f"Capability {capability!r} habilitada sin Cards con project_stage={etapa!r}: "
+                    f"{_GOV_FRASE}.",
+                )
+            )
+        else:
+            resultados.append(
+                checks.CheckResult(
+                    checks.STATUS_NA,
+                    "HARMESSI-GOV-NONE",
+                    f"Capability {capability!r} habilitada, todavía sin Cards.",
+                )
+            )
+    for reporte in reportes:
+        resultados += _gov_resultados_de_reporte(reporte)
+    return resultados
 
 
 # --- RUNTIME -------------------------------------------------------------------
@@ -1318,6 +1620,9 @@ def ejecutar(destino) -> tuple:
     )
     resultados += _ejecutar_check(
         SECCION_HARMESSI, "HARMESSI-INSTALLATION-STAGE", _check_installation_stage, destino, control_data
+    )
+    resultados += _ejecutar_check(
+        SECCION_HARMESSI, "HARMESSI-GOV", _check_governance, destino, control_data
     )
 
     resultados += _ejecutar_check(SECCION_RUNTIME, "RUNTIME-LAUNCHER", _check_launchers_existen, destino)

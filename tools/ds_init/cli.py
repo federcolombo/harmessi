@@ -27,7 +27,15 @@ from pathlib import Path
 from . import control as control_mod
 from . import legacy as legacy_mod
 from . import writer
-from .manifest import CAPABILITIES_CONOCIDAS, ORDEN_STAGES, manifest_para_perfil_y_stage, raiz_repo_origen
+from .manifest import (
+    CAPABILITIES_CONOCIDAS,
+    CAPABILITIES_VALIDAS,
+    ORDEN_STAGES,
+    capabilities_efectivas_sync,
+    manifest_para_perfil_y_stage,
+    raiz_repo_origen,
+    validar_capabilities,
+)
 from .planner import construir_plan, formatear_plan
 from .preflight import DestinoInvalidoError, validar_destino
 from .version import HARNESS_VERSION
@@ -72,13 +80,24 @@ def construir_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--disable-capability",
         action="append",
-        choices=list(CAPABILITIES_CONOCIDAS),
+        choices=list(CAPABILITIES_VALIDAS),
         default=None,
         metavar="CAPABILITY",
         help="Deshabilita una capability (M8, repetible) -- ninguna entrada del manifiesto "
         "declarada bajo esa capability se provisiona. Default: todas las capabilities "
         f"conocidas ({CAPABILITIES_CONOCIDAS}) habilitadas, comportamiento idéntico a no pasar "
-        "este flag. Válido para 'install' y 'sync'.",
+        "este flag. Válido para 'install' y 'sync'. Nunca borra archivos ya instalados.",
+    )
+    parser.add_argument(
+        "--enable-capability",
+        action="append",
+        choices=list(CAPABILITIES_VALIDAS),
+        default=None,
+        metavar="CAPABILITY",
+        help="Habilita una capability (repetible). Las opt-in (data_cards, model_governance) "
+        "están deshabilitadas por default; 'model_governance' requiere 'predictive_modeling'. "
+        "Acepta también las históricas para re-habilitarlas de forma explícita. Válido para "
+        "'install' y 'sync'.",
     )
     parser.add_argument(
         "--stage",
@@ -140,7 +159,29 @@ def _imprimir_omitidos(omitidos, perfil: str, stage: str) -> None:
             )
 
 
+def _rechazar_flags_contradictorios(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    """Una misma capability en `--enable-capability` y `--disable-capability`
+    es ambigua (install y sync resolverían distinto): se rechaza (exit 2)."""
+    contradictorias = sorted(set(args.enable_capability or []) & set(args.disable_capability or []))
+    if contradictorias:
+        parser.error(
+            "capability(s) en --enable-capability y --disable-capability a la vez: "
+            + ", ".join(contradictorias)
+        )
+
+
 def _main_install(parser: argparse.ArgumentParser, args: argparse.Namespace, destino: Path) -> int:
+    _rechazar_flags_contradictorios(parser, args)
+
+    # Set de install: (históricas - disable) | enable. Sin flags: idéntico a v0.8.
+    capabilities_habilitadas = (
+        frozenset(CAPABILITIES_CONOCIDAS) - frozenset(args.disable_capability or [])
+    ) | frozenset(args.enable_capability or [])
+    errores_capabilities = validar_capabilities(capabilities_habilitadas)
+    if errores_capabilities:
+        # Antes de cualquier escritura (R4): exit 2.
+        parser.error("; ".join(errores_capabilities))
+
     if not args.nombre:
         parser.error("--nombre es obligatorio para 'install'")
 
@@ -157,8 +198,6 @@ def _main_install(parser: argparse.ArgumentParser, args: argparse.Namespace, des
     except DestinoInvalidoError as exc:
         print(f"[ABORTADO] {exc}", file=sys.stderr)
         return 1
-
-    capabilities_habilitadas = frozenset(CAPABILITIES_CONOCIDAS) - frozenset(args.disable_capability or [])
 
     config = {
         "perfil": PERFIL_MVP,
@@ -220,11 +259,63 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
     if stage_base is None:
         stage_base = legacy_mod.inferir_installation_stage(destino, perfil)
 
-    if ORDEN_STAGES.index(target) <= ORDEN_STAGES.index(stage_base):
+    _rechazar_flags_contradictorios(parser, args)
+
+    # Set efectivo de sync (R5) y validación ANTES de cualquier escritura (R4).
+    persistidas = control_previo.get("capabilities_habilitadas")
+    if persistidas is not None:
+        if not isinstance(persistidas, list) or not all(isinstance(c, str) for c in persistidas):
+            parser.error("control.json persistido inválido: capabilities_habilitadas debe ser una lista de strings")
+        errores_persistidos = validar_capabilities(persistidas)
+        if errores_persistidos:
+            # La dependencia nunca se satisface en silencio, ni siquiera sin flags.
+            parser.error(
+                "control.json persistido inválido: "
+                + "; ".join(errores_persistidos)
+                + ". Corregí capabilities_habilitadas en control.json o habilitá las "
+                "capabilities requeridas de forma explícita."
+            )
+    capabilities_habilitadas = capabilities_efectivas_sync(
+        persistidas, args.enable_capability, args.disable_capability
+    )
+    errores_capabilities = validar_capabilities(capabilities_habilitadas)
+    if errores_capabilities:
+        if "predictive_modeling" in (args.disable_capability or []):
+            sugerencia = (
+                " Causa: --disable-capability predictive_modeling explícito; no la "
+                "deshabilites mientras 'model_governance' esté habilitada."
+            )
+        else:
+            sugerencia = (
+                " Si 'predictive_modeling' está deshabilitada en lo persistido, habilitala "
+                "de forma explícita: sync --enable-capability predictive_modeling "
+                "--enable-capability model_governance"
+            )
+        parser.error("; ".join(errores_capabilities) + "." + sugerencia)
+
+    # Set persistido tal como se interpreta hoy (R12: sin lista = históricas).
+    persistidas_efectivas = (
+        frozenset(persistidas) if persistidas is not None else frozenset(CAPABILITIES_CONOCIDAS)
+    )
+    hay_flags_capability = bool(args.enable_capability or args.disable_capability)
+    cambia_capabilities = hay_flags_capability and capabilities_habilitadas != persistidas_efectivas
+
+    # R6: `<` siempre "nada que hacer"; `==` procede solo si flags explícitos
+    # cambian el set efectivo respecto del persistido.
+    indice_target = ORDEN_STAGES.index(target)
+    indice_base = ORDEN_STAGES.index(stage_base)
+    if indice_target < indice_base or (indice_target == indice_base and not cambia_capabilities):
         print(
             f"[SYNC] El destino ya está instalado en un stage igual o superior a {target!r} "
             f"(actual: {stage_base!r}) — nada que hacer."
         )
+        if hay_flags_capability:
+            print(
+                "[SYNC] AVISO: los flags de capability se ignoraron: "
+                f"enable={sorted(args.enable_capability or [])}, "
+                f"disable={sorted(args.disable_capability or [])} (stage objetivo menor, o "
+                "igual sin cambio en el set efectivo)."
+            )
         return 0
 
     try:
@@ -237,8 +328,6 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
     nombre = configuracion_previa.get("nombre")
     notebooks_dir = configuracion_previa.get("notebooks_dir")
     venv_dir = configuracion_previa.get("venv_dir")
-
-    capabilities_habilitadas = frozenset(CAPABILITIES_CONOCIDAS) - frozenset(args.disable_capability or [])
 
     config = {
         "perfil": perfil,

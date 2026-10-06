@@ -133,6 +133,13 @@ CODE_EXISTS = "GOVASSESS-EXISTS"
 CODE_NOT_FOUND = "GOVASSESS-NOT-FOUND"
 CODE_PATH_INVALID = "GOVASSESS-PATH-INVALID"
 
+# Códigos de configuración efectiva (Change 4; duplicados de `govconfig`, test de paridad).
+CODE_GOVCFG_INVALID = "GOVCFG-INVALID"
+CODE_GOVCFG_UNRESOLVABLE = "GOVCFG-UNRESOLVABLE"
+CODE_GOVCFG_HARDENING_MISMATCH = "GOVCFG-HARDENING-MISMATCH"
+CODE_GOVCFG_LOCAL_ACTIVE = "GOVCFG-LOCAL-ACTIVE"
+MSG_LOCAL_ACTIVE = "restricción local activa en esta máquina"
+
 GOVASSESS_CODES = (
     CODE_UNKNOWN_KEY,
     CODE_IDENTITY_MISMATCH,
@@ -826,8 +833,16 @@ class GovernanceAssessment:
     hallazgos: tuple = ()
     card_id: str = ""
     nota: str = NOTA_COMPLETENESS
+    # Resolución de atestaciones `anchored` (solo con `anchor_verifier`); ver `assess.anclas_a_tuple`.
+    anchors: tuple = ()
 
     def a_dict(self) -> dict:
+        d = self._a_dict_base()
+        if self.anchors:
+            d["anchors"] = assess.anclas_a_dicts(self.anchors)
+        return d
+
+    def _a_dict_base(self) -> dict:
         def _copia(valor: Any) -> Any:
             if isinstance(valor, dict):
                 return {k: _copia(valor[k]) for k in sorted(valor)}
@@ -874,7 +889,9 @@ class _Req:
 _PRECEDENCIA_SOPORTE = (assess.EV_STALE, assess.EV_UNRESOLVABLE, assess.EV_UNVERIFIABLE)
 
 
-def _evaluar_requisito(req: _Req, claims: tuple, evidencias: dict, atestaciones: dict, estados_ev: dict) -> tuple:
+def _evaluar_requisito(
+    req: _Req, claims: tuple, evidencias: dict, atestaciones: dict, estados_ev: dict, anclas: Optional[dict] = None
+) -> tuple:
     """`(estado, detalle, evidencias_stale_citadas)`. Regla «todo lo citado respaldado y
     vigente»: TODOS los soportes de los claims del requisito deben ser aceptables para
     el spec y frescos; un soporte fresco nunca oculta a otro stale / inaceptable."""
@@ -905,7 +922,14 @@ def _evaluar_requisito(req: _Req, claims: tuple, evidencias: dict, atestaciones:
                 rechazados.append(s)
         elif s in atestaciones:
             if "attestation" in req.accepts and _RANGO_ATESTACION[atestaciones[s].attestation_kind] >= rango_min:
-                estados.append(assess.EV_FRESH)
+                ancla = anclas.get(s) if anclas else None
+                if ancla is None or ancla[0] == assess.ANCHOR_VERIFIED:
+                    estados.append(assess.EV_FRESH)
+                elif ancla[0] == assess.ANCHOR_STALE:  # R37: no satisface; el assessment queda stale
+                    estados.append(assess.EV_STALE)
+                    stale_citadas.append(s)
+                else:  # missing / unresolvable: unverifiable (ni anchored ni declared)
+                    estados.append(assess.EV_UNVERIFIABLE)
             else:
                 rechazados.append(s)
         else:
@@ -977,18 +1001,67 @@ def _nivel_idx(nivel: str) -> int:
     return govpolicy.LEVELS.index(nivel)
 
 
-def _evaluar(card: CardEnvelope, repo_root: Any, base: Any, resolvers: Mapping, clock: Any) -> GovernanceAssessment:
+def _hallazgos_contexto(governance: Any, info: dict, evidencias: dict) -> list:
+    """R29: compara lo pineado por el assessment contra el contexto ACTUAL (`governance`
+    resuelto o `none`). Devuelve los hallazgos que dejan el assessment `stale` (los de
+    `none` + hardening citado los trata el llamador como `incomplete`)."""
+    pol = info["pol"]
+    pin = evidencias.get(info["hard"]) if info["hard"] is not None else None
+    ruta_doc = governance.project_hardening_path
+    if ruta_doc is not None:
+        coincide = (
+            pin is not None and pin.locator == ruta_doc and pin.content_sha256 == governance.project_hardening_sha256
+        )
+        if not coincide:
+            return [Hallazgo(CODE_GOVCFG_HARDENING_MISMATCH, "$.body.policy_ref.hardening_evidence_id",
+                             "el assessment omite, cita otro documento o cita un hash anterior del endurecimiento de proyecto vigente")]
+    elif pin is not None:
+        return [Hallazgo(CODE_GOVCFG_HARDENING_MISMATCH, "$.body.policy_ref.hardening_evidence_id",
+                         "el assessment cita un endurecimiento pero no hay documento de proyecto vigente")]
+    if pol.get("effective_sha256") != governance.effective_sha256:
+        if governance.local_hardening_present:
+            return [Hallazgo(CODE_GOVCFG_LOCAL_ACTIVE, "$.body.policy_ref.effective_sha256", MSG_LOCAL_ACTIVE)]
+        return [Hallazgo(CODE_GOVCFG_HARDENING_MISMATCH, "$.body.policy_ref.effective_sha256",
+                         "la policy efectiva actual difiere de la pineada")]
+    return []
+
+
+def _evaluar(
+    card: CardEnvelope, repo_root: Any, base: Any, resolvers: Mapping, clock: Any,
+    governance: Any = None, anchor_verifier: Any = None,
+) -> GovernanceAssessment:
     info = _info(card.body)
     # 1. Validación estructural (sin invocar resolvers si falla).
     # Sin endurecimiento citado, la policy efectiva == base: se pasan sus ids (la base puede ser custom).
     ids_previos = frozenset(r.requirement_id for r in base.requirements) if info["hard"] is None else None
+    if governance is not None and governance.effective is not None:
+        # Contexto resuelto: los requisitos se evalúan contra la policy efectiva ACTUAL.
+        ids_previos = frozenset(r.requirement_id for r in governance.effective.requirements)
     estructurales = core.validate_card(card, clock=clock, validate_body=body_validator_for(card, ids_previos))
     if estructurales:
         return _invalido(card.card_id, estructurales)
 
+    if governance is not None:
+        # R29: invalid -> invalid sin evaluar requisitos; unresolvable -> incomplete.
+        if governance.state == "invalid":
+            return _invalido(card.card_id, governance.findings)
+        pinned = {"pinned": {"effective_sha256": info["pol"].get("effective_sha256"), "hardening_evidence_id": info["hard"]}, "recomputed": {}}
+        if governance.state == "unresolvable":
+            return GovernanceAssessment(
+                governance_completeness=GOV_INCOMPLETE, policy=pinned,
+                hallazgos=tuple(governance.findings), card_id=card.card_id,
+            )
+        if governance.state == "none" and info["hard"] is not None:
+            return GovernanceAssessment(
+                governance_completeness=GOV_INCOMPLETE, policy=pinned, card_id=card.card_id,
+                hallazgos=(Hallazgo(CODE_GOVCFG_HARDENING_MISMATCH, "$.body.policy_ref.hardening_evidence_id",
+                                    "el assessment cita un endurecimiento pero no hay documento de proyecto vigente; no se evalúa solo con la base"),),
+            )
+
     evidencias = {e.evidence_id: e for e in card.evidence}
     atestaciones = {a.attestation_id: a for a in card.attestations}
     estados_ev = {eid: assess.evaluar_evidencia(e, resolvers) for eid, e in evidencias.items()}
+    anclas = assess.resolver_anclas(card.attestations, anchor_verifier)
     evidencias_t = tuple(sorted(estados_ev.items(), key=lambda t: t[0]))
 
     inv: list = []   # hallazgos que invalidan
@@ -1022,7 +1095,10 @@ def _evaluar(card: CardEnvelope, repo_root: Any, base: Any, resolvers: Mapping, 
                             f"base_policy_id {pol.get('base_policy_id')!r} != {base.policy_id!r}"))
     hardening = None
     efectiva = None
-    if info["hard"] is not None:
+    if governance is not None:
+        efectiva = governance.effective
+        obs.extend(_hallazgos_contexto(governance, info, evidencias))
+    if governance is None and info["hard"] is not None:
         try:
             hardening = _leer_hardening(repo_root, evidencias[info["hard"]])
             if hardening is None:
@@ -1037,7 +1113,7 @@ def _evaluar(card: CardEnvelope, repo_root: Any, base: Any, resolvers: Mapping, 
         except Exception as exc:  # fail-closed
             inv.append(Hallazgo(CODE_POLICY_INVALID, "$.body.policy_ref.hardening_evidence_id",
                                 f"endurecimiento no interpretable ({type(exc).__name__})"))
-    if info["hard"] is None or hardening is not None:
+    if governance is None and (info["hard"] is None or hardening is not None):
         try:
             efectiva = govpolicy.merge(base, hardening)
         except govpolicy.GovPolicyError as exc:
@@ -1065,7 +1141,7 @@ def _evaluar(card: CardEnvelope, repo_root: Any, base: Any, resolvers: Mapping, 
     if pol.get("base_sha256") != base_sha or pol.get("base_version") != base.version:
         obs.append(Hallazgo(CODE_POLICY_CHANGED, "$.body.policy_ref",
                             "la policy base pineada (versión/hash) difiere de la vigente"))
-    if efectiva is not None and pol.get("effective_sha256") != efectiva.effective_sha256():
+    if governance is None and efectiva is not None and pol.get("effective_sha256") != efectiva.effective_sha256():
         obs.append(Hallazgo(CODE_POLICY_CHANGED, "$.body.policy_ref.effective_sha256",
                             "la policy efectiva recomputada difiere de la pineada"))
 
@@ -1080,7 +1156,7 @@ def _evaluar(card: CardEnvelope, repo_root: Any, base: Any, resolvers: Mapping, 
     if efectiva is None:
         filas: list = []
         for req in requisitos_estructurales:
-            estado, detalle, citadas = _evaluar_requisito(req, card.claims, evidencias, atestaciones, estados_ev)
+            estado, detalle, citadas = _evaluar_requisito(req, card.claims, evidencias, atestaciones, estados_ev, anclas)
             filas.append((req.requirement_id, req.severity, None, estado, detalle))
             stale = stale or estado == assess.REQ_STALE or bool(citadas)
         if inv:
@@ -1103,7 +1179,7 @@ def _evaluar(card: CardEnvelope, repo_root: Any, base: Any, resolvers: Mapping, 
         )
 
     # 5. Claims contra la policy efectiva (R41) cuando hay endurecimiento.
-    if info["hard"] is not None:
+    if info["hard"] is not None or governance is not None:
         _claims_fuera_de_policy(card.claims, frozenset(r.requirement_id for r in efectiva.requirements), inv)
 
     # 6. Nivel efectivo (R31, R34).
@@ -1139,6 +1215,14 @@ def _evaluar(card: CardEnvelope, repo_root: Any, base: Any, resolvers: Mapping, 
         elif activos[rid].severity == "required":
             inv.append(Hallazgo(CODE_NA_NOT_ALLOWED, ruta, f"{rid!r} es required en el nivel {nivel!r}; no admite N/A"))
         else:
+            ancla = anclas.get(_att) if isinstance(_att, str) else None
+            if ancla is not None and ancla[0] != assess.ANCHOR_VERIFIED:
+                # R37: el N/A respaldado por un ancla no verificada no vale (no se degrada a declared).
+                if ancla[0] == assess.ANCHOR_STALE:
+                    stale = True
+                else:
+                    incompleto = True
+                continue
             na_validos.add(rid)
 
     # 9. Evaluación de requisitos.
@@ -1149,7 +1233,7 @@ def _evaluar(card: CardEnvelope, repo_root: Any, base: Any, resolvers: Mapping, 
         if req.requirement_id in na_validos:
             estado, detalle, citadas = REQ_NOT_APPLICABLE, "declarado not_applicable con rationale y atestación", ()
         else:
-            estado, detalle, citadas = _evaluar_requisito(req, card.claims, evidencias, atestaciones, estados_ev)
+            estado, detalle, citadas = _evaluar_requisito(req, card.claims, evidencias, atestaciones, estados_ev, anclas)
         estados_req[req.requirement_id] = estado
         filas.append((req.requirement_id, req.severity, req.dimension, estado, detalle))
         if req.severity == "required":
@@ -1195,8 +1279,9 @@ def _evaluar(card: CardEnvelope, repo_root: Any, base: Any, resolvers: Mapping, 
         dimensiones=tuple(dimensiones),
         requisitos=tuple(sorted(filas, key=lambda t: t[0])),
         evidencias=evidencias_t,
-        hallazgos=tuple(inv + obs + inc),
+        hallazgos=tuple(inv + obs + inc) + assess.hallazgos_anclas(anclas),
         card_id=card.card_id,
+        anchors=assess.anclas_a_tuple(anclas),
     )
 
 
@@ -1207,8 +1292,14 @@ def evaluate_governance_assessment(
     base: Any = govpolicy.BASE_POLICY,
     resolvers: Optional[Mapping] = None,
     clock: Optional[Callable[[], str]] = None,
+    governance: Any = None,
+    anchor_verifier: Optional[Callable[[Any], Any]] = None,
 ) -> GovernanceAssessment:
     """Evalúa un assessment (`CardEnvelope` o ruta de archivo) contra la policy efectiva.
+
+    `governance` (Change 4, R29/R32): `ProjectGovernance` actual; `None` = comportamiento de
+    Change 3. Con `governance`, la base es `govpolicy.BASE_POLICY` (otra `base` se rechaza).
+    `anchor_verifier` (R34): verifica atestaciones `anchored`; `None` = estructural.
 
     Solo lanza `CardError` ante argumentos inválidos (`base`, `resolvers`, `clock`,
     `repo_root`). Un archivo ilegible o malformado, una Card inválida o cualquier fallo
@@ -1221,6 +1312,14 @@ def evaluate_governance_assessment(
         raise CardError(core.CODE_FIELD_INVALID, "evaluate_governance_assessment: resolvers debe ser un mapa kind -> callable")
     if clock is not None and not callable(clock):
         raise CardError(core.CODE_FIELD_INVALID, "evaluate_governance_assessment: clock debe ser callable")
+    if anchor_verifier is not None and not callable(anchor_verifier):
+        raise CardError(core.CODE_FIELD_INVALID, "evaluate_governance_assessment: anchor_verifier debe ser callable")
+    if governance is not None:
+        if getattr(governance, "state", None) not in ("none", "resolved", "invalid", "unresolvable"):
+            raise CardError(core.CODE_FIELD_INVALID, "evaluate_governance_assessment: governance debe ser ProjectGovernance")
+        if base.content_sha256() != govpolicy.BASE_POLICY_SHA256:
+            raise CardError(core.CODE_FIELD_INVALID, "evaluate_governance_assessment: con governance la base debe ser BASE_POLICY")
+        base = govpolicy.BASE_POLICY
     mapa = resolvers if resolvers is not None else _resolvers_por_defecto(repo_root)
     if isinstance(card_or_path, CardEnvelope):
         card = card_or_path
@@ -1230,7 +1329,7 @@ def evaluate_governance_assessment(
         except CardError as exc:
             return _invalido("", (Hallazgo(exc.code, "file", exc.message),))
     try:
-        return _evaluar(card, repo_root, base, mapa, clock)
+        return _evaluar(card, repo_root, base, mapa, clock, governance, anchor_verifier)
     except CardError as exc:
         return _invalido(card.card_id, (Hallazgo(exc.code, "$", exc.message),))
     except Exception as exc:  # fail-closed

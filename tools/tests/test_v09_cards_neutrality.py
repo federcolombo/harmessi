@@ -47,6 +47,20 @@ PROHIBIDOS_CORE = PROHIBIDOS | {"assess", "cards", "dsguard"}
 # `assess.py` puede usar `dsguard`, pero solo de forma perezosa (se verifica aparte).
 PROHIBIDOS_ASSESS = PROHIBIDOS
 
+# Enmienda R75/R76 (Change 4): adaptadores nuevos de tools/cards, únicos que
+# pueden importar dsguard/reporting/ds_init (además de hermanos y Foundation).
+ADAPTADORES = (
+    "tools/cards/approvals.py",
+    "tools/cards/discovery.py",
+    "tools/cards/report.py",
+    "tools/cards/govconfig.py",
+)
+PROHIBIDOS_ADAPTADORES = {
+    "autonomy", "leadrun", "modelquality", "qualityevidence", "datasources", "datacontracts",
+}
+# Importadores de producción de `cards` fuera de tools/cards (lista cerrada).
+IMPORTADORES_CARDS_PERMITIDOS = ("tools/ds_guard.py", "tools/harmessi/doctor.py")
+
 # Respaldo para Python < 3.10 (sin `sys.stdlib_module_names`): módulos stdlib
 # plausibles en un paquete como éste.
 _STDLIB_RESPALDO = frozenset({
@@ -155,8 +169,12 @@ def _prohibidos_presentes(imports: list, prohibidos: set) -> list:
 
 
 def _referencias_a_cards(ruta: Path) -> list:
+    return _referencias_a_cards_en_arbol(_parsear(ruta))
+
+
+def _referencias_a_cards_en_arbol(arbol: ast.AST) -> list:
     encontradas = []
-    for nodo in ast.walk(_parsear(ruta)):
+    for nodo in ast.walk(arbol):
         if isinstance(nodo, ast.Import):
             for alias in nodo.names:
                 partes = alias.name.split(".")
@@ -265,9 +283,13 @@ class TestCardsSinDependenciasNoStdlib(unittest.TestCase):
             "tools/cards/govpolicy.py": {"core"},
             "tools/cards/modelgov.py": {"core", "assess", "govpolicy", "resolvers"},
         }
+        # Enmienda R75/R76 (Change 4): los 4 adaptadores nuevos tienen lista propia
+        # (ver `test_adaptadores_*`); aquí solo se escanea la Foundation.
         violaciones = []
         for ruta in _modulos_cards():
             rel = ruta.relative_to(REPO_ORIGEN).as_posix()
+            if rel in ADAPTADORES:
+                continue
             hermanos = hermanos_por_modulo.get(rel, {"core"})
             permitidos = set(STDLIB) | hermanos
             if rel == ASSESS:
@@ -276,17 +298,52 @@ class TestCardsSinDependenciasNoStdlib(unittest.TestCase):
                 violaciones.append(f"{rel}: {v}")
         self.assertEqual(violaciones, [], f"imports no-stdlib en tools/cards: {violaciones}")
 
-    def test_dsguard_solo_en_assess(self):
+    def test_dsguard_solo_en_assess_y_adaptadores(self):
         for ruta in _modulos_cards():
             rel = ruta.relative_to(REPO_ORIGEN).as_posix()
-            if rel == ASSESS:
+            if rel == ASSESS or rel in ADAPTADORES:
                 continue
             for _n, modulo, nombres in _imports_todos(ruta):
                 self.assertNotIn("dsguard", _tokens(modulo, nombres), f"{rel} importa dsguard")
 
+    def test_foundation_no_importa_reporting_ni_ds_init_ni_adaptadores(self):
+        prohibidos = {"reporting", "ds_init"} | {Path(a).stem for a in ADAPTADORES}
+        for ruta in _modulos_cards():
+            rel = ruta.relative_to(REPO_ORIGEN).as_posix()
+            if rel in ADAPTADORES or rel.endswith("__init__.py"):
+                continue
+            with self.subTest(modulo=rel):
+                self.assertEqual(_prohibidos_presentes(_imports_todos(ruta), prohibidos), [])
+
+    def test_adaptadores_existen_o_se_omiten_los_ausentes(self):
+        # Sanity: los 4 adaptadores son los nombres de la lista cerrada.
+        self.assertEqual(
+            sorted(Path(a).stem for a in ADAPTADORES), ["approvals", "discovery", "govconfig", "report"]
+        )
+
+    def test_adaptadores_importan_solo_stdlib_foundation_dsguard_reporting_ds_init(self):
+        hermanos = {
+            "core", "assess", "resolvers", "datacard", "modelcard", "govpolicy", "modelgov",
+            "approvals", "discovery", "report", "govconfig",
+        }
+        permitidos = set(STDLIB) | hermanos | {"tools", "dsguard", "reporting", "ds_init"}
+        violaciones = []
+        for rel in ADAPTADORES:
+            ruta = REPO_ORIGEN / rel
+            if not ruta.is_file():
+                continue  # lo entrega otro writer del Change 4
+            for v in _violaciones(_imports_todos(ruta), permitidos, hermanos):
+                violaciones.append(f"{rel}: {v}")
+            for p in _prohibidos_presentes(_imports_todos(ruta), PROHIBIDOS_ADAPTADORES):
+                violaciones.append(f"{rel}: {p}")
+        self.assertEqual(violaciones, [], f"imports no permitidos en adaptadores de tools/cards: {violaciones}")
+
 
 class TestDireccionInversaDeCards(unittest.TestCase):
-    def test_ningun_modulo_de_produccion_existente_importa_cards(self):
+    def test_solo_importadores_permitidos_importan_cards(self):
+        # Enmienda R75 (Change 4): lista cerrada de importadores de producción:
+        # `ds_guard.py` (import perezoso por string vía `_importar_perezoso`, no
+        # detectable por AST) y `harmessi/doctor.py` (perezoso dentro de función).
         directorio_tools = REPO_ORIGEN / "tools"
         directorio_cards = REPO_ORIGEN / DIRECTORIO_CARDS
         violaciones = []
@@ -296,13 +353,41 @@ class TestDireccionInversaDeCards(unittest.TestCase):
                 continue
             if directorio_cards in ruta.parents:
                 continue
+            rel = ruta.relative_to(REPO_ORIGEN).as_posix()
+            if rel in IMPORTADORES_CARDS_PERMITIDOS:
+                continue
             for referencia in _referencias_a_cards(ruta):
-                violaciones.append(f"{ruta.relative_to(REPO_ORIGEN).as_posix()}: {referencia}")
+                violaciones.append(f"{rel}: {referencia}")
         self.assertEqual(
             violaciones,
             [],
-            f"Módulo(s) de producción que importan `cards` (R1/R3: el paquete es inerte en v0.9 Change 0): {violaciones}",
+            f"Módulo(s) de producción fuera de la lista cerrada que importan `cards`: {violaciones}",
         )
+
+    def test_doctor_importa_cards_solo_de_forma_perezosa(self):
+        ruta = REPO_ORIGEN / "tools/harmessi/doctor.py"
+        if not ruta.is_file():
+            self.skipTest("doctor.py no existe")
+        a_nivel_modulo = []
+        for nodo in ast.parse(ruta.read_text(encoding="utf-8")).body:
+            sub = [nodo] if isinstance(nodo, (ast.Import, ast.ImportFrom)) else []
+            for s in sub:
+                tmp = ast.Module(body=[s], type_ignores=[])
+                ref = _referencias_a_cards_en_arbol(tmp)
+                a_nivel_modulo.extend(ref)
+        self.assertEqual(a_nivel_modulo, [], "doctor.py no puede importar cards a nivel de módulo")
+
+    def test_cards_no_es_importado_por_paquetes_de_evidencia(self):
+        for paquete in ("datasources", "datacontracts", "qualityevidence", "modelquality", "leadrun", "reporting", "autonomy"):
+            directorio = REPO_ORIGEN / "tools" / paquete
+            if not directorio.is_dir():
+                continue
+            for ruta in sorted(directorio.rglob("*.py")):
+                partes = ruta.relative_to(directorio).parts
+                if "__pycache__" in partes or "tests" in partes:
+                    continue
+                with self.subTest(archivo=ruta.relative_to(REPO_ORIGEN).as_posix()):
+                    self.assertEqual(_referencias_a_cards(ruta), [])
 
 
 class TestSanityDeLosDetectores(unittest.TestCase):
