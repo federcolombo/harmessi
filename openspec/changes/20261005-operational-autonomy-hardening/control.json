@@ -1,0 +1,489 @@
+{
+  "schema_version": 1,
+  "change_id": "20261005-operational-autonomy-hardening",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-05T18:17:20Z",
+  "baseline": {
+    "commit": "259b4f0df212c5852d00899bd1b943ee981b99be",
+    "rama": "v0.9-dev",
+    "capturado_utc": "2026-10-05T18:17:20Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/templates/proposal.md",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.10.md",
+      "docs/roadmap/v0.9.md",
+      "openspec/changes/20261005-operational-autonomy-hardening/**",
+      "openspec/changes/20261005-operational-autonomy-hardening/control.json",
+      "openspec/changes/20261005-operational-autonomy-hardening/design.md",
+      "openspec/changes/20261005-operational-autonomy-hardening/proposal.md",
+      "openspec/changes/20261005-operational-autonomy-hardening/spec.md",
+      "openspec/changes/20261005-operational-autonomy-hardening/tasks.md",
+      "openspec/changes/20261005-operational-autonomy-hardening/verification.md",
+      "tools/autonomy/policy.py",
+      "tools/autonomy/tests/**",
+      "tools/cards/tests/**",
+      "tools/datacontracts/tests/**",
+      "tools/datasources/tests/**",
+      "tools/ds_guard.py",
+      "tools/ds_init/tests/**",
+      "tools/dsguard/hook_presupuesto.py",
+      "tools/dsguard/pathguard.py",
+      "tools/dsguard/scope.py",
+      "tools/dsguard/sdd.py",
+      "tools/harmessi/tests/**",
+      "tools/leadrun/allowlist.py",
+      "tools/leadrun/tests/**",
+      "tools/modelquality/tests/**",
+      "tools/qualityevidence/tests/**",
+      "tools/reporting/tests/**",
+      "tools/tests/**"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "94ce5201b963f35b97574989705433e663fc46498e05f65673f2775ab1090ba4",
+      "registrado_utc": "2026-10-05T18:19:13Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "071da1382bf84c74c8047e62ac26a62f00aa71c657bfcb505415a86472d5c873",
+      "registrado_utc": "2026-10-05T18:19:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a3d46d3e7e32032d598f754c988a66aa34bb64efc6865e3e8af8211501c09dea",
+      "registrado_utc": "2026-10-05T18:19:15Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "94ce5201b963f35b97574989705433e663fc46498e05f65673f2775ab1090ba4",
+      "registrado_utc": "2026-10-05T18:36:36Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_operational_session_recovery.py|tools/tests/test_operational_hook_guardrails.py|tools/leadrun/tests/test_allowlist_operational.py|tools/leadrun/tests/test_allowlist.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "b1132eccf426ce26154553afd654bd2e9c938705def2b5af938a498aef93f00f",
+      "registrado_utc": "2026-10-05T18:36:55Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: dirigida inicial B",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_operational_session_recovery.py|tools/tests/test_operational_hook_guardrails.py|tools/leadrun/tests/test_allowlist_operational.py|tools/leadrun/tests/test_allowlist.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "b1132eccf426ce26154553afd654bd2e9c938705def2b5af938a498aef93f00f",
+      "registrado_utc": "2026-10-05T18:37:32Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: dirigida B tras ajuste",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_operational_budgets.py|tools/tests/test_operational_scope.py|tools/autonomy/tests/test_policy.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "2daeb9044f3f72e2508416c591d8d8b13051783e4ceab9123f69794e172eafa7",
+      "registrado_utc": "2026-10-05T18:37:59Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: dirigida A",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/leadrun/tests/test_allowlist_operational.py|tools/leadrun/tests/test_allowlist.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "b3da223b57a7697de3a5c346fc04718a44cbada04028233a6268f3edb79b2a00",
+      "registrado_utc": "2026-10-05T18:40:42Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: dirigida allowlist dir/**",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "e52cb084631de881cefa90be3731f3a86e5891c228dcf71558bcd2ad195bd09d",
+      "registrado_utc": "2026-10-05T18:40:47Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión lote 1 tools/tests",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "e52cb084631de881cefa90be3731f3a86e5891c228dcf71558bcd2ad195bd09d",
+      "registrado_utc": "2026-10-05T19:00:24Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión lote 1 tools/tests",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9d3133ebda6cfefcdc4f520fdc62e03e12db45fae06545d134b5395b6afcd197",
+      "registrado_utc": "2026-10-05T19:21:01Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión lote 1 (lista de fallos)",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9d3133ebda6cfefcdc4f520fdc62e03e12db45fae06545d134b5395b6afcd197",
+      "registrado_utc": "2026-10-06T13:10:04Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión lote 1 (lista de fallos)",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/autonomy/tests|tools/leadrun/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "0083a2213a3aee8caf0ffeb6bb32b99615f8f63fffe6586208caad4e420d3f63",
+      "registrado_utc": "2026-10-06T13:32:26Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión lote 3 autonomy leadrun",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f80e771a30cba38735cf1133e37750275daabf3b955f7254b6e296bf939dde89",
+      "registrado_utc": "2026-10-06T13:33:00Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening (alcance ampliado a carpetas de tests de regresión, solo ejecución)",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/modelquality/tests|tools/qualityevidence/tests|tools/datasources/tests|tools/datacontracts/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ea72af6491fa1f5566b372f1791040cf52d270ff59ee64bf964401da218d29c1",
+      "registrado_utc": "2026-10-06T13:33:02Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión lote 2 modelquality qualityevidence datasources datacontracts",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/autonomy/tests|tools/leadrun/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "0083a2213a3aee8caf0ffeb6bb32b99615f8f63fffe6586208caad4e420d3f63",
+      "registrado_utc": "2026-10-06T13:33:11Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión lote 3 autonomy leadrun",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "f5da7879e3ee99afbf94ec2bbaac404176136c155eef2703b29e7b14794e230c",
+      "registrado_utc": "2026-10-06T13:33:21Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión lote 4 cards",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/ds_init/tests|tools/harmessi/tests|tools/reporting/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "25f7e20744856e600aaa769b544568cbb5874c885e3b230f318f22fed7e687cd",
+      "registrado_utc": "2026-10-06T13:35:09Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión lote 5 ds_init harmessi reporting",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_operational_budgets.py|tools/tests/test_operational_scope.py|tools/tests/test_operational_session_recovery.py|tools/tests/test_operational_hook_guardrails.py|tools/tests/test_operational_inert.py|tools/leadrun/tests/test_allowlist_operational.py|tools/leadrun/tests/test_allowlist.py|tools/autonomy/tests/test_policy.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "04484639c83cb442df9738b84fb654c1e579b83702195cf2287bd86a513417b5",
+      "registrado_utc": "2026-10-06T13:40:51Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: dirigida tras fixes review ciclo 1",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9d3133ebda6cfefcdc4f520fdc62e03e12db45fae06545d134b5395b6afcd197",
+      "registrado_utc": "2026-10-06T13:48:07Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión final lote 1 tools/tests",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/modelquality/tests|tools/qualityevidence/tests|tools/datasources/tests|tools/datacontracts/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ea72af6491fa1f5566b372f1791040cf52d270ff59ee64bf964401da218d29c1",
+      "registrado_utc": "2026-10-06T13:48:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión lote 2 modelquality qualityevidence datasources datacontracts",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/autonomy/tests|tools/leadrun/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "0083a2213a3aee8caf0ffeb6bb32b99615f8f63fffe6586208caad4e420d3f63",
+      "registrado_utc": "2026-10-06T13:48:22Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión lote 3 autonomy leadrun",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "f5da7879e3ee99afbf94ec2bbaac404176136c155eef2703b29e7b14794e230c",
+      "registrado_utc": "2026-10-06T13:48:32Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión lote 4 cards",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/ds_init/tests|tools/harmessi/tests|tools/reporting/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "25f7e20744856e600aaa769b544568cbb5874c885e3b230f318f22fed7e687cd",
+      "registrado_utc": "2026-10-06T13:50:30Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión lote 5 ds_init harmessi reporting",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_operational_budgets.py|tools/tests/test_operational_scope.py|tools/tests/test_operational_session_recovery.py|tools/tests/test_operational_hook_guardrails.py|tools/tests/test_operational_inert.py|tools/leadrun/tests/test_allowlist_operational.py|tools/autonomy/tests/test_policy.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "a50d92313b9775ed52b688979d5da91597e5c0476045bb18445e83fc72990ba4",
+      "registrado_utc": "2026-10-06T14:12:11Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: dirigida tras fixes ciclo 2",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9d3133ebda6cfefcdc4f520fdc62e03e12db45fae06545d134b5395b6afcd197",
+      "registrado_utc": "2026-10-06T14:14:23Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de operational-autonomy-hardening: regresión final lote 1 tools/tests (tras ciclo 2)",
+      "cita": "Aprobación humana explícita basada en feedback real de Harmessi v0.8.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-05T18:19:26Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-05T18:19:27Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-05T18:19:53Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-06T14:36:30Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-06T14:36:45Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-05T18:19:29Z",
+      "cierre_utc": "2026-10-06T13:09:52Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 600,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-06T04:19:29Z",
+      "minutos_consumidos": 1130.3833333333334,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-05T18:30:39Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-06T13:09:57Z",
+      "cierre_utc": "2026-10-06T14:36:46Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 600,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-06T23:09:57Z",
+      "minutos_consumidos": 86.81666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-06T13:43:09Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "metricas_eficiencia": {
+    "ejecuciones": [
+      {
+        "execution_id": "pytest__ea2370f5d034",
+        "duration_seconds": 2.2970000000000255,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__544b3a7afe41",
+        "duration_seconds": 1.6879999999999882,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__7ea53dd78f6b",
+        "duration_seconds": 102.53100000000006,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__b7479288b2ed",
+        "duration_seconds": 1.532000000000039,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__dd3297ceb8a3",
+        "duration_seconds": 1218.437,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__66742bfdedb6",
+        "duration_seconds": 1301.375,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__8591233e675b",
+        "duration_seconds": 5.436999999999898,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__434038b106fb",
+        "duration_seconds": 5.594000000000051,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__4978113c37b7",
+        "duration_seconds": 6.390000000000327,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__ba51c9ff36b4",
+        "duration_seconds": 104.09400000000005,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__70b74eda0cca",
+        "duration_seconds": 122.03099999999995,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__99d36c9c018e",
+        "duration_seconds": 3.0469999999995707,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__099f3409f535",
+        "duration_seconds": 5.375,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__f3bbf8bff5e4",
+        "duration_seconds": 6.344000000000051,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__5b325aa411ce",
+        "duration_seconds": 114.48399999999947,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__5c3ec2bdf2c5",
+        "duration_seconds": 1212.438,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__46b4a5f1c7ca",
+        "duration_seconds": 121.17200000000048,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__e193fba2dfd3",
+        "duration_seconds": 1276.5780000000004,
+        "command_form": "pytest"
+      }
+    ]
+  }
+}

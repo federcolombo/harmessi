@@ -221,7 +221,9 @@ def cmd_status(args: argparse.Namespace) -> int:
     sesion_info = sdd.session_status(control)
 
     rutas_autorizadas = control.get("alcance", {}).get("rutas_autorizadas", [])
-    fuera_de_alcance = repo.files_out_of_scope(repo_root, rutas_autorizadas)
+    fuera_de_alcance = [
+        r for r in repo.files_out_of_scope(repo_root, rutas_autorizadas) if not scope.es_output_intrinseco(r)
+    ]
 
     if args.json:
         payload = {
@@ -328,6 +330,29 @@ def cmd_approve(args: argparse.Namespace) -> int:
         if not (change_dir / artefacto).exists():
             print(f"El artefacto no existe: {artefacto}", file=sys.stderr)
             return 2
+
+    # Alcance autorizado (R22-R25 de 20261005-operational-autonomy-hardening):
+    # válido en CUALQUIER approval_mode. Sección ausente o sin bullets -> no se
+    # toca el alcance. Hallazgos -> exit 2 sin escribir nada (todo-o-nada).
+    if "proposal.md" in args.artefacto:
+        texto_alcance = (change_dir / "proposal.md").read_text(encoding="utf-8")
+        declaradas, hallazgos_alcance = sdd.parsear_alcance_autorizado(texto_alcance)
+        if hallazgos_alcance:
+            print(core.formatear_findings_texto(hallazgos_alcance), file=sys.stderr)
+            return 2
+        if declaradas:
+            md_defecto = list(_PLANTILLAS_POR_MODO.get(control.get("modo"), _PLANTILLAS_POR_MODO["completo"]))
+            md_defecto = [f"{n}.md" for n in md_defecto]
+            nuevas = sorted(set(_rutas_por_defecto_change(args.change_id, md_defecto)) | set(declaradas))
+            previas = control.setdefault("alcance", {}).get("rutas_autorizadas", [])
+            agregadas = sorted(set(nuevas) - set(previas))
+            retiradas = sorted(set(previas) - set(nuevas))
+            control["alcance"]["rutas_autorizadas"] = nuevas
+            print(f"alcance autorizado materializado ({len(nuevas)} rutas)")
+            for r in agregadas:
+                print(f"  + {r}")
+            for r in retiradas:
+                print(f"  - {r}")
 
     # Checkpoints de negocio (T5, R3-R6 de 20260930-autonomous-sdd-and-remediation):
     # si se aprueba `proposal.md` y el Change declara `approval_mode:
@@ -496,56 +521,221 @@ def _resolver_budgets(repo_root: Path) -> dict:
     no es una clave que `ConfigGuardrails`/`cargar_config` conozcan, así que
     el JSON crudo se relee aparte para llegar a ella -- mismo patrón que
     `_resolver_aprobacion_exec` ya usa para llegar a `autonomy`."""
-    resultado = dict(_BUDGET_DEFAULTS)
+    return _resolver_budgets_con_fuentes(repo_root)[0]
+
+
+# Mapeo legacy `autonomy.limits` -> clave canónica de `autonomy.budgets`
+# (R1 de 20261005-operational-autonomy-hardening). Solo estos dos ejes.
+_LIMITS_A_BUDGETS = {
+    "max_sessions": "max_sessions",
+    "max_total_minutes": "aggregate_minutes",
+}
+
+
+AVISO_GUARDRAILS_ILEGIBLE = "guardrails.json ilegible: los límites configurados NO se aplican"
+
+
+def _aviso_guardrails_ilegible(repo_root: Path) -> Optional[str]:
+    """I3: `AVISO_GUARDRAILS_ILEGIBLE` si `.claude/guardrails.json` EXISTE pero no
+    se puede leer (corrupto, versión no soportada, no-objeto) o `autonomy` no es
+    objeto; `None` en cualquier otro caso (incluido archivo ausente). Solo
+    informativo: el resolvedor sigue degradando a defaults, sin cambiar exit codes."""
+    pathguard_mod = _importar_perezoso("dsguard", "pathguard")
+    if pathguard_mod is None:
+        return None
+    ruta_config = Path(repo_root) / pathguard_mod.RUTA_CONFIG_RELATIVA
+    if not ruta_config.exists():
+        return None
+    try:
+        pathguard_mod.cargar_config(repo_root)
+        guardrails_dict = json.loads(ruta_config.read_text(encoding="utf-8"))
+    except (pathguard_mod.ConfigGuardrailsError, OSError, ValueError):
+        return AVISO_GUARDRAILS_ILEGIBLE
+    if not isinstance(guardrails_dict, dict):
+        return AVISO_GUARDRAILS_ILEGIBLE
+    if "autonomy" in guardrails_dict and not isinstance(guardrails_dict["autonomy"], dict):
+        return AVISO_GUARDRAILS_ILEGIBLE
+    return None
+
+
+def _leer_valores_brutos_budgets(repo_root: Path) -> tuple:
+    """Lee y valida `autonomy.budgets` y `autonomy.limits` de `guardrails.json`.
+    Devuelve `(valores_budgets, valores_limits)`: dos dicts ya validados, el
+    segundo con las claves traducidas a la clave canónica de budgets
+    (`max_total_minutes` -> `aggregate_minutes`). Ausencia de archivo/clave,
+    config corrupta o `autonomy` no-dict -> dicts vacíos (sin cambio de
+    comportamiento). Valor presente e inválido (no entero positivo, bool
+    excluido) o `limits` no-dict -> `BudgetsInvalidosError`
+    (`AUTONOMY-POLICY-LIMITS`, R3). Claves desconocidas dentro de `limits` se
+    ignoran acá (las reporta `tools/autonomy/policy.py`)."""
+    vacios = ({}, {})
 
     pathguard_mod = _importar_perezoso("dsguard", "pathguard")
     if pathguard_mod is None:
-        return resultado
+        return vacios
 
     ruta_config = Path(repo_root) / pathguard_mod.RUTA_CONFIG_RELATIVA
     if not ruta_config.exists():
-        return resultado
+        return vacios
 
     try:
         pathguard_mod.cargar_config(repo_root)
     except pathguard_mod.ConfigGuardrailsError:
-        return resultado
+        return vacios
 
     try:
         guardrails_dict = json.loads(ruta_config.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return resultado
+        return vacios
     if not isinstance(guardrails_dict, dict):
-        return resultado
+        return vacios
 
     autonomy_dict = guardrails_dict.get("autonomy")
     if not isinstance(autonomy_dict, dict):
-        return resultado
-    budgets_dict = autonomy_dict.get("budgets")
-    if not isinstance(budgets_dict, dict):
-        return resultado
+        return vacios
 
     hallazgos: list = []
     codigo = sdd.autonomy_core.CODE_POLICY_LIMITS
-    for clave in _BUDGET_DEFAULTS:
-        if clave not in budgets_dict:
-            continue
-        valor = budgets_dict[clave]
-        if isinstance(valor, bool) or not isinstance(valor, int) or valor <= 0:
+
+    def _es_valido(valor) -> bool:
+        return isinstance(valor, int) and not isinstance(valor, bool) and valor > 0
+
+    valores_budgets: dict = {}
+    budgets_dict = autonomy_dict.get("budgets")
+    if "budgets" in autonomy_dict and not isinstance(budgets_dict, dict):
+        # I4: `budgets` presente y no-dict (null, número, string, lista) es inválido, igual que `limits`.
+        hallazgos.append(
+            core.Finding(
+                codigo,
+                f"autonomy.budgets = {budgets_dict!r} inválido: debe ser un objeto",
+                str(ruta_config),
+            )
+        )
+    if isinstance(budgets_dict, dict):
+        for clave in _BUDGET_DEFAULTS:
+            if clave not in budgets_dict:
+                continue
+            valor = budgets_dict[clave]
+            if not _es_valido(valor):
+                hallazgos.append(
+                    core.Finding(
+                        codigo,
+                        f"autonomy.budgets.{clave} = {valor!r} inválido: debe ser un entero positivo",
+                        str(ruta_config),
+                    )
+                )
+                continue
+            valores_budgets[clave] = valor
+
+    valores_limits: dict = {}
+    if "limits" in autonomy_dict:
+        limits_dict = autonomy_dict["limits"]
+        if not isinstance(limits_dict, dict):
             hallazgos.append(
                 core.Finding(
                     codigo,
-                    f"autonomy.budgets.{clave} = {valor!r} inválido: debe ser un entero positivo",
+                    f"autonomy.limits = {limits_dict!r} inválido: debe ser un objeto",
                     str(ruta_config),
                 )
             )
-            continue
-        resultado[clave] = valor
+        else:
+            for clave_limits, clave_budgets in _LIMITS_A_BUDGETS.items():
+                if clave_limits not in limits_dict:
+                    continue
+                valor = limits_dict[clave_limits]
+                if not _es_valido(valor):
+                    hallazgos.append(
+                        core.Finding(
+                            codigo,
+                            f"autonomy.limits.{clave_limits} = {valor!r} inválido: debe ser un entero positivo",
+                            str(ruta_config),
+                        )
+                    )
+                    continue
+                valores_limits[clave_budgets] = valor
 
     if hallazgos:
         raise BudgetsInvalidosError(hallazgos)
 
-    return resultado
+    return valores_budgets, valores_limits
+
+
+def _resolver_budgets_con_fuentes(repo_root: Path) -> tuple:
+    """Variante de `_resolver_budgets` que además devuelve la fuente efectiva
+    por eje: `(dict_de_5_claves, fuentes)` con `fuentes[clave]` en
+    `'budgets'`, `'limits'`, `'ambas (mínimo=N)'` o `'default'` (R2/R4). Para
+    `max_sessions` y `aggregate_minutes`, si `budgets` y `limits` declaran el
+    eje, gana el MENOR (más estricto); nunca uno amplía al otro."""
+    resultado = dict(_BUDGET_DEFAULTS)
+    fuentes_base = "guardrails ilegible" if _aviso_guardrails_ilegible(repo_root) else "default"
+    fuentes = {clave: fuentes_base for clave in _BUDGET_DEFAULTS}
+
+    valores_budgets, valores_limits = _leer_valores_brutos_budgets(repo_root)
+
+    for clave in _BUDGET_DEFAULTS:
+        en_budgets = clave in valores_budgets
+        en_limits = clave in valores_limits
+        if en_budgets and en_limits:
+            minimo = min(valores_budgets[clave], valores_limits[clave])
+            resultado[clave] = minimo
+            fuentes[clave] = f"ambas (mínimo={minimo})"
+        elif en_budgets:
+            resultado[clave] = valores_budgets[clave]
+            fuentes[clave] = "budgets"
+        elif en_limits:
+            resultado[clave] = valores_limits[clave]
+            fuentes[clave] = "limits"
+
+    return resultado, fuentes
+
+
+_EJES_AGREGADOS = (
+    ("aggregate_minutes", "minutos_consumidos_totales"),
+    ("max_sessions", "sesiones_totales"),
+)
+
+
+def _resumen_limites_agregados(control: dict, repo_root: Path, budgets: dict, fuentes: dict) -> dict:
+    """Vista de solo lectura de los límites agregados efectivos por eje:
+    `{eje: {"efectivo", "fuente", "valores", "consumo", "restante"}}`.
+    `restante = max(0, límite - consumo)` (None si no hay límite). `valores`
+    lista `budgets`/`limits` por separado solo cuando ambos están declarados y
+    difieren (R4)."""
+    agregado = sdd.presupuesto_agregado(control)
+    valores_budgets, valores_limits = _leer_valores_brutos_budgets(repo_root)
+    resumen: dict = {}
+    for eje, clave_consumo in _EJES_AGREGADOS:
+        efectivo = budgets[eje]
+        consumo = agregado[clave_consumo]
+        restante = None if efectivo is None else max(0, efectivo - consumo)
+        valores = None
+        if (
+            eje in valores_budgets
+            and eje in valores_limits
+            and valores_budgets[eje] != valores_limits[eje]
+        ):
+            valores = {"budgets": valores_budgets[eje], "limits": valores_limits[eje]}
+        resumen[eje] = {
+            "efectivo": efectivo,
+            "fuente": fuentes[eje],
+            "valores": valores,
+            "consumo": consumo,
+            "restante": restante,
+        }
+    return resumen
+
+
+def _linea_limite_agregado(eje: str, info: dict) -> str:
+    texto = (
+        f"{eje}: efectivo={info['efectivo']} fuente={info['fuente']} "
+        f"consumo={info['consumo']:.1f} restante={info['restante']}"
+        if isinstance(info["consumo"], float)
+        else f"{eje}: efectivo={info['efectivo']} fuente={info['fuente']} "
+        f"consumo={info['consumo']} restante={info['restante']}"
+    )
+    if info["valores"]:
+        texto += f" (budgets={info['valores']['budgets']}, limits={info['valores']['limits']})"
+    return texto
 
 
 # --- config layering (v0.8 Change 4: 20260930-project-extension-and-
@@ -716,10 +906,13 @@ def cmd_session_start(args: argparse.Namespace) -> int:
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     try:
-        budgets = _resolver_budgets(repo_root)
+        budgets, fuentes_budgets = _resolver_budgets_con_fuentes(repo_root)
     except BudgetsInvalidosError as e:
         print(core.formatear_findings_texto(e.findings), file=sys.stderr)
         return 2
+    aviso_guardrails = _aviso_guardrails_ilegible(repo_root)
+    if aviso_guardrails:
+        print(f"AVISO: {aviso_guardrails}", file=sys.stderr)
 
     # `--minutos` explícito del llamador manda siempre, sin consultar policy
     # (R8 de spec.md); solo si el flag no se pasó (`None`, ver default de
@@ -752,6 +945,13 @@ def cmd_session_start(args: argparse.Namespace) -> int:
     )
     if findings_limite_agregado:
         print(core.formatear_findings_texto(findings_limite_agregado), file=sys.stderr)
+        # Fuente efectiva de cada límite agregado (R4 de 20261005-operational-autonomy-hardening).
+        print(
+            "Fuente de límites agregados: "
+            f"aggregate_minutes={budgets['aggregate_minutes']} ({fuentes_budgets['aggregate_minutes']}), "
+            f"max_sessions={budgets['max_sessions']} ({fuentes_budgets['max_sessions']})",
+            file=sys.stderr,
+        )
         return 2
 
     try:
@@ -829,8 +1029,22 @@ def cmd_session_status(args: argparse.Namespace) -> int:
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     estado = sdd.session_status(control)
+
+    # Sección de límites agregados efectivos (aditiva, informativa: nunca cambia el exit code).
+    limites_agregados = None
+    error_limites = None
+    try:
+        budgets_ef, fuentes_ef = _resolver_budgets_con_fuentes(repo_root)
+        limites_agregados = _resumen_limites_agregados(control, repo_root, budgets_ef, fuentes_ef)
+    except BudgetsInvalidosError as e:
+        error_limites = core.formatear_findings_texto(e.findings)
+    avisos = [a for a in (_aviso_guardrails_ilegible(repo_root),) if a]
+
     if args.json:
-        print(json.dumps(estado, indent=2, ensure_ascii=False))
+        payload = dict(estado)
+        payload["avisos"] = avisos
+        payload["limites_agregados"] = limites_agregados if error_limites is None else {"error": error_limites}
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
         if not estado["activa"]:
             print("No hay sesión activa.")
@@ -842,6 +1056,14 @@ def cmd_session_status(args: argparse.Namespace) -> int:
             )
             for f in estado["findings"]:
                 print(f"  [{f['codigo']}] {f['mensaje']}")
+        for aviso in avisos:
+            print(f"AVISO: {aviso}")
+        print("Límites agregados efectivos:")
+        if error_limites is not None:
+            print(f"  (inválidos) {error_limites}")
+        else:
+            for eje, _clave in _EJES_AGREGADOS:
+                print("  " + _linea_limite_agregado(eje, limites_agregados[eje]))
     return 0
 
 
@@ -892,7 +1114,7 @@ def cmd_session_aggregate(args: argparse.Namespace) -> int:
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     try:
-        budgets = _resolver_budgets(repo_root)
+        budgets, fuentes_budgets = _resolver_budgets_con_fuentes(repo_root)
     except BudgetsInvalidosError as e:
         print(core.formatear_findings_texto(e.findings), file=sys.stderr)
         return 2
@@ -903,13 +1125,20 @@ def cmd_session_aggregate(args: argparse.Namespace) -> int:
         "max_sessions": budgets["max_sessions"],
     }
     findings = sdd.chequear_limite_agregado(control, config_agregado)
+    resumen = _resumen_limites_agregados(control, repo_root, budgets, fuentes_budgets)
+    avisos = [a for a in (_aviso_guardrails_ilegible(repo_root),) if a]
 
     if args.json:
         payload = dict(agregado)
+        payload["avisos"] = avisos
         payload["limites_configurados"] = config_agregado
+        payload["limites_fuentes"] = {eje: resumen[eje]["fuente"] for eje, _c in _EJES_AGREGADOS}
+        payload["restante"] = {eje: resumen[eje]["restante"] for eje, _c in _EJES_AGREGADOS}
         payload["findings"] = [f.to_dict() for f in findings]
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
+        for aviso in avisos:
+            print(f"AVISO: {aviso}")
         print(
             f"Sesiones totales: {agregado['sesiones_totales']} "
             f"(abiertas: {agregado['sesiones_abiertas']}) — "
@@ -920,6 +1149,8 @@ def cmd_session_aggregate(args: argparse.Namespace) -> int:
                 f"Límites configurados: aggregate_minutes={config_agregado['aggregate_minutes']} "
                 f"max_sessions={config_agregado['max_sessions']}"
             )
+            for eje, _clave in _EJES_AGREGADOS:
+                print("  " + _linea_limite_agregado(eje, resumen[eje]))
         for f in findings:
             print(f"  [{f.codigo}] {f.mensaje}")
     return 0
@@ -1848,7 +2079,11 @@ def _resolver_aprobacion_exec(
                 return True, "human", modo, {"tipo": "human_manifest_aprobado"}, ""
             if hash_legacy is not None:
                 reciente = nbrunner_manifest._aprobacion_mas_reciente(control_data or {}, artefacto)
-                if reciente is not None and reciente.get("algoritmo") == "sha256/lf/v1":
+                # `sha256/argv-canonical-json`: legacy de `exec pytest` con intérprete crudo (I6).
+                if reciente is not None and reciente.get("algoritmo") in (
+                    "sha256/lf/v1",
+                    "sha256/argv-canonical-json",
+                ):
                     _f_legacy, estado_legacy = nbrunner_manifest.validar_aprobacion(
                         control_data or {}, artefacto, hash_legacy, modo="execute"
                     )
@@ -2256,19 +2491,27 @@ def _construir_exec_script(args: argparse.Namespace, repo_root: Path) -> ExecSpe
 
 def _construir_exec_pytest(args: argparse.Namespace, repo_root: Path) -> ExecSpec:
     """Builder puro de `exec pytest` (R8): hash del argv canónico, sin cambios."""
-    leadrun_core, _al, _rt = _modulos_leadrun_o_error()
+    leadrun_core, leadrun_allowlist, _rt = _modulos_leadrun_o_error()
 
     flags_extra = list(args.pytest_args or [])
     if flags_extra and flags_extra[0] == "--":
         flags_extra = flags_extra[1:]
     argv = [args.interpreter, "-m", "pytest", *args.paths, *flags_extra]
+    # R19: la identidad usa el intérprete NORMALIZADO; la ejecución usa el valor provisto.
+    argv_identidad = [leadrun_allowlist.normalizar_interprete(args.interpreter), *argv[1:]]
+    hash_identidad = leadrun_core.content_sha256(argv_identidad)
+    # I6: aprobaciones previas registradas con el intérprete CRUDO siguen valiendo
+    # (solo cuando el crudo difiere del normalizado).
+    hash_crudo = leadrun_core.content_sha256(list(argv))
+    hash_legacy = hash_crudo if hash_crudo != hash_identidad else None
 
     return ExecSpec(
         forma="pytest",
         argv=argv,
         artefacto="pytest:" + "|".join(args.paths),
-        hash_comando=leadrun_core.content_sha256(list(argv)),
+        hash_comando=hash_identidad,
         algoritmo="sha256/argv-canonical-json",
+        hash_legacy=hash_legacy,
     )
 
 
@@ -3633,6 +3876,17 @@ _PLANTILLAS_POR_MODO = {
 }
 
 
+def _rutas_por_defecto_change(change_id: str, archivos_md: list) -> list:
+    """Artefactos por defecto de un Change en `rutas_autorizadas`: los `.md`
+    creados por `init`, `control.json` y `verification.md` (R37; `init` no crea
+    este último). Compartido por `cmd_init` y `cmd_approve` (R24)."""
+    base = f"openspec/changes/{change_id}"
+    rutas = [f"{base}/{nombre}" for nombre in archivos_md]
+    rutas.append(f"{base}/control.json")
+    rutas.append(f"{base}/verification.md")
+    return rutas
+
+
 def _change_id_invalido(change_id: str) -> bool:
     """True si `change_id` puede escapar de `openspec/changes/<change_id>/`:
     componente `..`, separador de ruta (`/` o `\\`) o ruta absoluta. `init` es
@@ -3698,10 +3952,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         "rama": rama,
         "capturado_utc": core.ahora_utc(),
     }
-    rutas_autorizadas = [
-        f"openspec/changes/{args.change_id}/{nombre}" for nombre in archivos_creados
-    ]
-    rutas_autorizadas.append(f"openspec/changes/{args.change_id}/control.json")
+    rutas_autorizadas = _rutas_por_defecto_change(args.change_id, archivos_creados)
 
     # `aprobacion_modo` (R1/D1 de 20260930-autonomous-sdd-and-remediation):
     # ausente el flag -> `per_change` (default, idéntico al comportamiento de

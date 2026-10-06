@@ -758,5 +758,68 @@ class TestImportsYProsa(unittest.TestCase):
         self.assertEqual(autonomy_policy.POLICY_SCHEMA_VERSION, 2)
 
 
+class TestLimitsYBudgets(unittest.TestCase):
+    """R6 de 20261005-operational-autonomy-hardening: `budgets` habilita `autonomous`."""
+
+    def _parse(self, **autonomy):
+        base = {"mode": "autonomous"}
+        base.update(autonomy)
+        return parse_autonomy_policy(_guardrails(base), 2)
+
+    def test_budgets_only_autonomous(self):
+        pol, hall = self._parse(budgets={"max_sessions": 4, "aggregate_minutes": 200})
+        self.assertEqual(pol.mode, "autonomous")
+        self.assertEqual(pol.max_sessions, 4)
+        self.assertEqual(pol.max_total_minutes, 200)
+        self.assertNotIn(autonomy_core.CODE_POLICY_LIMITS, _codigos(hall))
+
+    def test_ambos_toma_el_minimo_en_los_dos_ordenes(self):
+        pol, _ = self._parse(
+            limits={"max_sessions": 3, "max_total_minutes": 300},
+            budgets={"max_sessions": 5, "aggregate_minutes": 100},
+        )
+        self.assertEqual((pol.max_sessions, pol.max_total_minutes), (3, 100))
+        pol, _ = self._parse(
+            limits={"max_sessions": 9, "max_total_minutes": 50},
+            budgets={"max_sessions": 5, "aggregate_minutes": 100},
+        )
+        self.assertEqual((pol.max_sessions, pol.max_total_minutes), (5, 50))
+        self.assertEqual(pol.mode, "autonomous")
+
+    def test_ejes_repartidos_entre_fuentes(self):
+        pol, _ = self._parse(limits={"max_sessions": 3}, budgets={"aggregate_minutes": 90})
+        self.assertEqual(pol.mode, "autonomous")
+        self.assertEqual((pol.max_sessions, pol.max_total_minutes), (3, 90))
+
+    def test_budgets_invalido_degrada(self):
+        for valor in (0, -1, True, "5", 1.5):
+            pol, hall = self._parse(
+                limits={"max_sessions": 3, "max_total_minutes": 120},
+                budgets={"aggregate_minutes": valor},
+            )
+            self.assertEqual(pol.mode, "supervised", valor)
+            self.assertIn(autonomy_core.CODE_POLICY_LIMITS, _codigos(hall), valor)
+
+    def test_budgets_sin_ejes_requeridos_degrada(self):
+        pol, hall = self._parse(budgets={"session_minutes": 30})
+        self.assertEqual(pol.mode, "supervised")
+        self.assertIn(autonomy_core.CODE_POLICY_LIMITS, _codigos(hall))
+
+    def test_budgets_no_dict_degrada(self):
+        for valor in (None, 5, "x", [1]):
+            pol, hall = self._parse(limits={"max_sessions": 3, "max_total_minutes": 120}, budgets=valor)
+            self.assertEqual(pol.mode, "supervised", valor)
+            self.assertIn(autonomy_core.CODE_POLICY_LIMITS, _codigos(hall), valor)
+
+    def test_budgets_ya_no_es_clave_desconocida(self):
+        _pol, hall = self._parse(budgets={"max_sessions": 4, "aggregate_minutes": 200})
+        self.assertNotIn(autonomy_core.CODE_POLICY_UNKNOWN_KEY, _codigos(hall))
+
+    def test_limits_only_identico(self):
+        pol, hall = parse_autonomy_policy(_guardrails(_autonomy()), 2)
+        self.assertEqual((pol.mode, pol.max_sessions, pol.max_total_minutes), ("autonomous", 3, 120))
+        self.assertEqual(hall, [])
+
+
 if __name__ == "__main__":
     unittest.main()

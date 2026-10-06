@@ -4,6 +4,7 @@ JSON de bajo nivel (usa `core.py` para eso).
 """
 from __future__ import annotations
 
+import fnmatch
 import re
 from datetime import timedelta
 from pathlib import Path
@@ -1017,6 +1018,122 @@ def parsear_checkpoints_de_propuesta(texto: str) -> tuple:
         checkpoints_validos.append(candidato)
 
     return checkpoints_validos, hallazgos
+
+
+CODE_ALCANCE_INVALIDO = "SDD-ALCANCE-INVALIDO"
+_ALCANCE_MAX_ENTRADAS = 500
+_ALCANCE_MAX_LARGO = 260
+_RE_ALCANCE_PROHIBIDOS = re.compile(r"""[\s$;&|<>()"'`?\[\]{}!]""")
+_RE_ALCANCE_UNIDAD_WINDOWS = re.compile(r"^[A-Za-z]:")
+# Rutas del propio harness/datos que una propuesta nunca puede autorizar (I7/I8); también se
+# rechazan patrones que las cubran (p. ej. `.claude/**`, `data/**`).
+_ALCANCE_RUTAS_PROTEGIDAS = (
+    ".claude/guardrails.json",
+    ".claude/settings.json",
+    ".claude/settings.local.json",
+    "data/raw/x",
+)
+
+
+def _normalizar_entrada_alcance(crudo: str) -> tuple:
+    """Normaliza UNA entrada de `## Alcance autorizado` -> `(ruta, motivo)`.
+    `motivo` es None si es válida (R23 de 20261005-operational-autonomy-hardening)."""
+    valor = crudo.strip()
+    if len(valor) >= 2 and valor.startswith("`") and valor.endswith("`"):
+        valor = valor[1:-1].strip()
+    if not valor:
+        return None, "entrada vacía"
+    if len(valor) > _ALCANCE_MAX_LARGO:
+        return None, f"más de {_ALCANCE_MAX_LARGO} caracteres"
+    if "\\" in valor:
+        return None, "backslash no permitido (usar '/')"
+    if valor.startswith("/") or valor.startswith("~") or _RE_ALCANCE_UNIDAD_WINDOWS.match(valor):
+        return None, "ruta absoluta o con '~' no permitida"
+    if _RE_ALCANCE_PROHIBIDOS.search(valor):
+        return None, "espacios o caracteres de shell/glob no permitidos"
+    while valor.startswith("./"):
+        valor = valor[2:]
+    while "//" in valor:
+        valor = valor.replace("//", "/")
+    if valor.endswith("/"):
+        valor = valor + "**"
+    if not valor or valor == ".":
+        return None, "entrada vacía"
+    if valor.startswith("/"):
+        return None, "ruta absoluta no permitida"
+    if ":" in valor:
+        return None, "':' no permitido"
+    segmentos = valor.split("/")
+    if ".." in segmentos or "." in segmentos:
+        return None, "segmento '.' o '..' no permitido"
+    primero = segmentos[0].rstrip(". ").lower()
+    if primero in (".git", ".harmessi"):
+        return None, f"{primero} no permitido"
+    if any(seg.endswith(".") or seg.endswith(" ") for seg in segmentos):
+        return None, "segmento que termina en '.' o espacio no permitido"
+    minuscula = valor.lower()
+    if minuscula == "data/raw" or minuscula.startswith("data/raw/"):
+        return None, "data/raw no permitido"
+    for protegida in _ALCANCE_RUTAS_PROTEGIDAS:
+        if fnmatch.fnmatchcase(protegida, minuscula):
+            return None, f"la ruta protegida {protegida} no puede autorizarse"
+    if "*" in segmentos[0]:
+        return None, "el primer segmento no puede contener '*' (alcance repo-wide)"
+    for i, seg in enumerate(segmentos):
+        if "**" in seg and not (seg == "**" and i == len(segmentos) - 1):
+            return None, "'**' solo permitido como último segmento completo"
+    return valor, None
+
+
+def parsear_alcance_autorizado(texto: str) -> tuple:
+    """Sección `## Alcance autorizado` de `proposal.md` -> `(rutas, hallazgos)`.
+    Función pura (R22-R26). Solo se consideran líneas bullet (`- ...`); el resto
+    (comentarios de plantilla, prosa) se ignora. Todo-o-nada: cualquier entrada
+    inválida produce un `Finding` `SDD-ALCANCE-INVALIDO`; el llamador debe
+    rechazar la aprobación completa. `rutas` son únicas y en orden de aparición.
+    Título exacto: `## Alcance` (otra sección) no se confunde con esta."""
+    seccion = _contenido_de_seccion(texto, "## Alcance autorizado")
+    rutas: list = []
+    hallazgos: list = []
+    if not seccion:
+        return rutas, hallazgos
+
+    ubicacion = "proposal.md#Alcance autorizado"
+    entradas = []
+    for linea in seccion.splitlines():
+        linea = linea.strip()
+        if linea.startswith("- ") or linea == "-":
+            entradas.append(linea[1:])
+        elif linea.startswith("* ") or linea.startswith("+ "):
+            # M4: bullets no soportados -> hallazgo, nunca se ignoran en silencio.
+            hallazgos.append(
+                Finding(
+                    CODE_ALCANCE_INVALIDO,
+                    f"Bullet no soportado {linea!r}: usar '- ruta'",
+                    ubicacion,
+                )
+            )
+    if len(entradas) > _ALCANCE_MAX_ENTRADAS:
+        hallazgos.append(
+            Finding(
+                CODE_ALCANCE_INVALIDO,
+                f"Más de {_ALCANCE_MAX_ENTRADAS} entradas en el alcance autorizado ({len(entradas)})",
+                ubicacion,
+            )
+        )
+        return [], hallazgos
+    for crudo in entradas:
+        ruta, motivo = _normalizar_entrada_alcance(crudo)
+        if motivo is not None:
+            hallazgos.append(
+                Finding(CODE_ALCANCE_INVALIDO, f"Entrada de alcance inválida {crudo.strip()!r}: {motivo}", ubicacion)
+            )
+            continue
+        if ruta not in rutas:
+            rutas.append(ruta)
+    if hallazgos:
+        return [], hallazgos
+    return rutas, hallazgos
 
 
 def presupuesto_agregado(control: dict) -> dict:

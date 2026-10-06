@@ -13,6 +13,16 @@ literales a una ruta protegida en el texto del comando; no detecta
 indirección (variables, `cd` previo, comandos generados dinámicamente,
 encoding). Se documenta así en cada mensaje de denegación relacionado.
 
+Bash/PowerShell sigue siendo best-effort (R45, `20261005-operational-
+autonomy-hardening`): no se construye un parser de shell. La única
+concesión es neutralizar, antes de la heurística de escritura, redirecciones
+sin efecto (`2>/dev/null`, `&>/dev/null`, `2>&1`, `>$null`, `>nul`, `2>nul`;
+ver `_PATRON_REDIRECCION_INOCUA`); toda otra redirección y los patrones de
+escritura (`rm`, `tee`, `sed -i`, `cp`, `mv`, `git add`, ...) siguen
+bloqueando. Secretos, holdouts y `data_raw` no cambian (R46); `Read`/`Grep`
+estructurados sobre `guardrails.json` están permitidos y `Write`/`Edit`/
+`NotebookEdit` bloqueados (R43).
+
 Config: `<repo_root>/.claude/guardrails.json` (opcional -- ausente usa
 defaults seguros). Ver `cargar_config` para el schema exacto.
 
@@ -418,8 +428,32 @@ _PATRON_REDIRECCION = re.compile(r"(?<![-=])>{1,2}(?!=)")
 
 _OPERADORES_SHELL: tuple = ("&&", "||", ";", "|", "(", ")", "`", "$(", "<", ">>", ">")
 
+# Redirecciones SIN efecto de escritura (R44, `20261005-operational-
+# autonomy-hardening`): descartan salida a un sumidero o duplican descriptores.
+# Se neutralizan (se reemplazan por un espacio) ANTES de la heurística de
+# escritura para no bloquear p. ej. `grep x .claude/guardrails.json 2>/dev/null`.
+# Lista cerrada y deliberadamente estrecha: `N>/dev/null`, `N>>/dev/null`,
+# `&>/dev/null`, `>/dev/null`, `N>&M` (p. ej. `2>&1`), `>$null`, `>nul`,
+# `2>nul` (nul/$null sin distinguir mayúsculas). El sumidero debe terminar ahí
+# (lookahead): `>nul.txt` o `>/dev/null/x` NO se neutralizan. Cualquier otra
+# redirección sigue contando como escritura.
+_PATRON_REDIRECCION_INOCUA = re.compile(
+    r"(?:"
+    r"(?:&|\d+)?>{1,2}[ \t]*/dev/null(?![\w./\\-])"
+    r"|(?<![\w>])\d*>&\d+(?![\w./\\-])"
+    r"|(?:&|\d+)?>{1,2}[ \t]*\$null(?![\w./\\-])"
+    r"|(?:&|\d+)?>{1,2}[ \t]*nul(?![\w./\\-])"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _neutralizar_redirecciones_inocuas(comando: str) -> str:
+    return _PATRON_REDIRECCION_INOCUA.sub(" ", comando)
+
 
 def _es_escritura_shell(comando: str) -> bool:
+    comando = _neutralizar_redirecciones_inocuas(comando)
     normalizado = comando.casefold()
     if _PATRON_REDIRECCION.search(comando):
         return True

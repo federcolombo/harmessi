@@ -34,7 +34,11 @@ KEY_VERSION = "version"
 KEY_MAX_SESSIONS = "max_sessions"
 KEY_MAX_MINUTES = "max_total_minutes"
 
-_CLAVES_AUTONOMY = (KEY_MODE, KEY_LIMITS, KEY_SEALED, KEY_ACCESS, KEY_VERSION)
+# `budgets` es clave conocida (canónica, R1/R6 de 20261005-operational-autonomy-hardening):
+# ya no se reporta como `unknown_key`; sus ejes de límites agregados se validan abajo y el
+# resto de sus claves las valida `ds_guard._resolver_budgets`.
+KEY_BUDGETS = "budgets"
+_CLAVES_AUTONOMY = (KEY_MODE, KEY_LIMITS, KEY_SEALED, KEY_ACCESS, KEY_VERSION, KEY_BUDGETS)
 _CLAVES_LIMITS = (KEY_MAX_SESSIONS, KEY_MAX_MINUTES)
 
 DETAIL_SEALED_UNSEALED_HOLDOUT = "holdout_source_not_sealed"
@@ -246,19 +250,48 @@ def _parsear(guardrails: Any, guard_max: Any):
         degradar = True
         limites_dict = None
     limites_ok = True
+    # `autonomy.budgets` (canónica) puede proveer los mismos dos ejes (R6):
+    # `max_sessions` y `aggregate_minutes` (= `max_total_minutes`). Valor efectivo = mínimo.
+    budgets_dict = autonomia.get(KEY_BUDGETS)
+    if KEY_BUDGETS in autonomia and not isinstance(budgets_dict, dict):
+        hallazgos.append(PolicyFinding(autonomy_core.CODE_POLICY_LIMITS, KEY_BUDGETS, "not_a_dict"))
+        degradar = True
+    if not isinstance(budgets_dict, dict):
+        budgets_dict = {}
+    claves_budgets = {KEY_MAX_SESSIONS: "max_sessions", KEY_MAX_MINUTES: "aggregate_minutes"}
     for clave in _CLAVES_LIMITS:
         ruta = "%s.%s" % (KEY_LIMITS, clave)
+        clave_b = claves_budgets[clave]
+        valor_limits = None
+        valor_budgets = None
+        invalido = False
         if isinstance(limites_dict, dict) and clave in limites_dict:
             valor = limites_dict[clave]
             if _es_int(valor) and valor > 0:
-                if clave == KEY_MAX_SESSIONS:
-                    max_sesiones = valor
-                else:
-                    max_minutos = valor
+                valor_limits = valor
             else:
                 hallazgos.append(PolicyFinding(autonomy_core.CODE_POLICY_LIMITS, ruta, "not_positive_int"))
-                limites_ok = False
-        else:
+                invalido = True
+        if clave_b in budgets_dict:
+            valor = budgets_dict[clave_b]
+            if _es_int(valor) and valor > 0:
+                valor_budgets = valor
+            else:
+                hallazgos.append(
+                    PolicyFinding(autonomy_core.CODE_POLICY_LIMITS, "budgets.%s" % clave_b, "not_positive_int")
+                )
+                invalido = True
+                degradar = True
+        efectivos = [v for v in (valor_limits, valor_budgets) if v is not None]
+        efectivo = min(efectivos) if efectivos else None
+        if efectivo is not None:
+            if clave == KEY_MAX_SESSIONS:
+                max_sesiones = efectivo
+            else:
+                max_minutos = efectivo
+        if invalido:
+            limites_ok = False
+        elif efectivo is None:
             limites_ok = False
             if declarado == "autonomous":
                 hallazgos.append(PolicyFinding(autonomy_core.CODE_POLICY_LIMITS, ruta, "missing"))

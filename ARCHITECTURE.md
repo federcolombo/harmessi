@@ -518,6 +518,15 @@ usarse para fuentes de datos porque ya lo ocupa `tools/providers`.
 intercepta un script que abre su propia conexión. Es el mismo tipo de límite que §5 y que el
 enforcement best-effort de `Bash`/`PowerShell`.
 
+### 6.1 Límites agregados de autonomía (Corrective A de v0.9)
+
+`autonomy.budgets` (`aggregate_minutes`, `max_sessions`, `session_minutes`, ...) es la representación canónica y la
+única que se documenta; `autonomy.limits` (`max_sessions`, `max_total_minutes`) sigue legible por compatibilidad.
+Si ambas existen, el límite efectivo por eje es el MENOR; un valor inválido en cualquiera falla cerrado. Ambos ejes
+alcanzan `checkpoint_resumable`/LIMIT (nunca STOP). El alcance de un Change se declara en `proposal.md`
+(`## Alcance autorizado`, aprobado por hash); `dir/**` significa el directorio y sus descendientes.
+`.harmessi/executions/**` y `openspec/decisions/ledger.jsonl` son outputs internos del harness, no scope funcional.
+
 ## 7. Dirección arquitectónica planificada para v0.10 (roles ≠ skills ≠ runtime, NO implementada)
 
 Registrado 2026-10-01 (feedback externo, preservado como línea de evolución -- ver `v0.10.md`,
