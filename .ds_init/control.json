@@ -51,7 +51,7 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/templates/proposal.md",
-      "sha256": "cac5e2143bdfa9a388b6de43b9ed6038cac919cde865ca6084724782032377d3"
+      "sha256": "99c7905c7a251facc91afeed775fa7f7c9535dfcc745050674813180327f51e4"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/templates/spec.md",
@@ -71,7 +71,7 @@
     },
     {
       "ruta": "tools/ds_guard.py",
-      "sha256": "4dc6990b63bdbadf3072ff7db9b6315fa7c28567647a7bdb0c8bea1ada9173b2"
+      "sha256": "182d7df49c32c8fdae48cb907dd7f028837bccf5362e66c81035fc0cf8947be0"
     },
     {
       "ruta": "tools/dsguard/__init__.py",
@@ -87,7 +87,7 @@
     },
     {
       "ruta": "tools/dsguard/sdd.py",
-      "sha256": "cfce8321669cf8bb9d9f65ab8d75202751e04b7ea66dc5f9df38b3aa5f4e82c4"
+      "sha256": "ed3751f5ee84c31f7c25736ca738eb5c52735d6705ac6963ae82a1c694d39002"
     },
     {
       "ruta": "tools/dsguard/decision.py",
@@ -131,7 +131,7 @@
     },
     {
       "ruta": "tools/dsguard/scope.py",
-      "sha256": "01293ab32586bbd493abfe41e4f1d454d0534e2c935771956c57c561eb1340f0"
+      "sha256": "2fcb84024106c4f469dadccc9754e2059922ddf01d5c3f9d15b311c52f11942b"
     },
     {
       "ruta": "tools/dsguard/scientific_validity.py",
@@ -147,7 +147,7 @@
     },
     {
       "ruta": "tools/dsguard/hook_presupuesto.py",
-      "sha256": "96272b999d5e420e4317d972c651518d3d6c55d212197f5685b4999fdd671aaf"
+      "sha256": "e245895fd13f8639565bbd9db73900933592431695f399e7acac3acc0e0523a3"
     },
     {
       "ruta": "tools/dsguard/hook_launcher_presupuesto.py",
@@ -155,7 +155,7 @@
     },
     {
       "ruta": "tools/dsguard/pathguard.py",
-      "sha256": "aadbdc0043862e486b5c3efdd07cd3abe64fa3c18a6711f5212834eae4371282"
+      "sha256": "ab1c9c8961654c68acafbbce2d29b61315450e35e395e6dd117c01d3bb9aa05e"
     },
     {
       "ruta": "tools/dsguard/hook_rutas.py",
@@ -211,7 +211,7 @@
     },
     {
       "ruta": "tools/leadrun/allowlist.py",
-      "sha256": "ad758be0b8f99b4335083f43afb0944e74188264a9a79c1df2ab971a9a6e18c7"
+      "sha256": "2c7cee44a28ab4bbfe94f90d88a3bfe8d89a56fbdf86428425316135e8def300"
     },
     {
       "ruta": "tools/leadrun/scripts.py",
@@ -403,7 +403,7 @@
     },
     {
       "ruta": "tools/autonomy/policy.py",
-      "sha256": "5b6d7d63ca87f691f6d4c8c6b3f5163b65cab305e3bf910c2ff8c92a4c68fa05"
+      "sha256": "c0699a59f4bdd40f706b09eaf03ed19387937252a0f03a30705894b797fe0d50"
     },
     {
       "ruta": "tools/datasources/__init__.py",
