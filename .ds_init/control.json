@@ -251,11 +251,11 @@
     },
     {
       "ruta": "tools/ds_profile/cli.py",
-      "sha256": "6264159c5a9b081c4134a676a82877c5de152e113c73805d3eb336a34ed2dccc"
+      "sha256": "9b9ee97ac9c5bb5bf7d9831eff8f0dd123eac8e0bc636c4adc7795606845f4e6"
     },
     {
       "ruta": "tools/ds_profile/io_readers.py",
-      "sha256": "764ea030af1b9c9ee1afbba5546d97f0bf397ef5f5a66a7570ca6c0889aa66eb"
+      "sha256": "bc5f0efc5bb98fca35cbdd1e2d9527fcf589ae70032b0fcbdb8030562324dd9c"
     },
     {
       "ruta": "tools/ds_profile/fingerprint.py",
@@ -267,7 +267,7 @@
     },
     {
       "ruta": "tools/ds_profile/column_stats.py",
-      "sha256": "475fcdb1c7640dec7e34641fd648f64fb4798bd30c5353252c6fa6b4ff5cda45"
+      "sha256": "66f77e942808b74b89abf47f0580ba63db0d8c9adbb5cfdaf1dee7e191d29c3b"
     },
     {
       "ruta": "tools/ds_profile/quality_flags.py",
@@ -275,7 +275,7 @@
     },
     {
       "ruta": "tools/ds_profile/sampling.py",
-      "sha256": "33533a5538a53c2fa1b1c9bb32f403edc9bd9145033c952237270392e3adedb6"
+      "sha256": "32ca2e3832343364a48cd8d6e59434130100087fb985798d542aca234fce99d8"
     },
     {
       "ruta": "tools/ds_profile/holdout_guard.py",
@@ -283,7 +283,7 @@
     },
     {
       "ruta": "tools/ds_profile/report.py",
-      "sha256": "ef9ce898deaea98cb61f1d3b868efc8e6d00d0134fd0318ae4797014d7152769"
+      "sha256": "ac2e671e95cc798a60f333b4b6b8c0f872df9d74666a596d82d0f058521b9394"
     },
     {
       "ruta": "tools/dsimpact/__init__.py",
