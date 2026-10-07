@@ -558,9 +558,10 @@ y mensaje accionable. Sin dependencias nuevas.
 
 Registrado 2026-10-01 (feedback externo, preservado como línea de evolución -- ver `v0.10.md`,
 "Composable Engineering & Data Science Skills", para el desglose completo de candidatas y
-principios). **Nada de esta sección existe todavía en el código salvo el contrato base de Change 0 (`tools/cards`: identidad, `EvidenceRef`,
-`HumanAttestation` declared/anchored, evaluación derivada `invalid > stale > incomplete > complete`); no hay
-Cards concretas, ni CLI/Doctor/capabilities (Change 4).** `anchored` significa estructuralmente coherente
+principios). **Nada de esta sección (la separación Role/Skill/Runtime y las Composable Skills) está implementado en v0.9.** Lo que sí existe en v0.9 es
+el contrato base de `tools/cards` (identidad, `EvidenceRef`, `HumanAttestation` declared/anchored, evaluación derivada
+`invalid > stale > incomplete > complete`), las Data/Model Cards, la governance de modelo y su integración (CLI, Doctor, capabilities, reporting; ver §8).
+`anchored` significa estructuralmente coherente
 (con `ApprovalRef` válido), no verificado contra `control.json`/ledger; las aprobaciones de Harmessi son
 declaraciones humanas registradas bajo el modelo de confianza del harness, no firmas ni prueba de autoría.
 

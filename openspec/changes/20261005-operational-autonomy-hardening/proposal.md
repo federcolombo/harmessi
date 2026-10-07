@@ -1,6 +1,6 @@
 # Propuesta — 20261005-operational-autonomy-hardening
 
-> Corrective A de v0.9, originado en feedback real de Harmessi 0.8.0 (`docs/feedback/20261005_segmentacion-pc.md`).
+> Corrective A de v0.9, originado en feedback real de Harmessi 0.8.0 (un informe de feedback externo no versionado).
 > No renumera Changes 0–5 de v0.9. Change 4 (`20261005-cards-governance-integration`) permanece sin tocar.
 
 ## Problema

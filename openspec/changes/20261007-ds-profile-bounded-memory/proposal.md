@@ -1,6 +1,6 @@
 # Propuesta — 20261007-ds-profile-bounded-memory
 
-> Corrective C de v0.9, originado en feedback real de Harmessi 0.8.0 (`docs/feedback/20261005_segmentacion-pc.md`): `ds_profile`
+> Corrective C de v0.9, originado en feedback real de Harmessi 0.8.0 (un informe de feedback externo no versionado): `ds_profile`
 > llevó a la máquina a «memoria crítica» con un Parquet de 620.570 filas × 27 columnas (~20 MB comprimido, Windows 11, Python 3.12,
 > pandas/pyarrow). No renumera Changes 0–5. Change 5 NO se toca.
 

@@ -49,3 +49,7 @@ data/
 
 # ds_init temporary staging left behind by an interrupted run
 .ds_init_staging_*/
+
+# Feedback externo local (contiene contexto de proyectos reales; no se versiona)
+docs/feedback/
+.harmessi/

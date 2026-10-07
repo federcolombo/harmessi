@@ -95,6 +95,19 @@ science project.
   depth via `dsguard.pathguard` even from a direct CLI call; Project EDA is
   the Lead-driven process that interprets those facts for modeling decisions
   while respecting cutoff and holdout boundaries.
+- **Data Cards, Model Cards and Model Governance (v0.9, opt-in)** — structured,
+  evidence-backed views of a dataset (Data Card) and a model (Model Card), plus
+  a progressive model-governance assessment by `risk_level` (low / medium /
+  high) over six Responsible AI dimensions (fairness, explainability, privacy,
+  security, accountability, human oversight). They are enabled per project via
+  the `data_cards` and `model_governance` capabilities (`model_governance`
+  requires `predictive_modeling`); without them a project behaves exactly as
+  in v0.8. Harmessi governs *evidence*: a Card references evidence that
+  already exists and validates that it is present, current and coherent. It
+  does **not** claim a model or dataset is ethical, fair, safe, private,
+  secure or compliant, and it is not a compliance engine. Use
+  `ds_guard cards validate` / `ds_guard cards report`, and `harmessi doctor`
+  for the `HARMESSI-GOV-*` checks.
 
 ## Requirements
 
@@ -203,6 +216,14 @@ truth; pass `--markdown` to also derive a human-readable `profile.md`). Like
 `nbrunner`, it defends holdouts in depth: it reuses `dsguard.pathguard` to
 refuse profiling a declared holdout even when invoked directly from the CLI,
 not only through an agent.
+
+Memory is bounded by design: before reading rows, `ds_profile` decides between
+exact and sampled mode from file metadata and an explicit memory budget
+(`--max-mb-exactos`, an estimate rather than a hard sandbox limit). Cheap
+metrics (counts, nulls, min/max, mean/std, dtype) stay exact in both modes;
+metrics that need many values (distinct counts, top values, quantiles,
+duplicate rows) fall back to a deterministic sample when the source exceeds the
+budget, and the profile says so (`sampling.motivo`, `exactitud`).
 
 Project EDA — documented for the Lead in the installed
 `.claude/skills/lead-data-scientist/eda.md` — is the process that interprets

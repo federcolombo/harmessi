@@ -1,6 +1,6 @@
 # Propuesta — 20261006-sdd-parsers-and-guardrail-ownership
 
-> Corrective B de v0.9, originado en feedback real de Harmessi 0.8.0 (`docs/feedback/20261005_segmentacion-pc.md`,
+> Corrective B de v0.9, originado en feedback real de Harmessi 0.8.0 (un informe de feedback externo no versionado,
 > hallazgos a, c y d). No renumera Changes 0–5. Corrective C (`ds_profile`) y Change 5 NO se tocan.
 
 ## Problema
