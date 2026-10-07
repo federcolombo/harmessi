@@ -4,14 +4,17 @@ Dos niveles, deliberadamente separados:
 
 1. `AcumuladorColumna` -- streaming, una instancia por columna, corre sobre
    CADA fila del dataset sin importar el modo (exacto/muestreado). Retiene
-   solo lo que "spec.md" exige siempre exacto: `nulls`, min/max numérico y
-   de fecha, media/std (Welford, sin retener la lista completa de valores).
-2. `clasificar_dtype` / `construir_metricas_columna` -- operan sobre una
-   lista de valores YA DECIDIDA por el orquestador (`report.py`): la lista
-   completa de valores no nulos en modo exacto, o los valores extraídos de
-   la muestra final del `ReservoirSampler` en modo muestreado. De ahí sale
-   todo lo que declara su propia `exactitud` (`unique`, `top_valores`,
-   `mediana`/`cuantiles`, y los flags que dependen de cardinalidad).
+   solo contadores y reducciones O(1): `nulls`, min/max numérico y de fecha,
+   media/std (Welford) y los contadores que clasifican `dtype`/`binary_numeric`/
+   `posible_problema_tipo` (exactos sobre todas las filas, sin lista de valores).
+2. `construir_metricas_columna` -- opera sobre una lista de valores YA
+   DECIDIDA por el orquestador (`report.py`): la lista de valores no nulos en
+   modo exacto (acotada por el presupuesto de `sampling.decidir_plan`), o los
+   valores de la muestra del `ReservoirSampler` en modo muestreado. De ahí sale
+   lo que declara su propia `exactitud` (`unique`, `top_valores`,
+   `mediana`/`cuantiles` y los flags de cardinalidad).
+   `clasificar_dtype`/`es_binario_numerico` (sobre listas) se conservan como
+   referencia de equivalencia con los acumuladores.
 
 Todos los parseos (`_es_entero`/`_es_flotante`/`_parsear_fecha`) convierten
 el valor a `str(valor)` antes de intentar parsear -- funciona igual para
@@ -168,6 +171,14 @@ class AcumuladorColumna:
         self.max_numerico: Optional[float] = None
         self.min_fecha: Optional[datetime] = None
         self.max_fecha: Optional[datetime] = None
+        # Contadores O(1) para clasificar dtype y derivar flags en streaming,
+        # exactos sobre TODAS las filas (sin retener valores).
+        self.n_entero = 0
+        self.n_fecha = 0
+        self.n_num_o_fecha = 0
+        self.solo_booleano = True
+        self._floats_distintos: set = set()
+        self._floats_desbordado = False
 
     def observar(self, valor) -> None:
         self.total += 1
@@ -175,9 +186,20 @@ class AcumuladorColumna:
             self.nulos += 1
             return
 
-        if _es_flotante(valor):
+        if self.solo_booleano and _texto(valor).casefold() not in ("true", "false"):
+            self.solo_booleano = False
+        if _es_entero(valor):
+            self.n_entero += 1
+
+        es_flotante = _es_flotante(valor)
+        if es_flotante:
             numero = _a_float(valor)
             self.n_numerico += 1
+            if not self._floats_desbordado:
+                self._floats_distintos.add(numero)
+                if len(self._floats_distintos) > 2:
+                    self._floats_desbordado = True
+                    self._floats_distintos = set()
             if self.min_numerico is None or numero < self.min_numerico:
                 self.min_numerico = numero
             if self.max_numerico is None or numero > self.max_numerico:
@@ -189,7 +211,10 @@ class AcumuladorColumna:
             self._m2 += delta * delta2
 
         fecha = _parsear_fecha(valor)
+        if es_flotante or fecha is not None:
+            self.n_num_o_fecha += 1
         if fecha is not None:
+            self.n_fecha += 1
             if self.min_fecha is None or fecha < self.min_fecha:
                 self.min_fecha = fecha
             if self.max_fecha is None or fecha > self.max_fecha:
@@ -207,6 +232,33 @@ class AcumuladorColumna:
     @property
     def filas_no_nulas(self) -> int:
         return self.total - self.nulos
+
+    def clasificar_dtype(self) -> str:
+        """Mismo criterio y orden que `clasificar_dtype(lista)` pero desde los
+        contadores (exacto sobre todas las filas, sin lista de valores)."""
+        total = self.filas_no_nulas
+        if total == 0:
+            return "texto"
+        if self.solo_booleano:
+            return "booleano"
+        if self.n_entero / total >= _UMBRAL_CLASIFICACION:
+            return "entero"
+        if self.n_numerico / total >= _UMBRAL_CLASIFICACION:
+            return "flotante"
+        if self.n_fecha / total >= _UMBRAL_CLASIFICACION:
+            return "fecha"
+        return "texto"
+
+    def es_binario_numerico(self, dtype: str) -> bool:
+        return (
+            dtype in ("entero", "flotante")
+            and not self._floats_desbordado
+            and self._floats_distintos == {0.0, 1.0}
+        )
+
+    def fraccion_numero_o_fecha(self) -> float:
+        total = self.filas_no_nulas
+        return self.n_num_o_fecha / total if total else 0.0
 
 
 # --- Estadísticos de orden/cardinalidad (exactos o sobre la muestra) ----
@@ -253,9 +305,12 @@ def construir_metricas_columna(
     `"exacta"`/`"muestreada"` acorde)."""
     total = acumulador.total
     nulos = acumulador.nulos
-    filas_no_nulas = acumulador.filas_no_nulas
+    # Denominador de las flags de cardinalidad: en modo muestreado `distintos` y
+    # las frecuencias salen de la muestra, así que se comparan contra la muestra.
+    filas_no_nulas_total = acumulador.filas_no_nulas
+    filas_no_nulas = len(valores_orden) if exactitud_orden == "muestreada" else filas_no_nulas_total
 
-    dtype = clasificar_dtype(valores_orden)
+    dtype = acumulador.clasificar_dtype()
 
     distintos = len(set(_texto(v) for v in valores_orden))
     contador = Counter(_texto(v) for v in valores_orden)
@@ -286,10 +341,10 @@ def construir_metricas_columna(
         detalle["fecha_min"] = acumulador.min_fecha.isoformat() if acumulador.min_fecha else None
         detalle["fecha_max"] = acumulador.max_fecha.isoformat() if acumulador.max_fecha else None
 
-    if es_binario_numerico(valores_orden, dtype):
+    if acumulador.es_binario_numerico(dtype):
         detalle["flags"].append("binary_numeric")
 
-    if dtype == "texto" and _fraccion_numero_o_fecha(valores_orden) >= _UMBRAL_POSIBLE_PROBLEMA_TIPO:
+    if dtype == "texto" and acumulador.fraccion_numero_o_fecha() >= _UMBRAL_POSIBLE_PROBLEMA_TIPO:
         detalle["flags"].append("posible_problema_tipo")
 
     if filas_no_nulas > 0 and distintos == 1:

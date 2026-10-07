@@ -543,6 +543,17 @@ alcanzan `checkpoint_resumable`/LIMIT (nunca STOP). El alcance de un Change se d
   `autonomy.limits`); cualquier otra clave (holdouts, data_raw, secretos_extra, write_scopes, excepciones, sealed_sources, source_access,
   desconocidas) sigue marcando `HARMESSI-DRIFT`. `HARMESSI-AUTONOMY-CONFIG` valida los valores mutables (mutable ≠ válido).
 
+### 6.3 `ds_profile` con memoria acotada (Corrective C de v0.9)
+
+`ds_profile` decide exacto vs muestreado ANTES de leer filas (`sampling.decidir_plan`): solo metadata (bytes, filas del footer/conteo CSV,
+columnas) contra `--max-mb-exactos`, que ahora es el PRESUPUESTO de memoria de trabajo (estimación `filas × columnas × 96 B`; no se confía en
+el tamaño comprimido). Exactos en ambos modos por acumuladores O(1): filas, nulos, min/max, media/std, fechas, `dtype`, `binary_numeric`,
+`posible_problema_tipo`. `unique`, `top_valores`, `mediana`, `cuantiles`, flags de cardinalidad y `duplicados_fila` son exactos solo dentro
+del presupuesto; si no, salen de un reservoir determinista (seed + `version_algoritmo`) con tope por presupuesto y se marcan `muestreada`.
+`profile.json.sampling` agrega (aditivo) `motivo`, `filas_observadas`, `version_algoritmo`, `presupuesto_bytes`, `estimado_bytes_exactos`.
+Parquet se lee por batches acotados (`BATCH_SIZE`), nunca `read_table`/pandas; fallas de lectura o fuentes demasiado anchas terminan con exit 4
+y mensaje accionable. Sin dependencias nuevas.
+
 ## 7. Dirección arquitectónica planificada para v0.10 (roles ≠ skills ≠ runtime, NO implementada)
 
 Registrado 2026-10-01 (feedback externo, preservado como línea de evolución -- ver `v0.10.md`,
