@@ -71,7 +71,7 @@ Si el usuario define otra política de commits para una versión concreta, esa i
 - `v0.7.0`: publicada — ML Quality & Data Contracts.
 - `v0.8.0`: publicada — Autonomous Project Runtime (autonomía del harness instalado + abstracción de
   fuentes de datos). Ver `v0.8.md`.
-- `v0.9.0`: lista para publicar (preparada en `v0.9-dev`, pendiente de aprobación humana y release) — Cards & Model Governance. Ver `v0.9.md`.
+- `v0.9.0`: publicada — Cards & Model Governance (Data/Model Cards, Responsible AI / model risk evidence, correctivos operativos). Ver `v0.9.md`.
 - `v0.10`: planificada — Integration & Stabilization (antes v0.9).
 - `v1.0`: Stable Public Contracts.
 
