@@ -88,7 +88,7 @@ INTERPRETE_AUTORIZADO = normalizar_interprete(sys.executable) if sys.executable 
 # `$`, `(`, `)`, `<`, `>`) -- así "git status" y "git diff --check" matchean,
 # pero "git status && rm -rf /" o "git status | tee log" no (el primer
 # metacaracter corta el consumo del grupo opcional y el `$` final falla).
-_CARACTERES_SEGUROS_TRAILING = r"[^&;|`$()<>\n]*"
+_CARACTERES_SEGUROS_TRAILING = r"[^&;|`$()<>\n\r\x0b\x0c\x85  ]*"
 _PATRON_GIT_STATUS_DIFF = re.compile(
     r"^git (status|diff)(?: " + _CARACTERES_SEGUROS_TRAILING + r")?$"
 )
@@ -106,10 +106,39 @@ _PATRON_GIT_DIFF_FLAG_ESCRITURA = re.compile(r"(^|\s)(--output(=|\s)|-o(\s|$))")
 # `sys.executable`, no esta regex (mismo patrón que `PATRON_COMANDO` de
 # hook_validar_comando.py). Mismo criterio anti-encadenado que arriba para
 # los flags de `session note|status|close`.
+#
+# R13: el token de intérprete admite comillas opcionales (sin comillas solo
+# si no tiene espacios ni metacaracteres) y un prefijo opcional `& ` (forma
+# PowerShell, exactamente un espacio). Solo rutas ABSOLUTAS (una relativa
+# depende del cwd real y no es inequívoca). Siempre comparación exacta
+# post-normalización, después de `_token_interprete_seguro`.
 _PATRON_DS_GUARD_SESSION = re.compile(
-    r'^"(?P<interprete>[^"]+)" tools/ds_guard\.py session (note|status|close)'
+    r'^(?:& )?(?:"(?P<interprete_q>[^"\n]+)"|(?P<interprete_s>[^\s"]+))'
+    r" tools/ds_guard\.py session (note|status|close)"
     r"(?: " + _CARACTERES_SEGUROS_TRAILING + r")?$"
 )
+
+_META_SIN_COMILLAS = set('&;|`$()<>"')
+_META_CON_COMILLAS = set('$`"\n')
+_PATRON_RUTA_ABSOLUTA = re.compile(r"^(?:[A-Za-z]:[\\/]|[\\/])")
+
+
+def _token_interprete_seguro(token: str, con_comillas: bool) -> bool:
+    """Valida el token ANTES de normalizarlo: la normalización (`normpath`)
+    colapsaría `/real/python;id;/../python` al intérprete autorizado mientras
+    el shell ejecutaría `id`. Rechaza segmentos `..`, saltos de línea,
+    metacaracteres (según el contexto de comillas), espacios sin comillas y
+    todo lo que no sea una ruta absoluta."""
+    if not token or "\n" in token or "\r" in token:
+        return False
+    if ".." in re.split(r"[\\/]+", token):
+        return False
+    prohibidos = _META_CON_COMILLAS if con_comillas else _META_SIN_COMILLAS
+    if any(c in prohibidos for c in token):
+        return False
+    if not con_comillas and any(c.isspace() for c in token):
+        return False
+    return bool(_PATRON_RUTA_ABSOLUTA.match(token) or os.path.isabs(token))
 
 
 def _matchea_allowlist(comando: str, interprete_autorizado: Optional[str]) -> bool:
@@ -121,9 +150,42 @@ def _matchea_allowlist(comando: str, interprete_autorizado: Optional[str]) -> bo
         return True
     m = _PATRON_DS_GUARD_SESSION.match(comando)
     if m and interprete_autorizado:
-        interprete_propuesto = normalizar_interprete(m.group("interprete"))
-        return interprete_propuesto == interprete_autorizado
+        con_comillas = m.group("interprete_q") is not None
+        token = m.group("interprete_q") if con_comillas else m.group("interprete_s")
+        if not _token_interprete_seguro(token, con_comillas):
+            return False
+        return normalizar_interprete(token) == normalizar_interprete(interprete_autorizado)
     return False
+
+
+def mensaje_recuperacion(interprete: Optional[str], change_id: Optional[str]) -> str:
+    """Bloque de recuperación para los bloqueos por `PRESUPUESTO AGOTADO`
+    (R11). Función pura. Comandos con la sintaxis real de la CLI; el
+    intérprete va entre comillas, con su valor literal. Si falta el
+    `change_id` o el intérprete (o contiene comillas), se omiten los comandos
+    afectados sin inventarlos y se dice."""
+    if not interprete or '"' in interprete or not change_id or not isinstance(change_id, str):
+        faltante = "intérprete" if not interprete or '"' in (interprete or "") else "change_id"
+        return (
+            f"\nRecuperación: no se pudo determinar el {faltante} de la sesión activa, así que no "
+            "se generan comandos. Cerrá la sesión con 'ds_guard session close --change-id <id> "
+            "--estado pausada' usando el intérprete del proyecto."
+        )
+    base = f'"{interprete}" tools/ds_guard.py session'
+
+    def _formas(sufijo: str) -> str:
+        return (
+            f"       Bash:        {base} {sufijo}\n"
+            f"       PowerShell:  & {base} {sufijo}"
+        )
+
+    return (
+        "\nRecuperación (status/close permitidos aun con el presupuesto vencido):\n"
+        f"  1. Ver estado:\n{_formas(f'status --change-id {change_id}')}\n"
+        f"  2. Cerrar sesión:\n{_formas(f'close --change-id {change_id} --estado pausada')}\n"
+        "  3. Después de cerrar, iniciar una sesión nueva (no permitido antes de cerrar):\n"
+        f"{_formas(f'start --change-id {change_id}')}"
+    )
 
 
 class ControlNoLegible(Exception):
@@ -217,6 +279,7 @@ def evaluar(
     payload: dict,
     sesion: Optional[dict],
     interprete_autorizado: Optional[str],
+    change_id: Optional[str] = None,
 ) -> tuple[bool, str, bool]:
     """Devuelve `(permitido, motivo, sesion_modificada)`. Función pura salvo
     por la mutación in-place de `sesion["subagentes"]` cuando corresponde
@@ -242,13 +305,17 @@ def evaluar(
             return True, "Comando dentro del allowlist de diagnóstico/checkpoint.", False
 
     restantes = _minutos_restantes_seguro(sesion)
+    # R11: bloque de recuperación con el intérprete real del hook (valor
+    # literal, no el normalizado/minúsculas) y el change_id de la sesión.
+    rec = mensaje_recuperacion(sys.executable, change_id)
 
     if tool_name in ("Bash", "PowerShell"):
         if restantes <= 0:
             return (
                 False,
                 "🛑 PRESUPUESTO AGOTADO: el presupuesto de la sesión venció. Solo quedan "
-                "disponibles 'git status'/'git diff' y 'ds_guard session note|status|close'.",
+                "disponibles 'git status'/'git diff' y 'ds_guard session note|status|close'."
+                + rec,
                 False,
             )
         return True, f"{tool_name} fuera de la ventana de deadline vencido: permitido.", False
@@ -258,7 +325,7 @@ def evaluar(
             return (
                 False,
                 "🛑 PRESUPUESTO AGOTADO: el presupuesto de la sesión venció, no se permite "
-                "trabajo nuevo (Write/Edit).",
+                "trabajo nuevo (Write/Edit)." + rec,
                 False,
             )
         return True, "Dentro de presupuesto.", False
@@ -268,7 +335,7 @@ def evaluar(
             return (
                 False,
                 "🛑 PRESUPUESTO AGOTADO: el presupuesto de la sesión venció, no se permiten "
-                "convocatorias nuevas de subagente.",
+                "convocatorias nuevas de subagente." + rec,
                 False,
             )
         if restantes <= VENTANA_AVISO_MINUTOS:
@@ -308,7 +375,7 @@ def evaluar(
                 return (
                     False,
                     "🛑 PRESUPUESTO AGOTADO: el presupuesto de la sesión venció, no se "
-                    "permiten continuaciones de subagente.",
+                    "permiten continuaciones de subagente." + rec,
                     False,
                 )
             if restantes <= VENTANA_AVISO_MINUTOS:
@@ -341,7 +408,7 @@ def evaluar(
             return (
                 False,
                 "🛑 PRESUPUESTO AGOTADO: el presupuesto de la sesión venció, no se permite "
-                "ningún SendMessage.",
+                "ningún SendMessage." + rec,
                 False,
             )
         return True, "SendMessage a destino no registrado como subagente: permitido, sin contar.", False
@@ -390,7 +457,8 @@ def main() -> int:
         )
 
     try:
-        permitido, motivo, modificado = evaluar(payload, sesion, INTERPRETE_AUTORIZADO)
+        change_id = control.get("change_id") if isinstance(control, dict) else None
+        permitido, motivo, modificado = evaluar(payload, sesion, INTERPRETE_AUTORIZADO, change_id)
     except ControlNoLegible as exc:
         print(f"hook_presupuesto: {exc}; se permite la acción (fail-safe).", file=sys.stderr)
         return 0

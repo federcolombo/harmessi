@@ -80,6 +80,16 @@ abreviado y completo — nacen en `propuesta_pendiente`; el abreviado no salta d
    `estado: cerrada`. Checkpoint de cierre en el chat. El archivo permanece en
    `openspec/changes/<id>/` (§9).
 
+   Vía concreta en `supervised`: la aprobación de cada ejecución gobernada se registra con
+   `ds_guard exec approve {script|pytest|notebook} <mismos argumentos que exec> --usuario --fecha
+   --alcance --cita` (construye el hash internamente; no se pasa hash), y luego se corre
+   `ds_guard exec <forma>` idéntico. `pytest` liga el argv completo; `script` liga contenido + argv
+   completo (semántica v2; las aprobaciones legacy `sha256/lf/v1` siguen aceptándose con aviso);
+   `notebook` liga el manifest. Para `pytest`, dos variantes de flags sobre las mismas rutas
+   comparten artefacto y solo la última aprobada es vigente. La aprobación es una declaración
+   humana registrada bajo el modelo de confianza del harness: no es firma criptográfica ni prueba
+   de identidad.
+
 ### Metodológica / alto riesgo / sensible (SDD completo)
 
 Los artefactos nacen como borrador antes de la aprobación, para que el usuario revise el artefacto
@@ -109,7 +119,8 @@ mismo. Orden de verificación: **reviewer antes de ejecutar, metodólogo despué
    cuenta contra el límite de intentos); en cualquier caso, es quien deja
    `estado: en_verificacion` — nunca el reviewer, nunca el usuario.
 9. El Lead ejecuta vía el runtime gobernado (`ds_guard exec script|pytest|notebook`, Change 2),
-   sujeto a `approval_mode`/la política de autonomía vigente. El estado permanece en
+   sujeto a `approval_mode`/la política de autonomía vigente (en `supervised`, aprobación previa
+   con `ds_guard exec approve ...`, ver la vía concreta arriba). El estado permanece en
    `en_verificacion` mientras la ejecución está en curso — nadie lo cambia en este paso.
 10. `metodologo` revisa resultados y conclusiones **cuando requieran interpretación
     metodológica** — es una segunda invocación planificada del mismo rol, no un reintento.

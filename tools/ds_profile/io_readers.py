@@ -16,6 +16,18 @@ from pathlib import Path
 from typing import Dict, Iterator, Optional, Protocol
 
 
+# Filas por batch al leer Parquet: acota la memoria transitoria (pyarrow usa
+# 65 536 por defecto).
+BATCH_SIZE = 8192
+# Tope de celdas (filas x columnas) por batch: en fuentes anchas el batch se
+# achica para que el transitorio de `to_pylist()` siga acotado.
+MAX_CELDAS_POR_BATCH = 2_000_000
+
+
+def tamano_batch(columnas: int) -> int:
+    return max(256, min(BATCH_SIZE, MAX_CELDAS_POR_BATCH // max(1, int(columnas))))
+
+
 class FormatoNoSoportadoError(Exception):
     """`--input` tiene una extensión que `ds_profile` no sabe leer.
 
@@ -146,7 +158,7 @@ class LectorParquet:
     def iter_filas(self) -> Iterator[dict]:
         # Streaming por row-group: `iter_batches()` nunca materializa el
         # archivo completo en memoria (ni `read_table()` ni `to_pandas()`).
-        for batch in self._parquet_file.iter_batches():
+        for batch in self._parquet_file.iter_batches(batch_size=tamano_batch(len(self._parquet_file.schema_arrow))):
             for fila in batch.to_pylist():
                 yield fila
 

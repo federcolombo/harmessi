@@ -18,7 +18,7 @@ de un proveedor.
 - `ARCHITECTURE.md`, sección "4. Deuda registrada", puntos 2 y 4.
 - `docs/roadmap/v0.5.md`, sección "Change 0 — multi-provider-adapters".
 - Verificado en este entorno con `command -v`: `claude` disponible
-  (`/c/Users/fcolombo/.local/bin/claude`, versión `2.1.274`); `codex`/`gemini`/`grok`/`antigravity`
+  (`<home>/.local/bin/claude`, versión `2.1.274`); `codex`/`gemini`/`grok`/`antigravity`
   ausentes de PATH.
 
 ## Supuestos descartados

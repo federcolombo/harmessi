@@ -6,6 +6,8 @@ Exit codes (spec.md):
     1 error de uso (archivo inexistente, extensión no soportada)
     2 denegado por guardrail (holdout, ver holdout_guard.py)
     3 dependencia faltante (pyarrow ausente al leer un .parquet)
+    4 lectura fallida o fuente que no entra en el presupuesto de memoria
+      (archivo malformado, error del reader, fuente demasiado ancha)
 
 Cada exit code distinto de 0 va acompañado de un mensaje a stderr. Nunca se
 crea `profile.json` parcial si el exit code no es 0 -- `report.py` solo
@@ -22,7 +24,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import holdout_guard, io_readers, report
+from . import holdout_guard, io_readers, report, sampling
 
 DEFAULT_MAX_FILAS_EXACTAS = 2_000_000
 DEFAULT_MAX_MB_EXACTOS = 500
@@ -41,7 +43,15 @@ def _construir_parser() -> argparse.ArgumentParser:
     p_run.add_argument(
         "--max-filas-exactas", type=int, default=DEFAULT_MAX_FILAS_EXACTAS, dest="max_filas_exactas"
     )
-    p_run.add_argument("--max-mb-exactos", type=int, default=DEFAULT_MAX_MB_EXACTOS, dest="max_mb_exactos")
+    p_run.add_argument(
+        "--max-mb-exactos",
+        type=int,
+        default=DEFAULT_MAX_MB_EXACTOS,
+        dest="max_mb_exactos",
+        help="Presupuesto de memoria de trabajo (MiB) del perfil exacto: si la estimacion "
+        "filas x columnas x 96 B (o el tamano del archivo) lo supera, se perfila una muestra "
+        "determinista y las metricas afectadas se marcan 'muestreada'.",
+    )
     p_run.add_argument("--top-n", type=int, default=DEFAULT_TOP_N, dest="top_n")
     p_run.add_argument("--seed", type=int, default=DEFAULT_SEED)
     p_run.add_argument("--markdown", action="store_true")
@@ -87,6 +97,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     except io_readers.DependenciaFaltanteError as exc:
         print(str(exc), file=sys.stderr)
         return 3
+    except (report.LecturaFallidaError, sampling.PresupuestoInsuficienteError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 4
 
     print(f"profile.json escrito en {resultado['ruta_profile_json']}")
     if resultado["ruta_profile_md"] is not None:

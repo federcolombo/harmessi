@@ -42,7 +42,7 @@ from typing import Any, Iterator, Optional
 
 # El literal "eda" es solo un valor del vocabulario `report_kind`: el core no
 # contiene lógica de EDA ni de ningún otro dominio.
-REPORT_KINDS = ("eda", "model", "evaluation", "production")
+REPORT_KINDS = ("eda", "model", "evaluation", "production", "governance")
 DECISION_SCOPES = ("exploratory", "model_valid", "operational")
 CLAIM_TYPES = (
     "descriptive",

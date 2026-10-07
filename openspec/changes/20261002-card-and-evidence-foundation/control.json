@@ -1,0 +1,278 @@
+{
+  "schema_version": 1,
+  "change_id": "20261002-card-and-evidence-foundation",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-02T12:10:06Z",
+  "baseline": {
+    "commit": "c49a7e4862f572d8d10ad31747e36258abe2f0ec",
+    "rama": "v0.9-dev",
+    "capturado_utc": "2026-10-02T12:10:06Z",
+    "rebaseline_motivo": "Rebaseline tras el commit del corrective Change 20261002-exec-approval-registration (c49a7e4), que no toca ningún archivo de este Change; verificado con git diff --name-only 9167271 c49a7e4",
+    "commit_anterior": "916727165d9c5b165bb8f7d67fd44d471bdac2e1"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".harmessi/executions/*",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.9.md",
+      "openspec/changes/20261002-card-and-evidence-foundation/control.json",
+      "openspec/changes/20261002-card-and-evidence-foundation/design.md",
+      "openspec/changes/20261002-card-and-evidence-foundation/proposal.md",
+      "openspec/changes/20261002-card-and-evidence-foundation/spec.md",
+      "openspec/changes/20261002-card-and-evidence-foundation/tasks.md",
+      "openspec/changes/20261002-card-and-evidence-foundation/verification.md",
+      "tools/autonomy/tests",
+      "tools/cards/__init__.py",
+      "tools/cards/assess.py",
+      "tools/cards/core.py",
+      "tools/cards/tests/__init__.py",
+      "tools/cards/tests/test_assess.py",
+      "tools/cards/tests/test_attestation.py",
+      "tools/cards/tests/test_core.py",
+      "tools/cards/tests/test_evidence.py",
+      "tools/cards/tests/test_serialization.py",
+      "tools/datasources/tests",
+      "tools/ds_init/tests",
+      "tools/leadrun/tests",
+      "tools/tests",
+      "tools/tests/test_v09_cards_inert.py",
+      "tools/tests/test_v09_cards_neutrality.py",
+      "tools/tests/test_v09_cards_parity.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "778f6383d0b7da9dcb6ba189397c7f513d56c684bd016f0daffc14ad9299afc9",
+      "registrado_utc": "2026-10-02T13:17:27Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "SDD Change 0 card-and-evidence-foundation con O1-O3 resueltas (declared/anchored strict union; sin ruta canónica; fuera del manifest hasta Change 4)",
+      "cita": "Apruebo explícitamente el SDD de Change 0: card-and-evidence-foundation y resuelvo O1–O3"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "8f9300577ae8bcc082c8e2389969ad81fd94d35942e6a96101074b8bd611ef95",
+      "registrado_utc": "2026-10-02T13:17:28Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "SDD Change 0 card-and-evidence-foundation con O1-O3 resueltas (declared/anchored strict union; sin ruta canónica; fuera del manifest hasta Change 4)",
+      "cita": "Apruebo explícitamente el SDD de Change 0: card-and-evidence-foundation y resuelvo O1–O3"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e1644f27bdcba5f47250fcc2073523c17d10637460ab9e24acbc0cb5e1f8bee2",
+      "registrado_utc": "2026-10-02T13:17:29Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "SDD Change 0 card-and-evidence-foundation con O1-O3 resueltas (declared/anchored strict union; sin ruta canónica; fuera del manifest hasta Change 4)",
+      "cita": "Apruebo explícitamente el SDD de Change 0: card-and-evidence-foundation y resuelvo O1–O3"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/cards/tests/test_serialization.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "e4a36833b9cf8e39deb0dc3e4255832b3d82e592c0e2a972c5a192a18851de27",
+      "registrado_utc": "2026-10-02T14:53:40Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Corrida dirigida de Change 0 (tools/cards/tests + tests v09 de neutralidad, paridad e inercia)",
+      "cita": "Aprobación humana explícita registrada en la revisión del corrective Change 20261002-exec-approval-registration"
+    },
+    {
+      "artefacto": "pytest:tools/tests|tools/ds_init/tests|tools/datasources/tests|tools/autonomy/tests|tools/leadrun/tests|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/cards/tests/test_serialization.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "1acd32b21e3a076f884391f49e902cc3ed6e8b5b2a4846f38e7001c68c643e30",
+      "registrado_utc": "2026-10-02T14:54:29Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Regresión relevante de Change 0 (tools/tests, ds_init, datasources, autonomy, leadrun + tests de cards)",
+      "cita": "Aprobación humana explícita registrada en la revisión del corrective Change 20261002-exec-approval-registration"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "e52cb084631de881cefa90be3731f3a86e5891c228dcf71558bcd2ad195bd09d",
+      "registrado_utc": "2026-10-02T15:07:01Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Regresión relevante de Change 0 card-and-evidence-foundation: lote 1 tools/tests",
+      "cita": "Aprobación humana explícita para completar la regresión y cierre de Change 0"
+    },
+    {
+      "artefacto": "pytest:tools/ds_init/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "7bd256be75b0db68eedbac703b18bb9d7087b2553311f8eae3409c2d9651130a",
+      "registrado_utc": "2026-10-02T15:24:03Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Regresión relevante de Change 0 card-and-evidence-foundation: lote 2 tools/ds_init/tests",
+      "cita": "Aprobación humana explícita para completar la regresión y cierre de Change 0"
+    },
+    {
+      "artefacto": "pytest:tools/datasources/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ac2aa1cbfbc411a0a617af15b4648fba881affb7fd2d5924dd33e72b6d39fecb",
+      "registrado_utc": "2026-10-02T15:34:32Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Regresión relevante de Change 0 card-and-evidence-foundation: lote 3 tools/datasources/tests",
+      "cita": "Aprobación humana explícita para completar la regresión y cierre de Change 0"
+    },
+    {
+      "artefacto": "pytest:tools/autonomy/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ca694226be09fa2090814bdab7b642d73c9b36af1ea6cd84f09911b738021396",
+      "registrado_utc": "2026-10-02T15:34:39Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Regresión relevante de Change 0 card-and-evidence-foundation: lote 4 tools/autonomy/tests",
+      "cita": "Aprobación humana explícita para completar la regresión y cierre de Change 0"
+    },
+    {
+      "artefacto": "pytest:tools/leadrun/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ad89b5b5ec0ca8d306740282684f52344bb062ee7c1157450f07ae6e6d0e5328",
+      "registrado_utc": "2026-10-02T15:34:43Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Regresión relevante de Change 0 card-and-evidence-foundation: lote 5 tools/leadrun/tests",
+      "cita": "Aprobación humana explícita para completar la regresión y cierre de Change 0"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/cards/tests/test_serialization.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "89e6ca6871f0c199db56498ba009136476a1d00d8f29e32ff484f7f3e4af5f39",
+      "registrado_utc": "2026-10-02T15:35:32Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Regresión relevante de Change 0 card-and-evidence-foundation: lote 6 tools/cards/tests (5 archivos)",
+      "cita": "Aprobación humana explícita para completar la regresión y cierre de Change 0"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_architecture_boundaries.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "1198fa8faeaa7489184bc573b303ee6415cb43960d156b503430a68b05130b4f",
+      "registrado_utc": "2026-10-02T15:36:55Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Regresión relevante de Change 0 card-and-evidence-foundation: re-test architecture_boundaries tras editar ARCHITECTURE.md",
+      "cita": "Aprobación humana explícita para completar la regresión y cierre de Change 0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-02T13:17:48Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-02T13:17:49Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-02T13:18:01Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-02T15:37:28Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-02T15:37:31Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-02T13:17:51Z",
+      "cierre_utc": "2026-10-02T15:37:32Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 12,
+        "max_roles": 3,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-02T21:17:51Z",
+      "minutos_consumidos": 139.68333333333334,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-02T14:56:51Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-02T14:54:13Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "metricas_eficiencia": {
+    "ejecuciones": [
+      {
+        "execution_id": "pytest__3b7953391f10",
+        "duration_seconds": 5.406999999999243,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__3aa4521c075f",
+        "duration_seconds": 6.015999999999622,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__5376709267f7",
+        "duration_seconds": 1001.6719999999987,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__79450d551e14",
+        "duration_seconds": 612.3600000000006,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__28d9a25e6a84",
+        "duration_seconds": 3.4840000000003783,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__142f8bb8fd80",
+        "duration_seconds": 1.7970000000004802,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__4ef668dc5844",
+        "duration_seconds": 6.09400000000096,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__787824971c74",
+        "duration_seconds": 4.061999999999898,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__9b7dee90ab63",
+        "duration_seconds": 1.9539999999997235,
+        "command_form": "pytest"
+      }
+    ]
+  }
+}

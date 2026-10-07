@@ -272,7 +272,15 @@ class TestCapabilities(unittest.TestCase):
             self.assertNotIn(destino, destinos)
 
     def test_capabilities_habilitadas_incluye_modelquality(self):
-        sin_filtro = {e.destino for e in manifest_para_perfil_y_stage(PERFIL, self.STAGE_MAXIMO)}
+        # v0.9 Change 4: las capabilities OPT-IN (data_cards/model_governance) NO se
+        # habilitan por default; con solo `predictive_modeling` el resultado es todo el
+        # manifiesto EXCEPTO las entradas que dependen de una capability opt-in.
+        opt_in = {"data_cards", "model_governance"}
+        sin_filtro = {
+            e.destino
+            for e in manifest_para_perfil_y_stage(PERFIL, self.STAGE_MAXIMO)
+            if not ((set(e.capabilities) | set(e.capabilities_cualquiera)) & opt_in)
+        }
         con_filtro = {
             e.destino
             for e in manifest_para_perfil_stage_y_capabilities(
@@ -284,8 +292,9 @@ class TestCapabilities(unittest.TestCase):
             self.assertIn(destino, con_filtro)
 
     def test_entradas_sin_capabilities_declarado_siempre_aparecen(self):
+        # "Sin filtro" = ni `capabilities` ni `capabilities_cualquiera` (v0.9 Change 4).
         destinos_sin_capability = {
-            e.destino for e in MANIFEST if not e.capabilities
+            e.destino for e in MANIFEST if not e.capabilities and not e.capabilities_cualquiera
         }
         for capabilities_habilitadas in (set(), {"predictive_modeling"}, {"otra_cosa"}):
             destinos = {

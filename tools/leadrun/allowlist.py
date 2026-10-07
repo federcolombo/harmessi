@@ -109,16 +109,42 @@ def _tiene_traversal(ruta: str) -> bool:
     return ".." in partes
 
 
+def _glob_asterisco(patron: str) -> "re.Pattern[str]":
+    """Compila `patron` con la semántica de `fnmatch.fnmatchcase` restringida
+    a `*` (cualquier secuencia de caracteres, incluida `/`); el resto de
+    caracteres es literal. Se implementa con `re` para no ampliar los imports
+    permitidos de este módulo (test de neutralidad de `tools/leadrun`)."""
+    return re.compile("".join(".*" if c == "*" else re.escape(c) for c in patron) + r"\Z", re.DOTALL)
+
+
 def _coincide_alcance(ruta: str, alcance: Tuple[str, ...]) -> bool:
     """`True` si `ruta` (ya validada como no-absoluta, sin traversal)
     coincide con alguna entrada de `alcance`: igualdad exacta o prefijo de
     directorio (criterio documentado: cada entrada de `alcance` se trata
     como una ruta de archivo exacta O un prefijo de directorio bajo el que
-    `ruta` debe caer)."""
+    `ruta` debe caer).
+
+    Formas adicionales (R35-R36, `20261005-operational-autonomy-hardening`):
+    - `dir/**`: el directorio mismo (p. ej. `pytest tools/tests`) y todos sus
+      descendientes (prefijo `dir/`); no cubre hermanos como `dir_old/` porque
+      el prefijo incluye la barra.
+    - Entradas con `*` dentro de un segmento (p. ej. `tools/tests/test_x_*.py`):
+      glob de `*` (equivalente a `fnmatchcase`) sobre la ruta completa. Sin `*`, comportamiento
+      previo (exacto o prefijo de directorio plano).
+    Todo en memoria, sin tocar el disco."""
     ruta_norm = ruta.replace("\\", "/")
     for entrada in alcance:
         entrada_norm = entrada.replace("\\", "/").rstrip("/")
         if not entrada_norm:
+            continue
+        if entrada_norm.endswith("/**"):
+            base = entrada_norm[:-3].rstrip("/")
+            if base and (ruta_norm == base or ruta_norm.startswith(base + "/")):
+                return True
+            continue
+        if "*" in entrada_norm:
+            if _glob_asterisco(entrada_norm).match(ruta_norm):
+                return True
             continue
         if ruta_norm == entrada_norm or ruta_norm.startswith(entrada_norm + "/"):
             return True
@@ -319,7 +345,13 @@ def evaluar_comando(
     else:
         return False, None, f"tipo de argv_o_texto no soportado: {type(argv_o_texto).__name__}"
 
+    # R18: comparación simétrica -- se normalizan AMBOS lados, así que el
+    # llamador puede entregar el intérprete autorizado en cualquier forma
+    # (case/separadores) sin cambiar el resultado.
     interprete_normalizado = normalizar_interprete(interprete_bruto)
+    if not isinstance(interprete_autorizado, str) or not interprete_autorizado:
+        return False, None, "intérprete no autorizado"
+    interprete_autorizado = normalizar_interprete(interprete_autorizado)
     if interprete_normalizado != interprete_autorizado:
         return False, None, "intérprete no autorizado"
 

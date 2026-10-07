@@ -40,6 +40,12 @@ categoría "Sensible") -->
 - Versión de artefactos referenciada:
 - Cita o descripción fiel de qué se aprobó:
 
+## Alcance autorizado
+<!-- opcional: rutas que este Change puede tocar, una por línea como `- ruta` o `- dir/**`
+(repo-relativas, sin `..`, sin rutas absolutas ni comodines repo-wide). Al aprobar proposal.md,
+ds_guard las materializa en control.json junto con los artefactos por defecto del Change;
+queda ligado al hash de la propuesta aprobada. Sin bullets, el alcance no se modifica. -->
+
 ## Motivo de rechazo
 <!-- completar solo si estado: descartada -->
 

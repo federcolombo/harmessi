@@ -1,0 +1,319 @@
+{
+  "schema_version": 1,
+  "change_id": "20261005-model-risk-responsible-ai",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-05T16:15:07Z",
+  "baseline": {
+    "commit": "fcb00682344f829c51ad4bdb8b8f9fdf3d877182",
+    "rama": "v0.9-dev",
+    "capturado_utc": "2026-10-05T16:15:07Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".harmessi/executions/*",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.10.md",
+      "docs/roadmap/v0.9.md",
+      "openspec/changes/20261005-model-risk-responsible-ai/control.json",
+      "openspec/changes/20261005-model-risk-responsible-ai/design.md",
+      "openspec/changes/20261005-model-risk-responsible-ai/proposal.md",
+      "openspec/changes/20261005-model-risk-responsible-ai/spec.md",
+      "openspec/changes/20261005-model-risk-responsible-ai/tasks.md",
+      "openspec/changes/20261005-model-risk-responsible-ai/verification.md",
+      "tools/autonomy/tests",
+      "tools/cards/assess.py",
+      "tools/cards/core.py",
+      "tools/cards/datacard.py",
+      "tools/cards/govpolicy.py",
+      "tools/cards/modelcard.py",
+      "tools/cards/modelgov.py",
+      "tools/cards/resolvers.py",
+      "tools/cards/tests/test_assess.py",
+      "tools/cards/tests/test_attestation.py",
+      "tools/cards/tests/test_core.py",
+      "tools/cards/tests/test_datacard.py",
+      "tools/cards/tests/test_datacard_location.py",
+      "tools/cards/tests/test_evidence.py",
+      "tools/cards/tests/test_govpolicy.py",
+      "tools/cards/tests/test_modelcard.py",
+      "tools/cards/tests/test_modelcard_location.py",
+      "tools/cards/tests/test_modelgov.py",
+      "tools/cards/tests/test_modelgov_location.py",
+      "tools/cards/tests/test_resolvers.py",
+      "tools/cards/tests/test_resolvers_gov.py",
+      "tools/cards/tests/test_resolvers_model.py",
+      "tools/cards/tests/test_serialization.py",
+      "tools/datacontracts/tests",
+      "tools/datasources/tests",
+      "tools/leadrun/tests",
+      "tools/modelquality/tests",
+      "tools/qualityevidence/tests",
+      "tools/tests",
+      "tools/tests/test_v09_cards_neutrality.py",
+      "tools/tests/test_v09_datacards_inert.py",
+      "tools/tests/test_v09_modelcards_inert.py",
+      "tools/tests/test_v09_modelgov_inert.py",
+      "tools/tests/test_v09_modelgov_parity.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "57e6b813d23b8af2a108be2b06add4c8e9ab3e3284602bc7bb0d4b5b3d51c162",
+      "registrado_utc": "2026-10-05T16:30:11Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "SDD Change 3 model-risk-responsible-ai con matriz base v1 aprobada y congelada y precisiones (declaración de riesgo única, contradicciones invalid, evidence_document, todos los soportes) e ejecuciones previstas",
+      "cita": "Apruebo explícitamente el SDD de 20261005-model-risk-responsible-ai; el diseño está alineado con el roadmap de v0.9; apruebo la matriz base v1"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "321077cc973a75c21f673e61348b336b52e4ce5872acc75ffb134332a07d377c",
+      "registrado_utc": "2026-10-05T16:30:13Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "SDD Change 3 model-risk-responsible-ai con matriz base v1 aprobada y congelada y precisiones (declaración de riesgo única, contradicciones invalid, evidence_document, todos los soportes) e ejecuciones previstas",
+      "cita": "Apruebo explícitamente el SDD de 20261005-model-risk-responsible-ai; el diseño está alineado con el roadmap de v0.9; apruebo la matriz base v1"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "cbcff5640b00026f6e892ed3b8a9d0a3e07b7f1e4664c8b25abe04cac30e2cd6",
+      "registrado_utc": "2026-10-05T16:30:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "SDD Change 3 model-risk-responsible-ai con matriz base v1 aprobada y congelada y precisiones (declaración de riesgo única, contradicciones invalid, evidence_document, todos los soportes) e ejecuciones previstas",
+      "cita": "Apruebo explícitamente el SDD de 20261005-model-risk-responsible-ai; el diseño está alineado con el roadmap de v0.9; apruebo la matriz base v1"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_govpolicy.py|tools/cards/tests/test_modelgov.py|tools/cards/tests/test_modelgov_location.py|tools/cards/tests/test_resolvers_gov.py|tools/cards/tests/test_modelcard.py|tools/cards/tests/test_modelcard_location.py|tools/cards/tests/test_resolvers_model.py|tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py|tools/tests/test_v09_modelcards_parity.py|tools/tests/test_v09_modelcards_inert.py|tools/tests/test_v09_modelgov_parity.py|tools/tests/test_v09_modelgov_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "62576c7b994edd22c59ceaf9ecff8fd11ace204ad7d0ccc3b6beec99347ac6b5",
+      "registrado_utc": "2026-10-05T16:54:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 3 model-risk-responsible-ai: dirigida inicial",
+      "cita": "Aprobación humana explícita del SDD de Change 3 20261005-model-risk-responsible-ai"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_govpolicy.py|tools/cards/tests/test_modelgov.py|tools/cards/tests/test_modelgov_location.py|tools/cards/tests/test_resolvers_gov.py|tools/cards/tests/test_modelcard.py|tools/cards/tests/test_modelcard_location.py|tools/cards/tests/test_resolvers_model.py|tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py|tools/tests/test_v09_modelcards_parity.py|tools/tests/test_v09_modelcards_inert.py|tools/tests/test_v09_modelgov_parity.py|tools/tests/test_v09_modelgov_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "938c88f4fbf0df912e94cd26f9d6010475380d54c244350dbb28fa6673004f32",
+      "registrado_utc": "2026-10-05T16:56:26Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 3 model-risk-responsible-ai: dirigida inicial (resumen compacto)",
+      "cita": "Aprobación humana explícita del SDD de Change 3 20261005-model-risk-responsible-ai"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_govpolicy.py|tools/cards/tests/test_modelgov.py|tools/cards/tests/test_modelgov_location.py|tools/cards/tests/test_resolvers_gov.py|tools/cards/tests/test_modelcard.py|tools/cards/tests/test_modelcard_location.py|tools/cards/tests/test_resolvers_model.py|tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py|tools/tests/test_v09_modelcards_parity.py|tools/tests/test_v09_modelcards_inert.py|tools/tests/test_v09_modelgov_parity.py|tools/tests/test_v09_modelgov_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "938c88f4fbf0df912e94cd26f9d6010475380d54c244350dbb28fa6673004f32",
+      "registrado_utc": "2026-10-05T16:59:28Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 3 model-risk-responsible-ai: dirigida tras ajustes de tests",
+      "cita": "Aprobación humana explícita del SDD de Change 3 20261005-model-risk-responsible-ai"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_govpolicy.py|tools/cards/tests/test_modelgov.py|tools/cards/tests/test_modelgov_location.py|tools/cards/tests/test_resolvers_gov.py|tools/cards/tests/test_modelcard.py|tools/cards/tests/test_modelcard_location.py|tools/cards/tests/test_resolvers_model.py|tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py|tools/tests/test_v09_modelcards_parity.py|tools/tests/test_v09_modelcards_inert.py|tools/tests/test_v09_modelgov_parity.py|tools/tests/test_v09_modelgov_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "938c88f4fbf0df912e94cd26f9d6010475380d54c244350dbb28fa6673004f32",
+      "registrado_utc": "2026-10-05T17:08:13Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 3 model-risk-responsible-ai: dirigida tras fixes del review ciclo 1",
+      "cita": "Aprobación humana explícita del SDD de Change 3 20261005-model-risk-responsible-ai"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_govpolicy.py|tools/cards/tests/test_modelgov.py|tools/cards/tests/test_modelgov_location.py|tools/cards/tests/test_resolvers_gov.py|tools/cards/tests/test_modelcard.py|tools/cards/tests/test_modelcard_location.py|tools/cards/tests/test_resolvers_model.py|tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py|tools/tests/test_v09_modelcards_parity.py|tools/tests/test_v09_modelcards_inert.py|tools/tests/test_v09_modelgov_parity.py|tools/tests/test_v09_modelgov_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "938c88f4fbf0df912e94cd26f9d6010475380d54c244350dbb28fa6673004f32",
+      "registrado_utc": "2026-10-05T17:14:40Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 3 model-risk-responsible-ai: dirigida final tras review ciclo 2",
+      "cita": "Aprobación humana explícita del SDD de Change 3 20261005-model-risk-responsible-ai"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "e52cb084631de881cefa90be3731f3a86e5891c228dcf71558bcd2ad195bd09d",
+      "registrado_utc": "2026-10-05T17:16:53Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 3 model-risk-responsible-ai: regresión lote 1 tools/tests",
+      "cita": "Aprobación humana explícita del SDD de Change 3 20261005-model-risk-responsible-ai"
+    },
+    {
+      "artefacto": "pytest:tools/modelquality/tests|tools/qualityevidence/tests|tools/datasources/tests|tools/datacontracts/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "cc923110784cd749ce5aa67c4d0cf74aaa8ac5b092717c1c4330a2cd1e1f6cab",
+      "registrado_utc": "2026-10-05T17:37:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 3 model-risk-responsible-ai: regresión lote 2 modelquality qualityevidence datasources datacontracts",
+      "cita": "Aprobación humana explícita del SDD de Change 3 20261005-model-risk-responsible-ai"
+    },
+    {
+      "artefacto": "pytest:tools/autonomy/tests|tools/leadrun/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "90182725bc12ae504caafe2c9c252304f4bc86cc11ab97c46aa1086496205cfb",
+      "registrado_utc": "2026-10-05T17:37:19Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 3 model-risk-responsible-ai: regresión lote 3 autonomy leadrun",
+      "cita": "Aprobación humana explícita del SDD de Change 3 20261005-model-risk-responsible-ai"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_govpolicy.py|tools/cards/tests/test_modelgov.py|tools/cards/tests/test_modelgov_location.py|tools/cards/tests/test_resolvers_gov.py|tools/cards/tests/test_modelcard.py|tools/cards/tests/test_modelcard_location.py|tools/cards/tests/test_resolvers_model.py|tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ed124229bb6a58f3e5e0d45236182365e2ac4ed14b33dbf6e650c38664d9bafc",
+      "registrado_utc": "2026-10-05T17:37:27Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-05",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 3 model-risk-responsible-ai: regresión lote 4 tools/cards/tests",
+      "cita": "Aprobación humana explícita del SDD de Change 3 20261005-model-risk-responsible-ai"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-05T16:30:15Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-05T16:30:16Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-05T16:30:19Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-05T17:39:56Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-05T17:40:56Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-05T16:30:18Z",
+      "cierre_utc": "2026-10-05T17:40:00Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 600,
+        "max_tareas": 14,
+        "max_roles": 3,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-06T02:30:18Z",
+      "minutos_consumidos": 69.7,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-05T16:41:24Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-05T17:10:13Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-05T17:40:54Z",
+      "cierre_utc": "2026-10-05T17:40:57Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 60,
+        "max_tareas": 4,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-05T18:40:54Z",
+      "minutos_consumidos": 0.05,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "metricas_eficiencia": {
+    "ejecuciones": [
+      {
+        "execution_id": "pytest__3548f1c05eb3",
+        "duration_seconds": 107.85899999999674,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__31a47912f1da",
+        "duration_seconds": 97.71900000000096,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__dada3d86db5b",
+        "duration_seconds": 97.46799999999712,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__6fddbb976ab5",
+        "duration_seconds": 105.04699999999866,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__759258799615",
+        "duration_seconds": 115.46900000000096,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__bd1d90b5045b",
+        "duration_seconds": 1194.530999999999,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__c492f2a6c0a2",
+        "duration_seconds": 5.40599999999904,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__198a7f096fdd",
+        "duration_seconds": 5.202999999997701,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__7472be8cddd4",
+        "duration_seconds": 87.56200000000172,
+        "command_form": "pytest"
+      }
+    ]
+  }
+}

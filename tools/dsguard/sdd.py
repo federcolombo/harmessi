@@ -4,14 +4,16 @@ JSON de bajo nivel (usa `core.py` para eso).
 """
 from __future__ import annotations
 
+import fnmatch
 import re
 from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
+from . import pep440_subset
 from . import repo as repo_mod
 from . import scope
-from .core import Finding, ahora_utc, escribir_control, hash_lf_v1, minutos_restantes, parsear_utc
+from .core import Finding, ahora_utc, escribir_control, hash_lf_v1, leer_control, minutos_restantes, parsear_utc
 
 # `tools/` ya está en `sys.path` en todo contexto real donde `dsguard.sdd` se
 # importa (CLI: `ds_guard.py:23`; tests: `sys.path.insert(0, tools/)` antes de
@@ -237,6 +239,134 @@ def _aprobacion_mas_reciente(control: dict, artefacto: str) -> Optional[dict]:
     # Append-only: la última de la lista ya es la más reciente; se ordena por
     # 'registrado_utc' además para ser robustos ante reordenamientos manuales.
     return sorted(candidatas, key=lambda a: a.get("registrado_utc", ""))[-1]
+
+
+# --- Primitiva de resolución de aprobación registrada (R1 de 20261006-sdd-parsers-
+# and-guardrail-ownership) ------------------------------------------------------
+
+_RE_CHANGE_ID_APROBACION = re.compile(r"[0-9]{8}-[a-z0-9][a-z0-9-]*")
+_RE_SHA256_HEX = re.compile(r"[0-9a-f]{64}")
+_ALGORITMO_APROBACION = "sha256/lf/v1"
+RESERVADOS_WINDOWS = frozenset(
+    ["con", "prn", "aux", "nul"] + [f"com{i}" for i in range(1, 10)] + [f"lpt{i}" for i in range(1, 10)]
+)
+
+
+def artefacto_con_forma_valida(artefacto) -> bool:
+    """Nombre simple de archivo: sin separadores, `..`, `:`, punto/espacio
+    final ni nombre reservado de Windows."""
+    if not isinstance(artefacto, str) or not artefacto.strip():
+        return False
+    if artefacto != artefacto.strip() or artefacto == "." or "/" in artefacto or "\\" in artefacto:
+        return False
+    if ".." in artefacto or ":" in artefacto or artefacto != artefacto.rstrip(" ."):
+        return False
+    return artefacto.split(".")[0].strip().lower() not in RESERVADOS_WINDOWS
+
+
+def artefacto_no_portable(artefacto) -> bool:
+    """`True` si `artefacto` lleva `:` (unidad/ADS de Windows), punto/espacio
+    final o es un nombre reservado de Windows (con o sin extensión)."""
+    if not isinstance(artefacto, str):
+        return True
+    return (
+        ":" in artefacto
+        or artefacto != artefacto.rstrip(" .")
+        or artefacto.split(".")[0].strip().lower() in RESERVADOS_WINDOWS
+    )
+
+
+def resolver_aprobacion_registrada(repo_root, change_id, artefacto, hash_esperado=None) -> dict:
+    """Primitiva única de resolución (R1): `{estado, detalle, entrada,
+    hash_vigente}` con `estado` en `verified | stale | missing | unresolvable`.
+
+    Pasos: (1) forma de `change_id`/`artefacto`; (2) Change en
+    `openspec/changes/<id>` u `openspec/archive/<id>`; (3) `control.json`
+    legible con lista `aprobaciones`; (4) existe una entrada del artefacto
+    (con `hash_esperado`, si se dio); (5) esa entrada es la MÁS RECIENTE del
+    artefacto, si no `stale`; (6) el archivo en disco (dentro del Change)
+    conserva el hash (`hash_lf_v1`), si no `stale`. Sin `hash_esperado`
+    resuelve contra la última entrada y, si `verified`, devuelve su hash en
+    `hash_vigente`. Solo lectura; nunca lanza (fail-closed `unresolvable`)."""
+    try:
+        return _resolver_aprobacion_registrada(repo_root, change_id, artefacto, hash_esperado)
+    except Exception as exc:  # fail-closed
+        return _resultado_aprobacion("unresolvable", f"resolución falló ({type(exc).__name__})")
+
+
+def _resultado_aprobacion(estado: str, detalle: str, entrada=None, hash_vigente=None) -> dict:
+    return {"estado": estado, "detalle": detalle, "entrada": entrada, "hash_vigente": hash_vigente}
+
+
+def _resolver_aprobacion_registrada(repo_root, change_id, artefacto, hash_esperado) -> dict:
+    # 1. Forma.
+    if not isinstance(change_id, str) or not _RE_CHANGE_ID_APROBACION.fullmatch(change_id):
+        return _resultado_aprobacion("unresolvable", "change_id con forma inválida")
+    if not artefacto_con_forma_valida(artefacto):
+        return _resultado_aprobacion("unresolvable", "artefacto con forma inválida o no portable")
+    if hash_esperado is not None and not (
+        isinstance(hash_esperado, str) and _RE_SHA256_HEX.fullmatch(hash_esperado)
+    ):
+        return _resultado_aprobacion("unresolvable", "hash_esperado con forma inválida")
+    if hash_esperado == _HASH_CERO:
+        return _resultado_aprobacion("missing", "hash de 64 ceros (placeholder): nunca es una aprobación")
+    # 2. Change.
+    raiz = Path(repo_root)
+    carpeta = None
+    for padre in ("changes", "archive"):
+        candidata = raiz / "openspec" / padre / change_id
+        if candidata.is_dir():
+            carpeta = candidata
+            break
+    if carpeta is None:
+        return _resultado_aprobacion("unresolvable", "Change inexistente (ni changes/ ni archive/)")
+    # 3. control.json.
+    try:
+        control = leer_control(carpeta / "control.json")
+    except Exception as exc:
+        return _resultado_aprobacion("unresolvable", f"control.json ilegible ({type(exc).__name__})")
+    aprobaciones = control.get("aprobaciones", []) if isinstance(control, dict) else None
+    if not isinstance(aprobaciones, list):
+        return _resultado_aprobacion("unresolvable", "control.json sin lista de aprobaciones válida")
+    propias = [a for a in aprobaciones if isinstance(a, dict) and a.get("artefacto") == artefacto]
+    # 4. Entrada del artefacto (con el hash esperado, si se dio).
+    if hash_esperado is not None:
+        coincidentes = [a for a in propias if a.get("hash") == hash_esperado]
+        if not coincidentes:
+            return _resultado_aprobacion("missing", "no hay aprobación registrada para ese artefacto y hash")
+    elif not propias:
+        return _resultado_aprobacion("missing", "no hay aprobación registrada para ese artefacto")
+    # 5. La más reciente del artefacto.
+    reciente = _aprobacion_mas_reciente({"aprobaciones": propias}, artefacto)
+    hash_reciente = reciente.get("hash") if reciente else None
+    if (
+        not (isinstance(hash_reciente, str) and _RE_SHA256_HEX.fullmatch(hash_reciente))
+        or hash_reciente == _HASH_CERO
+    ):
+        return _resultado_aprobacion("unresolvable", "la aprobación más reciente no tiene un hash válido", reciente)
+    if hash_esperado is not None and hash_reciente != hash_esperado:
+        return _resultado_aprobacion(
+            "stale", "la aprobación fue reemplazada por una más reciente del artefacto", reciente
+        )
+    if reciente.get("algoritmo", _ALGORITMO_APROBACION) != _ALGORITMO_APROBACION:
+        return _resultado_aprobacion("unresolvable", "algoritmo de hash de la aprobación no soportado", reciente)
+    # 6. Archivo en disco, dentro del Change.
+    archivo = carpeta / artefacto
+    try:
+        archivo.resolve().relative_to(carpeta.resolve())
+    except (ValueError, OSError):
+        return _resultado_aprobacion("unresolvable", "el artefacto sale del directorio del Change", reciente)
+    if not archivo.is_file():
+        return _resultado_aprobacion("missing", "el artefacto aprobado no existe en el Change", reciente)
+    try:
+        actual = hash_lf_v1(archivo)
+    except Exception as exc:
+        return _resultado_aprobacion(
+            "unresolvable", f"no se pudo hashear el artefacto ({type(exc).__name__})", reciente
+        )
+    if actual != hash_reciente:
+        return _resultado_aprobacion("stale", "el artefacto cambió en disco desde su aprobación", reciente)
+    return _resultado_aprobacion("verified", "aprobación vigente y artefacto sin cambios", reciente, hash_reciente)
 
 
 # --- Gates -----------------------------------------------------------------
@@ -916,11 +1046,56 @@ def resolver_approval_mode(control: dict) -> str:
 _RE_CHECKPOINT_BULLET = re.compile(
     r"^-\s+\*\*(?P<id>[^*]+)\*\*:\s*(?P<resumen>.+?)\s*—\s*alcance:\s*(?P<alcance>.+?)"
     r"\s*—\s*aprobacion:\s*(?P<change_id>[0-9]{8}-[a-z0-9][a-z0-9-]*)/proposal\.md@"
-    r"(?P<hash>[0-9a-f]{64})\s*$"
+    r"(?P<hash>[0-9a-f]{64}|approved)\s*$"
 )
 
+_HASH_CERO = "0" * 64
 
-def parsear_checkpoints_de_propuesta(texto: str) -> tuple:
+
+def checkpoints_con_placeholder_cero(texto: str) -> list:
+    """Ids de los bullets de `## Checkpoints de negocio` cuyo hash son 64
+    ceros (legacy, R10): se aceptan sintácticamente pero NUNCA cuentan como
+    aprobados. Lista vacía si no hay sección o ninguno."""
+    seccion = _contenido_de_seccion(texto, "## Checkpoints de negocio")
+    ids: list = []
+    for linea in (seccion or "").splitlines():
+        m = _RE_CHECKPOINT_BULLET.match(linea.strip())
+        if m and m.group("hash") == _HASH_CERO:
+            ids.append(m.group("id").strip())
+    return ids
+
+
+def verificar_checkpoints(repo_root, control: dict) -> list:
+    """Verificación posterior (R8): resuelve cada
+    `control["decisiones_preaprobadas"][*].approval_ref` con
+    `resolver_aprobacion_registrada` -> `[{summary, estado, detalle}]`, con
+    `estado` en `verified | stale | missing | placeholder | unresolvable`.
+    Hash de 64 ceros => `placeholder` (nunca `verified`). Solo lectura; nunca
+    lanza."""
+    resultado: list = []
+    decisiones = control.get("decisiones_preaprobadas", []) if isinstance(control, dict) else []
+    if not isinstance(decisiones, list):
+        return resultado
+    for decision in decisiones:
+        decision = decision if isinstance(decision, dict) else {}
+        resumen = decision.get("summary")
+        ref = decision.get("approval_ref")
+        if not isinstance(ref, dict):
+            estado, detalle = "unresolvable", "approval_ref ausente o con forma inválida"
+        elif ref.get("hash") == _HASH_CERO:
+            estado, detalle = "placeholder", "hash de 64 ceros (legacy): nunca cuenta como aprobado"
+        else:
+            r = resolver_aprobacion_registrada(
+                repo_root, ref.get("change_id"), ref.get("artefacto"), ref.get("hash")
+            )
+            if ref.get("hash") is None:  # sin hash no hay checkpoint concreto
+                r = _resultado_aprobacion("unresolvable", "approval_ref sin hash")
+            estado, detalle = r["estado"], r["detalle"]
+        resultado.append({"summary": resumen, "estado": estado, "detalle": detalle})
+    return resultado
+
+
+def parsear_checkpoints_de_propuesta(texto: str, change_id=None, resolver_approved=None) -> tuple:
     """Checkpoints de negocio (`## Checkpoints de negocio` de `proposal.md`,
     condicional a `approval_mode: checkpoints`, R3-R4 de `spec.md`; D2 de
     `design.md`) -> `(checkpoints_validos, hallazgos)`.
@@ -934,6 +1109,17 @@ def parsear_checkpoints_de_propuesta(texto: str) -> tuple:
     validó; nunca se agrega el checkpoint correspondiente a
     `checkpoints_validos` en esos casos (sin checkpoint fantasma, ver riesgo
     de `design.md`).
+
+    `@approved` (R5-R7 de `20261006-sdd-parsers-and-guardrail-ownership`):
+    en vez de `@<64 hex>` el bullet puede terminar en `@approved`; entonces se
+    invoca `resolver_approved(change_id_referenciado) -> (hash | None,
+    detalle)` y el checkpoint se materializa SIEMPRE con el hash concreto
+    devuelto. Sin `resolver_approved`, o con hash `None`/inválido/cero, el
+    bullet da un hallazgo `CODE_PREAPPROVED_INVALID` (nunca un checkpoint sin
+    hash real). `change_id` (Change que se aprueba) es informativo: la
+    decisión de qué hash corresponde a cada referencia es del resolver. Los
+    64 ceros legacy se aceptan sintácticamente (ver
+    `checkpoints_con_placeholder_cero`).
 
     Se devuelve una tupla en vez de solo la lista (decisión de implementación
     de esta invocación, T1): un checkpoint mal formado no debe desaparecer en
@@ -989,12 +1175,38 @@ def parsear_checkpoints_de_propuesta(texto: str) -> tuple:
             )
             continue
 
+        hash_bullet = m.group("hash")
+        if hash_bullet == "approved":
+            # `@approved` (R5-R7): se resuelve contra la aprobación REAL
+            # registrada; nunca se materializa sin un hash concreto.
+            hash_bullet, motivo = None, "sin resolver_approved"
+            if resolver_approved is not None:
+                try:
+                    candidato_hash, motivo = resolver_approved(m.group("change_id"))
+                except Exception as exc:  # fail-closed
+                    candidato_hash, motivo = None, f"resolver_approved falló ({type(exc).__name__})"
+                if (
+                    isinstance(candidato_hash, str)
+                    and _RE_SHA256_HEX.fullmatch(candidato_hash)
+                    and candidato_hash != _HASH_CERO
+                ):
+                    hash_bullet = candidato_hash
+            if hash_bullet is None:
+                hallazgos.append(
+                    Finding(
+                        autonomy_core.CODE_PREAPPROVED_INVALID,
+                        f"Checkpoint '@approved' no resoluble ({motivo}): {linea!r}",
+                        ubicacion,
+                    )
+                )
+                continue
+
         alcance = [item.strip() for item in m.group("alcance").split(",") if item.strip()]
         candidato = {
             "approval_ref": {
                 "artefacto": "proposal.md",
                 "change_id": m.group("change_id"),
-                "hash": m.group("hash"),
+                "hash": hash_bullet,
             },
             "decision_type": "business_checkpoint",
             "scope": alcance,
@@ -1017,6 +1229,122 @@ def parsear_checkpoints_de_propuesta(texto: str) -> tuple:
         checkpoints_validos.append(candidato)
 
     return checkpoints_validos, hallazgos
+
+
+CODE_ALCANCE_INVALIDO = "SDD-ALCANCE-INVALIDO"
+_ALCANCE_MAX_ENTRADAS = 500
+_ALCANCE_MAX_LARGO = 260
+_RE_ALCANCE_PROHIBIDOS = re.compile(r"""[\s$;&|<>()"'`?\[\]{}!]""")
+_RE_ALCANCE_UNIDAD_WINDOWS = re.compile(r"^[A-Za-z]:")
+# Rutas del propio harness/datos que una propuesta nunca puede autorizar (I7/I8); también se
+# rechazan patrones que las cubran (p. ej. `.claude/**`, `data/**`).
+_ALCANCE_RUTAS_PROTEGIDAS = (
+    ".claude/guardrails.json",
+    ".claude/settings.json",
+    ".claude/settings.local.json",
+    "data/raw/x",
+)
+
+
+def _normalizar_entrada_alcance(crudo: str) -> tuple:
+    """Normaliza UNA entrada de `## Alcance autorizado` -> `(ruta, motivo)`.
+    `motivo` es None si es válida (R23 de 20261005-operational-autonomy-hardening)."""
+    valor = crudo.strip()
+    if len(valor) >= 2 and valor.startswith("`") and valor.endswith("`"):
+        valor = valor[1:-1].strip()
+    if not valor:
+        return None, "entrada vacía"
+    if len(valor) > _ALCANCE_MAX_LARGO:
+        return None, f"más de {_ALCANCE_MAX_LARGO} caracteres"
+    if "\\" in valor:
+        return None, "backslash no permitido (usar '/')"
+    if valor.startswith("/") or valor.startswith("~") or _RE_ALCANCE_UNIDAD_WINDOWS.match(valor):
+        return None, "ruta absoluta o con '~' no permitida"
+    if _RE_ALCANCE_PROHIBIDOS.search(valor):
+        return None, "espacios o caracteres de shell/glob no permitidos"
+    while valor.startswith("./"):
+        valor = valor[2:]
+    while "//" in valor:
+        valor = valor.replace("//", "/")
+    if valor.endswith("/"):
+        valor = valor + "**"
+    if not valor or valor == ".":
+        return None, "entrada vacía"
+    if valor.startswith("/"):
+        return None, "ruta absoluta no permitida"
+    if ":" in valor:
+        return None, "':' no permitido"
+    segmentos = valor.split("/")
+    if ".." in segmentos or "." in segmentos:
+        return None, "segmento '.' o '..' no permitido"
+    primero = segmentos[0].rstrip(". ").lower()
+    if primero in (".git", ".harmessi"):
+        return None, f"{primero} no permitido"
+    if any(seg.endswith(".") or seg.endswith(" ") for seg in segmentos):
+        return None, "segmento que termina en '.' o espacio no permitido"
+    minuscula = valor.lower()
+    if minuscula == "data/raw" or minuscula.startswith("data/raw/"):
+        return None, "data/raw no permitido"
+    for protegida in _ALCANCE_RUTAS_PROTEGIDAS:
+        if fnmatch.fnmatchcase(protegida, minuscula):
+            return None, f"la ruta protegida {protegida} no puede autorizarse"
+    if "*" in segmentos[0]:
+        return None, "el primer segmento no puede contener '*' (alcance repo-wide)"
+    for i, seg in enumerate(segmentos):
+        if "**" in seg and not (seg == "**" and i == len(segmentos) - 1):
+            return None, "'**' solo permitido como último segmento completo"
+    return valor, None
+
+
+def parsear_alcance_autorizado(texto: str) -> tuple:
+    """Sección `## Alcance autorizado` de `proposal.md` -> `(rutas, hallazgos)`.
+    Función pura (R22-R26). Solo se consideran líneas bullet (`- ...`); el resto
+    (comentarios de plantilla, prosa) se ignora. Todo-o-nada: cualquier entrada
+    inválida produce un `Finding` `SDD-ALCANCE-INVALIDO`; el llamador debe
+    rechazar la aprobación completa. `rutas` son únicas y en orden de aparición.
+    Título exacto: `## Alcance` (otra sección) no se confunde con esta."""
+    seccion = _contenido_de_seccion(texto, "## Alcance autorizado")
+    rutas: list = []
+    hallazgos: list = []
+    if not seccion:
+        return rutas, hallazgos
+
+    ubicacion = "proposal.md#Alcance autorizado"
+    entradas = []
+    for linea in seccion.splitlines():
+        linea = linea.strip()
+        if linea.startswith("- ") or linea == "-":
+            entradas.append(linea[1:])
+        elif linea.startswith("* ") or linea.startswith("+ "):
+            # M4: bullets no soportados -> hallazgo, nunca se ignoran en silencio.
+            hallazgos.append(
+                Finding(
+                    CODE_ALCANCE_INVALIDO,
+                    f"Bullet no soportado {linea!r}: usar '- ruta'",
+                    ubicacion,
+                )
+            )
+    if len(entradas) > _ALCANCE_MAX_ENTRADAS:
+        hallazgos.append(
+            Finding(
+                CODE_ALCANCE_INVALIDO,
+                f"Más de {_ALCANCE_MAX_ENTRADAS} entradas en el alcance autorizado ({len(entradas)})",
+                ubicacion,
+            )
+        )
+        return [], hallazgos
+    for crudo in entradas:
+        ruta, motivo = _normalizar_entrada_alcance(crudo)
+        if motivo is not None:
+            hallazgos.append(
+                Finding(CODE_ALCANCE_INVALIDO, f"Entrada de alcance inválida {crudo.strip()!r}: {motivo}", ubicacion)
+            )
+            continue
+        if ruta not in rutas:
+            rutas.append(ruta)
+    if hallazgos:
+        return [], hallazgos
+    return rutas, hallazgos
 
 
 def presupuesto_agregado(control: dict) -> dict:
@@ -1153,104 +1481,22 @@ CODE_DEPENDENCY_PREAPPROVAL_INVALID = "SDD-DEPENDENCY-PREAPPROVAL-INVALID"
 
 _RE_DEPENDENCY_BULLET = re.compile(r"^-\s*(?P<nombre>[^:]*?)\s*:\s*(?P<rango>.+?)\s*$")
 
-# Operadores de comparación soportados, en el mismo orden en que deben
-# probarse (`>=`/`<=` antes que `>`/`<` para no matchear el prefijo corto).
-_OPERADORES_RANGO = (">=", "<=", "==", "!=", ">", "<")
-
-
 def _parsear_version(version: str) -> tuple:
-    """`"1.2.0"` -> `(1, 2, 0)`. Lanza `ValueError` si algún componente no es
-    un entero no negativo, o si `version` está vacía. Sin soporte de sufijos
-    tipo `rc1`/`post1`/`dev0` -- simplificación deliberada, solo-stdlib, para
-    no agregar una dependencia nueva a Harmessi (p. ej. `packaging`)."""
-    version = version.strip()
-    if not version:
-        raise ValueError("version_vacia")
-    partes = version.split(".")
-    componentes = []
-    for parte in partes:
-        if not parte.isdigit():
-            raise ValueError(f"componente_no_entero:{parte!r}")
-        componentes.append(int(parte))
-    return tuple(componentes)
+    """Alias fino de `pep440_subset.parse_version` (acepta local). Lanza
+    `ValueError` si `version` está fuera del subset."""
+    return pep440_subset.parse_version(version, permitir_local=True)
 
 
 def _parsear_rango_version(rango: str) -> list:
-    """Parser MÍNIMO y solo-stdlib de rangos tipo PEP 440 simplificado:
-    `>=`, `<=`, `>`, `<`, `==`, `!=`, combinados con coma (p. ej.
-    `>=1.2,<2`). Cada versión se parsea como tupla de enteros separados por
-    `.` (`_parsear_version`), sin soporte de sufijos tipo `rc1`/`post1` --
-    limitación deliberada (ver `_parsear_version`).
-
-    Devuelve `list[tuple[str, tuple[int, ...]]]` (operador, tupla de
-    versión). Lanza `ValueError` (capturado por el llamador,
-    `_version_satisface_rango`) si `rango` está vacío, si algún término no
-    tiene un operador soportado, o si la versión de algún término no
-    parsea."""
-    rango = rango.strip()
-    if not rango:
-        raise ValueError("rango_vacio")
-    terminos = []
-    for termino in rango.split(","):
-        termino = termino.strip()
-        if not termino:
-            raise ValueError("termino_vacio")
-        operador_encontrado = None
-        for operador in _OPERADORES_RANGO:
-            if termino.startswith(operador):
-                operador_encontrado = operador
-                break
-        if operador_encontrado is None:
-            raise ValueError(f"operador_no_soportado:{termino!r}")
-        version_texto = termino[len(operador_encontrado):]
-        terminos.append((operador_encontrado, _parsear_version(version_texto)))
-    return terminos
-
-
-def _rellenar_a_igual_longitud(a: tuple, b: tuple) -> tuple:
-    """`(a, b)` con ceros a la derecha para que tengan la misma longitud
-    (`"1.2"` == `"1.2.0"`)."""
-    n = max(len(a), len(b))
-    a2 = a + (0,) * (n - len(a))
-    b2 = b + (0,) * (n - len(b))
-    return a2, b2
-
-
-def _comparar_versiones(a: tuple, b: tuple) -> int:
-    """-1/0/1, rellenando a igual longitud antes de comparar."""
-    a2, b2 = _rellenar_a_igual_longitud(a, b)
-    if a2 < b2:
-        return -1
-    if a2 > b2:
-        return 1
-    return 0
+    """Alias fino de `pep440_subset.parse_range` (subset PEP 440 soportado
+    por Harmessi, R15-R20 de `20261006-sdd-parsers-and-guardrail-ownership`).
+    Lanza `ValueError` con el motivo si el rango no entra en el subset."""
+    return pep440_subset.parse_range(rango)
 
 
 def _version_satisface_rango(version: str, rango: str) -> bool:
-    """`True` si `version` (p. ej. `"1.5"`) satisface todos los términos de
-    `rango` (p. ej. `">=1.2,<2"`). `False` (fail-closed, nunca lanza) si
-    `version` o `rango` no son parseables por
-    `_parsear_version`/`_parsear_rango_version`."""
-    try:
-        version_tupla = _parsear_version(version)
-        terminos = _parsear_rango_version(rango)
-    except ValueError:
-        return False
-    for operador, version_rango in terminos:
-        cmp = _comparar_versiones(version_tupla, version_rango)
-        if operador == ">=" and not (cmp >= 0):
-            return False
-        if operador == "<=" and not (cmp <= 0):
-            return False
-        if operador == ">" and not (cmp > 0):
-            return False
-        if operador == "<" and not (cmp < 0):
-            return False
-        if operador == "==" and not (cmp == 0):
-            return False
-        if operador == "!=" and not (cmp != 0):
-            return False
-    return True
+    """Alias fino de `pep440_subset.satisfies` (fail-closed, nunca lanza)."""
+    return pep440_subset.satisfies(version, rango)
 
 
 def parsear_dependencias_preaprobadas(texto: str) -> tuple:

@@ -48,6 +48,20 @@ def archivos_tocados_desde_baseline(repo_root: Path, baseline_commit: Optional[s
     return rutas
 
 
+_PREFIJO_EXECUTIONS = ".harmessi/executions/"
+_RUTA_LEDGER = "openspec/decisions/ledger.jsonl"
+
+
+def es_output_intrinseco(ruta: str) -> bool:
+    """True SOLO para outputs de bookkeeping del harness: `.harmessi/executions/**`
+    y la ruta exacta `openspec/decisions/ledger.jsonl` (R38). Lista cerrada; no
+    autoriza nada para `exec` (R39), solo los excluye del evaluador de alcance."""
+    normalizada = str(ruta).replace("\\", "/")
+    while normalizada.startswith("./"):
+        normalizada = normalizada[2:]
+    return normalizada.startswith(_PREFIJO_EXECUTIONS) or normalizada == _RUTA_LEDGER
+
+
 def evaluar_alcance(repo_root: Path, control: dict) -> list:
     """[Finding("ALCANCE-RUTA", ...), ...] -- código único, mismo código que ya usaban
     `cmd_validate`/`gate_cierre` antes de este change (no se inventa un código nuevo). Unión
@@ -61,5 +75,8 @@ def evaluar_alcance(repo_root: Path, control: dict) -> list:
     tocados = set(repo_mod.list_dirty_files(repo_root))
     tocados |= set(archivos_tocados_desde_baseline(repo_root, baseline_commit))
 
-    fuera_de_alcance = sorted(r for r in tocados if not repo_mod.path_matches_any(r, rutas_autorizadas))
+    fuera_de_alcance = sorted(
+        r for r in tocados
+        if not es_output_intrinseco(r) and not repo_mod.path_matches_any(r, rutas_autorizadas)
+    )
     return [Finding("ALCANCE-RUTA", f"Archivo fuera de alcance: {r}", r) for r in fuera_de_alcance]

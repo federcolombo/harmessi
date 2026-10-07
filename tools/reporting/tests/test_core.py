@@ -174,7 +174,7 @@ def _reporte_completo(metadata=None):
 
 class TestVocabularios(unittest.TestCase):
     def test_vocabularios_exactos(self):
-        self.assertEqual(REPORT_KINDS, ("eda", "model", "evaluation", "production"))
+        self.assertEqual(REPORT_KINDS, ("eda", "model", "evaluation", "production", "governance"))
         self.assertEqual(DECISION_SCOPES, ("exploratory", "model_valid", "operational"))
         self.assertEqual(
             CLAIM_TYPES,
@@ -194,9 +194,12 @@ class TestVocabularios(unittest.TestCase):
 
 
 class TestOrtogonalidad(unittest.TestCase):
-    def test_las_12_combinaciones_se_construyen(self):
+    def test_todas_las_combinaciones_kind_x_scope_se_construyen(self):
+        # 4 kinds de v0.6 + `governance` (v0.9 Change 4) x 3 scopes = 15; el producto
+        # cartesiano completo sigue construyéndose (ortogonalidad intacta).
         combinaciones = list(product(REPORT_KINDS, DECISION_SCOPES))
-        self.assertEqual(len(combinaciones), 12)
+        self.assertEqual(len(combinaciones), len(REPORT_KINDS) * len(DECISION_SCOPES))
+        self.assertEqual(len(combinaciones), 15)
         for kind, scope in combinaciones:
             with self.subTest(kind=kind, scope=scope):
                 reporte = _reporte(report_kind=kind, decision_scope=scope)

@@ -21,7 +21,7 @@ import importlib.metadata as importlib_metadata
 import json
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import NamedTuple, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -221,7 +221,12 @@ def cmd_status(args: argparse.Namespace) -> int:
     sesion_info = sdd.session_status(control)
 
     rutas_autorizadas = control.get("alcance", {}).get("rutas_autorizadas", [])
-    fuera_de_alcance = repo.files_out_of_scope(repo_root, rutas_autorizadas)
+    fuera_de_alcance = [
+        r for r in repo.files_out_of_scope(repo_root, rutas_autorizadas) if not scope.es_output_intrinseco(r)
+    ]
+
+    # Verificación informativa de los checkpoints pre-aprobados (no cambia exit codes).
+    checkpoints_estado = sdd.verificar_checkpoints(repo_root, control) if control.get("decisiones_preaprobadas") else []
 
     if args.json:
         payload = {
@@ -231,6 +236,7 @@ def cmd_status(args: argparse.Namespace) -> int:
             "discrepancia": discrepancia,
             "sesion": sesion_info,
             "fuera_de_alcance": fuera_de_alcance,
+            "checkpoints": checkpoints_estado,
         }
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
@@ -251,6 +257,10 @@ def cmd_status(args: argparse.Namespace) -> int:
             print("Archivos fuera de alcance (informativo):")
             for r in fuera_de_alcance:
                 print(f"  - {r}")
+        if checkpoints_estado:
+            print("Checkpoints:")
+            for c in checkpoints_estado:
+                print(f"  - [{c['estado']}] {c['summary']}: {c['detalle']}")
 
     return 0
 
@@ -329,6 +339,39 @@ def cmd_approve(args: argparse.Namespace) -> int:
             print(f"El artefacto no existe: {artefacto}", file=sys.stderr)
             return 2
 
+    # Alcance autorizado (R22-R25 de 20261005-operational-autonomy-hardening):
+    # válido en CUALQUIER approval_mode. Sección ausente o sin bullets -> no se
+    # toca el alcance. Hallazgos -> exit 2 sin escribir nada (todo-o-nada).
+    # `proposal.md` se lee UNA sola vez (bytes): de esos mismos bytes salen el
+    # texto parseado y el hash (misma algoritmia que `core.hash_lf_v1`), así no
+    # hay ventana TOCTOU entre lo parseado y lo registrado.
+    hash_proposal = None
+    texto_proposal = None
+    if "proposal.md" in args.artefacto:
+        crudo_proposal = (change_dir / "proposal.md").read_bytes()
+        decodificado = crudo_proposal.decode("utf-8-sig")
+        normalizado = decodificado.replace("\r\n", "\n").replace("\r", "\n")
+        hash_proposal = hashlib.sha256(normalizado.encode("utf-8")).hexdigest()
+        texto_proposal = normalizado
+        texto_alcance = texto_proposal
+        declaradas, hallazgos_alcance = sdd.parsear_alcance_autorizado(texto_alcance)
+        if hallazgos_alcance:
+            print(core.formatear_findings_texto(hallazgos_alcance), file=sys.stderr)
+            return 2
+        if declaradas:
+            md_defecto = list(_PLANTILLAS_POR_MODO.get(control.get("modo"), _PLANTILLAS_POR_MODO["completo"]))
+            md_defecto = [f"{n}.md" for n in md_defecto]
+            nuevas = sorted(set(_rutas_por_defecto_change(args.change_id, md_defecto)) | set(declaradas))
+            previas = control.setdefault("alcance", {}).get("rutas_autorizadas", [])
+            agregadas = sorted(set(nuevas) - set(previas))
+            retiradas = sorted(set(previas) - set(nuevas))
+            control["alcance"]["rutas_autorizadas"] = nuevas
+            print(f"alcance autorizado materializado ({len(nuevas)} rutas)")
+            for r in agregadas:
+                print(f"  + {r}")
+            for r in retiradas:
+                print(f"  - {r}")
+
     # Checkpoints de negocio (T5, R3-R6 de 20260930-autonomous-sdd-and-remediation):
     # si se aprueba `proposal.md` y el Change declara `approval_mode:
     # checkpoints`, se parsea su sección `## Checkpoints de negocio` y se
@@ -339,12 +382,31 @@ def cmd_approve(args: argparse.Namespace) -> int:
     # aprobación de `proposal.md` completa (exit 2, no se escribe nada) en vez
     # de aceptar una lista de checkpoints parcialmente inválida.
     if "proposal.md" in args.artefacto and sdd.resolver_approval_mode(control) == "checkpoints":
-        texto_proposal = (change_dir / "proposal.md").read_text(encoding="utf-8")
-        checkpoints, hallazgos_checkpoints = sdd.parsear_checkpoints_de_propuesta(texto_proposal)
+        # `hash_proposal` (calculado arriba, una vez) sirve para la entrada de
+        # `aprobaciones` y para materializar `@approved` (D1-D4 del SDD).
+
+        def _resolver_approved(change_id_ref: str):
+            if change_id_ref == args.change_id:
+                return hash_proposal, "proposal.md de este Change"
+            res = sdd.resolver_aprobacion_registrada(repo_root, change_id_ref, "proposal.md")
+            if res.get("estado") == "verified":
+                return res.get("hash_vigente"), res.get("detalle", "")
+            return None, f"{res.get('estado')}: {res.get('detalle', '')}"
+
+        checkpoints, hallazgos_checkpoints = sdd.parsear_checkpoints_de_propuesta(
+            texto_proposal, change_id=args.change_id, resolver_approved=_resolver_approved
+        )
         if hallazgos_checkpoints:
             print(core.formatear_findings_texto(hallazgos_checkpoints), file=sys.stderr)
             return 2
         control["decisiones_preaprobadas"] = checkpoints
+        con_ceros = sdd.checkpoints_con_placeholder_cero(texto_proposal)
+        if con_ceros:
+            print(
+                "deprecated: checkpoints con hash de 64 ceros (placeholder, no verificable); "
+                "usar `@approved` o el hash real. ids: " + ", ".join(con_ceros),
+                file=sys.stderr,
+            )
 
         # Dependencias pre-aprobadas del proyecto (M11, adenda post-cierre
         # 2026-09-30 de `docs/roadmap/v0.8.md`): mismo criterio que los
@@ -362,7 +424,10 @@ def cmd_approve(args: argparse.Namespace) -> int:
     entradas = []
     for artefacto in args.artefacto:
         ruta = change_dir / artefacto
-        hash_valor = core.hash_lf_v1(ruta)
+        if artefacto == "proposal.md" and hash_proposal is not None:
+            hash_valor = hash_proposal  # mismo hash que se materializó en los checkpoints (sin releer)
+        else:
+            hash_valor = core.hash_lf_v1(ruta)
         entrada = {
             "artefacto": artefacto,
             "algoritmo": "sha256/lf/v1",
@@ -496,56 +561,221 @@ def _resolver_budgets(repo_root: Path) -> dict:
     no es una clave que `ConfigGuardrails`/`cargar_config` conozcan, así que
     el JSON crudo se relee aparte para llegar a ella -- mismo patrón que
     `_resolver_aprobacion_exec` ya usa para llegar a `autonomy`."""
-    resultado = dict(_BUDGET_DEFAULTS)
+    return _resolver_budgets_con_fuentes(repo_root)[0]
+
+
+# Mapeo legacy `autonomy.limits` -> clave canónica de `autonomy.budgets`
+# (R1 de 20261005-operational-autonomy-hardening). Solo estos dos ejes.
+_LIMITS_A_BUDGETS = {
+    "max_sessions": "max_sessions",
+    "max_total_minutes": "aggregate_minutes",
+}
+
+
+AVISO_GUARDRAILS_ILEGIBLE = "guardrails.json ilegible: los límites configurados NO se aplican"
+
+
+def _aviso_guardrails_ilegible(repo_root: Path) -> Optional[str]:
+    """I3: `AVISO_GUARDRAILS_ILEGIBLE` si `.claude/guardrails.json` EXISTE pero no
+    se puede leer (corrupto, versión no soportada, no-objeto) o `autonomy` no es
+    objeto; `None` en cualquier otro caso (incluido archivo ausente). Solo
+    informativo: el resolvedor sigue degradando a defaults, sin cambiar exit codes."""
+    pathguard_mod = _importar_perezoso("dsguard", "pathguard")
+    if pathguard_mod is None:
+        return None
+    ruta_config = Path(repo_root) / pathguard_mod.RUTA_CONFIG_RELATIVA
+    if not ruta_config.exists():
+        return None
+    try:
+        pathguard_mod.cargar_config(repo_root)
+        guardrails_dict = json.loads(ruta_config.read_text(encoding="utf-8"))
+    except (pathguard_mod.ConfigGuardrailsError, OSError, ValueError):
+        return AVISO_GUARDRAILS_ILEGIBLE
+    if not isinstance(guardrails_dict, dict):
+        return AVISO_GUARDRAILS_ILEGIBLE
+    if "autonomy" in guardrails_dict and not isinstance(guardrails_dict["autonomy"], dict):
+        return AVISO_GUARDRAILS_ILEGIBLE
+    return None
+
+
+def _leer_valores_brutos_budgets(repo_root: Path) -> tuple:
+    """Lee y valida `autonomy.budgets` y `autonomy.limits` de `guardrails.json`.
+    Devuelve `(valores_budgets, valores_limits)`: dos dicts ya validados, el
+    segundo con las claves traducidas a la clave canónica de budgets
+    (`max_total_minutes` -> `aggregate_minutes`). Ausencia de archivo/clave,
+    config corrupta o `autonomy` no-dict -> dicts vacíos (sin cambio de
+    comportamiento). Valor presente e inválido (no entero positivo, bool
+    excluido) o `limits` no-dict -> `BudgetsInvalidosError`
+    (`AUTONOMY-POLICY-LIMITS`, R3). Claves desconocidas dentro de `limits` se
+    ignoran acá (las reporta `tools/autonomy/policy.py`)."""
+    vacios = ({}, {})
 
     pathguard_mod = _importar_perezoso("dsguard", "pathguard")
     if pathguard_mod is None:
-        return resultado
+        return vacios
 
     ruta_config = Path(repo_root) / pathguard_mod.RUTA_CONFIG_RELATIVA
     if not ruta_config.exists():
-        return resultado
+        return vacios
 
     try:
         pathguard_mod.cargar_config(repo_root)
     except pathguard_mod.ConfigGuardrailsError:
-        return resultado
+        return vacios
 
     try:
         guardrails_dict = json.loads(ruta_config.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return resultado
+        return vacios
     if not isinstance(guardrails_dict, dict):
-        return resultado
+        return vacios
 
     autonomy_dict = guardrails_dict.get("autonomy")
     if not isinstance(autonomy_dict, dict):
-        return resultado
-    budgets_dict = autonomy_dict.get("budgets")
-    if not isinstance(budgets_dict, dict):
-        return resultado
+        return vacios
 
     hallazgos: list = []
     codigo = sdd.autonomy_core.CODE_POLICY_LIMITS
-    for clave in _BUDGET_DEFAULTS:
-        if clave not in budgets_dict:
-            continue
-        valor = budgets_dict[clave]
-        if isinstance(valor, bool) or not isinstance(valor, int) or valor <= 0:
+
+    def _es_valido(valor) -> bool:
+        return isinstance(valor, int) and not isinstance(valor, bool) and valor > 0
+
+    valores_budgets: dict = {}
+    budgets_dict = autonomy_dict.get("budgets")
+    if "budgets" in autonomy_dict and not isinstance(budgets_dict, dict):
+        # I4: `budgets` presente y no-dict (null, número, string, lista) es inválido, igual que `limits`.
+        hallazgos.append(
+            core.Finding(
+                codigo,
+                f"autonomy.budgets = {budgets_dict!r} inválido: debe ser un objeto",
+                str(ruta_config),
+            )
+        )
+    if isinstance(budgets_dict, dict):
+        for clave in _BUDGET_DEFAULTS:
+            if clave not in budgets_dict:
+                continue
+            valor = budgets_dict[clave]
+            if not _es_valido(valor):
+                hallazgos.append(
+                    core.Finding(
+                        codigo,
+                        f"autonomy.budgets.{clave} = {valor!r} inválido: debe ser un entero positivo",
+                        str(ruta_config),
+                    )
+                )
+                continue
+            valores_budgets[clave] = valor
+
+    valores_limits: dict = {}
+    if "limits" in autonomy_dict:
+        limits_dict = autonomy_dict["limits"]
+        if not isinstance(limits_dict, dict):
             hallazgos.append(
                 core.Finding(
                     codigo,
-                    f"autonomy.budgets.{clave} = {valor!r} inválido: debe ser un entero positivo",
+                    f"autonomy.limits = {limits_dict!r} inválido: debe ser un objeto",
                     str(ruta_config),
                 )
             )
-            continue
-        resultado[clave] = valor
+        else:
+            for clave_limits, clave_budgets in _LIMITS_A_BUDGETS.items():
+                if clave_limits not in limits_dict:
+                    continue
+                valor = limits_dict[clave_limits]
+                if not _es_valido(valor):
+                    hallazgos.append(
+                        core.Finding(
+                            codigo,
+                            f"autonomy.limits.{clave_limits} = {valor!r} inválido: debe ser un entero positivo",
+                            str(ruta_config),
+                        )
+                    )
+                    continue
+                valores_limits[clave_budgets] = valor
 
     if hallazgos:
         raise BudgetsInvalidosError(hallazgos)
 
-    return resultado
+    return valores_budgets, valores_limits
+
+
+def _resolver_budgets_con_fuentes(repo_root: Path) -> tuple:
+    """Variante de `_resolver_budgets` que además devuelve la fuente efectiva
+    por eje: `(dict_de_5_claves, fuentes)` con `fuentes[clave]` en
+    `'budgets'`, `'limits'`, `'ambas (mínimo=N)'` o `'default'` (R2/R4). Para
+    `max_sessions` y `aggregate_minutes`, si `budgets` y `limits` declaran el
+    eje, gana el MENOR (más estricto); nunca uno amplía al otro."""
+    resultado = dict(_BUDGET_DEFAULTS)
+    fuentes_base = "guardrails ilegible" if _aviso_guardrails_ilegible(repo_root) else "default"
+    fuentes = {clave: fuentes_base for clave in _BUDGET_DEFAULTS}
+
+    valores_budgets, valores_limits = _leer_valores_brutos_budgets(repo_root)
+
+    for clave in _BUDGET_DEFAULTS:
+        en_budgets = clave in valores_budgets
+        en_limits = clave in valores_limits
+        if en_budgets and en_limits:
+            minimo = min(valores_budgets[clave], valores_limits[clave])
+            resultado[clave] = minimo
+            fuentes[clave] = f"ambas (mínimo={minimo})"
+        elif en_budgets:
+            resultado[clave] = valores_budgets[clave]
+            fuentes[clave] = "budgets"
+        elif en_limits:
+            resultado[clave] = valores_limits[clave]
+            fuentes[clave] = "limits"
+
+    return resultado, fuentes
+
+
+_EJES_AGREGADOS = (
+    ("aggregate_minutes", "minutos_consumidos_totales"),
+    ("max_sessions", "sesiones_totales"),
+)
+
+
+def _resumen_limites_agregados(control: dict, repo_root: Path, budgets: dict, fuentes: dict) -> dict:
+    """Vista de solo lectura de los límites agregados efectivos por eje:
+    `{eje: {"efectivo", "fuente", "valores", "consumo", "restante"}}`.
+    `restante = max(0, límite - consumo)` (None si no hay límite). `valores`
+    lista `budgets`/`limits` por separado solo cuando ambos están declarados y
+    difieren (R4)."""
+    agregado = sdd.presupuesto_agregado(control)
+    valores_budgets, valores_limits = _leer_valores_brutos_budgets(repo_root)
+    resumen: dict = {}
+    for eje, clave_consumo in _EJES_AGREGADOS:
+        efectivo = budgets[eje]
+        consumo = agregado[clave_consumo]
+        restante = None if efectivo is None else max(0, efectivo - consumo)
+        valores = None
+        if (
+            eje in valores_budgets
+            and eje in valores_limits
+            and valores_budgets[eje] != valores_limits[eje]
+        ):
+            valores = {"budgets": valores_budgets[eje], "limits": valores_limits[eje]}
+        resumen[eje] = {
+            "efectivo": efectivo,
+            "fuente": fuentes[eje],
+            "valores": valores,
+            "consumo": consumo,
+            "restante": restante,
+        }
+    return resumen
+
+
+def _linea_limite_agregado(eje: str, info: dict) -> str:
+    texto = (
+        f"{eje}: efectivo={info['efectivo']} fuente={info['fuente']} "
+        f"consumo={info['consumo']:.1f} restante={info['restante']}"
+        if isinstance(info["consumo"], float)
+        else f"{eje}: efectivo={info['efectivo']} fuente={info['fuente']} "
+        f"consumo={info['consumo']} restante={info['restante']}"
+    )
+    if info["valores"]:
+        texto += f" (budgets={info['valores']['budgets']}, limits={info['valores']['limits']})"
+    return texto
 
 
 # --- config layering (v0.8 Change 4: 20260930-project-extension-and-
@@ -716,10 +946,13 @@ def cmd_session_start(args: argparse.Namespace) -> int:
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     try:
-        budgets = _resolver_budgets(repo_root)
+        budgets, fuentes_budgets = _resolver_budgets_con_fuentes(repo_root)
     except BudgetsInvalidosError as e:
         print(core.formatear_findings_texto(e.findings), file=sys.stderr)
         return 2
+    aviso_guardrails = _aviso_guardrails_ilegible(repo_root)
+    if aviso_guardrails:
+        print(f"AVISO: {aviso_guardrails}", file=sys.stderr)
 
     # `--minutos` explícito del llamador manda siempre, sin consultar policy
     # (R8 de spec.md); solo si el flag no se pasó (`None`, ver default de
@@ -752,6 +985,13 @@ def cmd_session_start(args: argparse.Namespace) -> int:
     )
     if findings_limite_agregado:
         print(core.formatear_findings_texto(findings_limite_agregado), file=sys.stderr)
+        # Fuente efectiva de cada límite agregado (R4 de 20261005-operational-autonomy-hardening).
+        print(
+            "Fuente de límites agregados: "
+            f"aggregate_minutes={budgets['aggregate_minutes']} ({fuentes_budgets['aggregate_minutes']}), "
+            f"max_sessions={budgets['max_sessions']} ({fuentes_budgets['max_sessions']})",
+            file=sys.stderr,
+        )
         return 2
 
     try:
@@ -829,8 +1069,22 @@ def cmd_session_status(args: argparse.Namespace) -> int:
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     estado = sdd.session_status(control)
+
+    # Sección de límites agregados efectivos (aditiva, informativa: nunca cambia el exit code).
+    limites_agregados = None
+    error_limites = None
+    try:
+        budgets_ef, fuentes_ef = _resolver_budgets_con_fuentes(repo_root)
+        limites_agregados = _resumen_limites_agregados(control, repo_root, budgets_ef, fuentes_ef)
+    except BudgetsInvalidosError as e:
+        error_limites = core.formatear_findings_texto(e.findings)
+    avisos = [a for a in (_aviso_guardrails_ilegible(repo_root),) if a]
+
     if args.json:
-        print(json.dumps(estado, indent=2, ensure_ascii=False))
+        payload = dict(estado)
+        payload["avisos"] = avisos
+        payload["limites_agregados"] = limites_agregados if error_limites is None else {"error": error_limites}
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
         if not estado["activa"]:
             print("No hay sesión activa.")
@@ -842,6 +1096,14 @@ def cmd_session_status(args: argparse.Namespace) -> int:
             )
             for f in estado["findings"]:
                 print(f"  [{f['codigo']}] {f['mensaje']}")
+        for aviso in avisos:
+            print(f"AVISO: {aviso}")
+        print("Límites agregados efectivos:")
+        if error_limites is not None:
+            print(f"  (inválidos) {error_limites}")
+        else:
+            for eje, _clave in _EJES_AGREGADOS:
+                print("  " + _linea_limite_agregado(eje, limites_agregados[eje]))
     return 0
 
 
@@ -892,7 +1154,7 @@ def cmd_session_aggregate(args: argparse.Namespace) -> int:
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     try:
-        budgets = _resolver_budgets(repo_root)
+        budgets, fuentes_budgets = _resolver_budgets_con_fuentes(repo_root)
     except BudgetsInvalidosError as e:
         print(core.formatear_findings_texto(e.findings), file=sys.stderr)
         return 2
@@ -903,13 +1165,20 @@ def cmd_session_aggregate(args: argparse.Namespace) -> int:
         "max_sessions": budgets["max_sessions"],
     }
     findings = sdd.chequear_limite_agregado(control, config_agregado)
+    resumen = _resumen_limites_agregados(control, repo_root, budgets, fuentes_budgets)
+    avisos = [a for a in (_aviso_guardrails_ilegible(repo_root),) if a]
 
     if args.json:
         payload = dict(agregado)
+        payload["avisos"] = avisos
         payload["limites_configurados"] = config_agregado
+        payload["limites_fuentes"] = {eje: resumen[eje]["fuente"] for eje, _c in _EJES_AGREGADOS}
+        payload["restante"] = {eje: resumen[eje]["restante"] for eje, _c in _EJES_AGREGADOS}
         payload["findings"] = [f.to_dict() for f in findings]
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
+        for aviso in avisos:
+            print(f"AVISO: {aviso}")
         print(
             f"Sesiones totales: {agregado['sesiones_totales']} "
             f"(abiertas: {agregado['sesiones_abiertas']}) — "
@@ -920,6 +1189,8 @@ def cmd_session_aggregate(args: argparse.Namespace) -> int:
                 f"Límites configurados: aggregate_minutes={config_agregado['aggregate_minutes']} "
                 f"max_sessions={config_agregado['max_sessions']}"
             )
+            for eje, _clave in _EJES_AGREGADOS:
+                print("  " + _linea_limite_agregado(eje, resumen[eje]))
         for f in findings:
             print(f"  [{f.codigo}] {f.mensaje}")
     return 0
@@ -1795,8 +2066,22 @@ def _resolver_modo_autonomia(repo_root: Path) -> tuple:
     return modo, None
 
 
-def _resolver_aprobacion_exec(repo_root: Path, control_data: dict, artefacto: str, hash_comando: str):
+def _resolver_aprobacion_exec(
+    repo_root: Path,
+    control_data: dict,
+    artefacto: str,
+    hash_comando: str,
+    hash_legacy: "Optional[str]" = None,
+):
     """Devuelve `(permitido, executed_by, mode, approval, motivo)` (R12/R14).
+
+    `hash_legacy` (R9b/D5 de `20261002-exec-approval-registration`, solo
+    `exec script`): si la aprobación no es vigente con `hash_comando` (v2) y
+    la entrada MÁS RECIENTE del artefacto tiene `algoritmo == "sha256/lf/v1"`,
+    se acepta también `hash_legacy` (hash solo del contenido del script). Una
+    entrada v2 (u otra) con hash distinto NO cae al camino legacy. La
+    aprobación legacy se reporta solo por stderr; `approval` es el mismo dict
+    que la aprobación v2 (sin marca `legacy`).
 
     - `pathguard.cargar_config` inválido/versión no soportada -> denegado
       (fail-closed, mismo criterio que `_access_check_real`).
@@ -1832,6 +2117,25 @@ def _resolver_aprobacion_exec(repo_root: Path, control_data: dict, artefacto: st
             )
             if estado == "vigente":
                 return True, "human", modo, {"tipo": "human_manifest_aprobado"}, ""
+            if hash_legacy is not None:
+                reciente = nbrunner_manifest._aprobacion_mas_reciente(control_data or {}, artefacto)
+                # `sha256/argv-canonical-json`: legacy de `exec pytest` con intérprete crudo (I6).
+                if reciente is not None and reciente.get("algoritmo") in (
+                    "sha256/lf/v1",
+                    "sha256/argv-canonical-json",
+                ):
+                    _f_legacy, estado_legacy = nbrunner_manifest.validar_aprobacion(
+                        control_data or {}, artefacto, hash_legacy, modo="execute"
+                    )
+                    if estado_legacy == "vigente":
+                        print(
+                            "aprobación legacy (sha256/lf/v1): no liga argumentos; "
+                            "re-aprobar con 'ds_guard exec approve script'",
+                            file=sys.stderr,
+                        )
+                        # El aviso legacy va solo a stderr: `approval` no lleva marca `legacy`
+                        # (la suite preexistente de exec exige exactamente este dict).
+                        return True, "human", modo, {"tipo": "human_manifest_aprobado"}, ""
             return False, None, modo, None, f"aprobación {estado} para {artefacto!r}"
 
         return False, None, modo, None, f"composición de aprobación no soportada: {decision!r}"
@@ -1893,6 +2197,44 @@ def _comparar_fingerprints(pre: dict, post: dict) -> list:
     return discrepancias
 
 
+def _validar_request_exec(args: argparse.Namespace, command_form: str, argv: list, control: dict, timeout=None):
+    """Arma el `ExecutionRequest` y evalúa la allowlist (R6 de
+    `20261002-exec-approval-registration`). Devuelve `(request, codigo)`:
+    `codigo` es `None` si todo es válido; si no, ya se imprimió el mensaje a
+    stderr y `codigo` es el exit code (2). Compartido por
+    `_ejecutar_exec_comun` y `exec approve` (lo que el runtime rechazaría no
+    puede aprobarse). `timeout=None` usa `args.timeout` si existe, o 600
+    (default de `exec`) en `exec approve`, que no tiene `--timeout`."""
+    leadrun_core, leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
+    if leadrun_core is None:
+        print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
+        return None, 3
+
+    scope = tuple(control.get("alcance", {}).get("rutas_autorizadas", []))
+    if timeout is None:
+        timeout = getattr(args, "timeout", 600)
+
+    try:
+        request = leadrun_core.ExecutionRequest(
+            command_form=command_form,
+            interpreter=args.interpreter,
+            argv=tuple(argv),
+            scope=scope,
+            timeout_seconds=timeout,
+        )
+    except leadrun_core.ExecutionError as exc:
+        print(str(exc), file=sys.stderr)
+        return None, 2
+
+    permitido_forma, _forma, motivo_forma = leadrun_allowlist.evaluar_comando(
+        request.argv, request.scope, request.interpreter
+    )
+    if not permitido_forma:
+        print(f"Comando rechazado por la allowlist: {motivo_forma}", file=sys.stderr)
+        return None, 2
+    return request, None
+
+
 def _ejecutar_exec_comun(
     args: argparse.Namespace,
     repo_root: Path,
@@ -1906,6 +2248,7 @@ def _ejecutar_exec_comun(
     omitir_gate_por_artefacto: bool = False,
     modo_resuelto: "Optional[str]" = None,
     info_salida: "Optional[dict]" = None,
+    hash_legacy: "Optional[str]" = None,
 ) -> int:
     """Pasos 4-9 comunes a `exec script|pytest|notebook` (ver encargo del
     Lead): construye el `ExecutionRequest`, evalúa la allowlist (defensa en
@@ -1963,26 +2306,9 @@ def _ejecutar_exec_comun(
         print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
         return 3
 
-    scope = tuple(control.get("alcance", {}).get("rutas_autorizadas", []))
-
-    try:
-        request = leadrun_core.ExecutionRequest(
-            command_form=command_form,
-            interpreter=args.interpreter,
-            argv=tuple(argv),
-            scope=scope,
-            timeout_seconds=args.timeout,
-        )
-    except leadrun_core.ExecutionError as exc:
-        print(str(exc), file=sys.stderr)
-        return 2
-
-    permitido_forma, _forma, motivo_forma = leadrun_allowlist.evaluar_comando(
-        request.argv, request.scope, request.interpreter
-    )
-    if not permitido_forma:
-        print(f"Comando rechazado por la allowlist: {motivo_forma}", file=sys.stderr)
-        return 2
+    request, codigo_request = _validar_request_exec(args, command_form, argv, control, timeout=args.timeout)
+    if codigo_request is not None:
+        return codigo_request
 
     if omitir_gate_por_artefacto:
         if modo_resuelto is not None:
@@ -1996,7 +2322,7 @@ def _ejecutar_exec_comun(
         approval = approval_override
     else:
         permitido_aprob, executed_by, modo, approval, motivo_aprob = _resolver_aprobacion_exec(
-            repo_root, control, artefacto, hash_comando
+            repo_root, control, artefacto, hash_comando, hash_legacy
         )
         if not permitido_aprob:
             print(f"Aprobación denegada: {motivo_aprob}", file=sys.stderr)
@@ -2134,59 +2460,124 @@ def _ejecutar_exec_comun(
     return checks.exit_code(resultados_check)
 
 
-def cmd_exec_script(args: argparse.Namespace) -> int:
-    try:
-        repo_root = _repo_root()
-    except RuntimeError as e:
-        print(str(e), file=sys.stderr)
-        return 3
-    _change_dir_, _tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+ALGORITMO_EXEC_SCRIPT_V2 = "sha256/script-content+argv/v2"
 
-    leadrun_core, _leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
-    if leadrun_core is None:
-        print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
-        return 3
+
+class ExecSpec(NamedTuple):
+    """Resultado de un builder `_construir_exec_<forma>` (D1 de
+    `20261002-exec-approval-registration`): todo lo que `exec` y `exec
+    approve` necesitan para ejecutar / registrar la MISMA identidad.
+    `hash_legacy` solo aplica a script (R9b): hash histórico solo-contenido."""
+
+    forma: str
+    argv: list
+    artefacto: str
+    hash_comando: str
+    algoritmo: str
+    hash_legacy: "Optional[str]" = None
+
+
+class _ErrorExec(Exception):
+    """Error de construcción de un `ExecSpec`: mensaje para stderr + exit code."""
+
+    def __init__(self, mensaje: str, codigo: int = 2):
+        super().__init__(mensaje)
+        self.mensaje = mensaje
+        self.codigo = codigo
+
+
+def _modulos_leadrun_o_error():
+    modulos = _leadrun_modulos()
+    if modulos[0] is None:
+        raise _ErrorExec(_mensaje_paquete_no_instalado("leadrun", "experiment"), 3)
+    return modulos
+
+
+def _construir_exec_script(args: argparse.Namespace, repo_root: Path) -> ExecSpec:
+    """Builder puro de `exec script` (R9, M1: hash v2 contenido+argv)."""
+    leadrun_core, leadrun_allowlist, _rt = _modulos_leadrun_o_error()
 
     args_extra = list(args.script_args or [])
     if args_extra and args_extra[0] == "--":
         args_extra = args_extra[1:]
     argv = [args.interpreter, args.script, *args_extra]
 
-    artefacto = args.script
     try:
-        hash_comando = core.hash_lf_v1(Path(repo_root) / args.script)
+        hash_contenido = core.hash_lf_v1(Path(repo_root) / args.script)
     except (OSError, UnicodeDecodeError) as exc:
-        print(f"No se pudo calcular el hash del script {args.script!r}: {exc}", file=sys.stderr)
-        return 2
+        raise _ErrorExec(f"No se pudo calcular el hash del script {args.script!r}: {exc}", 2)
 
-    return _ejecutar_exec_comun(args, repo_root, control, control_path, "script", argv, artefacto, hash_comando)
+    ruta_script = Path(args.script)
+    if ruta_script.is_absolute():
+        try:
+            ruta_script = ruta_script.relative_to(Path(repo_root))
+        except ValueError:
+            pass  # fuera del repo: la allowlist lo rechaza igual; se hashea tal cual
+    identidad = {
+        "algorithm": ALGORITMO_EXEC_SCRIPT_V2,
+        "script": ruta_script.as_posix(),
+        "script_sha256": hash_contenido,
+        "argv": [leadrun_allowlist.normalizar_interprete(args.interpreter), args.script, *args_extra],
+    }
+    return ExecSpec(
+        forma="script",
+        argv=argv,
+        artefacto=args.script,
+        hash_comando=leadrun_core.content_sha256(identidad),
+        algoritmo=ALGORITMO_EXEC_SCRIPT_V2,
+        hash_legacy=hash_contenido,
+    )
 
 
-def cmd_exec_pytest(args: argparse.Namespace) -> int:
-    try:
-        repo_root = _repo_root()
-    except RuntimeError as e:
-        print(str(e), file=sys.stderr)
-        return 3
-    _change_dir_, _tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
-
-    leadrun_core, _leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
-    if leadrun_core is None:
-        print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
-        return 3
+def _construir_exec_pytest(args: argparse.Namespace, repo_root: Path) -> ExecSpec:
+    """Builder puro de `exec pytest` (R8): hash del argv canónico, sin cambios."""
+    leadrun_core, leadrun_allowlist, _rt = _modulos_leadrun_o_error()
 
     flags_extra = list(args.pytest_args or [])
     if flags_extra and flags_extra[0] == "--":
         flags_extra = flags_extra[1:]
     argv = [args.interpreter, "-m", "pytest", *args.paths, *flags_extra]
+    # R19: la identidad usa el intérprete NORMALIZADO; la ejecución usa el valor provisto.
+    argv_identidad = [leadrun_allowlist.normalizar_interprete(args.interpreter), *argv[1:]]
+    hash_identidad = leadrun_core.content_sha256(argv_identidad)
+    # I6: aprobaciones previas registradas con el intérprete CRUDO siguen valiendo
+    # (solo cuando el crudo difiere del normalizado).
+    hash_crudo = leadrun_core.content_sha256(list(argv))
+    hash_legacy = hash_crudo if hash_crudo != hash_identidad else None
 
-    artefacto = "pytest:" + "|".join(args.paths)
-    hash_comando = leadrun_core.content_sha256(list(argv))
+    return ExecSpec(
+        forma="pytest",
+        argv=argv,
+        artefacto="pytest:" + "|".join(args.paths),
+        hash_comando=hash_identidad,
+        algoritmo="sha256/argv-canonical-json",
+        hash_legacy=hash_legacy,
+    )
 
-    return _ejecutar_exec_comun(args, repo_root, control, control_path, "pytest", argv, artefacto, hash_comando)
+
+def _construir_exec_notebook(args: argparse.Namespace, repo_root: Path) -> ExecSpec:
+    """Builder puro de `exec notebook` (R10): hash LF del manifest, sin cambios."""
+    _modulos_leadrun_o_error()
+
+    modo_flag = "--execute" if args.execute else "--dry-run"
+    argv = [args.interpreter, "tools/notebook_runner.py", "run", "--manifest", args.manifest, modo_flag]
+
+    try:
+        hash_comando = core.hash_lf_v1(Path(repo_root) / args.manifest)
+    except (OSError, UnicodeDecodeError) as exc:
+        raise _ErrorExec(f"No se pudo calcular el hash del manifest {args.manifest!r}: {exc}", 2)
+
+    return ExecSpec(
+        forma="notebook",
+        argv=argv,
+        artefacto=args.manifest,
+        hash_comando=hash_comando,
+        algoritmo="sha256/lf/v1",
+    )
 
 
-def cmd_exec_notebook(args: argparse.Namespace) -> int:
+def _cmd_exec_con_builder(args: argparse.Namespace, construir) -> int:
+    """Esqueleto común de `cmd_exec_*`: repo_root -> change -> builder -> ejecutar."""
     try:
         repo_root = _repo_root()
     except RuntimeError as e:
@@ -2194,22 +2585,133 @@ def cmd_exec_notebook(args: argparse.Namespace) -> int:
         return 3
     _change_dir_, _tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
-    leadrun_core, _leadrun_allowlist, _leadrun_runtime = _leadrun_modulos()
-    if leadrun_core is None:
-        print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
-        return 3
-
-    modo_flag = "--execute" if args.execute else "--dry-run"
-    argv = [args.interpreter, "tools/notebook_runner.py", "run", "--manifest", args.manifest, modo_flag]
-
-    artefacto = args.manifest
     try:
-        hash_comando = core.hash_lf_v1(Path(repo_root) / args.manifest)
-    except (OSError, UnicodeDecodeError) as exc:
-        print(f"No se pudo calcular el hash del manifest {args.manifest!r}: {exc}", file=sys.stderr)
-        return 2
+        spec = construir(args, repo_root)
+    except _ErrorExec as exc:
+        print(exc.mensaje, file=sys.stderr)
+        return exc.codigo
 
-    return _ejecutar_exec_comun(args, repo_root, control, control_path, "notebook", argv, artefacto, hash_comando)
+    return _ejecutar_exec_comun(
+        args, repo_root, control, control_path, spec.forma, spec.argv, spec.artefacto, spec.hash_comando,
+        hash_legacy=spec.hash_legacy,
+    )
+
+
+def cmd_exec_script(args: argparse.Namespace) -> int:
+    return _cmd_exec_con_builder(args, _construir_exec_script)
+
+
+def cmd_exec_pytest(args: argparse.Namespace) -> int:
+    return _cmd_exec_con_builder(args, _construir_exec_pytest)
+
+
+def cmd_exec_notebook(args: argparse.Namespace) -> int:
+    return _cmd_exec_con_builder(args, _construir_exec_notebook)
+
+
+# --- exec approve (20261002-exec-approval-registration) ----------------------
+
+def _registrar_aprobacion_exec(control: dict, control_path: Path, spec: ExecSpec, args: argparse.Namespace) -> dict:
+    """Agrega la entrada a `control["aprobaciones"]` (misma estructura que
+    `cmd_approve`, R11) y persiste con `core.escribir_control`. El hash sale
+    SIEMPRE del builder, nunca del humano (R2)."""
+    entrada = {
+        "artefacto": spec.artefacto,
+        "algoritmo": spec.algoritmo,
+        "hash": spec.hash_comando,
+        "registrado_utc": core.ahora_utc(),
+        "usuario": args.usuario,
+        "fecha_declarada": args.fecha,
+        "alcance_aprobado": args.alcance,
+        "cita": args.cita,
+    }
+    control.setdefault("aprobaciones", []).append(entrada)
+    core.escribir_control(control_path, control)
+    return entrada
+
+
+def _cmd_exec_approve_con_builder(args: argparse.Namespace, construir) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    error_usuario = core.validar_usuario_sin_email(args.usuario)
+    if error_usuario:
+        print(error_usuario, file=sys.stderr)
+        return 2
+    _change_dir_, _tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+
+    try:
+        spec = construir(args, repo_root)
+    except _ErrorExec as exc:
+        print(exc.mensaje, file=sys.stderr)
+        return exc.codigo
+
+    # Fail-closed (R12): mismo request + allowlist que el runtime; sin escritura si falla.
+    _request, codigo = _validar_request_exec(args, spec.forma, spec.argv, control)
+    if codigo is not None:
+        return codigo
+
+    entrada = _registrar_aprobacion_exec(control, control_path, spec, args)
+    print(f"artefacto: {entrada['artefacto']}")
+    print(f"algoritmo: {entrada['algoritmo']}")
+    print(f"hash: {entrada['hash']}")
+    return 0
+
+
+def cmd_exec_approve_script(args: argparse.Namespace) -> int:
+    return _cmd_exec_approve_con_builder(args, _construir_exec_script)
+
+
+def cmd_exec_approve_pytest(args: argparse.Namespace) -> int:
+    return _cmd_exec_approve_con_builder(args, _construir_exec_pytest)
+
+
+def cmd_exec_approve_notebook(args: argparse.Namespace) -> int:
+    return _cmd_exec_approve_con_builder(args, _construir_exec_notebook)
+
+
+# Argumentos semánticos compartidos por `exec <forma>` y `exec approve <forma>`
+# (D4): una sola definición para que no puedan divergir.
+
+def _agregar_args_exec_script(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--change-id", required=True, dest="change_id")
+    parser.add_argument("--interpreter", required=True)
+    parser.add_argument("--script", required=True)
+    parser.add_argument("script_args", nargs=argparse.REMAINDER, help="Argumentos del script, tras '--'.")
+
+
+_DESCRIPCION_EXEC_APPROVE = (
+    "Registra en control.json la aprobación de la ejecución EXACTA descrita por los mismos "
+    "argumentos que 'exec <forma>': el hash lo calcula la herramienta (nunca se suministra) y "
+    "cualquier cambio de target, flags, orden, script, argumentos o manifest invalida la "
+    "aprobación. Modelo de confianza: declaración humana registrada (usuario/fecha/alcance/"
+    "cita), sin autenticación criptográfica; no distingue humano de agente (deuda v0.10)."
+)
+
+
+def _agregar_args_exec_pytest(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--change-id", required=True, dest="change_id")
+    parser.add_argument("--interpreter", required=True)
+    parser.add_argument("--paths", required=True, nargs="+")
+    parser.add_argument("pytest_args", nargs=argparse.REMAINDER, help="Flags extra de pytest, tras '--'.")
+
+
+def _agregar_args_exec_notebook(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--change-id", required=True, dest="change_id")
+    parser.add_argument("--interpreter", required=True)
+    parser.add_argument("--manifest", required=True)
+    grupo = parser.add_mutually_exclusive_group()
+    grupo.add_argument("--dry-run", action="store_true", dest="dry_run")
+    grupo.add_argument("--execute", action="store_true", dest="execute")
+
+
+def _agregar_args_aprobacion_humana(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--usuario", required=True)
+    parser.add_argument("--fecha", required=True)
+    parser.add_argument("--alcance", required=True)
+    parser.add_argument("--cita", required=True)
 
 
 # --- source (v0.8 Change 1 T6: 20260928-source-neutral-data-access) ---------
@@ -2924,6 +3426,220 @@ def cmd_quality_drift(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- cards (Change 20261005-cards-governance-integration, R43-R52) ---------
+
+# Capability que habilita cada kind de Card (R45).
+_CARDS_CAPABILITY_DE_KIND = {"data": "data_cards", "model": "model_governance", "governance": "model_governance"}
+_CARDS_CODE_CAPABILITY_OFF = "CARDS-CAPABILITY-DISABLED"
+_CARDS_CODE_SIN_CARDS = "CARDS-NONE-FOUND"
+
+
+def _cards_leer_control(repo_root: Path) -> tuple:
+    """`(control|None, error|None)`: `.ds_init/control.json` si existe. Ilegible -> error."""
+    ruta = repo_root / ".ds_init" / "control.json"
+    if not ruta.is_file():
+        return None, None
+    datos, error = _cargar_json(str(ruta))
+    if error is not None:
+        return None, "no se pudo interpretar .ds_init/control.json"
+    return (datos if isinstance(datos, dict) else {}), None
+
+
+def _cards_nota(discovery_mod) -> str:
+    modelgov_mod = _importar_perezoso("cards", "modelgov")
+    nota = getattr(modelgov_mod, "NOTA_COMPLETENESS", None) if modelgov_mod is not None else None
+    return nota or discovery_mod.NOTA_COMPLETENESS_FALLBACK
+
+
+def _cards_resultados(pv, faltantes_cap: list, limpiar=None) -> list:
+    """CheckResult de la validación (los de cada Card + hallazgos de configuración WARN)."""
+    resultados: list = []
+    for kind in faltantes_cap:
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_NA, _CARDS_CODE_CAPABILITY_OFF,
+                f"cards {kind}: capability {_CARDS_CAPABILITY_DE_KIND[kind]} no habilitada; no se validan",
+            )
+        )
+    for reporte in pv.reports:
+        resultados.extend(reporte.check_results)
+    gov = pv.governance
+    if gov is not None:
+        _l = limpiar or (lambda t, *a: str(t))
+        for h in getattr(gov, "findings", ()) or ():
+            resultados.append(
+                checks.CheckResult(
+                    checks.STATUS_WARN, _l(getattr(h, "code", "GOVCFG"), None, 80),
+                    "governance project configuration finding", detail=_l(getattr(h, "detail", ""), None),
+                )
+            )
+    if not pv.reports and not faltantes_cap:
+        resultados.append(
+            checks.CheckResult(checks.STATUS_NA, _CARDS_CODE_SIN_CARDS, "no hay Cards de governance en las rutas conocidas")
+        )
+    return resultados
+
+
+def _cards_gating(discovery_mod, repo_root: Path, kinds_pedidos: list, explicito: bool) -> tuple:
+    """`(kinds_a_validar|None, kinds_deshabilitados, exit|None)`. Sin control.json no hay
+    gating (R45). Implícito (discovery): los kinds deshabilitados se omiten con N/A;
+    explícito (`--kind`/`--path`): kind deshabilitado -> exit 2."""
+    control, error = _cards_leer_control(repo_root)
+    if error is not None:
+        print(error, file=sys.stderr)
+        return None, [], 2
+    if control is None:
+        return (kinds_pedidos or None), [], None
+    cap = discovery_mod.estado_capabilities(control)
+    if cap["invalida"]:
+        for m in cap["invalida"]:
+            print(f"capabilities inválidas: {m}", file=sys.stderr)
+        return None, [], 2
+    kinds = kinds_pedidos or list(discovery_mod.KINDS)
+    habilitados = [k for k in kinds if _CARDS_CAPABILITY_DE_KIND[k] in cap["habilitadas"]]
+    apagados = [k for k in kinds if k not in habilitados]
+    if apagados and explicito:
+        for k in apagados:
+            print(f"capability {_CARDS_CAPABILITY_DE_KIND[k]} no habilitada: no se puede operar sobre Cards '{k}'", file=sys.stderr)
+        return None, apagados, 2
+    return habilitados, apagados, None
+
+
+def _cards_importar():
+    discovery_mod = _importar_perezoso("cards", "discovery")
+    if discovery_mod is None:
+        print(_mensaje_paquete_no_instalado("cards", "discovery"), file=sys.stderr)
+    return discovery_mod
+
+
+def _cards_gating_por_reportes(discovery_mod, repo_root: Path, pv) -> int:
+    """Gating de `--path`: según el kind real de cada Card validada. 0 ok, 2 deshabilitado."""
+    control, _error = _cards_leer_control(repo_root)
+    if _error:
+        # Fail-closed (cierre de revisión ciclo 2): un control ilegible no desactiva el gating.
+        print(f"cards: control de instalación ilegible: {_error}", file=sys.stderr)
+        return 2
+    if control is None:
+        return 0
+    cap = discovery_mod.estado_capabilities(control)
+    for r in pv.reports:
+        capacidad = _CARDS_CAPABILITY_DE_KIND.get(r.kind)
+        if capacidad is not None and capacidad not in cap["habilitadas"]:
+            print(f"capability {capacidad} no habilitada: no se puede operar sobre Cards '{r.kind}'", file=sys.stderr)
+            return 2
+    return 0
+
+
+def _cards_imprimir_humano(discovery_mod, pv, resultados: list, nota: str, titulo: str) -> None:
+    print(f"{titulo}\n")
+    for n in pv.notes:
+        print(f"Aviso: {n}")
+    for r in pv.reports:
+        print(f"[{r.kind}] {r.card_id or '(sin card_id)'}  revision={r.revision_id or '-'}  estado={r.status}  archivo={r.rel_path}")
+        pol = r.policy or {}
+        if r.kind == "governance":
+            print(f"    governance_completeness={r.status}  risk_level declarado={pol.get('declared_level')} efectivo={pol.get('effective_level')}")
+            politica = pol.get("policy") or {}
+            for lado in sorted(politica):
+                if isinstance(politica[lado], dict):
+                    print("    policy " + lado + ": " + ", ".join(f"{k}={politica[lado][k]}" for k in sorted(politica[lado])))
+            print(f"    configuración: {pol.get('config_state')}")
+        for req in r.requirements:
+            print(f"    requisito {req['requirement_id']} ({req['severity']}): {req['state']}")
+        for ev in r.evidence:
+            if ev["state"] != "fresh":
+                print(f"    evidencia {ev['evidence_id']}: {ev['state']}")
+        for an in r.anchors:
+            print(f"    atestación anchored {an['attestation_id']}: {an['state']} {an.get('detail') or ''}".rstrip())
+        for h in r.findings:
+            print(f"    hallazgo {h['code']} {h['path']}: {h['detail']}")
+    print()
+    _imprimir_check_results(resultados, False, "Resultados")
+    print(f"\nNota: {nota}")
+
+
+def _cards_emitir(discovery_mod, pv, resultados: list, como_json: bool, titulo: str, extra: Optional[dict] = None) -> None:
+    nota = _cards_nota(discovery_mod)
+    if como_json:
+        payload = {
+            "resultados": [r.to_dict() for r in resultados],
+            "cards": [discovery_mod.report_a_dict(r) for r in pv.reports],
+            "nota": nota,
+        }
+        if extra:
+            payload.update(extra)
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        _cards_imprimir_humano(discovery_mod, pv, resultados, nota, titulo)
+
+
+def cmd_cards_validate(args: argparse.Namespace) -> int:
+    """Valida Cards de governance (solo lectura, R44/R51)."""
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    discovery_mod = _cards_importar()
+    if discovery_mod is None:
+        return 3
+    kinds_pedidos = [args.kind] if args.kind else []
+    explicito = bool(args.kind or args.path)
+    kinds, apagados, salida = _cards_gating(discovery_mod, repo_root, kinds_pedidos, bool(args.kind))
+    if salida is not None:
+        return salida
+    if not args.path and kinds is not None and not kinds:
+        pv = discovery_mod.ProjectValidation(reports=(), governance=None, notes=())
+    else:
+        # Con --path el gating se aplica luego según el kind real de cada Card.
+        filtro = None if args.path else kinds
+        pv = discovery_mod.validar_proyecto(repo_root, kinds=filtro, paths=args.path or None)
+    if args.path and args.kind:
+        # M-2: `--kind` incompatible con el kind real de un `--path` es un error de uso.
+        for r in pv.reports:
+            if r.kind not in (args.kind, discovery_mod.KIND_DESCONOCIDO):
+                print(
+                    f"--kind {args.kind} es incompatible con el kind real ({r.kind}) de {r.rel_path}",
+                    file=sys.stderr,
+                )
+                return 2
+    if args.path:
+        salida = _cards_gating_por_reportes(discovery_mod, repo_root, pv)
+        if salida:
+            return salida
+    resultados = _cards_resultados(pv, [] if explicito else apagados, discovery_mod.limpiar_texto)
+    _cards_emitir(discovery_mod, pv, resultados, args.json, "Cards validate")
+    return checks.exit_code(resultados)
+
+
+def cmd_cards_report(args: argparse.Namespace) -> int:
+    """Valida y publica el reporte HTML de UNA Card con reporting.publish (R50)."""
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    discovery_mod = _cards_importar()
+    report_mod = _importar_perezoso("cards", "report")
+    if discovery_mod is None or report_mod is None:
+        print(_mensaje_paquete_no_instalado("cards", "discovery"), file=sys.stderr)
+        return 3
+    previo = discovery_mod.validar_proyecto(repo_root, paths=[args.path])
+    salida = _cards_gating_por_reportes(discovery_mod, repo_root, previo)
+    if salida:
+        return salida
+    try:
+        publicado, pv = report_mod.publicar_card(repo_root, args.path, out_dir=args.out_dir)
+    except ImportError:
+        print(_mensaje_paquete_no_instalado("reporting", "discovery"), file=sys.stderr)
+        return 3
+    resultados = _cards_resultados(pv, [], discovery_mod.limpiar_texto) + list(publicado.results)
+    _cards_emitir(discovery_mod, pv, resultados, args.json, "Cards report", extra={"out_dir": publicado.out_dir})
+    if not args.json and publicado.out_dir:
+        print(f"Reporte: {publicado.out_dir}")
+    return checks.exit_code(resultados)
+
+
 # --- archive --------------------------------------------------------------
 
 def cmd_archive(args: argparse.Namespace) -> int:
@@ -3414,6 +4130,17 @@ _PLANTILLAS_POR_MODO = {
 }
 
 
+def _rutas_por_defecto_change(change_id: str, archivos_md: list) -> list:
+    """Artefactos por defecto de un Change en `rutas_autorizadas`: los `.md`
+    creados por `init`, `control.json` y `verification.md` (R37; `init` no crea
+    este último). Compartido por `cmd_init` y `cmd_approve` (R24)."""
+    base = f"openspec/changes/{change_id}"
+    rutas = [f"{base}/{nombre}" for nombre in archivos_md]
+    rutas.append(f"{base}/control.json")
+    rutas.append(f"{base}/verification.md")
+    return rutas
+
+
 def _change_id_invalido(change_id: str) -> bool:
     """True si `change_id` puede escapar de `openspec/changes/<change_id>/`:
     componente `..`, separador de ruta (`/` o `\\`) o ruta absoluta. `init` es
@@ -3479,10 +4206,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         "rama": rama,
         "capturado_utc": core.ahora_utc(),
     }
-    rutas_autorizadas = [
-        f"openspec/changes/{args.change_id}/{nombre}" for nombre in archivos_creados
-    ]
-    rutas_autorizadas.append(f"openspec/changes/{args.change_id}/control.json")
+    rutas_autorizadas = _rutas_por_defecto_change(args.change_id, archivos_creados)
 
     # `aprobacion_modo` (R1/D1 de 20260930-autonomous-sdd-and-remediation):
     # ausente el flag -> `per_change` (default, idéntico al comportamiento de
@@ -3856,33 +4580,55 @@ def construir_parser() -> argparse.ArgumentParser:
     exec_sub = p_exec.add_subparsers(dest="subcomando", required=True)
 
     p_exec_script = exec_sub.add_parser("script", help="Ejecuta un script .py dentro del alcance autorizado del Change.")
-    p_exec_script.add_argument("--change-id", required=True, dest="change_id")
-    p_exec_script.add_argument("--interpreter", required=True)
-    p_exec_script.add_argument("--script", required=True)
+    _agregar_args_exec_script(p_exec_script)
     p_exec_script.add_argument("--timeout", type=int, default=600)
     p_exec_script.add_argument("--json", action="store_true")
-    p_exec_script.add_argument("script_args", nargs=argparse.REMAINDER, help="Argumentos del script, tras '--'.")
     p_exec_script.set_defaults(func=cmd_exec_script)
 
     p_exec_pytest = exec_sub.add_parser("pytest", help="Ejecuta pytest sobre rutas dentro del alcance autorizado del Change.")
-    p_exec_pytest.add_argument("--change-id", required=True, dest="change_id")
-    p_exec_pytest.add_argument("--interpreter", required=True)
-    p_exec_pytest.add_argument("--paths", required=True, nargs="+")
+    _agregar_args_exec_pytest(p_exec_pytest)
     p_exec_pytest.add_argument("--timeout", type=int, default=600)
     p_exec_pytest.add_argument("--json", action="store_true")
-    p_exec_pytest.add_argument("pytest_args", nargs=argparse.REMAINDER, help="Flags extra de pytest, tras '--'.")
     p_exec_pytest.set_defaults(func=cmd_exec_pytest)
 
     p_exec_notebook = exec_sub.add_parser("notebook", help="Ejecuta un notebook vía tools/notebook_runner.py, según un manifest.")
-    p_exec_notebook.add_argument("--change-id", required=True, dest="change_id")
-    p_exec_notebook.add_argument("--interpreter", required=True)
-    p_exec_notebook.add_argument("--manifest", required=True)
-    grupo_exec_notebook = p_exec_notebook.add_mutually_exclusive_group()
-    grupo_exec_notebook.add_argument("--dry-run", action="store_true", dest="dry_run")
-    grupo_exec_notebook.add_argument("--execute", action="store_true", dest="execute")
+    _agregar_args_exec_notebook(p_exec_notebook)
     p_exec_notebook.add_argument("--timeout", type=int, default=600)
     p_exec_notebook.add_argument("--json", action="store_true")
     p_exec_notebook.set_defaults(func=cmd_exec_notebook)
+
+    # exec approve {pytest,script,notebook} (20261002-exec-approval-registration)
+    p_exec_approve = exec_sub.add_parser(
+        "approve",
+        help="Registra la aprobación humana de una ejecución exacta (supervised).",
+        description=_DESCRIPCION_EXEC_APPROVE,
+    )
+    approve_sub = p_exec_approve.add_subparsers(dest="forma_aprobar", required=True)
+
+    p_ap_pytest = approve_sub.add_parser(
+        "pytest", help="Aprueba una ejecución exacta de pytest.", description=_DESCRIPCION_EXEC_APPROVE
+    )
+    _agregar_args_exec_pytest(p_ap_pytest)
+    _agregar_args_aprobacion_humana(p_ap_pytest)
+    p_ap_pytest.set_defaults(func=cmd_exec_approve_pytest)
+
+    p_ap_script = approve_sub.add_parser(
+        "script",
+        help="Aprueba una ejecución exacta de script (contenido + argv).",
+        description=_DESCRIPCION_EXEC_APPROVE,
+    )
+    _agregar_args_exec_script(p_ap_script)
+    _agregar_args_aprobacion_humana(p_ap_script)
+    p_ap_script.set_defaults(func=cmd_exec_approve_script)
+
+    p_ap_notebook = approve_sub.add_parser(
+        "notebook",
+        help="Aprueba la ejecución de un notebook según su manifest.",
+        description=_DESCRIPCION_EXEC_APPROVE,
+    )
+    _agregar_args_exec_notebook(p_ap_notebook)
+    _agregar_args_aprobacion_humana(p_ap_notebook)
+    p_ap_notebook.set_defaults(func=cmd_exec_approve_notebook)
 
     p_dependency = subparsers.add_parser(
         "dependency",
@@ -4026,6 +4772,25 @@ def construir_parser() -> argparse.ArgumentParser:
     p_quality_drift.add_argument("--current-label", default="current", dest="current_label")
     p_quality_drift.add_argument("--json", action="store_true")
     p_quality_drift.set_defaults(func=cmd_quality_drift)
+
+    p_cards = subparsers.add_parser(
+        "cards", help="Cards de governance (Data Card, Model Card, assessment): validación y reporte."
+    )
+    cards_sub = p_cards.add_subparsers(dest="subcomando", required=True)
+    p_cards_validate = cards_sub.add_parser(
+        "validate", help="Valida Cards por rutas conocidas o --path (solo lectura)."
+    )
+    p_cards_validate.add_argument("--path", action="append", default=[], help="Archivo de Card (repetible).")
+    p_cards_validate.add_argument("--kind", choices=["data", "model", "governance"], default=None)
+    p_cards_validate.add_argument("--json", action="store_true")
+    p_cards_validate.set_defaults(func=cmd_cards_validate)
+    p_cards_report = cards_sub.add_parser(
+        "report", help="Valida y publica el reporte de UNA Card (reporting.publish)."
+    )
+    p_cards_report.add_argument("--path", required=True)
+    p_cards_report.add_argument("--out-dir", default=None, dest="out_dir")
+    p_cards_report.add_argument("--json", action="store_true")
+    p_cards_report.set_defaults(func=cmd_cards_report)
 
     p_archive = subparsers.add_parser(
         "archive", help="Archiva un cambio cerrado de openspec/changes/ a openspec/archive/ (git mv)."

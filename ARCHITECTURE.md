@@ -33,6 +33,7 @@ otros la lógica de decisión vive mezclada con la lectura de stdin en el mismo 
 | `tools/dsguard/scientific_validity.py` | Scientific validity checks (v0.4 Change 0) |
 | `tools/dsguard/notebooks.py` | Diff de notebooks (no ejecuta nada) |
 | `tools/dsguard/status.py` | Status unificado (agrega los anteriores) |
+| `tools/dsguard/guardrails_drift.py`, `pep440_subset.py` | Módulos solo-stdlib de dsguard (drift semántico de `guardrails.json`; subconjunto PEP 440); `guardrails_drift.py` no importa `autonomy`: el llamador (doctor) inyecta `parse_autonomy_policy` |
 | `tools/dsimpact/*` (todo el paquete) | Impact preflight (v0.4 Change 1) |
 | `tools/ds_profile/*` (todo excepto lo que reusa `pathguard` como config) | Profiling de datasets |
 | `tools/nbrunner/core.py`, `execute.py`, `fsdiff.py`, `manifest.py` | Ejecución controlada de notebooks (invocada por el adapter, no es adapter en sí) |
@@ -270,6 +271,36 @@ archivo es neutral y una función es adapter, al revés que `hook_presupuesto.py
    `datacontracts`, `nbrunner`) importa `tools.leadrun`/`leadrun`, ni siquiera `ds_guard.py` a
    nivel de módulo. Verificado por `tools/tests/test_v08_leadrun_neutrality.py`.
 
+13. Familia `tools/cards` (v0.9 Change 0, `20261002-card-and-evidence-foundation`): `core.py` es solo-stdlib y no importa
+    `tools.*` ni hermanos; `assess.py` importa solo `core` y, de forma perezosa dentro de una función,
+    `dsguard.checks`. Ningún paquete existente importa `cards` y `cards` no importa `autonomy`,
+    `datasources`, `qualityevidence`, `modelquality`, `datacontracts`, `leadrun`, `reporting` ni
+    `ds_init`: las referencias a evidencia son punteros (`kind` + `ref_id` + `content_sha256`) y su
+    resolución se inyecta. Los helpers (`canonical_json`, `content_sha256`, patrón de ids, reglas de
+    identidad humana, forma de `ApprovalRef`) se duplican a propósito, con tests de paridad. Change 1 (`20261002-data-cards`) agrega `datacard.py` (Data Card = `CardEnvelope` con
+    `card_kind=data_card` y body cerrado; `assess` y `resolvers` son los únicos hermanos permitidos) y
+    `resolvers.py` (resolvers stdlib que releen `.harmessi/observations|quality` y archivos de contrato y
+    recomputan hashes con paridad testeada contra `datasources`/`datacontracts`/`qualityevidence`, sin
+    importarlos). Las Cards viven en `governance/cards/data/<card_id>.json`, project-owned y fuera del
+    manifest. Change 2 (`20261005-model-cards`) agrega `modelcard.py` (Model Card = `CardEnvelope` con `card_kind=model_card`;
+    identidad `card_id = model_id__<model_version con '.'→'_'>`, una Card por versión de modelo) y amplía
+    `resolvers.py` con resolvers para `data_card`, `model_quality_result`, `model_quality_policy`,
+    `observed_metric`, `baseline_reference`, `drift_evidence` y `execution_record` (pin exacto, sin «latest»;
+    `member` semántico para entradas de métricas/baselines). Las Model Cards viven en
+    `governance/cards/model/<card_id>.json`.
+    Change 3 (`20261005-model-risk-responsible-ai`) agrega `govpolicy.py` (policy de governance como datos:
+    niveles `low/medium/high`, seis dimensiones, orden de fuerza único, policy base `harmessi-base` v1 con hash
+    congelado y merge monotónico fail-closed de endurecimientos) y `modelgov.py` (`ModelGovernanceAssessment`:
+    `card_kind=governance_assessment`, una evaluación por Model Card concreta, `risk_level` declarado por
+    atestación, completitud `governance_completeness` derivada con regla «todos los soportes aceptables y
+    frescos»). Vive en `governance/model-risk/<card_id>.json`. `complete` significa que los requisitos de la
+    policy están satisfechos; no equivale a aprobación ética, de justicia, seguridad ni cumplimiento.
+    La Foundation suma los kinds observados `model_card`, `governance_policy` y `evidence_document`
+    (este último acredita existencia e integridad de un documento, no su contenido).
+    No está en
+    el manifest administrado hasta Change 4. Verificado por `tools/tests/test_v09_cards_neutrality.py`,
+    `test_v09_cards_parity.py` y `test_v09_cards_inert.py`.
+
 Estas reglas ya se cumplen hoy (verificado, ver `tools/tests/test_architecture_boundaries.py`,
 Change 3) — este documento las hace explícitas, no las introduce de cero.
 
@@ -488,11 +519,51 @@ usarse para fuentes de datos porque ya lo ocupa `tools/providers`.
 intercepta un script que abre su propia conexión. Es el mismo tipo de límite que §5 y que el
 enforcement best-effort de `Bash`/`PowerShell`.
 
+### 6.1 Límites agregados de autonomía (Corrective A de v0.9)
+
+`autonomy.budgets` (`aggregate_minutes`, `max_sessions`, `session_minutes`, ...) es la representación canónica y la
+única que se documenta; `autonomy.limits` (`max_sessions`, `max_total_minutes`) sigue legible por compatibilidad.
+Si ambas existen, el límite efectivo por eje es el MENOR; un valor inválido en cualquiera falla cerrado. Ambos ejes
+alcanzan `checkpoint_resumable`/LIMIT (nunca STOP). El alcance de un Change se declara en `proposal.md`
+(`## Alcance autorizado`, aprobado por hash); `dir/**` significa el directorio y sus descendientes.
+`.harmessi/executions/**` y `openspec/decisions/ledger.jsonl` son outputs internos del harness, no scope funcional.
+
+### 6.2 Checkpoints no circulares, subset PEP 440 y drift semántico de guardrails (Corrective B de v0.9)
+
+- **Checkpoints.** El bullet de `## Checkpoints de negocio` se escribe `aprobacion: <change_id>/proposal.md@approved` (sin el hash del
+  propio proposal). Al aprobar `proposal.md`, `ds_guard approve` calcula el hash real una vez y lo materializa en
+  `control["decisiones_preaprobadas"]`; `@<64 hex>` legacy sigue aceptándose y 64 ceros se acepta sintácticamente pero NUNCA cuenta como
+  aprobado (aviso `deprecated`; `status` lo muestra `placeholder`). La resolución de «aprobación vigente» es UNA primitiva de dsguard
+  (`sdd.resolver_aprobacion_registrada`) compartida con `tools/cards/approvals.py`; no hay segundo resolver ni store.
+- **Versiones.** `tools/dsguard/pep440_subset.py` implementa un SUBSET documentado de PEP 440 (release, `aN/bN/rcN`, `.postN`, `.devN`, `+local`
+  solo en la versión consultada; incluye la exclusión de pre/post-releases de la misma release en `<V`/`>V`) y falla cerrado fuera de él.
+  No es PEP 440 completo ni usa `packaging`.
+- **Guardrails.** `.claude/guardrails.json` sigue siendo managed/protegido, pero Doctor compara SEMÁNTICAMENTE contra la plantilla
+  distribuida ignorando solo la lista cerrada de paths mutables (`version`, `autonomy.mode`, `autonomy.version`, `autonomy.budgets`,
+  `autonomy.limits`); cualquier otra clave (holdouts, data_raw, secretos_extra, write_scopes, excepciones, sealed_sources, source_access,
+  desconocidas) sigue marcando `HARMESSI-DRIFT`. `HARMESSI-AUTONOMY-CONFIG` valida los valores mutables (mutable ≠ válido).
+
+### 6.3 `ds_profile` con memoria acotada (Corrective C de v0.9)
+
+`ds_profile` decide exacto vs muestreado ANTES de leer filas (`sampling.decidir_plan`): solo metadata (bytes, filas del footer/conteo CSV,
+columnas) contra `--max-mb-exactos`, que ahora es el PRESUPUESTO de memoria de trabajo (estimación `filas × columnas × 96 B`; no se confía en
+el tamaño comprimido). Exactos en ambos modos por acumuladores O(1): filas, nulos, min/max, media/std, fechas, `dtype`, `binary_numeric`,
+`posible_problema_tipo`. `unique`, `top_valores`, `mediana`, `cuantiles`, flags de cardinalidad y `duplicados_fila` son exactos solo dentro
+del presupuesto; si no, salen de un reservoir determinista (seed + `version_algoritmo`) con tope por presupuesto y se marcan `muestreada`.
+`profile.json.sampling` agrega (aditivo) `motivo`, `filas_observadas`, `version_algoritmo`, `presupuesto_bytes`, `estimado_bytes_exactos`.
+Parquet se lee por batches acotados (`BATCH_SIZE`), nunca `read_table`/pandas; fallas de lectura o fuentes demasiado anchas terminan con exit 4
+y mensaje accionable. Sin dependencias nuevas.
+
 ## 7. Dirección arquitectónica planificada para v0.10 (roles ≠ skills ≠ runtime, NO implementada)
 
 Registrado 2026-10-01 (feedback externo, preservado como línea de evolución -- ver `v0.10.md`,
 "Composable Engineering & Data Science Skills", para el desglose completo de candidatas y
-principios). **Nada de esta sección existe todavía en el código**; es dirección, no contrato.
+principios). **Nada de esta sección (la separación Role/Skill/Runtime y las Composable Skills) está implementado en v0.9.** Lo que sí existe en v0.9 es
+el contrato base de `tools/cards` (identidad, `EvidenceRef`, `HumanAttestation` declared/anchored, evaluación derivada
+`invalid > stale > incomplete > complete`), las Data/Model Cards, la governance de modelo y su integración (CLI, Doctor, capabilities, reporting; ver §8).
+`anchored` significa estructuralmente coherente
+(con `ApprovalRef` válido), no verificado contra `control.json`/ledger; las aprobaciones de Harmessi son
+declaraciones humanas registradas bajo el modelo de confianza del harness, no firmas ni prueba de autoría.
 
 Separación conceptual que Harmessi preserva hacia v0.10: **Agent/Role** (quién trabaja y con qué
 permisos -- Lead, writer, reviewer, metodólogo, ya estables en §2) ≠ **Skill** (cómo abordar
@@ -524,3 +595,33 @@ del PROYECTO, nunca branding ni conocimiento hardcodeado del harness.
 Antes de implementar cualquier skill de este catálogo: auditar qué capacidades ya existen en Lead/
 reviewer/metodólogo/SDD/`tools/dsimpact`/tests/remediation -- no duplicar una capacidad ya presente
 solo porque tenga otro nombre.
+
+## 8. Dirección arquitectónica planificada para v0.9 (Cards = vistas de governance, NO implementada)
+
+Registrado 2026-10-02 (ver `docs/roadmap/v0.9.md` para el alcance congelado). **Nada de esta sección
+existe todavía en el código**; es dirección, no contrato.
+
+Las Data Cards y Model Cards son **vistas de governance estructuradas y respaldadas por evidencia**:
+referencian artefactos existentes (v0.7 quality/contracts/drift, v0.8 `SourceObservation`/
+`SourceProvenance`/`ExecutionRecord`) y validan completitud, pero no generan evidencia ni cambian la
+autonomía. Distinguen evidencia observada/de sistema de `HumanAttestation`, que no satisface requisitos
+empíricos. La validación de Cards es un dominio de governance separado de la decisión de
+runtime/autonomía (no agrega STOP, no vive en `guardrails.json`).
+
+### 8.1 Integración de Cards al producto (v0.9 Change 4, `20261005-cards-governance-integration`)
+
+- **Capabilities opt-in.** `CAPABILITIES_CONOCIDAS` conserva su semántica histórica (default-on, `predictive_modeling`);
+  `data_cards` y `model_governance` viven en `CAPABILITIES_OPT_IN` (default-off, `--enable-capability`).
+  `model_governance` exige `predictive_modeling` (validado por `validar_capabilities` en install, sync y Doctor). Con
+  flags de capability, `sync` parte del set persistido completo; sin ellos conserva el comportamiento v0.8.
+- **Provisioning.** `tools/cards` se distribuye como entradas VERBATIM capability-aware (campo `capabilities_cualquiera`
+  para los módulos compartidos); `tools/cards/tests` y `governance/` (project-owned, `EXCLUSIONES_PERMANENTES`) nunca. El
+  instalador no crea Cards, assessments ni hardening.
+- **Adaptadores** (únicos módulos de `tools/cards` que pueden importar `dsguard`/`reporting`/`ds_init`): `govconfig`
+  (configuración efectiva de governance y hardening ACTUAL), `approvals` (resolución real de `ApprovalRef` contra
+  `control.json`; prueba una aprobación registrada bajo el trust model, NO identidad criptográfica), `discovery`, `report`.
+  La Foundation sigue stdlib-only y recibe el verificador/contexto por parámetro.
+- **Superficie:** `ds_guard cards validate|report`, Doctor `HARMESSI-GOV-*` y reporting vía `tools/reporting`
+  (`report_kind="governance"`, `decision_scope="exploratory"`). `governance` en `REPORT_KINDS` es solo vocabulario: no
+  autoriza lectura de holdout ni equivale a `evaluation`/`model`.
+- **Autonomía intacta (D1/D5/D6):** un FAIL de `cards validate` o un ERROR de Doctor no es una decisión de ejecución.

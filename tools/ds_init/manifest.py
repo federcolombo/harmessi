@@ -47,6 +47,14 @@ ORDEN_STAGES = ("discovery", "experiment", "production_candidate", "production")
 # habilitadas" -- backward compatible, cero cambio si nadie deshabilita nada.
 CAPABILITIES_CONOCIDAS = ("predictive_modeling",)
 
+# Capabilities opt-in (Change `20261005-cards-governance-integration`, R1/D1):
+# default-OFF, a diferencia de `CAPABILITIES_CONOCIDAS` (default-on histórico).
+# Mismo campo persistido (`capabilities_habilitadas`) y mismo filtro de
+# manifiesto; solo cambia el cómputo del set. `CAPABILITIES_CONOCIDAS` NO se
+# amplía: hacerlo activaría Cards en toda instalación nueva y en todo `sync`.
+CAPABILITIES_OPT_IN = ("data_cards", "model_governance")
+CAPABILITIES_VALIDAS = CAPABILITIES_CONOCIDAS + CAPABILITIES_OPT_IN
+
 # Mapeo explícito entre el identificador público de perfil (el que se escribe
 # en `--perfil` / el default de la CLI, con guiones, R2) y el nombre real del
 # directorio del perfil bajo `profiles/` (con guion bajo — no se renombra).
@@ -97,6 +105,10 @@ class EntradaManifiesto:
       proyecto -- compatible hacia atrás, R1/R5 de `spec.md` Change
       `20260930-project-extension-and-installer-integration`). Vocabulario
       inicial: `"predictive_modeling"`.
+    - `capabilities_cualquiera`: variante «cualquiera de» (R7 del Change
+      `20261005-cards-governance-integration`): la entrada aplica si al menos
+      una de estas capabilities está habilitada (intersección no vacía). Default
+      `()` sin efecto. Compatible con `capabilities` (subconjunto estricto).
     """
 
     fuente: Optional[str]
@@ -106,6 +118,7 @@ class EntradaManifiesto:
     perfiles: tuple = field(default_factory=tuple)
     stage_minimo: str = "discovery"
     capabilities: tuple = field(default_factory=tuple)
+    capabilities_cualquiera: tuple = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         if self.tratamiento not in TRATAMIENTOS_VALIDOS:
@@ -379,6 +392,18 @@ MANIFEST: tuple = (
         tratamiento=VERBATIM,
         destino="tools/dsguard/hook_launcher_rutas.py",
         descripcion="Lanzador Python puro del hook de protección de rutas (sin bash, cross-platform)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/dsguard/guardrails_drift.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/guardrails_drift.py",
+        descripcion="Drift de guardrails.json ignorando rutas mutables de autonomía (R25-R30; módulo solo-stdlib de dsguard)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/dsguard/pep440_subset.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/pep440_subset.py",
+        descripcion="Subconjunto de especificadores PEP 440 (módulo solo-stdlib de dsguard)",
     ),
     EntradaManifiesto(
         fuente=".claude/guardrails.json",
@@ -845,6 +870,93 @@ MANIFEST: tuple = (
         destino="tools/qualityevidence/evidence.py",
         descripcion="Persistencia de evidencia de calidad (.harmessi/quality/) y computo de drift (absolute_diff/relative_diff), codigos QUALITYEVIDENCE-* (v0.7 Change 3)",
     ),
+    # tools/cards (Change 20261005-cards-governance-integration, R8): opt-in por
+    # capability; sin tests; los compartidos aplican si hay data_cards O
+    # model_governance. Ningún módulo importa uno de capability ausente.
+    EntradaManifiesto(
+        fuente="tools/cards/__init__.py",
+        tratamiento=VERBATIM,
+        destino="tools/cards/__init__.py",
+        descripcion="Paquete de Cards de governance (Data/Model Card, assessment), sin logica",
+        capabilities_cualquiera=("data_cards", "model_governance"),
+    ),
+    EntradaManifiesto(
+        fuente="tools/cards/core.py",
+        tratamiento=VERBATIM,
+        destino="tools/cards/core.py",
+        descripcion="Tipos y utilidades neutrales de Cards (compartido data_cards/model_governance), solo stdlib",
+        capabilities_cualquiera=("data_cards", "model_governance"),
+    ),
+    EntradaManifiesto(
+        fuente="tools/cards/assess.py",
+        tratamiento=VERBATIM,
+        destino="tools/cards/assess.py",
+        descripcion="Evaluacion de requisitos/evidencias/atestaciones de Cards (compartido)",
+        capabilities_cualquiera=("data_cards", "model_governance"),
+    ),
+    EntradaManifiesto(
+        fuente="tools/cards/resolvers.py",
+        tratamiento=VERBATIM,
+        destino="tools/cards/resolvers.py",
+        descripcion="Resolvers de evidencia de Cards (compartido)",
+        capabilities_cualquiera=("data_cards", "model_governance"),
+    ),
+    EntradaManifiesto(
+        fuente="tools/cards/approvals.py",
+        tratamiento=VERBATIM,
+        destino="tools/cards/approvals.py",
+        descripcion="Adaptador de resolucion de ApprovalRef sobre dsguard (compartido)",
+        capabilities_cualquiera=("data_cards", "model_governance"),
+    ),
+    EntradaManifiesto(
+        fuente="tools/cards/discovery.py",
+        tratamiento=VERBATIM,
+        destino="tools/cards/discovery.py",
+        descripcion="Discovery determinista de Cards en governance/ y validacion de proyecto (compartido)",
+        capabilities_cualquiera=("data_cards", "model_governance"),
+    ),
+    EntradaManifiesto(
+        fuente="tools/cards/report.py",
+        tratamiento=VERBATIM,
+        destino="tools/cards/report.py",
+        descripcion="Adaptador de Cards a reporting.core.Report (compartido)",
+        capabilities_cualquiera=("data_cards", "model_governance"),
+    ),
+    EntradaManifiesto(
+        fuente="tools/cards/datacard.py",
+        tratamiento=VERBATIM,
+        destino="tools/cards/datacard.py",
+        descripcion="Data Card: esquema y evaluacion (capability data_cards)",
+        capabilities=("data_cards",),
+    ),
+    EntradaManifiesto(
+        fuente="tools/cards/modelcard.py",
+        tratamiento=VERBATIM,
+        destino="tools/cards/modelcard.py",
+        descripcion="Model Card: esquema y evaluacion (capability model_governance)",
+        capabilities=("model_governance",),
+    ),
+    EntradaManifiesto(
+        fuente="tools/cards/govpolicy.py",
+        tratamiento=VERBATIM,
+        destino="tools/cards/govpolicy.py",
+        descripcion="Policy de governance de riesgo de modelo (BASE_POLICY, hardening, merge)",
+        capabilities=("model_governance",),
+    ),
+    EntradaManifiesto(
+        fuente="tools/cards/modelgov.py",
+        tratamiento=VERBATIM,
+        destino="tools/cards/modelgov.py",
+        descripcion="Assessment de governance de modelo (capability model_governance)",
+        capabilities=("model_governance",),
+    ),
+    EntradaManifiesto(
+        fuente="tools/cards/govconfig.py",
+        tratamiento=VERBATIM,
+        destino="tools/cards/govconfig.py",
+        descripcion="Configuracion efectiva de governance: hardening de proyecto + capa local",
+        capabilities=("model_governance",),
+    ),
     EntradaManifiesto(
         fuente=f"{_dir_templates('python_jupyter_data')}/eda.md.tmpl",
         tratamiento=PLANTILLA,
@@ -903,6 +1015,7 @@ EXCLUSIONES_PERMANENTES: tuple = (
     "openspec/kdd/",
     "openspec/lifecycle/",
     ".harmessi/",
+    "governance/",
     "requirements.txt",
     "requirements-lock.txt",
     "tools/tests/test_ds_guard.py",
@@ -1009,11 +1122,62 @@ def manifest_para_perfil_stage_y_capabilities(
     intersectan). Cualquier llamador existente que siga usando
     `manifest_para_perfil`/`manifest_para_perfil_y_stage` sin capabilities no
     ve ningún cambio de comportamiento (R5)."""
-    capabilities_habilitadas = frozenset(capabilities_habilitadas)
     entradas = manifest_para_perfil_y_stage(perfil, stage)
+    return filtrar_entradas_por_capabilities(entradas, capabilities_habilitadas)
+
+
+def filtrar_entradas_por_capabilities(entradas, capabilities_habilitadas) -> list:
+    """UN helper de filtro por capabilities (R7 del Change
+    `20261005-cards-governance-integration`), reutilizado por el planner, por
+    `regenerar_control` y por Doctor. Una entrada aplica si:
+    - `capabilities == ()` y `capabilities_cualquiera == ()` (sin filtro), o
+    - `capabilities` es subconjunto de las habilitadas (si está declarada), y
+    - `capabilities_cualquiera` intersecta las habilitadas (si está declarada).
+    Ambas condiciones declaradas se exigen a la vez (conjunción)."""
+    habilitadas = frozenset(capabilities_habilitadas)
     return [
         entrada
         for entrada in entradas
-        if not entrada.capabilities
-        or set(entrada.capabilities) <= capabilities_habilitadas
+        if (not entrada.capabilities or set(entrada.capabilities) <= habilitadas)
+        and (
+            not entrada.capabilities_cualquiera
+            or set(entrada.capabilities_cualquiera) & habilitadas
+        )
     ]
+
+
+def validar_capabilities(capabilities) -> list:
+    """Valida un set de capabilities (D4): devuelve lista de mensajes (vacía =
+    válido). Regla: `model_governance` exige `predictive_modeling`. Nombres
+    desconocidos NO se validan aquí (R15: Doctor los reporta como WARN)."""
+    capabilities = frozenset(capabilities)
+    mensajes = []
+    if "model_governance" in capabilities and "predictive_modeling" not in capabilities:
+        mensajes.append(
+            "la capability 'model_governance' requiere 'predictive_modeling' habilitada"
+        )
+    return mensajes
+
+
+def capabilities_efectivas_sync(persistidas, enable, disable) -> frozenset:
+    """Set efectivo de capabilities para `sync` (R5).
+
+    - Sin flags (enable y disable vacíos): históricas = CONOCIDAS - disable
+      (v0.8 intacto); opt-in = persistidas - disable. Sin lista persistida
+      (legacy): opt-in deshabilitadas (R12).
+    - Con flags y lista persistida: (persistidas | enable) - disable (nada
+      deshabilitado se re-habilita ni nada habilitado se pierde sin pedirlo).
+    - Con flags y sin lista (legacy): (default histórico | enable) - disable.
+    """
+    enable = frozenset(enable or ())
+    disable = frozenset(disable or ())
+    historicas = frozenset(CAPABILITIES_CONOCIDAS)
+    if not enable and not disable:
+        # Se conserva TODO lo persistido que no sea histórico (opt-in y nombres
+        # desconocidos: nunca se descartan en silencio); lo histórico se recalcula.
+        no_historicas_persistidas = (
+            frozenset(persistidas) - historicas if persistidas is not None else frozenset()
+        )
+        return (historicas | no_historicas_persistidas) - disable
+    base = frozenset(persistidas) if persistidas is not None else historicas
+    return (base | enable) - disable
