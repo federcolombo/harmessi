@@ -51,7 +51,7 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/templates/proposal.md",
-      "sha256": "99c7905c7a251facc91afeed775fa7f7c9535dfcc745050674813180327f51e4"
+      "sha256": "f83a793897ce578469afcb8b74750cbebac85aa1de850bc5bbe53def3ad0f803"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/templates/spec.md",
@@ -87,7 +87,7 @@
     },
     {
       "ruta": "tools/dsguard/sdd.py",
-      "sha256": "59082420d42b3f7c88435f954b530ceefe6905fd43e5c1dfccdd6aa1e7a45fdd"
+      "sha256": "547094c29c2eac8ea65431b273569c10f4316ba57e4a01299f949bc4ad2d3172"
     },
     {
       "ruta": "tools/dsguard/decision.py",
@@ -147,7 +147,7 @@
     },
     {
       "ruta": "tools/dsguard/hook_presupuesto.py",
-      "sha256": "e245895fd13f8639565bbd9db73900933592431695f399e7acac3acc0e0523a3"
+      "sha256": "185a89a8aa7f35518016867a4eff81f5f19b917f156b1bd28e4b545069fe88da"
     },
     {
       "ruta": "tools/dsguard/hook_launcher_presupuesto.py",
@@ -167,11 +167,11 @@
     },
     {
       "ruta": "tools/dsguard/guardrails_drift.py",
-      "sha256": "f4494342c6d10af742233b920b73915a9c5f133695921e15cfc4d776f4c007f1"
+      "sha256": "7ee840bd2ab7e7045f2c7dc6f83b96878d4b2ce82849de8ba08fabe5dcaa3e9f"
     },
     {
       "ruta": "tools/dsguard/pep440_subset.py",
-      "sha256": "58de706d7ad35ea0708c82513013d9efefba191a925683b3aed5025e7268bfaa"
+      "sha256": "fadf7dd50b052f5db2d0447127b919681c68da6324f7350eef91671d8648952a"
     },
     {
       "ruta": ".claude/guardrails.json",
@@ -219,7 +219,7 @@
     },
     {
       "ruta": "tools/leadrun/allowlist.py",
-      "sha256": "2c7cee44a28ab4bbfe94f90d88a3bfe8d89a56fbdf86428425316135e8def300"
+      "sha256": "c9f92272a88f2c76cd37409c3cf20eaa0e17eb6f0f5541aeb2bcf532dbbce1e9"
     },
     {
       "ruta": "tools/leadrun/scripts.py",
@@ -251,11 +251,11 @@
     },
     {
       "ruta": "tools/ds_profile/cli.py",
-      "sha256": "9b9ee97ac9c5bb5bf7d9831eff8f0dd123eac8e0bc636c4adc7795606845f4e6"
+      "sha256": "86a5e12aff22d59041c7afd50859fe956c194d715c88704558b897e2e8ba468b"
     },
     {
       "ruta": "tools/ds_profile/io_readers.py",
-      "sha256": "bc5f0efc5bb98fca35cbdd1e2d9527fcf589ae70032b0fcbdb8030562324dd9c"
+      "sha256": "d78b6a5be5cf383e3f6ff436217162c2420dbcfc73d201098a514788e0bda6c2"
     },
     {
       "ruta": "tools/ds_profile/fingerprint.py",
@@ -267,7 +267,7 @@
     },
     {
       "ruta": "tools/ds_profile/column_stats.py",
-      "sha256": "66f77e942808b74b89abf47f0580ba63db0d8c9adbb5cfdaf1dee7e191d29c3b"
+      "sha256": "3522230e4b0bd3254e448aee340beeefc4337db9ad89a32925aa064f2850fa61"
     },
     {
       "ruta": "tools/ds_profile/quality_flags.py",
@@ -275,7 +275,7 @@
     },
     {
       "ruta": "tools/ds_profile/sampling.py",
-      "sha256": "32ca2e3832343364a48cd8d6e59434130100087fb985798d542aca234fce99d8"
+      "sha256": "401b99dd491a147cb55b7f088c2498b5a70087d6584a92b70bf65233419b2b7f"
     },
     {
       "ruta": "tools/ds_profile/holdout_guard.py",
@@ -283,7 +283,7 @@
     },
     {
       "ruta": "tools/ds_profile/report.py",
-      "sha256": "ac2e671e95cc798a60f333b4b6b8c0f872df9d74666a596d82d0f058521b9394"
+      "sha256": "56fe03bf85d043a97133b96739f23afb8515cb9e481e69abe52123f8f8f5b31c"
     },
     {
       "ruta": "tools/dsimpact/__init__.py",
