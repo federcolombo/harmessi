@@ -596,6 +596,28 @@ Antes de implementar cualquier skill de este catálogo: auditar qué capacidades
 reviewer/metodólogo/SDD/`tools/dsimpact`/tests/remediation -- no duplicar una capacidad ya presente
 solo porque tenga otro nombre.
 
+### 7.1 Congelado por Change 0 de v0.10 (aprobado 2026-10-08)
+
+Fijado por `20261008-v010-roadmap-and-architecture-audit`. Es dirección congelada: NADA de esto está implementado todavía.
+
+- **Role vs Skill vs Runtime; contrato de skill.** Una composable skill es un markdown pequeño, versionado, cargado bajo demanda y reusable, sin
+  permisos/hooks propios (los permisos vienen del rol/runtime), sin instalar dependencias y sin bypass de STOP/governance. Frontmatter mínimo:
+  `name`, `purpose`, `when_to_load`, `roles`, `artifacts`. Sin marketplace; no se crea un runtime de skills nuevo si
+  `.claude/skills/lead-data-scientist/*.md` ya soporta la composición.
+- **Frontera domain-modeling.** Domain Model (qué significa un concepto) ≠ Decision Ledger (por qué se decidió) ≠ Data Contract (qué
+  estructura/evidencia cumple el dato) ≠ Data Card (qué describe un data product concreto); sin duplicar, con referencias por id. El domain model
+  vive en `GLOSSARY.md` en la raíz del proyecto: project-owned, versionable en Git, no managed, sin registry/DB y sin evidencia de runtime. Estados
+  `hypothesis` | `approved`; `approved` exige aprobación verificable bajo el trust model vigente (sin ella es inválido, fail-closed) y nunca se infiere
+  por uso repetido ni por una inferencia del LLM.
+- **Frontera trust/authenticity.** `ApprovalRef` sigue siendo «aprobación registrada bajo el trust model». T0 `declared` = declaración registrada
+  (`--usuario` es metadata declarada; no demuestra presencia ni identidad). T1 `tty_confirmed` = confirmación interactiva desde un terminal de
+  control soportado: una señal de presencia humana más fuerte, NO prueba de identidad, autoría criptográfica ni non-repudiation. T2 (canal
+  separado/restricciones de adapter) es diseño futuro documentado; T3 (PKI/firmas) está fuera de alcance. Todo tier es aditivo y no cambia las Cards.
+- **Writer-concurrency.** Un único rol writer, con N instancias solo con ownership de archivos disjunto declarado en `tasks.md` antes de lanzar. El
+  Lead coordina y gobierna; no es writer.
+- **Re-adopción de guardrails.** Acotada a una closed list; no equivale a «aceptar el baseline actual» ni a ignorar drift. Fuera de la lista sigue
+  siendo drift, y los controles de seguridad no se re-adoptan.
+
 ## 8. Dirección arquitectónica planificada para v0.9 (Cards = vistas de governance, NO implementada)
 
 Registrado 2026-10-02 (ver `docs/roadmap/v0.9.md` para el alcance congelado). **Nada de esta sección

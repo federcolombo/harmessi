@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "change_id": "20261008-v010-roadmap-and-architecture-audit",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-08T13:11:40Z",
+  "baseline": {
+    "commit": "ff9a39d805f6e74dd268af02baed62e251cfd5d5",
+    "rama": "v0.10-dev",
+    "capturado_utc": "2026-10-08T13:11:40Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "docs/roadmap/README.md",
+      "docs/roadmap/v0.10.md",
+      "openspec/changes/20261008-v010-roadmap-and-architecture-audit/**",
+      "openspec/changes/20261008-v010-roadmap-and-architecture-audit/control.json",
+      "openspec/changes/20261008-v010-roadmap-and-architecture-audit/design.md",
+      "openspec/changes/20261008-v010-roadmap-and-architecture-audit/proposal.md",
+      "openspec/changes/20261008-v010-roadmap-and-architecture-audit/spec.md",
+      "openspec/changes/20261008-v010-roadmap-and-architecture-audit/tasks.md",
+      "openspec/changes/20261008-v010-roadmap-and-architecture-audit/verification.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f5c58f7f06fd2fc4ab6bbc06c35e0b314af17b1daa042d7add8bdcfc8cf1f393",
+      "registrado_utc": "2026-10-08T13:49:40Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-08",
+      "alcance_aprobado": "Aprobación y cierre de Change 0 v0.10 roadmap-and-architecture-audit",
+      "cita": "Aprobación humana explícita de roadmap v0.10 y decisiones M1-M5"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f0732198c3b0391059a79cf6855958b1813ac43cdd0e02b2d0947fe9d8c6b085",
+      "registrado_utc": "2026-10-08T13:49:41Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-08",
+      "alcance_aprobado": "Aprobación y cierre de Change 0 v0.10 roadmap-and-architecture-audit",
+      "cita": "Aprobación humana explícita de roadmap v0.10 y decisiones M1-M5"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "6882c67493f916a77819f167fb1289cbc6e427a395c33afe1d1551ea49657ca7",
+      "registrado_utc": "2026-10-08T13:49:42Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-08",
+      "alcance_aprobado": "Aprobación y cierre de Change 0 v0.10 roadmap-and-architecture-audit",
+      "cita": "Aprobación humana explícita de roadmap v0.10 y decisiones M1-M5"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-08T13:49:54Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-08T13:51:53Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-08T13:51:56Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-08T13:49:53Z",
+      "cierre_utc": "2026-10-08T13:51:57Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 120,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-08T15:49:53Z",
+      "minutos_consumidos": 2.066666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-08T13:50:31Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}
