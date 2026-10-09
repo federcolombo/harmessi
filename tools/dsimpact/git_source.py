@@ -46,30 +46,26 @@ def listar_cambios(repo_root: Path, since: Optional[str], staged: bool) -> list:
     [--staged] [since]`. Parsea A/M/D/Rxxx/Cxxx/T -- T se trata como M; C se
     trata como archivo nuevo en `new_path`, sin rastrear origen (límite
     documentado en `design.md` §8)."""
-    args = ["diff", "--name-status", "-M"]
-    if staged:
-        args.append("--staged")
-    else:
-        args.append(since)
-    r = repo_mod._git(repo_root, *args)
-    if r.returncode != 0:
-        raise GitSourceError(f"git diff falló: {r.stderr.strip()}")
+    # `diff_name_status` usa `-z` (rutas sin escapar, inmune a `core.quotepath`) y ya incluye `-M`.
+    args = ["--staged"] if staged else [since]
+    try:
+        entradas = repo_mod.diff_name_status(repo_root, *args)
+    except repo_mod.GitCommandError as exc:
+        raise GitSourceError(str(exc)) from exc  # mensaje ya trae el stderr de git
+    except repo_mod.GitOutputError as exc:
+        raise GitSourceError(f"git diff falló: {exc}") from exc
     resultado = []
-    for linea in r.stdout.split("\n"):
-        if not linea.strip():
-            continue
-        campos = linea.split("\t")
-        codigo = campos[0]
+    for codigo, nueva, vieja in entradas:
         if codigo.startswith("R"):
-            resultado.append(ArchivoCambiado(campos[2], STATUS_RENAMED, old_path=campos[1]))
+            resultado.append(ArchivoCambiado(nueva, STATUS_RENAMED, old_path=vieja))
         elif codigo.startswith("C"):
-            resultado.append(ArchivoCambiado(campos[2], STATUS_ADDED))
+            resultado.append(ArchivoCambiado(nueva, STATUS_ADDED))
         elif codigo == "A":
-            resultado.append(ArchivoCambiado(campos[1], STATUS_ADDED))
+            resultado.append(ArchivoCambiado(nueva, STATUS_ADDED))
         elif codigo == "D":
-            resultado.append(ArchivoCambiado(campos[1], STATUS_DELETED))
+            resultado.append(ArchivoCambiado(nueva, STATUS_DELETED))
         else:  # M, T, u otros -- tratados como modified
-            resultado.append(ArchivoCambiado(campos[1], STATUS_MODIFIED))
+            resultado.append(ArchivoCambiado(nueva, STATUS_MODIFIED))
     return resultado
 
 

@@ -9,6 +9,7 @@ Nunca se commitea nada desde este módulo.
 from __future__ import annotations
 
 import fnmatch
+import re
 import subprocess
 from pathlib import Path
 
@@ -89,6 +90,101 @@ def list_dirty_files(repo_root: Path) -> list:
         archivos.append(ruta)
         i += 1
     return archivos
+
+
+class GitOutputError(ValueError):
+    """Salida de Git ilegible, malformada o comando fallido (nunca se adivina)."""
+
+
+class GitCommandError(GitOutputError):
+    """El comando git terminó con returncode != 0 (distinto de salida ilegible,
+    que es `GitOutputError` puro)."""
+
+
+_ESTADO_VALIDO = re.compile(r"[AMDTUXB]|[RC]\d{1,3}")
+
+
+def parse_name_status_z(salida: str) -> list:
+    """Parsea la salida de `git diff --name-status -z -M`. Función PURA.
+
+    Campos separados por `\\0`. Registros `X\\0ruta\\0` para estados de una
+    letra (A, M, D, T, U, X, B) y `R<nn>\\0vieja\\0nueva\\0` /
+    `C<nn>\\0origen\\0destino\\0` (tres campos). Devuelve una lista de tuplas
+    `(codigo, ruta_nueva, ruta_vieja_o_None)`; `codigo` es el campo de estado
+    tal cual (`"R100"`, `"M"`). Para R/C, `ruta_nueva` es el destino y
+    `ruta_vieja` el origen; para el resto `ruta_vieja` es None.
+
+    Salida vacía -> `[]`. Se tolera el `\\0` final. Estado vacío o desconocido,
+    registro truncado o ruta vacía -> `GitOutputError`; nunca se devuelven
+    resultados parciales. No se usa `splitlines` ni `split("\\t")` ni se
+    interpretan escapes octales (las rutas pueden contener `\\t` o `\\n`).
+
+    Contrato de encoding: la salida `-z` de Git es UTF-8 también en Windows.
+    `_git` decodifica `utf-8` con `errors="replace"`: un byte inválido produce
+    U+FFFD y la ruta no coincidirá con ningún alcance (falla cerrado). No hay
+    normalización Unicode NFC/NFD. No depende de `core.quotepath`.
+
+    El estado se valida completo: `[AMDTUXB]` o `[RC]` seguido de 1 a 3
+    dígitos (p. ej. `R100`, `C75`).
+
+    Limitación preexistente: `_git` usa `text=True` (universal newlines), por
+    lo que un `\\r` dentro de un nombre de archivo POSIX se convierte en `\\n`.
+    Afecta también a `list_dirty_files` y queda fuera de este corrective; las
+    rutas con `\\t` y `\\n` sí se preservan.
+    """
+    if not salida:
+        return []
+    campos = salida.split("\0")
+    if campos[-1] == "":
+        campos = campos[:-1]
+    registros = []
+    i = 0
+    while i < len(campos):
+        codigo = campos[i]
+        if not codigo:
+            raise GitOutputError(f"Estado vacío en la posición {i} de la salida -z")
+        if not _ESTADO_VALIDO.fullmatch(codigo):
+            raise GitOutputError(f"Estado desconocido en la salida -z: {codigo!r}")
+        cantidad = 2 if codigo[0] in ("R", "C") else 1
+        rutas = campos[i + 1:i + 1 + cantidad]
+        if len(rutas) < cantidad:
+            raise GitOutputError(
+                f"Registro truncado para el estado {codigo!r}: "
+                f"se esperaban {cantidad} ruta(s) y hay {len(rutas)}"
+            )
+        if any(r == "" for r in rutas):
+            raise GitOutputError(f"Ruta vacía en el registro con estado {codigo!r}")
+        if cantidad == 2:
+            registros.append((codigo, rutas[1], rutas[0]))
+        else:
+            registros.append((codigo, rutas[0], None))
+        i += 1 + cantidad
+    return registros
+
+
+def diff_name_status(repo_root: Path, *args: str) -> list:
+    """Ejecuta `git diff --name-status -z -M <args>` y devuelve
+    `parse_name_status_z(stdout)`. returncode != 0 -> `GitOutputError` con el
+    stderr: se lanza `GitCommandError` (subclase de `GitOutputError`); la salida
+    malformada lanza `GitOutputError` puro, así el consumidor distingue ambos.
+
+    Contrato de encoding: la salida `-z` es UTF-8 también en Windows; `_git`
+    decodifica `utf-8` con `errors="replace"` (un byte inválido produce U+FFFD
+    y la ruta no coincidirá con ningún alcance: falla cerrado). Sin
+    normalización Unicode NFC/NFD. NO depende de `core.quotepath`.
+
+    Limitación preexistente: `_git` usa `text=True` (universal newlines), por
+    lo que un `\\r` en un nombre de archivo POSIX se convierte en `\\n`; afecta
+    también a `list_dirty_files`, fuera de este corrective. Las rutas con `\\t`
+    y `\\n` sí se preservan.
+    """
+    resultado = _git(repo_root, "diff", "--name-status", "-z", "-M", *args)
+    if resultado.returncode != 0:
+        raise GitCommandError(
+            f"git diff --name-status falló (código {resultado.returncode}): "
+            f"{resultado.stderr.strip()}"
+        )
+    return parse_name_status_z(resultado.stdout)
 
 
 def is_tree_clean(repo_root: Path) -> bool:
