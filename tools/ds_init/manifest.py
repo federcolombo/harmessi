@@ -28,6 +28,11 @@ MERGE = "MERGE"
 
 TRATAMIENTOS_VALIDOS = (VERBATIM, PLANTILLA, GENERADO, MERGE)
 
+# Tipos de contenido de una entrada (mismos valores que
+# `managed_hash.CONTENIDO_TEXTO` / `CONTENIDO_BINARIO`; se declaran acá como
+# literales para que el manifiesto no dependa de `managed_hash`).
+CONTENIDOS_VALIDOS = ("texto", "binario")
+
 # Vocabulario de bundles/stages de instalación progresiva (Change 7 v0.3:
 # 20260915-progressive-capability-installation-and-scaffold). Acumulativo:
 # cada stage incluye todo lo de los stages anteriores más sus propias
@@ -109,6 +114,10 @@ class EntradaManifiesto:
       `20261005-cards-governance-integration`): la entrada aplica si al menos
       una de estas capabilities está habilitada (intersección no vacía). Default
       `()` sin efecto. Compatible con `capabilities` (subconjunto estricto).
+    - `contenido`: tipo de contenido del archivo administrado (`"texto"` por
+      defecto, o `"binario"`); decide el algoritmo de hash managed (R5/R6 del
+      Change `20261008-cross-platform-managed-hashing`), sin heurísticas de
+      decodificación. Va al final para no alterar el orden posicional.
     """
 
     fuente: Optional[str]
@@ -119,8 +128,14 @@ class EntradaManifiesto:
     stage_minimo: str = "discovery"
     capabilities: tuple = field(default_factory=tuple)
     capabilities_cualquiera: tuple = field(default_factory=tuple)
+    contenido: str = "texto"
 
     def __post_init__(self) -> None:
+        if self.contenido not in CONTENIDOS_VALIDOS:
+            raise ValueError(
+                f"contenido inválido {self.contenido!r} para destino {self.destino!r} "
+                f"(válidos: {CONTENIDOS_VALIDOS})"
+            )
         if self.tratamiento not in TRATAMIENTOS_VALIDOS:
             raise ValueError(
                 f"tratamiento inválido {self.tratamiento!r} para destino {self.destino!r}"
@@ -1082,6 +1097,17 @@ def manifest_para_perfil(perfil: str) -> list:
 
     destinos_explicitos = set(config.get("destinos", []))
     return [entrada for entrada in MANIFEST if entrada.destino in destinos_explicitos]
+
+
+def contenido_de(ruta: str, perfil: Optional[str] = None) -> str:
+    """Tipo de contenido (`"texto"` | `"binario"`) de la entrada del manifiesto
+    cuyo `destino` es `ruta`. Si la ruta no está en el manifiesto (o en el
+    manifiesto del `perfil`, si se pasa), devuelve `"texto"` (default)."""
+    entradas = manifest_para_perfil(perfil) if perfil is not None else MANIFEST
+    for entrada in entradas:
+        if entrada.destino == ruta:
+            return entrada.contenido
+    return "texto"
 
 
 def manifest_para_perfil_y_stage(perfil: str, stage: str) -> list:

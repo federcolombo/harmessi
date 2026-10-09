@@ -36,7 +36,8 @@ from .manifest import (
     raiz_repo_origen,
     validar_capabilities,
 )
-from .planner import construir_plan, formatear_plan
+from .managed_hash import ESTADO_ALG_DESCONOCIDO, ESTADO_DRIFT
+from .planner import ACCION_MERGE, construir_plan, formatear_plan
 from .preflight import DestinoInvalidoError, validar_destino
 from .version import HARNESS_VERSION
 
@@ -52,6 +53,9 @@ STAGES_INSTALL_PERMITIDOS = ("discovery", "experiment")
 
 STAGE_INSTALL_DEFAULT = "experiment"
 
+# Estados de clasificación de baseline que `sync` trata como drift preservado.
+_ESTADOS_DRIFT = (ESTADO_DRIFT, ESTADO_ALG_DESCONOCIDO)
+
 
 def construir_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -63,9 +67,11 @@ def construir_parser() -> argparse.ArgumentParser:
         "accion",
         nargs="?",
         default="install",
-        choices=["install", "sync"],
-        help="Operación a realizar: 'install' (default, instala un destino nuevo) o 'sync' "
-        "(amplía un destino ya instalado hasta un --stage objetivo mayor).",
+        choices=["install", "sync", "migrate-hashes"],
+        help="Operación a realizar: 'install' (default, instala un destino nuevo), 'sync' "
+        "(amplía un destino ya instalado hasta un --stage objetivo mayor) o 'migrate-hashes' "
+        "(migra al algoritmo de hash vigente las entradas legacy que verifican; dry-run por "
+        "defecto, --execute para aplicar).",
     )
     parser.add_argument("--destino", required=True, help="Repo local destino (debe existir, ser Git, working tree limpio).")
     parser.add_argument(
@@ -339,9 +345,37 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
         "stage": target,
         "placeholders": _contexto_placeholders(nombre, notebooks_dir, venv_dir),
         "capabilities_habilitadas": sorted(capabilities_habilitadas),
+        # R27f: el instalador recibe el baseline previo para no perderlo.
+        "entradas_conservadas": list(control_previo.get("archivos") or []),
     }
 
-    plan = construir_plan(perfil, destino, config, stage=target, capabilities_habilitadas=capabilities_habilitadas)
+    # M-A (R27): se clasifica contra el baseline ANTERIOR, antes de escribir.
+    clasificacion = control_mod.clasificar_baseline(destino, control_previo)
+
+    # A1: rutas con drift (o algoritmo desconocido): el instalador no las hashea.
+    rutas_drift = {
+        ruta for ruta, info in clasificacion.items() if (info or {}).get("estado") in _ESTADOS_DRIFT
+    }
+    config["rutas_drift"] = sorted(rutas_drift)
+
+    plan = construir_plan(
+        perfil,
+        destino,
+        config,
+        stage=target,
+        capabilities_habilitadas=capabilities_habilitadas,
+        clasificacion=clasificacion,
+    )
+    # Rutas MERGE sobre archivo existente sin baseline utilizable: no son
+    # drift (no se informan como tal) pero tampoco se hashean/adoptan en el
+    # control intermedio del instalador.
+    merge_sin_baseline = {
+        a.destino for a in plan if a.accion == ACCION_MERGE and clasificacion.get(a.destino) is None
+    }
+    config["rutas_drift"] = sorted(rutas_drift | merge_sin_baseline)
+    # Rutas que ya existían en disco ANTES de la corrida (para que
+    # `regenerar_control` no adopte un MERGE sobre archivo sin baseline).
+    preexistentes = {a.destino for a in plan if (destino / a.destino).exists()}
     print(formatear_plan(plan))
 
     if not args.execute:
@@ -365,35 +399,103 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
     # forma explícita y no ambigua en vez de dejar escapar la excepción o
     # imprimir el mensaje de éxito de todas formas.
     try:
-        control_recien_escrito = json.loads(ruta_control.read_text(encoding="utf-8"))
+        # Modo conservador (R28): se pasa el control PREVIO original y la
+        # clasificación calculada antes de escribir; el drift se conserva tal cual.
         control_mod.regenerar_control(
             destino,
-            control_recien_escrito,
+            control_previo,
             perfil=perfil,
             stage=target,
             installation_stage=target,
             capabilities_habilitadas=capabilities_habilitadas,
+            clasificacion=clasificacion,
+            resultado=resultado,
+            preexistentes=preexistentes,
         )
     except Exception as exc:  # noqa: BLE001 - fallo real, nunca debe pasar desapercibido
         print(
             f"[ABORTADO-PARCIAL] Los archivos de '{target}' se instalaron correctamente en el "
             f"destino, pero no se pudo completar el registro acumulado en "
-            f"{ruta_control}: {exc}. control.json puede haber quedado con 'archivos' "
-            f"incompleto (le faltan entradas de corridas anteriores a esta). Revisar "
-            f"{ruta_control} a mano, o volver a correr 'sync --stage {target} --execute' "
-            f"(idempotente: los archivos ya presentes se omiten, solo se reintenta la "
-            f"reconciliación de control.json).",
+            f"{ruta_control}: {exc}. El stage ya quedó persistido, así que volver a correr "
+            f"'sync --stage {target}' NO repite la reconciliación. control.json conserva las "
+            f"entradas previas (el drift nunca se adopta) pero puede no incluir los archivos "
+            f"nuevos de esta corrida. Revisá el estado con 'python -m tools.harmessi doctor' y, "
+            f"si hay entradas legacy, corré 'python -m tools.ds_init migrate-hashes --destino "
+            f"<destino>'.",
             file=sys.stderr,
         )
         return 1
 
     print(
         f"\n[EXECUTE] Sync completo ({stage_base!r} -> {target!r}): {len(resultado.aplicados)} "
-        f"archivo(s) aplicado(s), {len(resultado.omitidos)} omitido(s) por colisión existente."
+        f"archivo(s) aplicado(s), {len(resultado.omitidos)} omitido(s) por colisión existente, "
+        f"{len(resultado.actualizados)} actualizado(s), {len(resultado.sin_cambios)} sin cambios."
     )
-    if resultado.omitidos:
-        _imprimir_omitidos(resultado.omitidos, perfil, target)
+    # M5: drift preservado para TODA ruta del plan, incluidas las MERGE que sí se mergearon.
+    drift_preservado = [a.destino for a in plan if a.destino in rutas_drift]
+    for ruta in drift_preservado:
+        if ruta in resultado.omitidos:
+            print(
+                f"DRIFT preservado: {ruta} — modificado respecto del baseline; sync no lo reescribió "
+                "ni lo adoptó; revisá el cambio o reinstalá el asset explícitamente"
+            )
+        else:
+            print(
+                f"DRIFT preservado: {ruta} — modificado respecto del baseline; se aplicó el merge "
+                "funcional pero sync no adoptó el archivo (la entrada previa del baseline se "
+                "conserva); revisá el cambio o reinstalá el asset explícitamente"
+            )
+    if resultado.actualizados:
+        print("Actualizados (pristine con nueva versión distribuida):")
+        for ruta in resultado.actualizados:
+            print(f"  {ruta}")
+    if resultado.sin_cambios:
+        print(f"Sin cambios (contenido distribuido idéntico al actual): {len(resultado.sin_cambios)} archivo(s)")
+    omitidos_otros = [r for r in resultado.omitidos if r not in drift_preservado]
+    if omitidos_otros:
+        _imprimir_omitidos(omitidos_otros, perfil, target)
     print(f"Archivo de control: {resultado.control_path}")
+    return 0
+
+
+def _main_migrate_hashes(args: argparse.Namespace, destino: Path) -> int:
+    """`migrate-hashes` (R20-R26): migra al algoritmo vigente SOLO las entradas
+    legacy que verifican. Dry-run por defecto. No es re-adopción: no pide
+    `--usuario` ni aprobación y el drift persiste."""
+    ruta_control = destino / control_mod.DIR_CONTROL / control_mod.NOMBRE_ARCHIVO_CONTROL
+    if not ruta_control.exists():
+        print(f"[ABORTADO] No existe {ruta_control}: nada que migrar.", file=sys.stderr)
+        return 1
+
+    try:
+        informe = control_mod.migrar_hashes(destino, ejecutar=bool(args.execute))
+    except (OSError, ValueError) as exc:
+        print(f"[ABORTADO] No se pudo migrar los hashes: {exc}", file=sys.stderr)
+        return 1
+
+    def _etiqueta(item) -> str:
+        if isinstance(item, dict):
+            ruta = item.get("ruta", "")
+            detalle = item.get("detalle")
+            return f"{ruta} — {detalle}" if detalle else str(ruta)
+        if isinstance(item, (tuple, list)) and len(item) == 2:
+            return f"{item[0]} — {item[1]}"
+        return str(item)
+
+    modo = "EXECUTE" if args.execute else "DRY-RUN"
+    print(f"[{modo}] migrate-hashes")
+    secciones = (
+        ("Migradas" if args.execute else "Migrables", informe.migradas),
+        ("Ya actuales", informe.ya_actuales),
+        ("No verificables (drift persiste, no se tocan)", informe.no_verificables),
+        ("Desconocidas (algoritmo desconocido, fail-closed)", informe.desconocidas),
+    )
+    for titulo, items in secciones:
+        print(f"{titulo}: {len(items)}")
+        for item in items:
+            print(f"  {_etiqueta(item)}")
+    if not args.execute:
+        print("\n[DRY-RUN] No se escribió control.json. Usá --execute para aplicar la migración.")
     return 0
 
 
@@ -407,6 +509,8 @@ def main(argv: list = None) -> int:
         return _main_install(parser, args, destino)
     if args.accion == "sync":
         return _main_sync(parser, args, destino)
+    if args.accion == "migrate-hashes":
+        return _main_migrate_hashes(args, destino)
 
     parser.error(f"acción desconocida: {args.accion!r}")
     return 2  # inalcanzable: parser.error() ya hizo sys.exit(2)

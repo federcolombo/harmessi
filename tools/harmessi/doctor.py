@@ -32,6 +32,7 @@ from typing import Callable, Optional
 from tools import launcher_common
 from tools.ds_init import control as control_mod
 from tools.ds_init import legacy as legacy_mod
+from tools.ds_init import managed_hash as managed_hash_mod
 from tools.ds_init import manifest as manifest_mod
 from tools.ds_init.version import HARNESS_VERSION
 from tools.dsguard import checks
@@ -535,11 +536,11 @@ def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
         ]
 
     resultados = []
+    legacy_migrables = 0
     for entrada in archivos:
         if not isinstance(entrada, dict):
             continue
         ruta_rel = entrada.get("ruta")
-        hash_esperado = entrada.get("sha256")
         if not ruta_rel:
             continue
         ruta_abs = destino / ruta_rel
@@ -554,7 +555,9 @@ def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
             )
             continue
         try:
-            hash_real = control_mod.sha256_de_archivo(ruta_abs)
+            estado, detalle = managed_hash_mod.verificar_entrada(
+                ruta_abs, entrada, contenido=manifest_mod.contenido_de(ruta_rel)
+            )
         except OSError as exc:
             resultados.append(
                 checks.CheckResult(
@@ -565,21 +568,48 @@ def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
                 )
             )
             continue
-        if hash_real != hash_esperado:
-            if str(ruta_rel).replace("\\", "/") == RUTA_GUARDRAILS_JSON:
-                # R25-R30: solo las rutas mutables declaradas no cuentan como drift.
-                resultado_guardrails = _drift_guardrails_json(ruta_abs, ruta_rel)
-                if resultado_guardrails is not None:
-                    resultados.append(resultado_guardrails)
-                continue
+        if estado == managed_hash_mod.ESTADO_OK:
+            continue
+        if estado == managed_hash_mod.ESTADO_OK_LEGACY:
+            # Baseline legacy (sin hash_alg) verificable por EOL: informativo, no es WARN.
+            legacy_migrables += 1
+            continue
+        if estado == managed_hash_mod.ESTADO_ALG_DESCONOCIDO:
+            # Fail-closed: no se puede verificar un algoritmo que no se conoce.
             resultados.append(
                 checks.CheckResult(
-                    checks.STATUS_WARN,
+                    checks.STATUS_FAIL,
                     "HARMESSI-DRIFT",
-                    f"Modificado desde la instalación: {ruta_rel}",
+                    f"Algoritmo de hash desconocido para {ruta_rel}: {entrada.get('hash_alg')!r} "
+                    f"(no se puede verificar; fail-closed) {detalle or ''}".rstrip(),
                     subject=ruta_rel,
                 )
             )
+            continue
+        # ESTADO_DRIFT (y cualquier estado inesperado, fail-closed):
+        if str(ruta_rel).replace("\\", "/") == RUTA_GUARDRAILS_JSON:
+            # R25-R30: solo las rutas mutables declaradas no cuentan como drift.
+            resultado_guardrails = _drift_guardrails_json(ruta_abs, ruta_rel)
+            if resultado_guardrails is not None:
+                resultados.append(resultado_guardrails)
+            continue
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_WARN,
+                "HARMESSI-DRIFT",
+                f"Modificado desde la instalación: {ruta_rel}",
+                subject=ruta_rel,
+            )
+        )
+    if legacy_migrables:
+        sugerencia = (
+            f"{legacy_migrables} archivo(s) administrado(s) con hash legacy (sin hash_alg) verifican "
+            "salvo diferencias de fin de línea; sin drift real. Acción sugerida: "
+            "python -m tools.ds_init migrate-hashes --execute"
+        )
+        if not resultados:
+            sugerencia = "Ningún archivo administrado difiere de su baseline registrado. " + sugerencia
+        resultados.append(checks.CheckResult(checks.STATUS_PASS, "HARMESSI-DRIFT", sugerencia))
     if not resultados:
         resultados.append(
             checks.CheckResult(

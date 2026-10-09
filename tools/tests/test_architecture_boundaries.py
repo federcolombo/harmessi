@@ -22,6 +22,7 @@ ARCHITECTURE.md §2.3/§4 punto 5, igual que el caso de `pathguard.py`.
 from __future__ import annotations
 
 import ast
+import sys
 import unittest
 from pathlib import Path
 
@@ -197,6 +198,67 @@ class TestNingunCoreLeeStdinDirectamente(unittest.TestCase):
             "Módulo(s) CORE leyendo stdin directamente -- prohibido por ARCHITECTURE.md §3.1 "
             "('Core ... ni conoce sys.stdin/exit-code-como-decisión'), eso es responsabilidad "
             f"exclusiva del adapter: {violaciones}",
+        )
+
+
+# --- Frontera managed vs evidence (v0.10 Change 1: 20261008-cross-platform-managed-hashing) ---
+# `tools/ds_init/managed_hash.py` es la primitive única de hash de archivos managed. Debe ser
+# stdlib-only y solo la usan `tools/ds_init/` y `tools/harmessi/doctor.py`; cards, datasources,
+# reporting, ds_profile y dsguard hashean evidencia/pins con sus propios contratos.
+RUTA_MANAGED_HASH = "tools/ds_init/managed_hash.py"
+CONSUMIDORES_PERMITIDOS_MANAGED_HASH = ("tools/ds_init/", "tools/harmessi/doctor.py")
+
+
+def _todos_los_imports(ruta_absoluta: Path) -> list:
+    """Todos los imports del archivo (incluye anidados en funciones) como tuplas
+    `(nivel, nombre_completo)`; `nivel > 0` indica import relativo."""
+    arbol = ast.parse(ruta_absoluta.read_text(encoding="utf-8"), filename=str(ruta_absoluta))
+    imports: list = []
+    for nodo in ast.walk(arbol):
+        if isinstance(nodo, ast.Import):
+            imports.extend((0, alias.name) for alias in nodo.names)
+        elif isinstance(nodo, ast.ImportFrom):
+            base = nodo.module or ""
+            if base:
+                imports.append((nodo.level, base))
+            imports.extend(
+                (nodo.level, f"{base}.{alias.name}" if base else alias.name) for alias in nodo.names
+            )
+    return imports
+
+
+class TestFronteraManagedHash(unittest.TestCase):
+    def test_managed_hash_importa_solo_stdlib(self):
+        violaciones = []
+        for nivel, nombre in _todos_los_imports(REPO_ORIGEN / RUTA_MANAGED_HASH):
+            raiz = nombre.split(".")[0]
+            if nivel > 0:
+                violaciones.append(f"import relativo: {'.' * nivel}{nombre}")
+            elif raiz == "tools" or raiz not in sys.stdlib_module_names:
+                violaciones.append(f"no stdlib: {nombre}")
+        self.assertEqual(
+            violaciones,
+            [],
+            f"{RUTA_MANAGED_HASH} debe usar solo stdlib (sin tools.* ni imports relativos): {violaciones}",
+        )
+
+    def test_ningun_modulo_fuera_de_ds_init_y_doctor_importa_managed_hash(self):
+        violaciones = []
+        for ruta in sorted((REPO_ORIGEN / "tools").rglob("*.py")):
+            relativa = ruta.relative_to(REPO_ORIGEN).as_posix()
+            if relativa.startswith(CONSUMIDORES_PERMITIDOS_MANAGED_HASH):
+                continue
+            partes = relativa.split("/")
+            if "tests" in partes[:-1] or partes[-1].startswith("test_"):
+                continue  # los tests de la frontera no son módulos de producto
+            for _nivel, nombre in _todos_los_imports(ruta):
+                if "managed_hash" in nombre.split("."):
+                    violaciones.append(f"{relativa} importa '{nombre}'")
+        self.assertEqual(
+            violaciones,
+            [],
+            "Frontera managed vs evidence (ARCHITECTURE.md §8.2): solo tools/ds_init/ y "
+            f"tools/harmessi/doctor.py pueden importar managed_hash: {violaciones}",
         )
 
 

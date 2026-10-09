@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "change_id": "20261008-cross-platform-managed-hashing",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-08T15:22:09Z",
+  "baseline": {
+    "commit": "ff76b206dcd7e1c0350d360e3ec593d734a497ee",
+    "rama": "v0.10-dev",
+    "capturado_utc": "2026-10-08T15:22:09Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.10.md",
+      "openspec/changes/20261008-cross-platform-managed-hashing/control.json",
+      "openspec/changes/20261008-cross-platform-managed-hashing/design.md",
+      "openspec/changes/20261008-cross-platform-managed-hashing/proposal.md",
+      "openspec/changes/20261008-cross-platform-managed-hashing/spec.md",
+      "openspec/changes/20261008-cross-platform-managed-hashing/tasks.md",
+      "openspec/changes/20261008-cross-platform-managed-hashing/verification.md",
+      "tools/ds_init/cli.py",
+      "tools/ds_init/control.py",
+      "tools/ds_init/managed_hash.py",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/planner.py",
+      "tools/ds_init/tests/**",
+      "tools/ds_init/writer.py",
+      "tools/harmessi/doctor.py",
+      "tools/harmessi/tests/**",
+      "tools/tests/test_architecture_boundaries.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "93291daf832eb5163ae501f39e4b47de23bc891710f3890e0dd717afc6a2002e",
+      "registrado_utc": "2026-10-08T16:41:25Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-08",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 cross-platform managed hashing",
+      "cita": "Aprobación humana explícita del SDD de Change 1 y decisión M-A sobre sync"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "78ea81e5cf787fc308b90f853c90421c0452204bcfbe8fa130219b6b68f42b1d",
+      "registrado_utc": "2026-10-08T16:41:27Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-08",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 cross-platform managed hashing",
+      "cita": "Aprobación humana explícita del SDD de Change 1 y decisión M-A sobre sync"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e8fad271ed1e82f113b0582222297b9b35ebdf45a1ad3eab071d3337772c60ca",
+      "registrado_utc": "2026-10-08T16:41:28Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-08",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 cross-platform managed hashing",
+      "cita": "Aprobación humana explícita del SDD de Change 1 y decisión M-A sobre sync"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-08T16:41:36Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-08T16:41:37Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-08T16:41:39Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-09T13:49:18Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-09T13:49:30Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-08T16:41:38Z",
+      "cierre_utc": "2026-10-08T17:46:06Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-09T00:41:38Z",
+      "minutos_consumidos": 64.46666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-08T17:45:25Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-08T17:10:28Z"
+        }
+      },
+      "tareas": [
+        "reviewer ciclo 1",
+        "reviewer ciclo 2"
+      ],
+      "roles": [
+        "data-science-reviewer"
+      ],
+      "reintentos": 0,
+      "rondas_revision": 2,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-09T13:49:17Z",
+      "cierre_utc": "2026-10-09T13:49:31Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-09T17:49:17Z",
+      "minutos_consumidos": 0.23333333333333334,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

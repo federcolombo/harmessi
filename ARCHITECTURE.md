@@ -647,3 +647,34 @@ runtime/autonomía (no agrega STOP, no vive en `guardrails.json`).
   (`report_kind="governance"`, `decision_scope="exploratory"`). `governance` en `REPORT_KINDS` es solo vocabulario: no
   autoriza lectura de holdout ni equivale a `evaluation`/`model`.
 - **Autonomía intacta (D1/D5/D6):** un FAIL de `cards validate` o un ERROR de Doctor no es una decisión de ejecución.
+
+### 8.2 Frontera de hashing managed vs evidence (v0.10 Change 1)
+
+Change `20261008-cross-platform-managed-hashing`. Existe una única primitive para hashes de archivos managed
+(`tools/ds_init/managed_hash.py`, stdlib-only, lectura en streaming); no es una abstracción para todos los hashes
+del proyecto. Solo la usan `tools/ds_init/` y `tools/harmessi/doctor.py`; cards, datasources, reporting, `ds_profile` y
+dsguard no la importan (lo verifica `tools/tests/test_architecture_boundaries.py`).
+
+| Superficie | Contrato de hash |
+|---|---|
+| Managed texto | `sha256/eol-lf/v1` (bytes; CRLF y CR solitario -> LF; sin tocar BOM ni espacios) |
+| Managed binario | `sha256/bin/v1` (bytes exactos) |
+| Aprobaciones / ApprovalRef / checkpoints | `sha256/lf/v1` / `hash_lf_v1` (sin cambios) |
+| Pins / evidence (Cards, EvidenceRef) | `sha256/bin/v1` (bytes exactos; sin cambios) |
+| JSON canónico | lógico (sin cambios) |
+
+- **`hash_alg` por entrada.** Cada entrada de `control.json` lleva `{ruta, sha256, hash_alg}`. Una entrada sin `hash_alg` es
+  legacy (hash de bytes crudos). Un `hash_alg` desconocido es `algoritmo_desconocido` y falla cerrado (nunca `ok`).
+- **Legacy.** Se verifica sin regenerar aceptando SOLO diferencias de EOL (forma cruda, LF o CRLF); en binarios, solo el hash crudo.
+  `migrate-hashes [--execute]` (dry-run por defecto) migra las entradas verificables al algoritmo vigente.
+- **Semántica de `sync`.** Reconcilia, NO adopta: clasifica contra el baseline anterior antes de escribir. Pristine o legacy
+  verificado se actualiza (journal con backup y rollback) y se rehashea con el algoritmo vigente; drift real conserva archivo y
+  entrada tal cual; un archivo existente sin entrada no se adopta salvo que coincida con lo distribuido. `regenerar_control`
+  explícito sigue siendo el rebaseline total de mantenimiento. Migración de hash != managed upgrade != re-adopción (Change 3).
+- **`.gitattributes`.** Harmessi no lo gestiona ni lo sobrescribe y no forma parte del correctness: funciona con o sin `core.autocrlf`.
+- **Límite honesto.** El modo legacy acepta únicamente diferencias de EOL. Un EOL mixto histórico (ni crudo, ni LF, ni CRLF puro)
+  no es verificable y se reporta como drift. Un downgrade a un Harmessi anterior puede mostrar falso drift sobre entradas con
+  `hash_alg`. El hash que se registra se relee del disco al final de la corrida, así que existe una ventana de segundos entre la
+  clasificación del baseline y la escritura/hash en la que una edición concurrente del usuario podría pisarse (si el archivo era
+  pristine al clasificar) o registrarse (si estaba en `sin_cambios`/`solo_si_identico`); es un límite aceptado de v0.10 y no se
+  cierra con locks. Los pins byte-exact de evidencia bajo `autocrlf` (F-2) quedan como candidato futuro.

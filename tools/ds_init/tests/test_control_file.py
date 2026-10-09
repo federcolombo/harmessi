@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from tools.ds_init import control as control_mod
+from tools.ds_init import managed_hash
 from tools.ds_init import writer
 from tools.ds_init.planner import construir_plan
 from tools.ds_init.version import HARNESS_VERSION
@@ -111,11 +112,11 @@ class TestArchivoDeControl(unittest.TestCase):
         for entrada in contenido["archivos"]:
             ruta_absoluta = self.repo / entrada["ruta"]
             self.assertTrue(ruta_absoluta.exists(), f"{entrada['ruta']} listado en control.json no existe")
-            hash_real = control_mod.sha256_de_archivo(ruta_absoluta)
+            estado, detalle = managed_hash.verificar_entrada(ruta_absoluta, entrada)
             self.assertEqual(
-                entrada["sha256"],
-                hash_real,
-                f"hash SHA-256 de {entrada['ruta']} no coincide con el archivo real",
+                estado,
+                managed_hash.ESTADO_OK,
+                f"hash managed de {entrada['ruta']} no coincide con el archivo real: {detalle}",
             )
 
 
@@ -201,8 +202,8 @@ class TestRegenerarControl(unittest.TestCase):
 
         for entrada in control_nuevo["archivos"]:
             ruta_absoluta = self.repo / entrada["ruta"]
-            hash_real = control_mod.sha256_de_archivo(ruta_absoluta)
-            self.assertEqual(entrada["sha256"], hash_real)
+            estado, detalle = managed_hash.verificar_entrada(ruta_absoluta, entrada)
+            self.assertEqual(estado, managed_hash.ESTADO_OK, detalle)
 
     def test_no_conserva_entradas_obsoletas(self):
         control_previo = json.loads(json.dumps(self.control_previo))

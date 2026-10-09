@@ -15,7 +15,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import tools.cards as cards_pkg
-from tools.ds_init import control as control_mod
+from tools.ds_init import managed_hash as managed_hash_mod
 from tools.dsguard import checks
 from tools.harmessi import doctor as doctor_mod
 from tools.harmessi.tests.test_doctor import (
@@ -250,7 +250,9 @@ class TestSinDrift(_Base):
     def test_governance_no_produce_drift(self):
         gestionado = self.escribir("tools/x.py", "x = 1\n")
         ctl = self.control([CAPS_HISTORICA], archivos=[
-            {"ruta": "tools/x.py", "sha256": control_mod.sha256_de_archivo(gestionado)}])
+            {"ruta": "tools/x.py",
+             "sha256": managed_hash_mod.hash_managed_file(gestionado, managed_hash_mod.ALG_TEXTO),
+             "hash_alg": managed_hash_mod.ALG_TEXTO}])
         self.escribir("governance/cards/data/a.json", '{"v": 1}')
         antes = doctor_mod._check_hashes_drift(self.repo, ctl)
         self.escribir("governance/cards/data/a.json", '{"v": 2}')  # modificado

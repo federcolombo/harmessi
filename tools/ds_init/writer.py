@@ -49,11 +49,13 @@ from .manifest import (
     MERGE,
     PLANTILLA,
     VERBATIM,
+    contenido_de,
     manifest_para_perfil,
     manifest_para_perfil_y_stage,
     raiz_repo_origen,
 )
-from .planner import ACCION_MERGE, ACCION_OMITIR_EXISTENTE
+from .managed_hash import algoritmo_para_contenido, hash_managed_file
+from .planner import ACCION_ACTUALIZAR_MANAGED, ACCION_MERGE, ACCION_OMITIR_EXISTENTE
 from .settings_merge import fusionar
 from .templating import (
     insertar_bloque_claude_md,
@@ -98,6 +100,8 @@ class ResultadoInstalacion:
     omitidos: list = field(default_factory=list)
     control_path: Optional[str] = None
     advertencias: list = field(default_factory=list)
+    actualizados: list = field(default_factory=list)
+    sin_cambios: list = field(default_factory=list)
 
 
 def _rmtree_seguro(staging: Path) -> Optional[str]:
@@ -144,13 +148,18 @@ def _escribir_texto(ruta: Path, contenido: str) -> None:
 def _armar_staging(plan: list, entradas_por_destino: dict, destino: Path, staging: Path, placeholders: dict):
     """Arma el árbol completo dentro de `staging` a partir de `plan`
     (lista de `AccionPlan` de `planner.construir_plan`). Devuelve
-    `(entradas_journal, omitidos)`.
+    `(entradas_journal, omitidos, actualizados, sin_cambios)`.
 
     `entradas_journal` es una lista de dicts `{"destino": ruta_relativa,
     "accion": "crear"|"reemplazar-merge", "aplicado": False}`, en el orden en
-    que aparecen en `plan` (ese es también el orden de aplicación)."""
+    que aparecen en `plan` (ese es también el orden de aplicación).
+    `actualizados` son las rutas `actualizar-managed` cuyo contenido distribuido
+    difiere del actual (entran al journal como `reemplazar-merge`);
+    `sin_cambios` las que coinciden (no se escriben ni entran al journal)."""
     entradas_journal = []
     omitidos = []
+    actualizados = []
+    sin_cambios = []
 
     for accion in plan:
         rel = accion.destino
@@ -206,9 +215,28 @@ def _armar_staging(plan: list, entradas_por_destino: dict, destino: Path, stagin
         else:
             raise ValueError(f"tratamiento sin manejo en writer: {entrada.tratamiento!r}")
 
+        if accion.accion == ACCION_ACTUALIZAR_MANAGED:
+            # R27: se compara el hash managed del contenido distribuido (ya
+            # armado en staging) con el del archivo actual; si coinciden no se
+            # escribe nada.
+            algoritmo = algoritmo_para_contenido(contenido_de(rel))
+            if hash_managed_file(staging_path, algoritmo) == hash_managed_file(destino / rel, algoritmo):
+                staging_path.unlink()
+                _limpiar_padres_vacios(staging_path, staging)
+                sin_cambios.append(rel)
+                continue
+            if getattr(accion, "solo_si_identico", False):
+                # R27d: existente sin baseline y distinto -> nunca se sobrescribe.
+                staging_path.unlink()
+                _limpiar_padres_vacios(staging_path, staging)
+                omitidos.append(rel)
+                continue
+            accion_journal = ACCION_JOURNAL_REEMPLAZAR_MERGE  # reusa backup + rollback
+            actualizados.append(rel)
+
         entradas_journal.append({"destino": rel, "accion": accion_journal, "aplicado": False})
 
-    return entradas_journal, omitidos
+    return entradas_journal, omitidos, actualizados, sin_cambios
 
 
 def _validar_staging(staging: Path) -> None:
@@ -365,7 +393,7 @@ def instalar(plan: list, destino, config: dict) -> ResultadoInstalacion:
     staging.mkdir(parents=False, exist_ok=False)
 
     try:
-        entradas_journal, omitidos = _armar_staging(
+        entradas_journal, omitidos, actualizados, sin_cambios = _armar_staging(
             plan, entradas_por_destino, destino, staging, placeholders
         )
         _validar_staging(staging)
@@ -427,13 +455,29 @@ def instalar(plan: list, destino, config: dict) -> ResultadoInstalacion:
         )
         _escribir_journal(journal_path, entradas_journal)
 
+        # A1: las rutas con drift previo (aunque el merge las haya reescrito)
+        # nunca se hashean acá: su entrada previa queda en `entradas_conservadas`
+        # para que un control.json intermedio no adopte un hash de drift.
+        rutas_drift = set(config.get("rutas_drift") or [])
+        archivos_a_hashear = [r for r in archivos_aplicados if r not in rutas_drift]
+        kwargs_control = {}
+        if config.get("entradas_conservadas"):
+            # R27f: en sync, control.json nunca pierde el baseline previo. Se
+            # pasan solo las entradas que esta corrida no vuelve a hashear.
+            a_hashear = set(archivos_a_hashear)
+            kwargs_control["entradas_conservadas"] = [
+                e
+                for e in config["entradas_conservadas"]
+                if isinstance(e, dict) and e.get("ruta") not in a_hashear
+            ]
         control_mod.generar_control(
             destino,
             perfil,
             config,
-            archivos_aplicados,
+            archivos_a_hashear,
             installation_stage=stage,
             capabilities_habilitadas=config.get("capabilities_habilitadas"),
+            **kwargs_control,
         )
     except Exception as exc:
         fallos_rollback = _revertir_journal(entradas_journal, destino, staging)
@@ -473,4 +517,6 @@ def instalar(plan: list, destino, config: dict) -> ResultadoInstalacion:
         omitidos=omitidos,
         control_path=str(control_path),
         advertencias=advertencias,
+        actualizados=actualizados,
+        sin_cambios=sin_cambios,
     )
