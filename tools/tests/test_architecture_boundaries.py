@@ -262,5 +262,54 @@ class TestFronteraManagedHash(unittest.TestCase):
         )
 
 
+# `tools/dsguard/human_presence.py` es la señal T1 (`console_confirmed`): stdlib-only, sin acoplarse
+# a ningún provider, y Cards (vistas de governance) no la importan: no crean ni elevan T1.
+RUTA_HUMAN_PRESENCE = "tools/dsguard/human_presence.py"
+NOMBRES_PROVIDER = ("claude", "codex", "gemini", "chatgpt", "anthropic")
+
+
+class TestFronteraHumanPresence(unittest.TestCase):
+    def test_human_presence_importa_solo_stdlib(self):
+        violaciones = []
+        for nivel, nombre in _todos_los_imports(REPO_ORIGEN / RUTA_HUMAN_PRESENCE):
+            raiz = nombre.split(".")[0]
+            if nivel > 0:
+                violaciones.append(f"import relativo: {'.' * nivel}{nombre}")
+            elif raiz == "tools" or raiz not in sys.stdlib_module_names:
+                violaciones.append(f"no stdlib: {nombre}")
+        self.assertEqual(
+            violaciones,
+            [],
+            f"{RUTA_HUMAN_PRESENCE} debe usar solo stdlib (sin tools.* ni imports relativos): {violaciones}",
+        )
+
+    def test_human_presence_no_menciona_providers_en_imports(self):
+        violaciones = [
+            nombre
+            for _nivel, nombre in _todos_los_imports(REPO_ORIGEN / RUTA_HUMAN_PRESENCE)
+            if any(p in nombre.lower() for p in NOMBRES_PROVIDER)
+        ]
+        self.assertEqual(
+            violaciones,
+            [],
+            f"{RUTA_HUMAN_PRESENCE} no debe importar módulos de provider: {violaciones}",
+        )
+
+    def test_ningun_modulo_de_cards_importa_human_presence(self):
+        violaciones = []
+        for ruta in sorted((REPO_ORIGEN / "tools" / "cards").glob("*.py")):
+            if ruta.name == "approvals.py":
+                continue
+            for _nivel, nombre in _todos_los_imports(ruta):
+                if "human_presence" in nombre.split("."):
+                    violaciones.append(f"{ruta.name} importa '{nombre}'")
+        self.assertEqual(
+            violaciones,
+            [],
+            "Cards no crean ni elevan T1 (ARCHITECTURE.md §8.3): solo tools/cards/approvals.py "
+            f"puede referenciar human_presence: {violaciones}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

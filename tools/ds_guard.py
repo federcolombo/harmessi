@@ -16,6 +16,7 @@ Solo biblioteca estándar. No instala ni importa nada fuera de `tools/dsguard`.
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import importlib.metadata as importlib_metadata
 import json
@@ -41,6 +42,7 @@ from dsguard import (  # noqa: E402
     core,
     decision,
     efficiency,
+    human_presence,
     kdd,
     kdd_compat,
     lifecycle,
@@ -322,6 +324,66 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 # --- approve --------------------------------------------------------------
 
+_MENSAJE_T1 = (
+    "se registró approval_channel=console_confirmed: señal de presencia interactiva en la consola "
+    "de control, no identidad ni autoría verificadas (--usuario sigue siendo metadata declarada)"
+)
+
+
+def _entrada_aprobacion(base: dict, args: argparse.Namespace, change_id: str, artefacto: str,
+                        hash_valor: str, accion: str) -> Optional[dict]:
+    """Helper único de registro (R20) compartido por `approve` y `exec approve`.
+
+    `declared` (default): devuelve `base` idéntica a la forma histórica (sin
+    `approval_channel`). `console_confirmed`: pide confirmación interactiva y, si
+    `ok`, agrega los campos del canal; si no, imprime el motivo a stderr y devuelve
+    None (el llamador aborta con exit 2 sin escribir; nunca se degrada a declared)."""
+    canal = getattr(args, "channel", human_presence.CANAL_DECLARED)
+    if canal == human_presence.CANAL_DECLARED:
+        return base
+    if canal != human_presence.CANAL_CONSOLE:
+        print(f"Canal de aprobación no soportado: {canal}", file=sys.stderr)
+        return None
+    resultado = human_presence.solicitar_confirmacion(
+        {"change_id": change_id, "artefacto": artefacto, "hash": hash_valor, "accion": accion}
+    )
+    if not resultado.ok:
+        print(resultado.motivo or "Confirmación interactiva no obtenida.", file=sys.stderr)
+        return None
+    entrada = dict(base)
+    # `registrado_utc` se toma DESPUÉS de la confirmación (conserva la posición de la
+    # clave): registrado_utc <= confirmed_at queda coherente con el orden real.
+    entrada["registrado_utc"] = core.ahora_utc()
+    entrada.update(human_presence.campos_registro(resultado))
+    return entrada
+
+
+_MENSAJE_CONTROL_CAMBIO = "control.json cambió durante la confirmación; reintentá"
+
+
+def _snapshot_control(args: argparse.Namespace, control: dict) -> Optional[dict]:
+    """Copia profunda del control recién cargado, solo con `console_confirmed`
+    (las confirmaciones pueden tardar minutos; ver `_control_cambio_en_disco`)."""
+    if getattr(args, "channel", human_presence.CANAL_DECLARED) == human_presence.CANAL_CONSOLE:
+        return copy.deepcopy(control)
+    return None
+
+
+def _control_cambio_en_disco(control_path: Path, snapshot: Optional[dict]) -> bool:
+    """Concurrencia optimista fail-closed: True si `control.json` en disco difiere
+    del snapshot inicial (o no se puede leer). Sin snapshot (T0) no verifica.
+
+    Concurrencia optimista sin lock: REDUCE la ventana de pérdida de actualización
+    (de la duración de los prompts a milisegundos entre esta relectura y la
+    escritura) pero no la elimina."""
+    if snapshot is None:
+        return False
+    try:
+        return core.leer_control(control_path) != snapshot
+    except Exception:  # noqa: BLE001 -- ilegible = no se puede garantizar: fail-closed
+        return True
+
+
 def cmd_approve(args: argparse.Namespace) -> int:
     try:
         repo_root = _repo_root()
@@ -333,6 +395,8 @@ def cmd_approve(args: argparse.Namespace) -> int:
         print(error_usuario, file=sys.stderr)
         return 2
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+    snapshot_control = _snapshot_control(args, control)
+    mensajes_diferidos = []  # stdout de éxito: se emite solo tras escribir control
 
     for artefacto in args.artefacto:
         if not (change_dir / artefacto).exists():
@@ -366,11 +430,11 @@ def cmd_approve(args: argparse.Namespace) -> int:
             agregadas = sorted(set(nuevas) - set(previas))
             retiradas = sorted(set(previas) - set(nuevas))
             control["alcance"]["rutas_autorizadas"] = nuevas
-            print(f"alcance autorizado materializado ({len(nuevas)} rutas)")
+            mensajes_diferidos.append(f"alcance autorizado materializado ({len(nuevas)} rutas)")
             for r in agregadas:
-                print(f"  + {r}")
+                mensajes_diferidos.append(f"  + {r}")
             for r in retiradas:
-                print(f"  - {r}")
+                mensajes_diferidos.append(f"  - {r}")
 
     # Checkpoints de negocio (T5, R3-R6 de 20260930-autonomous-sdd-and-remediation):
     # si se aprueba `proposal.md` y el Change declara `approval_mode:
@@ -421,6 +485,9 @@ def cmd_approve(args: argparse.Namespace) -> int:
             return 2
         control["dependencias_preaprobadas"] = dependencias
 
+    # Todo-o-nada: se arman (y, si se pidió `console_confirmed`, se confirman) TODAS
+    # las entradas antes de tocar `control`; el hash de cada artefacto se calcula
+    # UNA vez y es el mismo que se muestra en el challenge y se registra.
     entradas = []
     for artefacto in args.artefacto:
         ruta = change_dir / artefacto
@@ -428,7 +495,7 @@ def cmd_approve(args: argparse.Namespace) -> int:
             hash_valor = hash_proposal  # mismo hash que se materializó en los checkpoints (sin releer)
         else:
             hash_valor = core.hash_lf_v1(ruta)
-        entrada = {
+        base = {
             "artefacto": artefacto,
             "algoritmo": "sha256/lf/v1",
             "hash": hash_valor,
@@ -438,14 +505,24 @@ def cmd_approve(args: argparse.Namespace) -> int:
             "alcance_aprobado": args.alcance,
             "cita": args.cita,
         }
-        control.setdefault("aprobaciones", []).append(entrada)
+        entrada = _entrada_aprobacion(base, args, args.change_id, artefacto, hash_valor, "approve")
+        if entrada is None:
+            return 2
         entradas.append(entrada)
 
+    if _control_cambio_en_disco(control_path, snapshot_control):
+        print(_MENSAJE_CONTROL_CAMBIO, file=sys.stderr)
+        return 2
+    control.setdefault("aprobaciones", []).extend(entradas)
     core.escribir_control(control_path, control)
 
+    for linea in mensajes_diferidos:
+        print(linea)
     for e in entradas:
         print(f"{e['artefacto']}: {e['hash']}")
     print("el hash acredita identidad de contenido, no aprobación humana")
+    if any(e.get("approval_channel") == human_presence.CANAL_CONSOLE for e in entradas):
+        print(_MENSAJE_T1)
     return 0
 
 
@@ -2611,11 +2688,12 @@ def cmd_exec_notebook(args: argparse.Namespace) -> int:
 
 # --- exec approve (20261002-exec-approval-registration) ----------------------
 
-def _registrar_aprobacion_exec(control: dict, control_path: Path, spec: ExecSpec, args: argparse.Namespace) -> dict:
+def _registrar_aprobacion_exec(control: dict, control_path: Path, spec: ExecSpec, args: argparse.Namespace,
+                              snapshot_control: Optional[dict] = None) -> Optional[dict]:
     """Agrega la entrada a `control["aprobaciones"]` (misma estructura que
     `cmd_approve`, R11) y persiste con `core.escribir_control`. El hash sale
     SIEMPRE del builder, nunca del humano (R2)."""
-    entrada = {
+    base = {
         "artefacto": spec.artefacto,
         "algoritmo": spec.algoritmo,
         "hash": spec.hash_comando,
@@ -2625,6 +2703,12 @@ def _registrar_aprobacion_exec(control: dict, control_path: Path, spec: ExecSpec
         "alcance_aprobado": args.alcance,
         "cita": args.cita,
     }
+    entrada = _entrada_aprobacion(base, args, args.change_id, spec.artefacto, spec.hash_comando, "exec-approve")
+    if entrada is None:
+        return None
+    if _control_cambio_en_disco(control_path, snapshot_control):
+        print(_MENSAJE_CONTROL_CAMBIO, file=sys.stderr)
+        return None
     control.setdefault("aprobaciones", []).append(entrada)
     core.escribir_control(control_path, control)
     return entrada
@@ -2640,7 +2724,13 @@ def _cmd_exec_approve_con_builder(args: argparse.Namespace, construir) -> int:
     if error_usuario:
         print(error_usuario, file=sys.stderr)
         return 2
+    # `--channel` tras `--` lo traga el REMAINDER y registraría una T0 silenciosa: se rechaza.
+    resto = list(getattr(args, "script_args", None) or []) + list(getattr(args, "pytest_args", None) or [])
+    if any(a == "--channel" or a.startswith("--channel=") for a in resto):
+        print("`--channel` debe ir antes de `--`", file=sys.stderr)
+        return 2
     _change_dir_, _tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+    snapshot_control = _snapshot_control(args, control)
 
     try:
         spec = construir(args, repo_root)
@@ -2653,10 +2743,14 @@ def _cmd_exec_approve_con_builder(args: argparse.Namespace, construir) -> int:
     if codigo is not None:
         return codigo
 
-    entrada = _registrar_aprobacion_exec(control, control_path, spec, args)
+    entrada = _registrar_aprobacion_exec(control, control_path, spec, args, snapshot_control)
+    if entrada is None:
+        return 2
     print(f"artefacto: {entrada['artefacto']}")
     print(f"algoritmo: {entrada['algoritmo']}")
     print(f"hash: {entrada['hash']}")
+    if entrada.get("approval_channel") == human_presence.CANAL_CONSOLE:
+        print(_MENSAJE_T1)
     return 0
 
 
@@ -2687,7 +2781,10 @@ _DESCRIPCION_EXEC_APPROVE = (
     "argumentos que 'exec <forma>': el hash lo calcula la herramienta (nunca se suministra) y "
     "cualquier cambio de target, flags, orden, script, argumentos o manifest invalida la "
     "aprobación. Modelo de confianza: declaración humana registrada (usuario/fecha/alcance/"
-    "cita), sin autenticación criptográfica; no distingue humano de agente (deuda v0.10)."
+    "cita), sin autenticación criptográfica; no distingue humano de agente (deuda v0.10). "
+    "Con --channel console_confirmed se exige además una consola de control real (falla cerrado, "
+    "nunca degrada a declared); esa señal de presencia NO prueba identidad ni resiste input de "
+    "consola sintetizado deliberadamente."
 )
 
 
@@ -2712,6 +2809,19 @@ def _agregar_args_aprobacion_humana(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--fecha", required=True)
     parser.add_argument("--alcance", required=True)
     parser.add_argument("--cita", required=True)
+    _agregar_arg_channel(parser)
+
+
+def _agregar_arg_channel(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--channel", choices=["declared", "console_confirmed"], default="declared",
+        help="Canal de aprobación: 'declared' (default, solo metadata declarada) o 'console_confirmed' "
+             "(pide confirmación interactiva en la consola de control). console_confirmed exige una consola "
+             "de control real y falla cerrado con exit 2 (nunca degrada a declared). Es una solicitud: el flag "
+             "por sí solo no produce la señal de presencia. NO prueba identidad ni resiste input de consola "
+             "sintetizado deliberadamente. En 'exec approve script|pytest' debe ir antes de '--' "
+             "(después se rechaza con exit 2).",
+    )
 
 
 # --- source (v0.8 Change 1 T6: 20260928-source-neutral-data-access) ---------
@@ -4304,6 +4414,7 @@ def construir_parser() -> argparse.ArgumentParser:
     p_approve.add_argument("--fecha", required=True)
     p_approve.add_argument("--alcance", required=True)
     p_approve.add_argument("--cita", required=True)
+    _agregar_arg_channel(p_approve)
     p_approve.set_defaults(func=cmd_approve)
 
     p_transition = subparsers.add_parser("transition", help="Aplica una transición de estado SDD.")

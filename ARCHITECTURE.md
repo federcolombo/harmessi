@@ -610,8 +610,8 @@ Fijado por `20261008-v010-roadmap-and-architecture-audit`. Es dirección congela
   `hypothesis` | `approved`; `approved` exige aprobación verificable bajo el trust model vigente (sin ella es inválido, fail-closed) y nunca se infiere
   por uso repetido ni por una inferencia del LLM.
 - **Frontera trust/authenticity.** `ApprovalRef` sigue siendo «aprobación registrada bajo el trust model». T0 `declared` = declaración registrada
-  (`--usuario` es metadata declarada; no demuestra presencia ni identidad). T1 `tty_confirmed` = confirmación interactiva desde un terminal de
-  control soportado: una señal de presencia humana más fuerte, NO prueba de identidad, autoría criptográfica ni non-repudiation. T2 (canal
+  (`--usuario` es metadata declarada; no demuestra presencia ni identidad). T1 `console_confirmed` = confirmación interactiva desde una consola de
+  control soportada: una señal de presencia interactiva, NO prueba de identidad, autoría criptográfica ni non-repudiation. T2 (canal
   separado/restricciones de adapter) es diseño futuro documentado; T3 (PKI/firmas) está fuera de alcance. Todo tier es aditivo y no cambia las Cards.
 - **Writer-concurrency.** Un único rol writer, con N instancias solo con ownership de archivos disjunto declarado en `tasks.md` antes de lanzar. El
   Lead coordina y gobierna; no es writer.
@@ -678,3 +678,53 @@ dsguard no la importan (lo verifica `tools/tests/test_architecture_boundaries.py
   clasificación del baseline y la escritura/hash en la que una edición concurrente del usuario podría pisarse (si el archivo era
   pristine al clasificar) o registrarse (si estaba en `sin_cambios`/`solo_si_identico`); es un límite aceptado de v0.10 y no se
   cierra con locks. Los pins byte-exact de evidencia bajo `autocrlf` (F-2) quedan como candidato futuro.
+
+### 8.3 Trust tiers de aprobación (v0.10 Change 2)
+
+Change `20261009-approval-trust-human-presence`. Tiers:
+
+| Tier | Canal | Estado |
+|---|---|---|
+| T0 | `declared` | vigente, backward compatible |
+| T1 | `console_confirmed` (`channel_version = console/v1`) | implementado |
+| T2 | enforcement del provider | futuro, NO implementado |
+| T3 | PKI / firmas | fuera de alcance |
+
+- **Texto normativo (EN).** A `console_confirmed` approval means that a declared approval was accompanied by an interactive
+  confirmation received through a supported control console for that specific operation. It does not prove the identity or
+  authorship of the declared user and is not resistant to a deliberately synthesized local console input.
+- **Texto normativo (ES).** Una aprobación declarada con ese metadata fue acompañada por una señal T1 de presencia interactiva;
+  Harmessi NO verificó que la persona declarada haya realizado físicamente esa aprobación.
+- **Registro aditivo.** La aprobación T1 agrega `approval_channel`, `confirmed_at` y `channel_version`; una aprobación sin esos
+  campos sigue siendo `declared`. `ApprovalRef` no cambia y solo expone el tier si el estado es `verified`.
+- **`isatty()` no es criterio.** En Windows devuelve True incluso en el runtime del agente (stdin=NUL); el canal exige una consola de
+  control real (ver `tools/dsguard/human_presence.py`). Sin ella falla cerrado.
+- **Inyección sintética.** PTY sintético (POSIX) o `WriteConsoleInputW`/`AttachConsole` (Windows): not empirically exercised;
+  explicitly outside T1 guarantee.
+- **`!` del provider.** Ejecutar con `!` no es T1 automáticamente: depende del canal observado por el proceso.
+- **T1 no es autorización ni RBAC.** Es una señal de presencia, no un permiso ni una identidad. T1 no es un boundary criptográfico.
+- **Qué detiene T1.** Flags, `--usuario`, stdin por pipe/archivo/DEVNULL, variables de entorno, subprocesos no interactivos y los
+  runtimes de agente observados no obtienen `console_confirmed`.
+- **Qué no detiene.** T1 no resiste administrador/root, SO comprometido ni malware.
+- **El tier es un registro, no una prueba.** `control.json` no está autenticado ni protegido por pathguard (solo
+  `.claude/guardrails.json` lo está): quien pueda editarlo puede escribir `approval_channel`/`channel_version` y el resolver lo leerá
+  como T1. La protección frente a eso pertenece a T2 / hook estricto del Bash del Lead (diferido) y a que Change 3 lo consuma junto
+  con otras garantías.
+- **Dependencia de entorno (Windows).** `GetConsoleWindow() != 0` también es verdadero para un runtime que herede la consola del
+  terminal humano (ConPTY/Windows Terminal/shell hijo): un agente podría leer el buffer de pantalla y escribir entrada. Es el mismo
+  límite de entrada sintética; la garantía depende de que el runtime del agente no comparta la consola con el humano (caso
+  observado: consola privada sin ventana).
+- **Alcance (R30).** `decision` y `remediation` siguen T0 (`declared`).
+- **Concurrencia de `control.json`.** La concurrencia optimista durante la confirmación reduce pero no elimina la ventana de pérdida
+  de actualización (milisegundos entre la verificación y la escritura).
+- **Qué ve el humano en `exec approve`.** Confirma `artefacto` + hash abreviado + acción; no ve el intérprete ni el argv real (límite
+  documentado; mejora futura posible).
+- **Consola heredada (ampliación).** El discriminante de consola también se cumple para un hijo que herede la consola/terminal del
+  humano (Windows: ConPTY/Windows Terminal/shell hijo; POSIX: mismo process group en primer plano), así que la garantía depende de
+  que el runtime del agente no comparta la consola con el humano.
+- **POSIX no verificado.** El comportamiento POSIX NO fue verificado en un runtime real (solo análisis y tests con fakes).
+- Aceptación manual ejecutada el 2026-10-13 en una terminal real de Windows: una aprobación `console_confirmed` quedó registrada con las claves históricas más `approval_channel`, `confirmed_at` y `channel_version`; ejecuciones desde las herramientas Bash y PowerShell del agente fallaron cerradas (exit 2, 0 aprobaciones). POSIX y terminales ConPTY/Windows Terminal específicas no fueron verificados.
+- **Sintaxis de `exec approve`.** `--channel` debe ir antes de `--`; después se rechaza.
+- **Frontera.** `human_presence.py` es stdlib-only y provider-neutral; Cards no lo importan (no crean ni elevan T1). Lo verifica
+  `tools/tests/test_architecture_boundaries.py`.
+- **Consumo.** Change 3 (Governed Amendments) será el primer consumidor obligatorio de T1.

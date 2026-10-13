@@ -20,6 +20,20 @@ ancla verificada demuestra «existe una aprobación registrada, aún vigente, de
 artefacto bajo el trust model de Harmessi»; NO identidad criptográfica, presencia del
 usuario, no repudio ni que el contenido aprobado sea el claim de la atestación.
 `usuario` / `fecha_declarada` son metadatos informativos: no se comparan ni validan.
+
+Canal / trust tier (Change 20261009, R31-R38): el resultado expone, aditivamente y solo
+para estado verified, `approval_channel` y `trust_tier` derivados de la entrada de
+aprobación resuelta (coincide con el hash del ref y es la más reciente del artefacto); en
+stale/missing/unresolvable van en `None` (un ref viejo no hereda el tier de una aprobación
+posterior). Un consumidor debe leer `getattr(res, "trust_tier", None)` y tratar None como
+«sin tier verificable». `console_confirmed` exacto +
+`channel_version == "console/v1"` -> T1; ausente, desconocido o malformado -> `declared`/T0.
+El canal no altera el estado. El `ApprovalRef` nunca declara su tier. Un ancla verificada
+puede exponer el tier de la aprobación resuelta pero sigue sin probar identidad. A
+`console_confirmed` approval means that a declared approval was accompanied by an
+interactive confirmation received through a supported control console for that specific
+operation. It does not prove the identity or authorship of the declared user and is not
+resistant to a deliberately synthesized local console input.
 """
 from __future__ import annotations
 
@@ -33,10 +47,21 @@ try:  # import dual: paquete (`tools.cards`) o módulo suelto
 except ImportError:  # pragma: no cover - ejecución sin paquete padre
     import core  # type: ignore[no-redef]
 
+CANAL_DECLARED = "declared"
+CANAL_CONSOLE = "console_confirmed"
+VERSION_CANAL_CONSOLE = "console/v1"
+TIER_T0 = "T0"
+TIER_T1 = "T1"
+
 NOTA_ANCHOR = (
     "ancla verificada = existe una aprobación registrada, aún vigente, de ese artefacto "
-    "bajo el trust model de Harmessi; NO prueba identidad criptográfica, presencia del "
-    "usuario, no repudio ni que el contenido aprobado sea el claim de la atestación"
+    "bajo el trust model de Harmessi; puede exponer el trust tier (T0/T1) de la aprobación "
+    "resuelta pero NO prueba identidad criptográfica, presencia del "
+    "usuario, no repudio ni que el contenido aprobado sea el claim de la atestación. "
+    "A `console_confirmed` approval means that a declared approval was accompanied by an "
+    "interactive confirmation received through a supported control console for that specific "
+    "operation. It does not prove the identity or authorship of the declared user and is not "
+    "resistant to a deliberately synthesized local console input."
 )
 
 VERIFIED = "verified"
@@ -56,6 +81,10 @@ class AnchorResolution:
     artefacto: Optional[str] = None
     usuario: Optional[str] = None
     fecha_declarada: Optional[str] = None
+    # Aditivos (Change 20261009, R31-R38): derivados de la entrada de aprobación resuelta
+    # (la más reciente del artefacto). `None` salvo estado verified.
+    approval_channel: Optional[str] = None
+    trust_tier: Optional[str] = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.state, str) or self.state not in ESTADOS:
@@ -116,7 +145,36 @@ def _resolver(repo_root: Any, ref: Any) -> AnchorResolution:
     detalle = res.get("detalle") if isinstance(res, dict) else None
     if estado not in ESTADOS:
         return AnchorResolution(UNRESOLVABLE, "resolución de aprobación con estado desconocido", **base)
-    return AnchorResolution(estado, str(detalle), **base, **meta)
+    canal = dict(approval_channel=None, trust_tier=None)
+    if estado == VERIFIED:
+        # Solo se lee de la entrada resuelta; nada se toma del `ref` salvo change_id/artefacto/hash.
+        canal_ok, tier = _canal_y_tier(entrada)
+        canal = dict(approval_channel=canal_ok, trust_tier=tier)
+    return AnchorResolution(estado, str(detalle), **base, **meta, **canal)
+
+
+def _canal_y_tier(entrada: Any) -> tuple:
+    """`(approval_channel, trust_tier)` de una entrada de aprobación (solo lectura).
+
+    `console_confirmed` exacto + `channel_version == "console/v1"` -> T1. Ausente,
+    desconocido o malformado -> `declared`/T0 (el valor desconocido no se propaga)."""
+    if (
+        isinstance(entrada, dict)
+        and type(entrada.get("approval_channel")) is str
+        and entrada.get("approval_channel") == CANAL_CONSOLE
+        and type(entrada.get("channel_version")) is str
+        and entrada.get("channel_version") == VERSION_CANAL_CONSOLE
+    ):
+        return CANAL_CONSOLE, TIER_T1
+    return CANAL_DECLARED, TIER_T0
+
+
+def canal_de_aprobacion(repo_root: Any, approval_ref: Any) -> tuple:
+    """`(estado, approval_channel, trust_tier)` de un `approval_ref`. Nunca lanza; solo lectura.
+
+    Canal/tier son `None` salvo que el estado sea verified."""
+    res = resolve_approval_ref(repo_root, approval_ref)
+    return res.state, res.approval_channel, res.trust_tier
 
 
 def make_anchor_verifier(repo_root: Any) -> Callable[[Any], AnchorResolution]:

@@ -211,6 +211,15 @@ ledger (`ds_guard decision supersede`, ver
 `.claude/skills/lead-data-scientist/decision-ledger.md`) y, si corresponde, reabrir el SDD del
 cambio afectado con aprobación explícita del usuario.
 
+## Aprobaciones con presencia interactiva (`console_confirmed`)
+
+Cuando un Change o una operación exige T1 (`console_confirmed`), el Lead lleva todo hasta el checkpoint y **se detiene**: el humano
+ejecuta `ds_guard approve ... --channel console_confirmed` en su propia terminal.
+
+- El Lead/agente nunca intenta obtener T1: no pasa flags, pipes ni sintetiza input. El `!` del provider puede no ser T1.
+- `--channel console_confirmed` sin consola de control falla cerrado y nunca se degrada a `declared` automáticamente; si el humano decide aceptar T0, es él quien reintenta explícitamente con `--channel declared`.
+- T1 es una señal de presencia interactiva; no prueba identidad ni autoría.
+
 ## 9. Archivado
 
 Al cerrar, el cambio **permanece** en `openspec/changes/<id>/` con `estado: cerrada` hasta que se
