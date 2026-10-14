@@ -727,4 +727,29 @@ Change `20261009-approval-trust-human-presence`. Tiers:
 - **Sintaxis de `exec approve`.** `--channel` debe ir antes de `--`; después se rechaza.
 - **Frontera.** `human_presence.py` es stdlib-only y provider-neutral; Cards no lo importan (no crean ni elevan T1). Lo verifica
   `tools/tests/test_architecture_boundaries.py`.
-- **Consumo.** Change 3 (Governed Amendments) será el primer consumidor obligatorio de T1.
+- **Consumo.** Change 3 (Governed Amendments, §8.4) es el primer consumidor obligatorio de T1.
+
+### 8.4 Governed amendments (v0.10 Change 3)
+
+Change `20261013-governed-amendments`. Comandos: `ds_guard scope amend|show` y `ds_guard guardrails readopt`.
+
+- **T1 obligatorio.** Ambas mutaciones exigen `console_confirmed`; no existe `--channel declared`. Fallan cerradas sin consola real.
+- **Cadenas propias, append-only.** `openspec/changes/<id>/amendments.jsonl` (scope) y `openspec/decisions/guardrails-adoptions.jsonl`
+  (adopciones). NO son el decision ledger.
+- **Lectura única del scope.** `scope.alcance_efectivo` es el único lector; la caché de `control.json` nunca supera a la cadena
+  (`ALCANCE-CACHE-DIVERGENTE`, `ALCANCE-ENMIENDA-INVALIDA`). Ancla: `alcance.scope_hash`.
+- **Closed list de re-adopción.** Exactamente `holdouts`, `data_raw`, `secretos_extra`, `autonomy.sealed_sources`, y SOLO adiciones.
+  Excluidos: `excepciones`, `write_scopes`, `autonomy.source_access`, remociones, claves desconocidas y las claves mutables de
+  Corrective B (no producen drift). Lo que queda fuera sigue siendo drift contra la plantilla.
+- **Doctor.** Baseline = plantilla ∪ adopciones válidas de la cadena.
+- **pathguard.** Protege ambos registros (`RUTAS_REGISTROS_GOBERNADOS_PROTEGIDAS`) contra Write/Edit/shell de escritura; no bloquea
+  lectura ni el CLI gobernado.
+- **Otras reglas.** Re-aprobar un proposal con enmiendas se rechaza; `sync` nunca re-adopta.
+- **Operation binding.** Cada operación liga `hash_diff`. Orden de atomicidad: recalcular -> concurrencia optimista -> T1 -> releer ->
+  escritura temporal + validar cadena -> `os.replace` -> caché best-effort -> validación posterior.
+- **Frontera.** `scope_amendments.py` y `guardrails_adoption.py` son stdlib + imports relativos de `dsguard`; no importan
+  `human_presence` (reciben `campos_t1` ya resueltos; la presencia se invoca solo desde `ds_guard.py`) y ni Cards, datasources,
+  reporting ni ds_profile los importan. Lo verifica `tools/tests/test_architecture_boundaries.py`.
+- **Límites honestos.** Sin criptografía. T1 es presencia, no identidad. pathguard no autentica el registro: la seguridad es
+  T1 + binding + cadena + validación + Git. Un agente que escriba fuera de pathguard o sintetice input puede falsificar.
+  `readopt` requiere el clon de Harmessi (plantilla del repo origen, como Doctor) y `--destino`.

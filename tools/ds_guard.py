@@ -20,7 +20,9 @@ import copy
 import hashlib
 import importlib.metadata as importlib_metadata
 import json
+import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import NamedTuple, Optional
 
@@ -42,6 +44,7 @@ from dsguard import (  # noqa: E402
     core,
     decision,
     efficiency,
+    guardrails_adoption,
     human_presence,
     kdd,
     kdd_compat,
@@ -55,6 +58,7 @@ from dsguard import (  # noqa: E402
     repo,
     scientific_validity,
     scope,
+    scope_amendments,
     sdd,
     status,
 )
@@ -222,7 +226,8 @@ def cmd_status(args: argparse.Namespace) -> int:
     sesion_activa = sdd._sesion_activa(control)
     sesion_info = sdd.session_status(control)
 
-    rutas_autorizadas = control.get("alcance", {}).get("rutas_autorizadas", [])
+    # Scope efectivo vía función única (aprobado + enmiendas gobernadas); sin enmiendas = caché.
+    rutas_autorizadas, hallazgos_alcance = scope.alcance_efectivo(change_dir, control)
     fuera_de_alcance = [
         r for r in repo.files_out_of_scope(repo_root, rutas_autorizadas) if not scope.es_output_intrinseco(r)
     ]
@@ -240,6 +245,8 @@ def cmd_status(args: argparse.Namespace) -> int:
             "fuera_de_alcance": fuera_de_alcance,
             "checkpoints": checkpoints_estado,
         }
+        if hallazgos_alcance:
+            payload["hallazgos_alcance"] = [h.to_dict() for h in hallazgos_alcance]
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
         print(f"Cambio: {args.change_id}")
@@ -255,6 +262,8 @@ def cmd_status(args: argparse.Namespace) -> int:
             )
         else:
             print("Sin sesión activa.")
+        for h in hallazgos_alcance:
+            print(f"  [{h.codigo}] {h.mensaje}")
         if fuera_de_alcance:
             print("Archivos fuera de alcance (informativo):")
             for r in fuera_de_alcance:
@@ -292,7 +301,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
         sesion_activa is not None or estado == "cerrada"
     )
     if not gate_cierre_va_a_correr:
-        findings += scope.evaluar_alcance(repo_root, control)
+        findings += scope.evaluar_alcance(repo_root, control, change_dir=change_dir)
 
     for linea in repo.diff_check(repo_root):
         findings.append(core.Finding("ALCANCE-WHITESPACE", linea))
@@ -384,6 +393,18 @@ def _control_cambio_en_disco(control_path: Path, snapshot: Optional[dict]) -> bo
         return True
 
 
+def _hay_enmiendas_o_ilegible(change_dir: Path) -> bool:
+    """True si `amendments.jsonl` existe con tamaño > 0 (cualquier contenido, incluso solo
+    espacios o líneas en blanco, cuenta) o no se puede inspeccionar (fail-closed)."""
+    ruta = scope_amendments.ruta_archivo(change_dir)
+    if not ruta.exists():
+        return False
+    try:
+        return ruta.stat().st_size > 0
+    except OSError:
+        return True
+
+
 def cmd_approve(args: argparse.Namespace) -> int:
     try:
         repo_root = _repo_root()
@@ -395,6 +416,15 @@ def cmd_approve(args: argparse.Namespace) -> int:
         print(error_usuario, file=sys.stderr)
         return 2
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+    # Governed amendments (M4): con enmiendas (o archivo ilegible/inválido) el scope lo gobierna la
+    # cadena; re-aprobar proposal.md se rechaza ANTES de mutar nada, con o sin sección de alcance.
+    if "proposal.md" in args.artefacto and _hay_enmiendas_o_ilegible(change_dir):
+        print(
+            "el scope está gobernado por enmiendas; re-aprobar proposal.md se rechaza "
+            "(ver ds_guard scope show)",
+            file=sys.stderr,
+        )
+        return 2
     snapshot_control = _snapshot_control(args, control)
     mensajes_diferidos = []  # stdout de éxito: se emite solo tras escribir control
 
@@ -430,6 +460,8 @@ def cmd_approve(args: argparse.Namespace) -> int:
             agregadas = sorted(set(nuevas) - set(previas))
             retiradas = sorted(set(previas) - set(nuevas))
             control["alcance"]["rutas_autorizadas"] = nuevas
+            # Ancla de la primera enmienda (revisión 0).
+            control["alcance"]["scope_hash"] = scope_amendments.hash_alcance(nuevas)
             mensajes_diferidos.append(f"alcance autorizado materializado ({len(nuevas)} rutas)")
             for r in agregadas:
                 mensajes_diferidos.append(f"  + {r}")
@@ -2287,7 +2319,20 @@ def _validar_request_exec(args: argparse.Namespace, command_form: str, argv: lis
         print(_mensaje_paquete_no_instalado("leadrun", "experiment"), file=sys.stderr)
         return None, 3
 
-    scope = tuple(control.get("alcance", {}).get("rutas_autorizadas", []))
+    # Scope efectivo vía función única; cadena de enmiendas inválida => exec (y exec approve) rechazan.
+    try:
+        change_dir_exec = _change_dir(_repo_root(), args.change_id)
+    except RuntimeError:
+        change_dir_exec = None
+    rutas_efectivas, hallazgos_scope = scope.alcance_efectivo(change_dir_exec, control)
+    if any(h.codigo == scope_amendments.COD_ENMIENDA_INVALIDA for h in hallazgos_scope):
+        print(
+            "Historial de enmiendas de alcance inválido; exec rechazado (fail-closed): "
+            + "; ".join(h.mensaje for h in hallazgos_scope),
+            file=sys.stderr,
+        )
+        return None, 2
+    scope_exec = tuple(rutas_efectivas)
     if timeout is None:
         timeout = getattr(args, "timeout", 600)
 
@@ -2296,7 +2341,7 @@ def _validar_request_exec(args: argparse.Namespace, command_form: str, argv: lis
             command_form=command_form,
             interpreter=args.interpreter,
             argv=tuple(argv),
-            scope=scope,
+            scope=scope_exec,
             timeout_seconds=timeout,
         )
     except leadrun_core.ExecutionError as exc:
@@ -4248,6 +4293,8 @@ def _rutas_por_defecto_change(change_id: str, archivos_md: list) -> list:
     rutas = [f"{base}/{nombre}" for nombre in archivos_md]
     rutas.append(f"{base}/control.json")
     rutas.append(f"{base}/verification.md")
+    # Registro de enmiendas del propio Change (no removible; Change 3 de v0.10).
+    rutas.append(f"{base}/amendments.jsonl")
     return rutas
 
 
@@ -4331,7 +4378,10 @@ def cmd_init(args: argparse.Namespace) -> int:
         "origen": "ds_guard init",
         "creado_utc": core.ahora_utc(),
         "baseline": baseline,
-        "alcance": {"rutas_autorizadas": rutas_autorizadas},
+        "alcance": {
+            "rutas_autorizadas": rutas_autorizadas,
+            "scope_hash": scope_amendments.hash_alcance(rutas_autorizadas),
+        },
         "aprobaciones": [],
         "transiciones": [],
         "sesiones": [],
@@ -4356,6 +4406,525 @@ def cmd_init(args: argparse.Namespace) -> int:
         print(f"Cambio inicializado: {args.change_id} (modo {args.modo})")
         for nombre_archivo in archivos_creados:
             print(f"  creado: openspec/changes/{args.change_id}/{nombre_archivo}")
+    return 0
+
+
+# --- scope amend / show (Change 3 de v0.10: governed amendments) ---------------
+
+_ESTADOS_ENMENDABLES = ("aprobada_implementacion", "en_implementacion", "en_verificacion")
+
+
+class _ErrorOperacion(Exception):
+    """Aborta una operación gobernada con `codigo` de salida y mensaje (stderr)."""
+
+    def __init__(self, mensaje: str, codigo: int = 2):
+        super().__init__(mensaje)
+        self.mensaje = mensaje
+        self.codigo = codigo
+
+
+def _resolver_fecha(valor) -> tuple:
+    """`(fecha, error)`: `--fecha` (YYYY-MM-DD) o la fecha de hoy en UTC si no se pasó."""
+    if valor is None:
+        return core.ahora_utc()[:10], None
+    try:
+        if not isinstance(valor, str) or not valor.isascii() \
+                or not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", valor):
+            raise ValueError(valor)
+        datetime.strptime(valor, "%Y-%m-%d")
+    except ValueError:
+        return None, f"--fecha inválida: {_imprimible(valor)!r} (formato esperado YYYY-MM-DD, ASCII)"
+    return valor, None
+
+
+def _imprimible(texto) -> str:
+    """Texto del llamador seguro para imprimir: todo carácter no imprimible pasa a `?`."""
+    return "".join(c if c.isprintable() else "?" for c in str(texto))
+
+
+_LIMITE_ACCION_T1 = 120  # human_presence._sanitizar trunca a 120: nunca se confía en el truncado
+
+
+def _accion_scope(plan) -> str:
+    partes = [f"+{_imprimible(r)}" for r in plan.add] + [f"-{_imprimible(r)}" for r in plan.remove]
+    return "scope-amend: " + " ".join(partes)
+
+
+def _texto_con_control_en(args_texto: list) -> Optional[str]:
+    """Primer texto del llamador con caracteres de control/formato/etc., o None."""
+    for t in args_texto:
+        if scope_amendments.texto_con_caracteres_de_control(t):
+            return t
+    return None
+
+
+def _normalizar_ruta_alcance(crudo):
+    """Wrapper de `sdd._normalizar_entrada_alcance`: `(ruta|None, motivo|None)`."""
+    if not isinstance(crudo, str):
+        return None, "no es un string"
+    ruta, motivo = sdd._normalizar_entrada_alcance(crudo)
+    if motivo is not None:
+        return None, motivo
+    return ruta, None
+
+
+def _ruta_enmiendas_relativa(change_id: str) -> str:
+    return f"openspec/changes/{change_id}/{scope_amendments.NOMBRE_ARCHIVO}"
+
+
+def _calcular_plan_scope(args: argparse.Namespace, repo_root: Path):
+    """Recalcula TODO desde disco. Devuelve `(change_dir, control, estado, plan, auto)`;
+    `auto` indica que se agregó `amendments.jsonl` a los ADD. Levanta `_ErrorOperacion`."""
+    change_dir, tasks_path, control_path, _control_ignorado = _cargar_change(repo_root, args.change_id)
+    try:
+        control = core.leer_control(control_path)
+    except core.ControlJsonError as exc:
+        raise _ErrorOperacion(str(exc))
+    estado_sdd, _err = sdd.read_estado(tasks_path)
+    if estado_sdd not in _ESTADOS_ENMENDABLES:
+        raise _ErrorOperacion(
+            f"El Change '{args.change_id}' está en estado {estado_sdd!r}: solo se enmiendan Changes "
+            f"aprobados y no cerrados ({', '.join(_ESTADOS_ENMENDABLES)})"
+        )
+    estado = scope_amendments.estado_alcance(change_dir, control)
+    if not estado.valido:
+        raise _ErrorOperacion(
+            "El historial de enmiendas es inválido:\n" + core.formatear_findings_texto(list(estado.hallazgos))
+        )
+    if estado.revision == 0:
+        ancla = control.get("alcance", {}).get("scope_hash") if isinstance(control.get("alcance"), dict) else None
+        if isinstance(ancla, str) and ancla and scope_amendments.hash_alcance(estado.rutas) != ancla:
+            raise _ErrorOperacion(
+                "control.json: el scope en caché no coincide con el hash de aprobación registrado; "
+                "se rechaza la enmienda (R24)"
+            )
+    md_defecto = [f"{n}.md" for n in _PLANTILLAS_POR_MODO.get(control.get("modo"), _PLANTILLAS_POR_MODO["completo"])]
+    defecto = _rutas_por_defecto_change(args.change_id, md_defecto)
+    add = list(args.add or [])
+    remove = list(args.remove or [])
+    plan = scope_amendments.planificar_enmienda(estado, add, remove, defecto, _normalizar_ruta_alcance)
+    auto = False
+    if not plan.errores and not plan.es_noop and estado.revision == 0:
+        propia = _ruta_enmiendas_relativa(args.change_id)
+        if not repo.path_matches_any(propia, list(estado.rutas)):
+            auto = True
+            plan = scope_amendments.planificar_enmienda(
+                estado, [propia] + add, remove, defecto, _normalizar_ruta_alcance
+            )
+    return change_dir, control, estado, plan, auto
+
+
+def _imprimir_diff_scope(plan, auto: bool, change_id: str) -> None:
+    print(f"Enmienda de scope del Change {change_id} ({plan.operacion or 'sin cambios'}):")
+    propia = _ruta_enmiendas_relativa(change_id)
+    for r in plan.add:
+        marca = " (+ registro de la propia enmienda)" if (auto and r == propia) else ""
+        print(f"  + {_imprimible(r)}{marca}")
+    for r in plan.remove:
+        print(f"  - {_imprimible(r)}")
+    for r in plan.noop_add:
+        print(f"  = {_imprimible(r)} (add no-op: ya presente)")
+    for r in plan.noop_remove:
+        print(f"  = {_imprimible(r)} (remove no-op: ausente)")
+    print(f"  rutas antes ({len(plan.rutas_antes)}): {[_imprimible(r) for r in plan.rutas_antes]}")
+    print(f"  rutas después ({len(plan.rutas_despues)}): {[_imprimible(r) for r in plan.rutas_despues]}")
+    print(f"  hash_antes:   {plan.hash_antes}")
+    print(f"  hash_despues: {plan.hash_despues}")
+    print(f"  hash_diff:    {scope_amendments.hash_diff(change_id, plan)}")
+
+
+def cmd_scope_show(args: argparse.Namespace) -> int:
+    if _change_id_invalido(args.change_id):
+        print(f"--change-id inválido: {_imprimible(args.change_id)!r}", file=sys.stderr)
+        return 2
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    change_dir, _tasks, control_path, control = _cargar_change(repo_root, args.change_id)
+    estado = scope_amendments.estado_alcance(change_dir, control)
+    if not estado.valido:
+        print(core.formatear_findings_texto(list(estado.hallazgos)), file=sys.stderr)
+        return 1
+    hallazgos = list(estado.hallazgos)
+    if getattr(args, "reparar_cache", False):
+        divergente = any(h.codigo == scope_amendments.COD_CACHE_DIVERGENTE for h in hallazgos)
+        if not divergente:
+            print("La caché ya coincide con la cadena de enmiendas: nada que reparar.")
+        else:
+            # Solo alinea la caché derivada con la verdad gobernada; sin T1, sin tocar scope_hash.
+            try:
+                control_disco = core.leer_control(control_path)
+                control_disco.setdefault("alcance", {})["rutas_autorizadas"] = list(estado.rutas)
+                core.escribir_control(control_path, control_disco)
+            except Exception as exc:  # noqa: BLE001
+                print(f"No se pudo reparar la caché ({type(exc).__name__}): {exc}", file=sys.stderr)
+                return 2
+            print(
+                "Caché control.alcance.rutas_autorizadas realineada con la cadena de enmiendas "
+                "(sin cambiar el scope efectivo ni alcance.scope_hash)."
+            )
+            hallazgos = [h for h in hallazgos if h.codigo != scope_amendments.COD_CACHE_DIVERGENTE]
+    print(f"Change: {args.change_id}")
+    print(f"Revisión: {estado.revision}")
+    print(f"scope_hash: {estado.scope_hash}")
+    print(f"Rutas efectivas ({len(estado.rutas)}):")
+    for r in estado.rutas:
+        print(f"  - {_imprimible(r)}")
+    for h in hallazgos:
+        print(f"AVISO [{h.codigo}] {h.mensaje}")
+    return 0
+
+
+def cmd_scope_amend(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    if _change_id_invalido(args.change_id):
+        print(f"--change-id inválido: {args.change_id!r}", file=sys.stderr)
+        return 2
+    if not isinstance(args.motivo, str) or not args.motivo.strip():
+        print("--motivo es obligatorio y no puede estar vacío", file=sys.stderr)
+        return 2
+    if not isinstance(args.usuario, str) or not args.usuario.strip():
+        print("--usuario es obligatorio y no puede estar vacío", file=sys.stderr)
+        return 2
+    error_usuario = core.validar_usuario_sin_email(args.usuario)
+    if error_usuario:
+        print(error_usuario, file=sys.stderr)
+        return 2
+    if not (args.add or args.remove):
+        print("Debe indicarse al menos un --add o un --remove", file=sys.stderr)
+        return 2
+    # Antes de cualquier prompt T1: nada del llamador con caracteres de control/formato.
+    if _texto_con_control_en([args.motivo, args.usuario, *(args.add or []), *(args.remove or [])]) is not None:
+        print(
+            "--motivo, --usuario y las rutas de --add/--remove no pueden contener caracteres de "
+            "control, de formato ni no imprimibles",
+            file=sys.stderr,
+        )
+        return 2
+    fecha, error_fecha = _resolver_fecha(args.fecha)
+    if error_fecha:
+        print(error_fecha, file=sys.stderr)
+        return 2
+
+    try:
+        change_dir, control, estado, plan, auto = _calcular_plan_scope(args, repo_root)
+    except _ErrorOperacion as exc:
+        print(exc.mensaje, file=sys.stderr)
+        return exc.codigo
+    if plan.errores:
+        for e in plan.errores:
+            print(f"Error: {e}", file=sys.stderr)
+        return 2
+    if args.expected_scope_hash and args.expected_scope_hash != plan.hash_antes:
+        print(
+            f"--expected-scope-hash no coincide con el scope vigente ({plan.hash_antes}); "
+            "revisá `ds_guard scope show`",
+            file=sys.stderr,
+        )
+        return 2
+    if plan.es_noop:
+        print("Sin cambios efectivos (todo es no-op): no se pide confirmación ni se escribe nada.")
+        _imprimir_diff_scope(plan, auto, args.change_id)
+        return 0
+    _imprimir_diff_scope(plan, auto, args.change_id)
+    print(f"  motivo:  {_imprimible(args.motivo)}")
+    print(f"  usuario: {_imprimible(args.usuario)} (declarado)")
+    print(f"  fecha:   {fecha}")
+    cabe_accion = len(_accion_scope(plan)) <= _LIMITE_ACCION_T1
+    if args.dry_run:
+        if not cabe_accion:
+            print(
+                "AVISO: demasiadas rutas para confirmar en una sola operación; la ejecución "
+                "se rechazaría (dividí la enmienda en pasos más chicos)."
+            )
+        print("--dry-run: no se pidió confirmación ni se escribió nada.")
+        return 0
+    if not cabe_accion:
+        print(
+            "demasiadas rutas para confirmar en una sola operación; dividí la enmienda en pasos más chicos",
+            file=sys.stderr,
+        )
+        return 2
+
+    # Ejecución (R31): recalcular TODO inmediatamente antes de T1.
+    try:
+        change_dir, control, estado, plan2, auto = _calcular_plan_scope(args, repo_root)
+    except _ErrorOperacion as exc:
+        print(exc.mensaje, file=sys.stderr)
+        return exc.codigo
+    if plan2.errores or plan2.es_noop or \
+            scope_amendments.hash_diff(args.change_id, plan2) != scope_amendments.hash_diff(args.change_id, plan):
+        print("el estado cambió durante la confirmación (antes del prompt); reintentá", file=sys.stderr)
+        return 2
+    plan = plan2
+    hash_binding = scope_amendments.hash_diff(args.change_id, plan)
+    accion = _accion_scope(plan)
+    if len(accion) > _LIMITE_ACCION_T1:
+        print(
+            "demasiadas rutas para confirmar en una sola operación; dividí la enmienda en pasos más chicos",
+            file=sys.stderr,
+        )
+        return 2
+    resultado = human_presence.solicitar_confirmacion({
+        "change_id": args.change_id,
+        "artefacto": "scope-amendment",
+        "hash": hash_binding,
+        "accion": accion,
+    })
+    if not resultado.ok:
+        print(resultado.motivo or "Confirmación interactiva no obtenida.", file=sys.stderr)
+        return 2
+
+    # Releer y replanificar: si cambió el diff, abortar sin escribir.
+    try:
+        change_dir, control, estado, plan3, _auto3 = _calcular_plan_scope(args, repo_root)
+    except _ErrorOperacion as exc:
+        print(exc.mensaje, file=sys.stderr)
+        return exc.codigo
+    if plan3.errores or plan3.es_noop or scope_amendments.hash_diff(args.change_id, plan3) != hash_binding:
+        print("el estado cambió durante la confirmación; no se escribió nada", file=sys.stderr)
+        return 2
+    try:
+        entrada = scope_amendments.aplicar_enmienda(
+            change_dir, plan3, motivo=args.motivo, usuario=args.usuario, fecha=fecha,
+            campos_t1=human_presence.campos_registro(resultado),
+            esperado_hash_antes=plan.hash_antes, change_id=args.change_id,
+        )
+    except (ValueError, OSError) as exc:
+        print(f"No se aplicó la enmienda: {exc}", file=sys.stderr)
+        return 2
+
+    # Caché derivada: best-effort (la cadena es la fuente de verdad). No se toca `scope_hash`.
+    control_path = change_dir / "control.json"
+    try:
+        control_disco = core.leer_control(control_path)
+        control_disco.setdefault("alcance", {})["rutas_autorizadas"] = list(plan.rutas_despues)
+        core.escribir_control(control_path, control_disco)
+    except Exception as exc:  # noqa: BLE001
+        print(
+            f"Aviso: no se pudo refrescar la caché de control.json ({type(exc).__name__}); "
+            "el estado sigue consistente (la cadena manda).",
+            file=sys.stderr,
+        )
+    try:
+        control_final = core.leer_control(control_path)
+    except Exception:  # noqa: BLE001
+        control_final = control
+    post = scope_amendments.estado_alcance(change_dir, control_final)
+    if not post.valido or post.scope_hash != plan.hash_despues:
+        print(
+            "Aviso: la enmienda YA fue escrita en el historial, pero la validación posterior falló "
+            "(el historial resultante no coincide con lo esperado). Revisá `ds_guard scope show`.",
+            file=sys.stderr,
+        )
+        return 2
+    print(f"Enmienda #{entrada['seq']} registrada en {_ruta_enmiendas_relativa(args.change_id)}")
+    print(f"scope_hash: {post.scope_hash}")
+    print(_MENSAJE_T1)
+    return 0
+
+
+# --- guardrails readopt ------------------------------------------------------------
+
+def _ruta_plantilla_guardrails():
+    """Ruta del guardrails.json del repo ORIGEN de Harmessi (igual que Doctor), o None si no
+    se puede determinar. Aislada para poder parchearla en tests."""
+    try:
+        from tools.ds_init import manifest as manifest_mod  # import perezoso
+        return manifest_mod.raiz_repo_origen() / ".claude" / "guardrails.json"
+    except Exception:  # noqa: BLE001
+        pass
+    raiz = Path(__file__).resolve().parents[1]
+    if (raiz / "tools" / "ds_init" / "manifest.py").is_file():
+        return raiz / ".claude" / "guardrails.json"
+    return None
+
+
+def _calcular_plan_readopt(destino: Path):
+    """Recalcula desde disco. Devuelve `(actual, plantilla, adopciones, plan)`. Cualquier error
+    inesperado (incluido `RecursionError`) se traduce en `_ErrorOperacion` (fail-closed)."""
+    try:
+        return _calcular_plan_readopt_interno(destino)
+    except _ErrorOperacion:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise _ErrorOperacion(f"no se pudo calcular la re-adopción ({type(exc).__name__})")
+
+
+def _calcular_plan_readopt_interno(destino: Path):
+    ruta_actual = destino / ".claude" / "guardrails.json"
+    try:
+        actual = json.loads(ruta_actual.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise _ErrorOperacion(f"guardrails.json inexistente o malformado en {ruta_actual} ({type(exc).__name__})")
+    if not isinstance(actual, dict):
+        raise _ErrorOperacion("guardrails.json malformado: se esperaba un objeto JSON")
+    ruta_plantilla = _ruta_plantilla_guardrails()
+    if ruta_plantilla is None:
+        raise _ErrorOperacion(
+            "No se pudo determinar la plantilla de guardrails: ejecutá desde el clon de Harmessi con --destino"
+        )
+    ruta_plantilla = Path(ruta_plantilla)
+    try:
+        if ruta_plantilla.resolve() == ruta_actual.resolve():
+            raise _ErrorOperacion(
+                "El destino es el propio repo origen (no hay baseline independiente): "
+                "ejecutá desde el clon de Harmessi con --destino"
+            )
+        plantilla = json.loads(ruta_plantilla.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise _ErrorOperacion(f"plantilla de guardrails ilegible ({type(exc).__name__})")
+    adopciones = guardrails_adoption.cargar_adopciones(destino)
+    plan = guardrails_adoption.planificar_adopcion(actual, plantilla, adopciones)
+    return actual, plantilla, adopciones, plan
+
+
+def _imprimir_diff_readopt(plan, destino: Path) -> None:
+    print("Re-adopción de guardrails (solo adiciones sobre la closed list):")
+    print(f"  destino: {_imprimible(destino)}")
+    for clave in sorted(plan.adiciones):
+        print(f"  {clave}:")
+        for e in plan.adiciones[clave]:
+            print(f"    + {_imprimible(e)}")
+    print(f"  hash_antes:   {plan.hash_antes}")
+    print(f"  hash_despues: {plan.hash_despues}")
+    print(f"  hash_diff:    {guardrails_adoption.hash_diff(plan)}")
+
+
+def cmd_guardrails_readopt(args: argparse.Namespace) -> int:
+    if not isinstance(args.motivo, str) or not args.motivo.strip():
+        print("--motivo es obligatorio y no puede estar vacío", file=sys.stderr)
+        return 2
+    if not isinstance(args.usuario, str) or not args.usuario.strip():
+        print("--usuario es obligatorio y no puede estar vacío", file=sys.stderr)
+        return 2
+    error_usuario = core.validar_usuario_sin_email(args.usuario)
+    if error_usuario:
+        print(error_usuario, file=sys.stderr)
+        return 2
+    if _texto_con_control_en([args.motivo, args.usuario]) is not None:
+        print("--motivo y --usuario no pueden contener caracteres de control, de formato ni no imprimibles",
+              file=sys.stderr)
+        return 2
+    fecha, error_fecha = _resolver_fecha(args.fecha)
+    if error_fecha:
+        print(error_fecha, file=sys.stderr)
+        return 2
+    if args.destino:
+        destino = Path(args.destino).resolve()
+    else:
+        try:
+            destino = _repo_root()
+        except RuntimeError as e:
+            print(str(e), file=sys.stderr)
+            return 3
+
+    try:
+        actual, plantilla, adop, plan = _calcular_plan_readopt(destino)
+    except _ErrorOperacion as exc:
+        print(exc.mensaje, file=sys.stderr)
+        return exc.codigo
+    if plan.rechazos:
+        print("Re-adopción rechazada (rechazo total, sin aplicación parcial):", file=sys.stderr)
+        for motivo in plan.rechazos:
+            print(f"  - {motivo}", file=sys.stderr)
+        if not adop.valida:
+            for h in adop.hallazgos:
+                detalle = h.get("detail") if isinstance(h, dict) else str(h)
+                print(f"  [registro de adopciones inválido] {detalle}", file=sys.stderr)
+        return 2
+    if args.expected_guardrails_hash and args.expected_guardrails_hash != plan.hash_antes:
+        print(
+            f"--expected-guardrails-hash no coincide con el estado vigente ({plan.hash_antes})",
+            file=sys.stderr,
+        )
+        return 2
+    if plan.es_noop:
+        print("Sin diferencias adoptables (no-op): no se pide confirmación ni se escribe nada.")
+        try:
+            from dsguard import guardrails_drift
+            residual = guardrails_drift.comparar(
+                actual, guardrails_adoption.baseline_efectivo(plantilla, adop))
+        except Exception:  # noqa: BLE001 -- informativo
+            residual = []
+        if residual:
+            print(
+                "Nota: aun así hay diferencias (p. ej. de orden o duplicados) que no son adopciones y "
+                "que Doctor puede seguir marcando como drift: " + ", ".join(_imprimible(r) for r in residual)
+            )
+        return 0
+    if _texto_con_control_en([e for el in plan.adiciones.values() for e in el]) is not None:
+        print("Los elementos a adoptar no pueden contener caracteres de control, de formato ni no imprimibles",
+              file=sys.stderr)
+        return 2
+    _imprimir_diff_readopt(plan, destino)
+    print(f"  motivo:  {_imprimible(args.motivo)}")
+    print(f"  usuario: {_imprimible(args.usuario)} (declarado)")
+    print(f"  fecha:   {fecha}")
+    if args.dry_run:
+        print("--dry-run: no se pidió confirmación ni se escribió nada.")
+        return 0
+
+    try:
+        _a, _p, _ad, plan2 = _calcular_plan_readopt(destino)
+    except _ErrorOperacion as exc:
+        print(exc.mensaje, file=sys.stderr)
+        return exc.codigo
+    if plan2.rechazos or plan2.es_noop or \
+            guardrails_adoption.hash_diff(plan2) != guardrails_adoption.hash_diff(plan):
+        print("el estado cambió durante la confirmación (antes del prompt); reintentá", file=sys.stderr)
+        return 2
+    plan = plan2
+    hash_binding = guardrails_adoption.hash_diff(plan)
+    resultado = human_presence.solicitar_confirmacion({
+        "change_id": "proyecto",
+        "artefacto": "guardrails-readopt",
+        "hash": hash_binding,
+        "accion": ("guardrails-readopt: " + " ".join(
+            f"{clave}+{len(plan.adiciones[clave])}" for clave in sorted(plan.adiciones)
+        ))[:100],
+    })
+    if not resultado.ok:
+        print(resultado.motivo or "Confirmación interactiva no obtenida.", file=sys.stderr)
+        return 2
+
+    try:
+        actual, plantilla, _ad, plan3 = _calcular_plan_readopt(destino)
+    except _ErrorOperacion as exc:
+        print(exc.mensaje, file=sys.stderr)
+        return exc.codigo
+    if plan3.rechazos or plan3.es_noop or guardrails_adoption.hash_diff(plan3) != hash_binding:
+        print("el estado cambió durante la confirmación; no se escribió nada", file=sys.stderr)
+        return 2
+    try:
+        entrada = guardrails_adoption.aplicar_adopcion(
+            destino, plan3, motivo=args.motivo, usuario=args.usuario,
+            fecha=fecha,
+            campos_t1=human_presence.campos_registro(resultado),
+            esperado_hash_antes=plan.hash_antes,
+        )
+    except (ValueError, OSError) as exc:
+        print(f"No se aplicó la re-adopción: {exc}", file=sys.stderr)
+        return 2
+
+    post = guardrails_adoption.cargar_adopciones(destino)
+    cubiertas = guardrails_adoption.rutas_cubiertas(actual, plantilla, post)
+    if not post.valida or not set(plan3.adiciones) <= set(cubiertas):
+        print(
+            "Aviso: la re-adopción YA fue escrita en el registro, pero la validación posterior falló "
+            "(las adopciones no cubren la diferencia). Revisá `doctor` y el registro.",
+            file=sys.stderr,
+        )
+        return 2
+    print(f"Re-adopción #{entrada['seq']} registrada en {guardrails_adoption.RUTA_REGISTRO_RELATIVA}")
+    print("guardrails.json y control.json no se modificaron.")
+    print(_MENSAJE_T1)
     return 0
 
 
@@ -4979,6 +5548,48 @@ def construir_parser() -> argparse.ArgumentParser:
     p_decision_show.add_argument("--decision-id", required=True, dest="decision_id")
     p_decision_show.add_argument("--json", action="store_true")
     p_decision_show.set_defaults(func=cmd_decision_show)
+
+    # Governed amendments (Change 3 de v0.10). Sin --channel/--yes/--force: T1 es obligatorio.
+    p_scope = subparsers.add_parser("scope", help="Scope autorizado de un Change: consulta y enmiendas gobernadas.")
+    scope_sub = p_scope.add_subparsers(dest="subcomando_scope", required=True)
+
+    p_scope_show = scope_sub.add_parser(
+        "show",
+        help="Revisión, scope_hash y rutas efectivas. Solo lectura, salvo --reparar-cache, que reescribe "
+             "la caché derivada de control.json.",
+    )
+    p_scope_show.add_argument("--change-id", required=True, dest="change_id")
+    p_scope_show.add_argument(
+        "--reparar-cache", action="store_true", dest="reparar_cache",
+        help="Realinea la caché de control.json con la cadena de enmiendas (sin T1, sin tocar scope_hash).",
+    )
+    p_scope_show.set_defaults(func=cmd_scope_show)
+
+    p_scope_amend = scope_sub.add_parser(
+        "amend", help="Enmienda incremental (add/remove) del scope; exige confirmación T1 console_confirmed."
+    )
+    p_scope_amend.add_argument("--change-id", required=True, dest="change_id")
+    p_scope_amend.add_argument("--add", action="append", default=None)
+    p_scope_amend.add_argument("--remove", action="append", default=None)
+    p_scope_amend.add_argument("--motivo", required=True)
+    p_scope_amend.add_argument("--usuario", required=True)
+    p_scope_amend.add_argument("--fecha", default=None)
+    p_scope_amend.add_argument("--dry-run", action="store_true", dest="dry_run")
+    p_scope_amend.add_argument("--expected-scope-hash", default=None, dest="expected_scope_hash")
+    p_scope_amend.set_defaults(func=cmd_scope_amend)
+
+    p_guardrails = subparsers.add_parser("guardrails", help="Re-adopción gobernada de guardrails (closed list aditiva).")
+    guardrails_sub = p_guardrails.add_subparsers(dest="subcomando_guardrails", required=True)
+    p_readopt = guardrails_sub.add_parser(
+        "readopt", help="Registra adiciones elegibles de guardrails.json; exige confirmación T1 console_confirmed."
+    )
+    p_readopt.add_argument("--motivo", required=True)
+    p_readopt.add_argument("--usuario", required=True)
+    p_readopt.add_argument("--fecha", default=None)
+    p_readopt.add_argument("--destino", default=None)
+    p_readopt.add_argument("--dry-run", action="store_true", dest="dry_run")
+    p_readopt.add_argument("--expected-guardrails-hash", default=None, dest="expected_guardrails_hash")
+    p_readopt.set_defaults(func=cmd_guardrails_readopt)
 
     return parser
 

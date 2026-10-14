@@ -23,6 +23,13 @@ bloqueando. Secretos, holdouts y `data_raw` no cambian (R46); `Read`/`Grep`
 estructurados sobre `guardrails.json` están permitidos y `Write`/`Edit`/
 `NotebookEdit` bloqueados (R43).
 
+Registros de enmiendas gobernadas (`openspec/changes/*/amendments.jsonl`, también bajo
+`openspec/archive/*/`, y `openspec/decisions/guardrails-adoptions.jsonl`): protegidos contra
+escritura como `guardrails.json` (ver `RUTAS_REGISTROS_GOBERNADOS_PROTEGIDAS`); la lectura y
+`ds_guard scope amend`/`guardrails readopt` no se bloquean. Pathguard NO hace auténtico
+criptográficamente el registro: la seguridad es T1 + binding + cadena + validación fail-closed
++ Git.
+
 Config: `<repo_root>/.claude/guardrails.json` (opcional -- ausente usa
 defaults seguros). Ver `cargar_config` para el schema exacto.
 
@@ -59,6 +66,23 @@ RUTA_CONFIG_RELATIVA = ".claude/guardrails.json"
 # holdout debe quedar como acto humano auditable, no como algo que un agente
 # pueda escribirse a sí mismo.
 RUTA_GUARDRAILS_PROTEGIDA = ".claude/guardrails.json"
+
+# Registros de enmiendas gobernadas (`20261013-governed-amendments`, M1, D11, R61-R63):
+# `amendments.jsonl` de cada Change (activo o archivado) y el registro de adopciones de
+# guardrails. Mismo tratamiento que `guardrails.json`: Write/Edit/NotebookEdit denegados y
+# shell denegado si referencia la ruta Y parece escritura (best-effort). La lectura NO se
+# bloquea. Solo escribe `ds_guard` (`scope amend`, `guardrails readopt`): el comando no contiene
+# la ruta del registro y el proceso Python escribe fuera del alcance de este hook.
+# Denegado por pathguard (best-effort): los registros de enmiendas gobernadas los escribe
+# `ds_guard`; pathguard protege contra el agente que usa las herramientas gobernadas, NO contra
+# quien escriba el filesystem por otra vía. La seguridad descansa en T1 `console_confirmed` +
+# binding + cadena + validación fail-closed + Git, y no es criptográfica. No hay ruta
+# alternativa de «editar y reparar».
+RUTAS_REGISTROS_GOBERNADOS_PROTEGIDAS: tuple = (
+    "openspec/changes/*/amendments.jsonl",
+    "openspec/archive/*/amendments.jsonl",
+    "openspec/decisions/guardrails-adoptions.jsonl",
+)
 
 # Denylist de secretos: dura, no removible desde la config -- `secretos_extra`
 # solo puede *agregar*, nunca sacar nada de acá (mismo criterio que
@@ -329,6 +353,19 @@ def _extraer_ruta_bruta(tool_name: str, tool_input: dict) -> Optional[str]:
     return None
 
 
+def _ruta_sin_stream_ntfs(ruta_bruta: str) -> Optional[str]:
+    """Si `ruta_bruta` trae un ':' después de la unidad (`C:` inicial), es un stream alternativo
+    NTFS (`archivo::$DATA`, `archivo:stream`): devuelve la ruta sin el sufijo `:...`. `None` si no
+    hay tal ':'."""
+    resto = ruta_bruta
+    prefijo = ""
+    if len(resto) >= 2 and resto[1] == ":" and resto[0].isalpha():
+        prefijo, resto = resto[:2], resto[2:]
+    if ":" not in resto:
+        return None
+    return prefijo + resto.split(":", 1)[0]
+
+
 def _evaluar_ruta_estructurada(
     tool_name: str, tool_input: dict, agent_type: Optional[str], config: ConfigGuardrails, repo_root: Path
 ) -> tuple:
@@ -336,16 +373,35 @@ def _evaluar_ruta_estructurada(
     if ruta_bruta is None:
         return False, f"No se pudo determinar la ruta del tool call '{tool_name}': denegado (fail-closed)."
 
+    es_escritura = tool_name in _TOOLS_ESCRITURA
+
+    if es_escritura:
+        base_sin_stream = _ruta_sin_stream_ntfs(ruta_bruta)
+        if base_sin_stream is not None:
+            base_relativa, base_dentro = resolver_ruta_relativa(base_sin_stream, repo_root)
+            if base_dentro and (
+                base_relativa.casefold() == RUTA_GUARDRAILS_PROTEGIDA.casefold()
+                or _matchea_patrones(base_relativa, RUTAS_REGISTROS_GOBERNADOS_PROTEGIDAS)
+            ):
+                return False, (
+                    "Ruta protegida con stream alternativo NTFS (':' tras la unidad): denegado por "
+                    f"pathguard (best-effort): {ruta_bruta!r}."
+                )
+
     ruta_relativa, dentro_del_repo = resolver_ruta_relativa(ruta_bruta, repo_root)
     if not dentro_del_repo:
         if tool_name == "Read" and _es_ruta_externa_declarada_read_only(ruta_bruta, repo_root):
             return True, f"Fuente externa de solo lectura declarada (M9): {ruta_bruta!r}."
         return False, f"Ruta fuera del repositorio o no resoluble: {ruta_bruta!r}."
 
-    es_escritura = tool_name in _TOOLS_ESCRITURA
-
     if es_escritura and ruta_relativa.casefold() == RUTA_GUARDRAILS_PROTEGIDA.casefold():
         return False, "guardrails.json está protegido: no puede modificarse vía Write/Edit/NotebookEdit."
+
+    if es_escritura and _matchea_patrones(ruta_relativa, RUTAS_REGISTROS_GOBERNADOS_PROTEGIDAS):
+        return False, (
+            f"Registro de enmiendas gobernadas: solo escribe `ds_guard` ({ruta_relativa}); "
+            "no puede modificarse vía Write/Edit/NotebookEdit."
+        )
 
     patrones_secretos = SECRETOS_HARDCODEADOS + config.secretos_extra
     if _matchea_patrones(ruta_relativa, patrones_secretos):
@@ -460,6 +516,35 @@ def _es_escritura_shell(comando: str) -> bool:
     return any(patron in normalizado for patron in _PATRONES_ESCRITURA_SHELL)
 
 
+# Comandos git que reescriben el working tree/índice/historial. Cuentan como escritura SOLO
+# cuando el comando referencia un registro protegido (guardrails.json o registros gobernados):
+# `git checkout HEAD~1 -- <registro>` o `git restore` podrían revertir/falsear el registro.
+# `git diff/show/log/status/blame` (lectura) NO figuran acá.
+_PATRONES_GIT_MUTANTES_REGISTRO: tuple = (
+    "git checkout", "git restore", "git stash", "git apply", "git reset", "git clean",
+    "git merge", "git cherry-pick", "git rebase", "git rm", "git mv",
+)
+
+
+def _es_escritura_shell_registro(comando: str, permitir_git_add: bool = False) -> bool:
+    """Como `_es_escritura_shell` más los comandos git mutantes. `permitir_git_add=True` (registros
+    gobernados) deja pasar `git add`/`git commit` para no impedir comitear la evidencia;
+    `guardrails.json` conserva `git add` denegado como siempre."""
+    comando_n = _neutralizar_redirecciones_inocuas(comando)
+    normalizado = comando_n.casefold()
+    if _PATRON_REDIRECCION.search(comando_n):
+        return True
+    if permitir_git_add:
+        # "dd " (comando dd) matchea dentro de "git add ": se quita `git add` antes de escanear.
+        normalizado = normalizado.replace("git add", " ")
+    for patron in _PATRONES_ESCRITURA_SHELL:
+        if permitir_git_add and patron == "git add":
+            continue
+        if patron in normalizado:
+            return True
+    return any(patron in normalizado for patron in _PATRONES_GIT_MUTANTES_REGISTRO)
+
+
 def _tokens_de_comando(comando: str) -> list:
     """Tokenización deliberadamente ingenua (split por espacios tras
     reemplazar operadores comunes por espacios): no es un parser de shell,
@@ -488,6 +573,11 @@ def _comando_referencia_alguna(tokens: list, patrones, repo_root: Path) -> Optio
         candidatos = [token]
         if ":" in token:
             candidatos.append(token.rpartition(":")[2])
+            # Stream alternativo NTFS (`archivo::$DATA`, `archivo:stream`): token cortado en el
+            # primer ':' posterior al prefijo de unidad.
+            sin_stream = _ruta_sin_stream_ntfs(token)
+            if sin_stream:
+                candidatos.append(sin_stream)
         for candidato in candidatos:
             if not candidato:
                 continue
@@ -524,9 +614,16 @@ def _evaluar_shell(tool_input: dict, config: ConfigGuardrails, repo_root: Path) 
             )
 
     referencia = _comando_referencia_alguna(tokens, (RUTA_GUARDRAILS_PROTEGIDA,), repo_root)
-    if referencia and _es_escritura_shell(comando):
+    if referencia and _es_escritura_shell_registro(comando):
         return False, (
             f"Comando parece modificar guardrails.json (escaneo best-effort): {referencia!r}."
+        )
+
+    referencia = _comando_referencia_alguna(tokens, RUTAS_REGISTROS_GOBERNADOS_PROTEGIDAS, repo_root)
+    if referencia and _es_escritura_shell_registro(comando, permitir_git_add=True):
+        return False, (
+            "Registro de enmiendas gobernadas: denegado por pathguard (best-effort); lo escribe "
+            f"`ds_guard`, el comando parece modificarlo: {referencia!r}."
         )
 
     referencia = _comando_referencia_alguna(tokens, config.data_raw, repo_root)

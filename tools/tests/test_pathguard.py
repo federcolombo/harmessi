@@ -801,5 +801,189 @@ class TestEvaluarToolCallGenerico(unittest.TestCase):
         self.assertFalse(permitido)
 
 
+class TestRegistrosGobernadosProtegidos(unittest.TestCase):
+    """`amendments.jsonl` y `guardrails-adoptions.jsonl` (M1, D11, R61-R63): escritura denegada
+    como `guardrails.json`; lectura y comandos legítimos de `ds_guard` permitidos."""
+
+    REGISTROS = (
+        "openspec/changes/abc/amendments.jsonl",
+        "openspec/archive/abc/amendments.jsonl",
+        "openspec/decisions/guardrails-adoptions.jsonl",
+        "openspec/changes/ñandú con espacio/amendments.jsonl",
+    )
+
+    def setUp(self):
+        self.repo = _crear_repo_temporal()
+        self.config = pathguard.ConfigGuardrails()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _evaluar(self, tool_name, tool_input):
+        payload = {"tool_name": tool_name, "tool_input": tool_input}
+        return pathguard.evaluar_tool_call(payload, self.config, self.repo)
+
+    def test_write_edit_notebookedit_denegados(self):
+        for ruta in self.REGISTROS:
+            for tool, campo in (("Write", "file_path"), ("Edit", "file_path"), ("NotebookEdit", "notebook_path")):
+                with self.subTest(ruta=ruta, tool=tool):
+                    permitido, motivo = self._evaluar(tool, {campo: ruta})
+                    self.assertFalse(permitido)
+                    self.assertIn("solo escribe `ds_guard`", motivo)
+
+    def test_write_ruta_absoluta_y_casing_denegados(self):
+        absoluta = str(self.repo / "openspec" / "changes" / "abc" / "amendments.jsonl")
+        self.assertFalse(self._evaluar("Write", {"file_path": absoluta})[0])
+        self.assertFalse(self._evaluar("Write", {"file_path": "OpenSpec/Changes/ABC/Amendments.jsonl"})[0])
+
+    def test_read_permitido(self):
+        for ruta in self.REGISTROS:
+            with self.subTest(ruta=ruta):
+                self.assertTrue(self._evaluar("Read", {"file_path": ruta})[0])
+
+    def test_vecinos_siguen_editables(self):
+        for ruta in ("openspec/changes/abc/tasks.md", "openspec/changes/abc/control.json",
+                     "openspec/decisions/ledger.jsonl"):
+            with self.subTest(ruta=ruta):
+                self.assertTrue(self._evaluar("Write", {"file_path": ruta})[0])
+                self.assertTrue(self._evaluar("Edit", {"file_path": ruta})[0])
+
+    def test_shell_lectura_permitida(self):
+        for comando in (
+            "cat openspec/changes/abc/amendments.jsonl",
+            "git diff openspec/changes/abc/amendments.jsonl",
+            "git log -p -- openspec/decisions/guardrails-adoptions.jsonl",
+            "git show HEAD:openspec/changes/abc/amendments.jsonl",
+            "python tools/ds_guard.py validate --change-id abc",
+            "python tools/ds_guard.py scope show --change-id abc",
+            "python tools/ds_guard.py scope amend --change-id abc --add x --dry-run",
+        ):
+            for tool in ("Bash", "PowerShell"):
+                with self.subTest(comando=comando, tool=tool):
+                    self.assertTrue(self._evaluar(tool, {"command": comando})[0])
+
+    def test_shell_escritura_denegada(self):
+        for comando in (
+            "echo x >> openspec/changes/abc/amendments.jsonl",
+            "echo x > openspec/decisions/guardrails-adoptions.jsonl",
+            "Set-Content openspec/changes/abc/amendments.jsonl 'x'",
+            "echo x | tee openspec/changes/abc/amendments.jsonl",
+            "Add-Content -Path openspec/archive/abc/amendments.jsonl -Value x",
+            "rm openspec/changes/abc/amendments.jsonl",
+            "sed -i s/a/b/ openspec/changes/abc/amendments.jsonl",
+            "cp otro.jsonl openspec/changes/abc/amendments.jsonl",
+        ):
+            for tool in ("Bash", "PowerShell"):
+                with self.subTest(comando=comando, tool=tool):
+                    permitido, motivo = self._evaluar(tool, {"command": comando})
+                    self.assertFalse(permitido)
+                    self.assertIn("Registro de enmiendas gobernadas", motivo)
+
+    def test_comandos_legitimos_de_ds_guard_permitidos(self):
+        for comando in (
+            "python tools/ds_guard.py scope amend --change-id abc --add x --motivo razon",
+            "python tools/ds_guard.py guardrails readopt --dry-run",
+            "python tools/ds_guard.py guardrails readopt",
+        ):
+            with self.subTest(comando=comando):
+                self.assertTrue(self._evaluar("Bash", {"command": comando})[0])
+
+    def test_guardrails_json_sin_cambios_de_comportamiento(self):
+        permitido, motivo = self._evaluar("Write", {"file_path": ".claude/guardrails.json"})
+        self.assertFalse(permitido)
+        self.assertIn("guardrails.json está protegido", motivo)
+        self.assertTrue(self._evaluar("Read", {"file_path": ".claude/guardrails.json"})[0])
+        permitido, motivo = self._evaluar("Bash", {"command": "echo x >> .claude/guardrails.json"})
+        self.assertFalse(permitido)
+        self.assertIn("guardrails.json", motivo)
+
+    # -- comandos git mutantes (A3.4) --
+
+    def test_git_mutantes_sobre_registros_denegados(self):
+        for comando in (
+            "git checkout HEAD~1 -- openspec/changes/abc/amendments.jsonl",
+            "git restore openspec/changes/abc/amendments.jsonl",
+            "git restore --source=HEAD~1 openspec/decisions/guardrails-adoptions.jsonl",
+            "git apply openspec/changes/abc/amendments.jsonl",
+            "git reset HEAD~1 -- openspec/changes/abc/amendments.jsonl",
+            "git rm openspec/changes/abc/amendments.jsonl",
+            "git mv openspec/changes/abc/amendments.jsonl otro.jsonl",
+        ):
+            for tool in ("Bash", "PowerShell"):
+                with self.subTest(comando=comando, tool=tool):
+                    permitido, motivo = self._evaluar(tool, {"command": comando})
+                    self.assertFalse(permitido)
+                    self.assertIn("Registro de enmiendas gobernadas", motivo)
+
+    def test_git_mutantes_sobre_guardrails_json_denegados(self):
+        for comando in (
+            "git checkout HEAD~1 -- .claude/guardrails.json",
+            "git restore .claude/guardrails.json",
+            "git apply .claude/guardrails.json",
+        ):
+            with self.subTest(comando=comando):
+                permitido, motivo = self._evaluar("Bash", {"command": comando})
+                self.assertFalse(permitido)
+                self.assertIn("guardrails.json", motivo)
+
+    def test_git_lectura_sobre_registros_permitida(self):
+        for comando in (
+            "git diff HEAD~1 -- openspec/changes/abc/amendments.jsonl",
+            "git show HEAD:openspec/changes/abc/amendments.jsonl",
+            "git log --oneline -- openspec/decisions/guardrails-adoptions.jsonl",
+            "git blame openspec/changes/abc/amendments.jsonl",
+            "git status openspec/changes/abc/amendments.jsonl",
+        ):
+            with self.subTest(comando=comando):
+                self.assertTrue(self._evaluar("Bash", {"command": comando})[0])
+
+    def test_git_add_sobre_registros_permitido_y_sobre_guardrails_denegado(self):
+        for comando in (
+            "git add openspec/changes/abc/amendments.jsonl",
+            "git add openspec/decisions/guardrails-adoptions.jsonl",
+        ):
+            with self.subTest(comando=comando):
+                self.assertTrue(self._evaluar("Bash", {"command": comando})[0])
+        # Como hoy: `git add` sobre guardrails.json sigue denegado.
+        self.assertFalse(self._evaluar("Bash", {"command": "git add .claude/guardrails.json"})[0])
+
+    def test_git_add_encadenado_con_escritura_sigue_denegado(self):
+        comando = ("git add x.txt openspec/changes/abc/amendments.jsonl; "
+                   "rm openspec/changes/abc/amendments.jsonl")
+        self.assertFalse(self._evaluar("Bash", {"command": comando})[0])
+
+    def test_shell_stream_ntfs_denegado_y_cat_permitido(self):
+        for tool in ("Bash", "PowerShell"):
+            with self.subTest(tool=tool):
+                permitido, motivo = self._evaluar(
+                    tool, {"command": "echo x > openspec/changes/abc/amendments.jsonl::$DATA"})
+                self.assertFalse(permitido)
+                self.assertIn("Registro de enmiendas gobernadas", motivo)
+                self.assertTrue(self._evaluar(
+                    tool, {"command": "cat openspec/changes/abc/amendments.jsonl"})[0])
+        self.assertFalse(self._evaluar(
+            "Bash", {"command": "echo x > .claude/guardrails.json::$DATA"})[0])
+
+    # -- stream alternativo NTFS (A3.6) --
+
+    def test_write_stream_alternativo_ntfs_denegado(self):
+        for ruta in (
+            "openspec/changes/abc/amendments.jsonl::$DATA",
+            "openspec/changes/abc/amendments.jsonl:stream",
+            "openspec/decisions/guardrails-adoptions.jsonl::$DATA",
+            ".claude/guardrails.json::$DATA",
+            str(self.repo / "openspec" / "changes" / "abc" / "amendments.jsonl") + "::$DATA",
+        ):
+            for tool, campo in (("Write", "file_path"), ("Edit", "file_path"), ("NotebookEdit", "notebook_path")):
+                with self.subTest(ruta=ruta, tool=tool):
+                    permitido, motivo = self._evaluar(tool, {campo: ruta})
+                    self.assertFalse(permitido)
+                    self.assertIn("stream alternativo NTFS", motivo)
+
+    def test_stream_ntfs_en_archivo_vecino_no_activa_la_regla(self):
+        permitido, motivo = self._evaluar("Write", {"file_path": "openspec/changes/abc/tasks.md:s"})
+        self.assertNotIn("stream alternativo NTFS", motivo)
+
+
 if __name__ == "__main__":
     unittest.main()

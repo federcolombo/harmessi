@@ -22,7 +22,7 @@ from pathlib import Path
 REPO_ORIGEN = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ORIGEN / "tools"))
 
-from dsguard import core, scope, sdd  # noqa: E402
+from dsguard import core, scope, scope_amendments, sdd  # noqa: E402
 
 DS_GUARD = REPO_ORIGEN / "tools" / "ds_guard.py"
 
@@ -241,6 +241,207 @@ class TestEvaluarAlcance(unittest.TestCase):
                 self.assertEqual(f1.ubicacion, f2.ubicacion)
         finally:
             shutil.rmtree(repo, ignore_errors=True)
+
+
+# --- Alcance efectivo con enmiendas gobernadas (Change 20261013-governed-amendments, R21-R25) ---
+
+_CAMPOS_T1_FALSOS = {
+    "approval_channel": "console_confirmed",
+    "confirmed_at": "2026-10-13T00:00:00Z",
+    "channel_version": "console/v1",
+}
+_CHANGE_ID = "abc"
+_REGISTRO_REL = f"openspec/changes/{_CHANGE_ID}/amendments.jsonl"
+
+
+def _enmendar(change_dir: Path, control: dict, add=(), remove=()) -> dict:
+    """Agrega una enmienda real vía `scope_amendments` (T1 falso: el módulo de datos no pide T1)."""
+    estado = scope_amendments.estado_alcance(change_dir, control)
+    plan = scope_amendments.planificar_enmienda(estado, list(add), list(remove), (), lambda r: (r, None))
+    return scope_amendments.aplicar_enmienda(
+        change_dir, plan, motivo="prueba", usuario="tester", fecha="2026-10-13",
+        campos_t1=dict(_CAMPOS_T1_FALSOS), esperado_hash_antes=plan.hash_antes,
+        utc="2026-10-13T00:00:00Z",
+    )
+
+
+class TestAlcanceEfectivo(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="dsguard_alcance_efectivo_"))
+        self.change_dir = self.tmp / "openspec" / "changes" / _CHANGE_ID
+        self.change_dir.mkdir(parents=True)
+        self.control = {"change_id": _CHANGE_ID, "alcance": {"rutas_autorizadas": ["a.py", "b.py"]}}
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_sin_archivo_es_la_cache(self):
+        rutas, hallazgos = scope.alcance_efectivo(self.change_dir, self.control)
+        self.assertEqual(sorted(rutas), ["a.py", "b.py"])
+        self.assertEqual(hallazgos, [])
+
+    def test_change_dir_none_es_la_cache(self):
+        rutas, hallazgos = scope.alcance_efectivo(None, self.control)
+        self.assertEqual(rutas, ["a.py", "b.py"])
+        self.assertEqual(hallazgos, [])
+
+    def test_cadena_valida_es_la_ultima_entrada(self):
+        _enmendar(self.change_dir, self.control, add=["c.py"])
+        _enmendar(self.change_dir, self.control, remove=["a.py"])
+        self.control["alcance"]["rutas_autorizadas"] = ["b.py", "c.py"]  # caché al día
+        rutas, hallazgos = scope.alcance_efectivo(self.change_dir, self.control)
+        self.assertEqual(sorted(rutas), ["b.py", "c.py"])
+        self.assertEqual(hallazgos, [])
+
+    def test_cadena_invalida_rutas_vacias_y_hallazgo(self):
+        _enmendar(self.change_dir, self.control, add=["c.py"])
+        registro = self.change_dir / "amendments.jsonl"
+        registro.write_text(registro.read_text(encoding="utf-8").replace("prueba", "alterado"), encoding="utf-8")
+        rutas, hallazgos = scope.alcance_efectivo(self.change_dir, self.control)
+        self.assertEqual(rutas, [])
+        self.assertIn("ALCANCE-ENMIENDA-INVALIDA", [h.codigo for h in hallazgos])
+
+    def test_json_invalido_rutas_vacias_y_hallazgo(self):
+        (self.change_dir / "amendments.jsonl").write_text("{no es json\n", encoding="utf-8")
+        rutas, hallazgos = scope.alcance_efectivo(self.change_dir, self.control)
+        self.assertEqual(rutas, [])
+        self.assertIn("ALCANCE-ENMIENDA-INVALIDA", [h.codigo for h in hallazgos])
+
+    def test_cache_divergente_gana_la_cadena_y_hay_hallazgo(self):
+        _enmendar(self.change_dir, self.control, add=["c.py"])
+        # La caché de control.json NO se refrescó (o fue editada a mano): la cadena manda.
+        self.control["alcance"]["rutas_autorizadas"] = ["a.py", "b.py", "z_manual.py"]
+        rutas, hallazgos = scope.alcance_efectivo(self.change_dir, self.control)
+        self.assertEqual(sorted(rutas), ["a.py", "b.py", "c.py"])
+        self.assertNotIn("z_manual.py", rutas)
+        self.assertIn("ALCANCE-CACHE-DIVERGENTE", [h.codigo for h in hallazgos])
+
+    def test_rutas_con_unicode_y_espacios(self):
+        _enmendar(self.change_dir, self.control, add=["carpeta con espacio/ñandú.py"])
+        rutas, _ = scope.alcance_efectivo(self.change_dir, self.control)
+        self.assertIn("carpeta con espacio/ñandú.py", rutas)
+
+
+class TestEvaluarAlcanceConEnmiendas(unittest.TestCase):
+    """`evaluar_alcance` usa el alcance efectivo. El `amendments.jsonl` entra en la caché del
+    scope (como lo hace la primera enmienda en el CLI) para no contar como archivo fuera de alcance."""
+
+    def setUp(self):
+        self.repo = _crear_repo()
+        self.change_dir = self.repo / "openspec" / "changes" / _CHANGE_ID
+        self.change_dir.mkdir(parents=True)
+        (self.change_dir / "tasks.md").write_text("t\n", encoding="utf-8")
+        _git(self.repo, "add", ".")
+        _git(self.repo, "commit", "-q", "-m", "change")
+        self.control = _control(
+            self.repo, baseline_commit=_head(self.repo),
+            rutas=["openspec/dentro.py", _REGISTRO_REL],
+        )
+        self.control["change_id"] = _CHANGE_ID
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _ubicaciones_ruta(self) -> set:
+        return {f.ubicacion for f in scope.evaluar_alcance(self.repo, self.control) if f.codigo == "ALCANCE-RUTA"}
+
+    def test_sin_enmiendas_equivale_a_la_cache(self):
+        (self.repo / "nuevo.py").write_text("n = 1\n", encoding="utf-8")
+        self.assertEqual(self._ubicaciones_ruta(), {"nuevo.py"})
+
+    def test_ruta_agregada_deja_de_dar_alcance_ruta(self):
+        (self.repo / "nuevo.py").write_text("n = 1\n", encoding="utf-8")
+        self.assertIn("nuevo.py", self._ubicaciones_ruta())
+        _enmendar(self.change_dir, self.control, add=["nuevo.py"])
+        self.control["alcance"]["rutas_autorizadas"] = sorted(
+            set(self.control["alcance"]["rutas_autorizadas"]) | {"nuevo.py"})
+        findings = scope.evaluar_alcance(self.repo, self.control)
+        self.assertEqual(findings, [])
+
+    def test_ruta_removida_vuelve_a_dar_alcance_ruta(self):
+        _enmendar(self.change_dir, self.control, remove=["openspec/dentro.py"])
+        self.control["alcance"]["rutas_autorizadas"] = [_REGISTRO_REL]
+        (self.repo / "openspec" / "dentro.py").write_text("x = 99\n", encoding="utf-8")
+        self.assertIn("openspec/dentro.py", self._ubicaciones_ruta())
+
+    def test_cache_divergente_emite_aviso_y_manda_la_cadena(self):
+        _enmendar(self.change_dir, self.control, add=["nuevo.py"])
+        # caché no refrescada: sigue sin "nuevo.py"
+        (self.repo / "nuevo.py").write_text("n = 1\n", encoding="utf-8")
+        findings = scope.evaluar_alcance(self.repo, self.control)
+        codigos = [f.codigo for f in findings]
+        self.assertIn("ALCANCE-CACHE-DIVERGENTE", codigos)
+        self.assertNotIn("ALCANCE-RUTA", codigos)
+
+    def test_cache_editada_a_mano_no_autoriza(self):
+        _enmendar(self.change_dir, self.control, add=["nuevo.py"])
+        self.control["alcance"]["rutas_autorizadas"].append("manual.py")
+        (self.repo / "manual.py").write_text("m = 1\n", encoding="utf-8")
+        findings = scope.evaluar_alcance(self.repo, self.control)
+        self.assertIn(("ALCANCE-RUTA", "manual.py"), {(f.codigo, f.ubicacion) for f in findings})
+        self.assertIn("ALCANCE-CACHE-DIVERGENTE", [f.codigo for f in findings])
+
+    def test_cadena_invalida_todo_queda_fuera_de_alcance(self):
+        (self.change_dir / "amendments.jsonl").write_text("{no es json\n", encoding="utf-8")
+        # Modificar un archivo que la caché SÍ autorizaba: con cadena inválida ya no vale.
+        (self.repo / "openspec" / "dentro.py").write_text("x = 2\n", encoding="utf-8")
+        findings = scope.evaluar_alcance(self.repo, self.control)
+        pares = {(f.codigo, f.ubicacion) for f in findings}
+        self.assertIn(("ALCANCE-RUTA", "openspec/dentro.py"), pares)
+        self.assertIn("ALCANCE-ENMIENDA-INVALIDA", [f.codigo for f in findings])
+
+    def test_change_dir_archivado_se_resuelve(self):
+        archivo = self.repo / "openspec" / "archive"
+        archivo.mkdir(parents=True)
+        shutil.move(str(self.change_dir), str(archivo / _CHANGE_ID))
+        (archivo / _CHANGE_ID / "amendments.jsonl").write_text("{no es json\n", encoding="utf-8")
+        findings = scope.evaluar_alcance(self.repo, self.control)
+        self.assertIn("ALCANCE-ENMIENDA-INVALIDA", [f.codigo for f in findings])
+
+    def test_sin_directorio_del_change_usa_la_cache(self):
+        control = _control(self.repo, baseline_commit=_head(self.repo), rutas=["openspec/dentro.py"])
+        control["change_id"] = "inexistente"
+        self.assertEqual(scope.evaluar_alcance(self.repo, control), [])
+
+    def test_control_con_ancla_sin_change_id_es_fail_closed(self):
+        control = _control(self.repo, baseline_commit=_head(self.repo), rutas=["openspec/dentro.py"])
+        control["alcance"]["scope_hash"] = scope_amendments.hash_alcance(["openspec/dentro.py"])
+        (self.repo / "openspec" / "dentro.py").write_text("x = 2\n", encoding="utf-8")
+        findings = scope.evaluar_alcance(self.repo, control)
+        pares = {(f.codigo, f.ubicacion) for f in findings}
+        self.assertIn("ALCANCE-ENMIENDA-INVALIDA", [f.codigo for f in findings])
+        self.assertIn(("ALCANCE-RUTA", "openspec/dentro.py"), pares)
+
+    def test_control_con_ancla_y_directorio_inexistente_es_fail_closed(self):
+        control = _control(self.repo, baseline_commit=_head(self.repo), rutas=["openspec/dentro.py"])
+        control["change_id"] = "inexistente"
+        control["alcance"]["scope_hash"] = scope_amendments.hash_alcance(["openspec/dentro.py"])
+        findings = scope.evaluar_alcance(self.repo, control)
+        self.assertIn("ALCANCE-ENMIENDA-INVALIDA", [f.codigo for f in findings])
+
+    def test_change_dir_explicito_se_usa_tal_cual(self):
+        control = _control(self.repo, baseline_commit=_head(self.repo), rutas=["openspec/dentro.py"])
+        control["alcance"]["scope_hash"] = scope_amendments.hash_alcance(["openspec/dentro.py"])
+        # Sin change_id en el control, pero con change_dir explícito: no es fail-closed.
+        self.assertEqual(scope.evaluar_alcance(self.repo, control, change_dir=self.change_dir), [])
+        (self.change_dir / "amendments.jsonl").write_text("{no es json\n", encoding="utf-8")
+        findings = scope.evaluar_alcance(self.repo, control, change_dir=self.change_dir)
+        self.assertIn("ALCANCE-ENMIENDA-INVALIDA", [f.codigo for f in findings])
+
+    def test_legado_sin_ancla_sin_change_id_usa_la_cache(self):
+        control = _control(self.repo, baseline_commit=_head(self.repo), rutas=["openspec/dentro.py"])
+        self.assertNotIn("scope_hash", control["alcance"])
+        (self.repo / "openspec" / "dentro.py").write_text("x = 2\n", encoding="utf-8")
+        self.assertEqual(scope.evaluar_alcance(self.repo, control), [])
+
+    def test_unicode_y_espacios_en_ruta_agregada(self):
+        nombre = "ñandú nuevo.py"
+        (self.repo / nombre).write_text("n = 1\n", encoding="utf-8")
+        self.assertIn(nombre, self._ubicaciones_ruta())
+        _enmendar(self.change_dir, self.control, add=[nombre])
+        self.control["alcance"]["rutas_autorizadas"] = sorted(
+            set(self.control["alcance"]["rutas_autorizadas"]) | {nombre})
+        self.assertEqual(scope.evaluar_alcance(self.repo, self.control), [])
 
 
 def _correr_ds_guard(args: list, cwd: Path) -> subprocess.CompletedProcess:

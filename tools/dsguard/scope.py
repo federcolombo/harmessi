@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Optional
 
 from . import repo as repo_mod
+from . import scope_amendments
 from .core import Finding
 
 
@@ -62,19 +63,77 @@ def es_output_intrinseco(ruta: str) -> bool:
     return normalizada.startswith(_PREFIJO_EXECUTIONS) or normalizada == _RUTA_LEDGER
 
 
-def evaluar_alcance(repo_root: Path, control: dict) -> list:
+def alcance_efectivo(change_dir, control: dict) -> tuple:
+    """`(rutas, hallazgos)`: scope efectivo de un Change (R21-R25, R22). Función única de lectura
+    del alcance: delega en `scope_amendments.estado_alcance` (scope inicial aprobado + cadena de
+    enmiendas). Sin `amendments.jsonl` el resultado equivale a la caché de `control.json`
+    (compatibilidad total). Si la cadena es inválida (`valido` False), `rutas` es `[]`
+    (fail-closed: nada queda autorizado) y `hallazgos` trae `ALCANCE-ENMIENDA-INVALIDA`. Si la
+    caché diverge de la cadena, gana la cadena y se agrega `ALCANCE-CACHE-DIVERGENTE`.
+    `change_dir` None => no hay dónde buscar la cadena: se usa la caché, sin hallazgos."""
+    if change_dir is None:
+        rutas_cache = control.get("alcance", {}).get("rutas_autorizadas", [])
+        return list(rutas_cache), []
+    estado = scope_amendments.estado_alcance(Path(change_dir), control)
+    hallazgos = list(estado.hallazgos)
+    if not estado.valido:
+        if not any(h.codigo == "ALCANCE-ENMIENDA-INVALIDA" for h in hallazgos):
+            hallazgos.append(Finding(
+                "ALCANCE-ENMIENDA-INVALIDA",
+                "La cadena de enmiendas de alcance no es válida; nada queda autorizado.",
+                None,
+            ))
+        return [], hallazgos
+    return list(estado.rutas), hallazgos
+
+
+def _resolver_change_dir(repo_root: Path, control: dict) -> Optional[Path]:
+    """`openspec/changes/<change_id>` o, si no existe, `openspec/archive/<change_id>`. `None` si
+    el control no trae `change_id` utilizable o ninguno de los dos directorios existe."""
+    change_id = control.get("change_id")
+    if not isinstance(change_id, str) or not change_id or change_id in (".", ".."):
+        return None
+    if "/" in change_id or "\\" in change_id:
+        return None
+    for base in ("changes", "archive"):
+        candidato = repo_root / "openspec" / base / change_id
+        if candidato.is_dir():
+            return candidato
+    return None
+
+
+def evaluar_alcance(repo_root: Path, control: dict, change_dir=None) -> list:
     """[Finding("ALCANCE-RUTA", ...), ...] -- mismo código que ya usaban `cmd_validate`/`gate_cierre`;
     además emite `Finding("ALCANCE-GIT-ILEGIBLE")` (fail-closed) si la salida de git del diff desde
     baseline es ilegible (los hallazgos ALCANCE-RUTA del resto se siguen emitiendo). Unión
     deduplicada de `repo.list_dirty_files` (working tree) + `archivos_tocados_desde_baseline`
-    (historial desde baseline), comparada contra `rutas_autorizadas` vía `repo.path_matches_any`
-    (reusada tal cual, sin reimplementar matching)."""
+    (historial desde baseline), comparada contra el alcance efectivo (`alcance_efectivo`: scope
+    aprobado + enmiendas gobernadas; sin enmiendas o sin `change_id`/directorio resoluble, la caché
+    `rutas_autorizadas` como siempre) vía `repo.path_matches_any` (reusada tal cual). Propaga además
+    `ALCANCE-ENMIENDA-INVALIDA` (cadena inválida: nada autorizado, todo archivo tocado queda fuera
+    de alcance) y `ALCANCE-CACHE-DIVERGENTE`. `change_dir` opcional: si se pasa se usa tal cual; si no
+    se pasa y no se puede resolver, un control con ancla (`alcance.scope_hash`) es fail-closed
+    (`ALCANCE-ENMIENDA-INVALIDA`, nada autorizado); sin ancla (legado) se usa la caché."""
     repo_root = Path(repo_root)
-    rutas_autorizadas = control.get("alcance", {}).get("rutas_autorizadas", [])
+    if change_dir is None:
+        change_dir = _resolver_change_dir(repo_root, control)
+    alcance_control = control.get("alcance")
+    tiene_ancla = isinstance(alcance_control, dict) and bool(alcance_control.get("scope_hash"))
+    if change_dir is None and tiene_ancla:
+        # Change con ancla de aprobación (`scope_hash`) cuyo directorio no se puede resolver:
+        # no se cae a la caché cruda (fail-closed).
+        rutas_autorizadas = []
+        findings_alcance = [Finding(
+            "ALCANCE-ENMIENDA-INVALIDA",
+            "No se pudo resolver el directorio del Change para validar el alcance gobernado.",
+            None,
+        )]
+    else:
+        rutas_autorizadas, findings_alcance = alcance_efectivo(change_dir, control)
     baseline_commit = control.get("baseline", {}).get("commit")
 
     tocados = set(repo_mod.list_dirty_files(repo_root))
-    findings = []
+    findings = list(findings_alcance)
     try:
         tocados |= set(archivos_tocados_desde_baseline(repo_root, baseline_commit))
     except GitIlegibleError as exc:

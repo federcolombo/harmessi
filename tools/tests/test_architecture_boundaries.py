@@ -311,5 +311,78 @@ class TestFronteraHumanPresence(unittest.TestCase):
         )
 
 
+# --- Frontera de enmiendas gobernadas (v0.10 Change 3: 20261013-governed-amendments) ---
+# `scope_amendments.py` y `guardrails_adoption.py` son stdlib + imports relativos del mismo paquete
+# (`from .core import Finding`, `from . import guardrails_drift`). No importan `tools.*`, providers ni
+# `human_presence`: reciben `campos_t1` ya resueltos; la primitive de presencia se invoca solo desde
+# `tools/ds_guard.py`. Cards/datasources/reporting/ds_profile no los importan.
+RUTAS_ENMIENDAS = (
+    "tools/dsguard/scope_amendments.py",
+    "tools/dsguard/guardrails_adoption.py",
+)
+NOMBRES_ENMIENDAS = ("scope_amendments", "guardrails_adoption")
+DIRS_SIN_ACCESO_A_ENMIENDAS = (
+    "tools/cards",
+    "tools/datasources",
+    "tools/reporting",
+    "tools/ds_profile",
+)
+
+
+class TestFronteraEnmiendasGobernadas(unittest.TestCase):
+    def test_modulos_de_enmiendas_importan_solo_stdlib_y_paquete(self):
+        violaciones = []
+        for ruta in RUTAS_ENMIENDAS:
+            for nivel, nombre in _todos_los_imports(REPO_ORIGEN / ruta):
+                raiz = nombre.split(".")[0]
+                if nivel == 1:
+                    continue  # import relativo del mismo paquete dsguard
+                if nivel > 1:
+                    violaciones.append(f"{ruta}: import relativo fuera del paquete: {nombre}")
+                elif raiz == "tools" or raiz not in sys.stdlib_module_names:
+                    violaciones.append(f"{ruta}: no stdlib: {nombre}")
+        self.assertEqual(
+            violaciones,
+            [],
+            f"Los módulos de enmiendas deben usar solo stdlib + imports relativos de dsguard: {violaciones}",
+        )
+
+    def test_modulos_de_enmiendas_no_mencionan_providers(self):
+        violaciones = [
+            f"{ruta}: {nombre}"
+            for ruta in RUTAS_ENMIENDAS
+            for _nivel, nombre in _todos_los_imports(REPO_ORIGEN / ruta)
+            if any(p in nombre.lower() for p in NOMBRES_PROVIDER)
+        ]
+        self.assertEqual(violaciones, [], f"No deben importar módulos de provider: {violaciones}")
+
+    def test_modulos_de_enmiendas_no_importan_human_presence(self):
+        violaciones = [
+            f"{ruta}: {nombre}"
+            for ruta in RUTAS_ENMIENDAS
+            for _nivel, nombre in _todos_los_imports(REPO_ORIGEN / ruta)
+            if "human_presence" in nombre.split(".")
+        ]
+        self.assertEqual(
+            violaciones,
+            [],
+            "Reciben campos_t1 ya resueltos; la presencia T1 se invoca solo desde tools/ds_guard.py "
+            f"(ARCHITECTURE.md §8.4): {violaciones}",
+        )
+
+    def test_cards_datasources_reporting_ds_profile_no_importan_enmiendas(self):
+        violaciones = []
+        for directorio in DIRS_SIN_ACCESO_A_ENMIENDAS:
+            for ruta in sorted((REPO_ORIGEN / directorio).rglob("*.py")):
+                for _nivel, nombre in _todos_los_imports(ruta):
+                    if any(n in nombre.split(".") for n in NOMBRES_ENMIENDAS):
+                        violaciones.append(f"{ruta.relative_to(REPO_ORIGEN).as_posix()} importa '{nombre}'")
+        self.assertEqual(
+            violaciones,
+            [],
+            f"Cards/datasources/reporting/ds_profile no deben importar enmiendas/adopciones: {violaciones}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

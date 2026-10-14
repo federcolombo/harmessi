@@ -220,6 +220,18 @@ ejecuta `ds_guard approve ... --channel console_confirmed` en su propia terminal
 - `--channel console_confirmed` sin consola de control falla cerrado y nunca se degrada a `declared` automáticamente; si el humano decide aceptar T0, es él quien reintenta explícitamente con `--channel declared`.
 - T1 es una señal de presencia interactiva; no prueba identidad ni autoría.
 
+## Enmiendas gobernadas (scope y guardrails)
+
+Cuando el Lead necesita ampliar o reducir el scope de un Change aprobado:
+
+- Corre `ds_guard scope amend --dry-run ...`, presenta el diff y la razón, y **se detiene**: el humano ejecuta el mismo comando sin
+  `--dry-run` en su terminal (T1 `console_confirmed`).
+- Nunca intenta obtener T1 ni edita `control.json`, `amendments.jsonl` ni `guardrails.json`.
+- El scope efectivo sale de la cadena de enmiendas: `ds_guard scope show`, no la caché de `control.json`.
+- Enmendar el scope no cambia el ownership de los writers (se declara en `tasks.md`).
+- `ds_guard guardrails readopt` aplica solo a adiciones elegibles (closed list) y también termina en STOP humano.
+- `sync` nunca re-adopta.
+
 ## 9. Archivado
 
 Al cerrar, el cambio **permanece** en `openspec/changes/<id>/` con `estado: cerrada` hasta que se

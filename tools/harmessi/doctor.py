@@ -37,6 +37,11 @@ from tools.ds_init import manifest as manifest_mod
 from tools.ds_init.version import HARNESS_VERSION
 from tools.dsguard import checks
 from tools.dsguard import guardrails_drift
+
+try:  # instalación vieja sin re-adopción: comportamiento previo, sin adopciones
+    from tools.dsguard import guardrails_adoption
+except ImportError:  # pragma: no cover
+    guardrails_adoption = None
 from tools.dsguard import maturity
 from tools.dsguard import pathguard
 
@@ -481,7 +486,7 @@ def _check_archivos_administrados(destino: Path, control_data: Optional[dict]) -
 RUTA_GUARDRAILS_JSON = ".claude/guardrails.json"
 
 
-def _drift_guardrails_json(ruta_abs: Path, ruta_rel) -> Optional["checks.CheckResult"]:
+def _drift_guardrails_json(ruta_abs: Path, ruta_rel, destino: Optional[Path] = None) -> Optional["checks.CheckResult"]:
     """Compara `.claude/guardrails.json` contra la plantilla ignorando las rutas mutables
     (`guardrails_drift.RUTAS_MUTABLES`). `None` = sin drift. Ante cualquier error
     (JSON ilegible, no-dict, baseline ilegible, excepción) devuelve un WARN fail-closed:
@@ -509,13 +514,85 @@ def _drift_guardrails_json(ruta_abs: Path, ruta_rel) -> Optional["checks.CheckRe
             subject=str(ruta_rel),
         )
     if not rutas:
+        # B10: sin drift de claves, pero un registro de adopciones EXISTENTE e inválido no
+        # debe pasar inadvertido.
+        if guardrails_adoption is not None:
+            raiz = destino if destino is not None else Path(ruta_abs).parent.parent
+            try:
+                if (Path(raiz) / guardrails_adoption_nombre()).exists():
+                    _cubiertas, detalle = _rutas_cubiertas_por_adopciones(
+                        ruta_abs, ruta_rel, destino, actual, baseline
+                    )
+                    if detalle:
+                        return checks.CheckResult(
+                            checks.STATUS_WARN,
+                            "HARMESSI-DRIFT",
+                            f"{ruta_rel}: registro de adopciones no utilizable: {detalle}",
+                            subject=str(ruta_rel),
+                        )
+            except OSError as exc:
+                return checks.CheckResult(
+                    checks.STATUS_WARN,
+                    "HARMESSI-DRIFT",
+                    f"{ruta_rel}: registro de adopciones no utilizable: {type(exc).__name__}",
+                    subject=str(ruta_rel),
+                )
         return None
+    # R53-R57: baseline = plantilla ∪ adopciones válidas. Doctor solo LEE el registro;
+    # nunca re-adopta ni toca el hash gestionado (R59).
+    cubiertas, detalle_adopcion = _rutas_cubiertas_por_adopciones(
+        ruta_abs, ruta_rel, destino, actual, baseline
+    )
+    restantes = [r for r in rutas if r not in cubiertas]
+    if not restantes and cubiertas:
+        return checks.CheckResult(
+            checks.STATUS_PASS,
+            "HARMESSI-DRIFT",
+            f"{ruta_rel}: diferencias con la plantilla reconocidas por re-adopción "
+            f"({guardrails_adoption_nombre()}): {', '.join(sorted(cubiertas))}",
+            subject=str(ruta_rel),
+        )
+    mensaje = f"Modificado desde la instalación: {ruta_rel} (rutas: {', '.join(restantes)})"
+    if cubiertas:
+        mensaje += f"; re-adoptadas (no cuentan como drift): {', '.join(sorted(cubiertas))}"
+    if detalle_adopcion:
+        # R56: cadena inválida -> la diferencia sigue siendo drift; el hallazgo viaja en el mismo
+        # WARN `HARMESSI-DRIFT` (no hay un code de adopción previo en Doctor; un solo resultado
+        # por archivo mantiene el contrato de `_drift_guardrails_json`).
+        mensaje += f"; registro de adopciones no utilizable: {detalle_adopcion}"
     return checks.CheckResult(
         checks.STATUS_WARN,
         "HARMESSI-DRIFT",
-        f"Modificado desde la instalación: {ruta_rel} (rutas: {', '.join(rutas)})",
+        mensaje,
         subject=str(ruta_rel),
     )
+
+
+def guardrails_adoption_nombre() -> str:
+    return "openspec/decisions/guardrails-adoptions.jsonl"
+
+
+def _rutas_cubiertas_por_adopciones(ruta_abs, ruta_rel, destino, actual, baseline):
+    """`(set de rutas cubiertas, detalle de problema | "")`. Sin módulo de adopción
+    (instalación vieja) o sin registro válido: nada cubierto (fail-closed)."""
+    if guardrails_adoption is None:
+        return set(), ""
+    try:
+        if destino is None:
+            # `ruta_abs` = <destino>/.claude/guardrails.json
+            destino = Path(ruta_abs).parent.parent
+        resultado = guardrails_adoption.cargar_adopciones(Path(destino))
+        # `rutas_cubiertas` recibe el ResultadoAdopciones COMPLETO y maneja internamente
+        # la cadena inválida (devuelve vacío); acá solo se informa el hallazgo.
+        cubiertas = set(guardrails_adoption.rutas_cubiertas(actual, baseline, resultado))
+        if not resultado.valida:
+            detalle = "; ".join(
+                f"{h.get('code')}: {h.get('detail')}" for h in (resultado.hallazgos or [])
+            ) or "cadena inválida"
+            return set(), detalle
+        return cubiertas, ""
+    except Exception as exc:  # fail-closed: sin adopciones
+        return set(), f"{type(exc).__name__}: {exc}"
 
 
 def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
@@ -589,7 +666,7 @@ def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
         # ESTADO_DRIFT (y cualquier estado inesperado, fail-closed):
         if str(ruta_rel).replace("\\", "/") == RUTA_GUARDRAILS_JSON:
             # R25-R30: solo las rutas mutables declaradas no cuentan como drift.
-            resultado_guardrails = _drift_guardrails_json(ruta_abs, ruta_rel)
+            resultado_guardrails = _drift_guardrails_json(ruta_abs, ruta_rel, destino)
             if resultado_guardrails is not None:
                 resultados.append(resultado_guardrails)
             continue

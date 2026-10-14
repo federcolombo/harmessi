@@ -248,5 +248,174 @@ class TestAutonomyConfigCasosBorde(_BaseInstalada):
             self.assertIn("supervised", self._config(resultados).mensaje)
 
 
+CAMPOS_T1_FALSOS = {
+    "approval_channel": "console_confirmed",
+    "confirmed_at": "2026-10-13T00:00:00Z",
+    "channel_version": "console/v1",
+}
+RUTA_ADOPCIONES = "openspec/decisions/guardrails-adoptions.jsonl"
+
+
+class _BaseAdopciones(_BaseInstalada):
+    """Drift con re-adopciones (R53-R57). Usa el `guardrails_adoption` REAL."""
+
+    def _plantilla(self) -> dict:
+        origen = doctor_mod.manifest_mod.raiz_repo_origen() / RUTA_GUARDRAILS
+        return json.loads(origen.read_text(encoding="utf-8"))
+
+    def _agregar(self, clave: str, valor: str):
+        datos = self._leer()
+        datos.setdefault(clave, []).append(valor)
+        self._escribir(datos, indent=2)
+
+    def _adoptar(self):
+        from tools.dsguard import guardrails_adoption as ga
+
+        plan = ga.planificar_adopcion(
+            self._leer(), self._plantilla(), ga.cargar_adopciones(self.repo)
+        )
+        self.assertFalse(plan.rechazos, plan.rechazos)
+        ga.aplicar_adopcion(
+            self.repo, plan, motivo="motivo", usuario="usuario", fecha="2026-10-13",
+            campos_t1=CAMPOS_T1_FALSOS, esperado_hash_antes=plan.hash_antes,
+        )
+
+    def _registro(self):
+        return self.repo / RUTA_ADOPCIONES
+
+    def _pass_info(self, resultados):
+        return [
+            r for r in resultados
+            if r.codigo == "HARMESSI-DRIFT" and r.nivel == doctor_mod.NIVEL_OK
+            and "re-adopci" in r.mensaje
+        ]
+
+
+class TestDriftConAdopciones(_BaseAdopciones):
+    def test_adicion_adoptada_sin_drift_y_pass_informativo(self):
+        self._agregar("holdouts", "data/sellado/**")
+        self._adoptar()
+        control = self.repo / ".claude" / "harmessi" / "control.json"
+        bytes_antes = control.read_bytes() if control.exists() else None
+        resultados = self._doctor()
+        self.assertEqual(self._drift(resultados), [])
+        info = self._pass_info(resultados)
+        self.assertEqual(len(info), 1, info)
+        self.assertIn("holdouts", info[0].mensaje)
+        # El managed hash no se actualiza para simular aceptación (R55/R59).
+        if bytes_antes is not None:
+            self.assertEqual(control.read_bytes(), bytes_antes)
+
+    def test_extra_no_adoptado_warn_solo_esa_clave(self):
+        self._agregar("holdouts", "data/sellado/**")
+        self._adoptar()
+        self._agregar("secretos_extra", "otro/**")
+        drift = self._drift(self._doctor())
+        self.assertEqual(len(drift), 1, drift)
+        self.assertIn("rutas: secretos_extra", drift[0].mensaje)
+        self.assertIn("re-adoptadas", drift[0].mensaje)
+
+    def test_elemento_extra_en_clave_adoptada_es_drift(self):
+        self._agregar("holdouts", "data/sellado/**")
+        self._adoptar()
+        self._agregar("holdouts", "data/otro/**")
+        drift = self._drift(self._doctor())
+        self.assertEqual(len(drift), 1, drift)
+        self.assertIn("rutas: holdouts", drift[0].mensaje)
+
+    def test_adoptado_eliminado_es_drift(self):
+        self._agregar("holdouts", "data/sellado/**")
+        self._adoptar()
+        datos = self._leer()
+        datos["holdouts"] = []
+        datos["data_raw"] = []  # elimina un elemento de la plantilla
+        self._escribir(datos, indent=2)
+        drift = self._drift(self._doctor())
+        self.assertEqual(len(drift), 1, drift)
+        self.assertIn("data_raw", drift[0].mensaje)
+
+    def test_clave_prohibida_cambiada_con_adopcion_de_otra_es_warn(self):
+        self._agregar("holdouts", "data/sellado/**")
+        self._adoptar()
+        datos = self._leer()
+        datos["excepciones"] = ["x/**"]
+        self._escribir(datos, indent=2)
+        drift = self._drift(self._doctor())
+        self.assertEqual(len(drift), 1, drift)
+        self.assertIn("rutas: excepciones", drift[0].mensaje)
+
+    def test_cadena_rota_no_cubre_y_agrega_hallazgo(self):
+        self._agregar("holdouts", "data/sellado/**")
+        self._adoptar()
+        registro = self._registro()
+        lineas = registro.read_text(encoding="utf-8").splitlines()
+        entrada = json.loads(lineas[0])
+        entrada["motivo"] = "alterado a mano"  # el hash de la entrada ya no coincide
+        lineas[0] = json.dumps(entrada)
+        registro.write_text("\n".join(lineas) + "\n", encoding="utf-8")
+        drift = self._drift(self._doctor())
+        self.assertEqual(len(drift), 1, drift)
+        self.assertIn("rutas: holdouts", drift[0].mensaje)
+        self.assertIn("registro de adopciones no utilizable", drift[0].mensaje)
+
+    def test_registro_invalido_sin_drift_de_claves_es_warn(self):
+        # Solo cambia una ruta mutable (hash distinto, sin drift de claves) + registro corrupto.
+        self._editar_autonomy({"mode": "autonomous", "budgets": dict(BUDGETS_VALIDOS)})
+        registro = self._registro()
+        registro.parent.mkdir(parents=True, exist_ok=True)
+        registro.write_text("{no es json\n", encoding="utf-8")
+        drift = self._drift(self._doctor())
+        self.assertEqual(len(drift), 1, drift)
+        self.assertIn("registro de adopciones no utilizable", drift[0].mensaje)
+
+    def test_reorden_sin_adopcion_es_drift_no_pass(self):
+        datos = self._leer()
+        datos["data_raw"] = datos["data_raw"] + datos["data_raw"]  # duplicado, sin adopción
+        self._escribir(datos, indent=2)
+        resultados = self._doctor()
+        self.assertEqual(self._pass_info(resultados), [])
+        self.assertEqual(len(self._drift(resultados)), 1)
+
+    def test_sin_registro_comportamiento_historico(self):
+        self._agregar("holdouts", "data/sellado/**")
+        self.assertFalse(self._registro().exists())
+        resultados = self._doctor()
+        drift = self._drift(resultados)
+        self.assertEqual(len(drift), 1, drift)
+        self.assertIn("rutas: holdouts", drift[0].mensaje)
+        self.assertNotIn("re-adopt", drift[0].mensaje)
+        self.assertEqual(self._pass_info(resultados), [])
+
+    def test_guardrails_malformado_sigue_fail_closed(self):
+        self._agregar("holdouts", "data/sellado/**")
+        self._adoptar()
+        self.ruta.write_text("{no es json", encoding="utf-8")
+        drift = self._drift(self._doctor())
+        self.assertEqual(len(drift), 1, drift)
+        self.assertIn("no se pudo comparar", drift[0].mensaje)
+
+
+class TestDriftAdopcionesModuloFalso(_BaseAdopciones):
+    def test_modulo_ausente_equivale_a_sin_adopciones(self):
+        self._agregar("holdouts", "data/sellado/**")
+        with patch.object(doctor_mod, "guardrails_adoption", None):
+            drift = self._drift(self._doctor())
+        self.assertEqual(len(drift), 1, drift)
+        self.assertIn("rutas: holdouts", drift[0].mensaje)
+
+    def test_excepcion_del_modulo_es_fail_closed(self):
+        from types import SimpleNamespace
+
+        def _explota(_raiz):
+            raise RuntimeError("boom")
+
+        falso = SimpleNamespace(cargar_adopciones=_explota, rutas_cubiertas=lambda *a: set())
+        self._agregar("holdouts", "data/sellado/**")
+        with patch.object(doctor_mod, "guardrails_adoption", falso):
+            drift = self._drift(self._doctor())
+        self.assertEqual(len(drift), 1, drift)
+        self.assertIn("rutas: holdouts", drift[0].mensaje)
+
+
 if __name__ == "__main__":
     unittest.main()
