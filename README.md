@@ -108,6 +108,15 @@ science project.
   secure or compliant, and it is not a compliance engine. Use
   `ds_guard cards validate` / `ds_guard cards report`, and `harmessi doctor`
   for the `HARMESSI-GOV-*` checks.
+- **Integration & Stabilization and Composable Skills (v0.10)** — managed-file
+  hashing that no longer depends on line endings (`ds_init migrate-hashes`,
+  dry-run by default), Unicode-safe Git path handling, a `console_confirmed`
+  approval channel, governed scope amendments and guardrails re-adoption
+  (`ds_guard scope`, `ds_guard guardrails readopt`), a closed skill contract
+  with explicit writer semantics, and the `domain-modeling` skill with a
+  project-owned `GLOSSARY.md` (`ds_guard glossary check|hash`).
+  `console_confirmed` is an interactive-presence signal, not proof of identity
+  or authorship. See `docs/releases/v0.10.0.md`.
 
 ## Requirements
 

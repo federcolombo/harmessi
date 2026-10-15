@@ -1,5 +1,5 @@
 {
-  "harness_version": "0.9.0",
+  "harness_version": "0.10.0",
   "perfil": "python-jupyter-data",
   "fecha_utc": "2026-09-09T18:08:09Z",
   "configuracion": {
@@ -11,479 +11,638 @@
   "archivos": [
     {
       "ruta": ".claude/agents/python-data-engineer.md",
-      "sha256": "d3e882bd0b8516d73667f66f2a92b0eef46068789e8e5191f6ba2bdb57343fd1"
+      "sha256": "6fc8d426e2d2e9ca34917a2ad7ff6b1b970c8174a9cb5ddfe66c24a226cde1bc",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/agents/data-science-reviewer.md",
-      "sha256": "99ee0defc43465d871f3d47b6140c8b5cd3d4dc46445f41ccbc559f92c172e80"
+      "sha256": "ace0a54615941dff4525ec94bd9e8135e43b5418dbdbc9f9f2a6a54abe8d25a8",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/agents/metodologo.md",
-      "sha256": "4a1ee1dfe2201f73edcb110e4799a609d32b9857c58f54a58c053774595cfee3"
+      "sha256": "e9aeb024595f930adb7e58a3d7203430d5828e1f038676586b83cdd0ee4a0471",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/agents/notebook-runner.md",
-      "sha256": "b6e282d474a1f16709ff4fd68a1ed6e7e49f5027831e8ed8a149218ba040d9e6"
+      "sha256": "b6e282d474a1f16709ff4fd68a1ed6e7e49f5027831e8ed8a149218ba040d9e6",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/SKILL.md",
-      "sha256": "939c0542d27a0b7e6a20a1278a1a7c78f7b7c4427f472996ba10df8e9f71394e"
+      "sha256": "3aa21adc9e8f92fad382e221f4f8d534a66f11445078c1c17f303d9f46aedda3",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/sdd.md",
-      "sha256": "79ad4fce504305d3e9f392f556e3d3ae4ba67546f0c39d0823a8a15a9a925cd0"
+      "sha256": "886b79b49ff3e6d892b95144d8dcf3acb0967a1db2215626930a2abea2a478e6",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/verificador.md",
-      "sha256": "912efeffb8dc6d77d049cfb465c328b67d59db68c5b01f369acf84d8eb922feb"
+      "sha256": "e1371539497e687b9748282bcc85d2471702f8c52b0fca9716f09b4a98d62e8e",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/kdd.md",
-      "sha256": "2c1f5a9b98f5baccf04ee3e76878d84d0b6c7d47a4963e66900020e7aad30531"
+      "sha256": "a79bc4faf5016124d757c81c2a81acb4cc66b0830cb29fa9378b6afdbdfb5ff6",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/decision-ledger.md",
-      "sha256": "3f5e05f7511550d9bd7f1bf2ffdf9ff5046c3ac1e345b99d26cb6580d6fcd168"
+      "sha256": "e46a9c9d476fff68ac24e1a2d2e025229320ffd0aaaa65eabac5b8a029e62c02",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/methodology.md",
-      "sha256": "bd068a20f45011e3f23db01be61bb6b81b467119d38a21731f809a11c4be7faa"
+      "sha256": "b1bcaa2c7d270cf8d7b443840a997d343dcaafb4327b400085dd8b07055d220f",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/templates/proposal.md",
-      "sha256": "f83a793897ce578469afcb8b74750cbebac85aa1de850bc5bbe53def3ad0f803"
+      "sha256": "99c7905c7a251facc91afeed775fa7f7c9535dfcc745050674813180327f51e4",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/templates/spec.md",
-      "sha256": "989f4de1534ee1d0734a3e388afb455850c8f78d0a11b90fd2f7b88bce4851ce"
+      "sha256": "989f4de1534ee1d0734a3e388afb455850c8f78d0a11b90fd2f7b88bce4851ce",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/templates/design.md",
-      "sha256": "388a14cd4b8424e0685c2b8f746b3e0469515d447bae85e35f54a5d82c0f4bac"
+      "sha256": "388a14cd4b8424e0685c2b8f746b3e0469515d447bae85e35f54a5d82c0f4bac",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/templates/tasks.md",
-      "sha256": "7a66f27121905f7277a474aa86f5a98d9896265ce0a8751d374e991201a9415a"
+      "sha256": "4e39c64168fec8fd552deb28a61f71d2c1b3bfa283b84bda8ef84278ddf8ff5e",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/templates/verification.md",
-      "sha256": "36e7f082d559fe73ae05c6a1fcec3b6b0a590bd176d4c4e416ece03929feda62"
+      "sha256": "36e7f082d559fe73ae05c6a1fcec3b6b0a590bd176d4c4e416ece03929feda62",
+      "hash_alg": "sha256/eol-lf/v1"
+    },
+    {
+      "ruta": ".claude/skills/lead-data-scientist/templates/skill.md",
+      "sha256": "3ff123b23b73b8ddceb3b938ec4a8c2f3fa38f43f4517ca37d87f9d3473f2683",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/ds_guard.py",
-      "sha256": "35526143754dc6ef37a4362bcf39a9dd6d7b98cbba7963b760a5d2a8af414a54"
+      "sha256": "3fb45d3988b5863ffc5b7838a38d0c90971f656a24a04be9afb19f548c9735cd",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/__init__.py",
-      "sha256": "835577b881fe594bfd64db28ebe6bb745f9074994b6cf831591f8741729d3cc5"
+      "sha256": "835577b881fe594bfd64db28ebe6bb745f9074994b6cf831591f8741729d3cc5",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/core.py",
-      "sha256": "4855c90a46b97b57ef615fadb386177ec3f079c07de6b1c000103b1d208b5697"
+      "sha256": "e9a684cff25313929dc78ef41ca64d74749ca3ab9b886152b6be1b327e163929",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/repo.py",
-      "sha256": "0094b3f0313e4ae05b81aa3e05b1dc81394b3ef77fabbb5ee443f7e8982eee37"
+      "sha256": "101968e4154b024820cca1c589ba08cc2b33a48e4e13593106d2a40165ebe563",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/sdd.py",
-      "sha256": "547094c29c2eac8ea65431b273569c10f4316ba57e4a01299f949bc4ad2d3172"
+      "sha256": "6b59e69dbfac04db8721055eace0b4e6ffe731979128d6f1960f720eed8bef2b",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/decision.py",
-      "sha256": "685aef60a3c440bc97bc2a29a2667908e0ad890acdb42ade41b47887f7dc3e0a"
+      "sha256": "685aef60a3c440bc97bc2a29a2667908e0ad890acdb42ade41b47887f7dc3e0a",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/kdd.py",
-      "sha256": "9de7cfb1869d133643685024c4aaf17734a0dd223f2e230f59cbe9974ad22e84"
+      "sha256": "9de7cfb1869d133643685024c4aaf17734a0dd223f2e230f59cbe9974ad22e84",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/lifecycle.py",
-      "sha256": "b770011260c2c33d95fcfc00c7f1f8aad8ed2b653bb6c9d2d77de80ff8c20046"
+      "sha256": "b770011260c2c33d95fcfc00c7f1f8aad8ed2b653bb6c9d2d77de80ff8c20046",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/kdd_compat.py",
-      "sha256": "310940d85842cb3aaf0bc4f743dc7628b728dae1957ea4edc933df87a89d089c"
+      "sha256": "310940d85842cb3aaf0bc4f743dc7628b728dae1957ea4edc933df87a89d089c",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/maturity.py",
-      "sha256": "cfdafa6dedce17c925cb44e9ff71f5200bb4c62c9a66f0dddf6beb576da3084c"
+      "sha256": "cfdafa6dedce17c925cb44e9ff71f5200bb4c62c9a66f0dddf6beb576da3084c",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/checks.py",
-      "sha256": "c5c0d9aada331d9e3177fb71888acad8181e44f496a99cf58367f837a0f7fef5"
+      "sha256": "658d9658b09e181b4900cfb2c614f0be518c9ee4a3b939a4ccecb7b76fe3d4b3",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/mlops_foundations.py",
-      "sha256": "7eb8e38c7f7c8bafd546c89dfdf7456f6dd187f80538fd39fe40c73010fbd26a"
+      "sha256": "7eb8e38c7f7c8bafd546c89dfdf7456f6dd187f80538fd39fe40c73010fbd26a",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/mlops_evidence.py",
-      "sha256": "2205f19b89fe5185c6dd649000955e2a5d1965866401611698351a4aeadbc16d"
+      "sha256": "0f912f8e4e631b648153f663ebeb2acdec5252b811618819a10f620312d99149",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/readiness.py",
-      "sha256": "6d3ec667c6d6d3e0d8053e69b910742e8759d73df29f106bc85475958f4698d5"
+      "sha256": "a32fdf9882d391414f9dc7f1c59924d8bc858de5e2eea4a4b8800df86101b570",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/status.py",
-      "sha256": "a96068f7c8e019d21c1f9abb19165c523b8f31e75c0627f37c9c6c257ac2cf95"
+      "sha256": "f479e9c91423678c9f77c0ef1173fa698a7e8871d04fd208c87933e4841d5ae1",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/scope.py",
-      "sha256": "2fcb84024106c4f469dadccc9754e2059922ddf01d5c3f9d15b311c52f11942b"
+      "sha256": "26b06f1189f18cea28f0e0b75ea72441e83eea87f670844c19f5bca1d92806ae",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/scientific_validity.py",
-      "sha256": "9254d22a462a56d191d13f3daf5b2551898679a663e6acd3e45ae29d33351e3e"
+      "sha256": "9254d22a462a56d191d13f3daf5b2551898679a663e6acd3e45ae29d33351e3e",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/efficiency.py",
-      "sha256": "b950f70972137eb5fa164701f79a1109a19313ec08081f2b9326bc55ddb0a784"
+      "sha256": "648a2fb3fa856622f1731c4f1070f70964027e3d09e37e9d1b6ec494075c1d83",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/notebooks.py",
-      "sha256": "60fcce1db067d23183256193c80214168ad5450951104368a67807c42ce894ae"
+      "sha256": "60fcce1db067d23183256193c80214168ad5450951104368a67807c42ce894ae",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/hook_presupuesto.py",
-      "sha256": "185a89a8aa7f35518016867a4eff81f5f19b917f156b1bd28e4b545069fe88da"
+      "sha256": "e245895fd13f8639565bbd9db73900933592431695f399e7acac3acc0e0523a3",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/hook_launcher_presupuesto.py",
-      "sha256": "3c17e15cc044f2efdb31075c79849a147d8730b20d56176fb08c1d2d842e27fb"
+      "sha256": "3c17e15cc044f2efdb31075c79849a147d8730b20d56176fb08c1d2d842e27fb",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/pathguard.py",
-      "sha256": "ab1c9c8961654c68acafbbce2d29b61315450e35e395e6dd117c01d3bb9aa05e"
+      "sha256": "ee1b011911e23c7a2cce5dd583417e936afd35a6c8b31e54d26a96544aec7f27",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/hook_rutas.py",
-      "sha256": "08757cbeb087359091bf211786c9a85297430d35555d3663c814c39baca73600"
+      "sha256": "08757cbeb087359091bf211786c9a85297430d35555d3663c814c39baca73600",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/hook_launcher_rutas.py",
-      "sha256": "3cd261a764216a550bead30e3359da3100f4b9685bf8cb7d11acd59d48ba8793"
+      "sha256": "3cd261a764216a550bead30e3359da3100f4b9685bf8cb7d11acd59d48ba8793",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/guardrails_drift.py",
-      "sha256": "7ee840bd2ab7e7045f2c7dc6f83b96878d4b2ce82849de8ba08fabe5dcaa3e9f"
+      "sha256": "f4494342c6d10af742233b920b73915a9c5f133695921e15cfc4d776f4c007f1",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsguard/pep440_subset.py",
-      "sha256": "fadf7dd50b052f5db2d0447127b919681c68da6324f7350eef91671d8648952a"
+      "sha256": "58de706d7ad35ea0708c82513013d9efefba191a925683b3aed5025e7268bfaa",
+      "hash_alg": "sha256/eol-lf/v1"
+    },
+    {
+      "ruta": "tools/dsguard/skill_contract.py",
+      "sha256": "1850841941ea8d0d8a07a6580d669bcf14402181c77b0a3829d06dad66dba84a",
+      "hash_alg": "sha256/eol-lf/v1"
+    },
+    {
+      "ruta": ".claude/skills/lead-data-scientist/skills/domain-modeling.md",
+      "sha256": "27b3c95d4087fe7994960f4dd8a468ec9c43fe1b6848afe406e3cccb364167b5",
+      "hash_alg": "sha256/eol-lf/v1"
+    },
+    {
+      "ruta": "tools/dsguard/glossary.py",
+      "sha256": "a12cc113b292e0962702798ead402eb81b740e35f9f392c3ad425a5b29298d55",
+      "hash_alg": "sha256/eol-lf/v1"
+    },
+    {
+      "ruta": "tools/dsguard/ownership.py",
+      "sha256": "ebaaa1c388752b2ba09796963b4fefa7117254909f04e43bca56efb50f3630ed",
+      "hash_alg": "sha256/eol-lf/v1"
+    },
+    {
+      "ruta": "tools/dsguard/guardrails_adoption.py",
+      "sha256": "d4ed666226bc1c84e3e6ad512659e8213dbda0d6b79a93dc2387551d35cdfb53",
+      "hash_alg": "sha256/eol-lf/v1"
+    },
+    {
+      "ruta": "tools/dsguard/human_presence.py",
+      "sha256": "f797fe85287810dbe85b585c1fdb66b55392973d351b06b788f6a33fce4e31db",
+      "hash_alg": "sha256/eol-lf/v1"
+    },
+    {
+      "ruta": "tools/dsguard/scope_amendments.py",
+      "sha256": "4a7bae4fb49a281b6aa2cf5b5eb4fb4313db62c99ef927f107f509880f7b2593",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/guardrails.json",
-      "sha256": "7b1e6a694fa8283afae7ca31aa0f2b2302dd6850590e69f078c154445b42c7c7"
+      "sha256": "7b1e6a694fa8283afae7ca31aa0f2b2302dd6850590e69f078c154445b42c7c7",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/nbrunner/__init__.py",
-      "sha256": "28a85555a287d46438079dc8baf0f5cd10d2d2a2671d7e529665b62e5023185b"
+      "sha256": "d6d08fd2fcca553a771b63b3caeb0c57c62702f3865a6f748ed2d186bff72ffe",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/nbrunner/core.py",
-      "sha256": "f576c57bcba98111296c722957a906f73dbdc8c3f2f7749ea3c16e129b91b87f"
+      "sha256": "f6e4f739a8a03e6bad5cf22ddc60737bb5cad325b4e69fb0f7fab74cebadebe4",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/nbrunner/execute.py",
-      "sha256": "dd90d851491c3e8dcfb2fe4964d9d2748e4f2ee30ba5d1be167566a0d2c170c6"
+      "sha256": "b02151c30183d0c7633a75745c4c159912cebbdcf1052b5c86bedc5887818d78",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/nbrunner/fsdiff.py",
-      "sha256": "53d8caaea8f468a78c0e95b998721c005f93a6aa2314123c3065edde9f5f2f0a"
+      "sha256": "a0f4b4082b4b8e25b87441cb5d0782eceec1fed1e2db637799d2b05ffcb3b510",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/nbrunner/hook_validar_comando.py",
-      "sha256": "740c977f9fb52b8ac543a895751912c0de85649f898793959f4a95408b10cccb"
+      "sha256": "ad1b505ca493fac460da7542c8f9ba3059cebb89fdd1c12c91bd8777dd8ca234",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/nbrunner/hook_launcher.py",
-      "sha256": "1c913b5bc6df2e4e776d7fbedac4e3dbf2f742582d1d1cec1de47665c4a4c0c6"
+      "sha256": "1c913b5bc6df2e4e776d7fbedac4e3dbf2f742582d1d1cec1de47665c4a4c0c6",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/launcher_common.py",
-      "sha256": "6c1b6500cbdbd69b5d2b9baf2d961b9932dddedcc9c1bb5d7fe7c67c96456af8"
+      "sha256": "6c1b6500cbdbd69b5d2b9baf2d961b9932dddedcc9c1bb5d7fe7c67c96456af8",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/nbrunner/manifest.py",
-      "sha256": "43ac431a9aeafb361253f5fe6c9a2c284af4e64121ca6f07f9af9569f845a0c9"
+      "sha256": "be34bdc076488f1e35971797d58873f842dc8c2c38eee9e59509e8e0868bd1d9",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/leadrun/__init__.py",
-      "sha256": "3866757fb23d7a9730357f3dcfb0b235945360b73451ad8a55566e81c79cc24c"
+      "sha256": "9bc575df023cc87542fafdc7d37bf9238c090268b82eec88c933119fc7bf0a81",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/leadrun/core.py",
-      "sha256": "ea70cf76e00a70e7e5db5c42bf344f51b55b29dc4fb34ac5a9ee6243e4dc20ad"
+      "sha256": "f3a252a57cf34f97d1dd9c48f48332bc70f0526f3f9fb7ba6f87ab82e8465283",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/leadrun/allowlist.py",
-      "sha256": "c9f92272a88f2c76cd37409c3cf20eaa0e17eb6f0f5541aeb2bcf532dbbce1e9"
+      "sha256": "2c7cee44a28ab4bbfe94f90d88a3bfe8d89a56fbdf86428425316135e8def300",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/leadrun/scripts.py",
-      "sha256": "c805ee387169f464fb1abe244f2f32d3479613720c2af08ba05b9d2575284b16"
+      "sha256": "95f335f241caf6b02532c22ef1397a78acf312cdb8579727634437b6bd691b90",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/leadrun/notebooks.py",
-      "sha256": "84c468937c429c81dbbc6237df920bba70d3f154cc6af9de4ec7baa9c8dbd908"
+      "sha256": "0fbfb0dff482ae5401f95cb5377e7fe5ec46d670868bc7160d329ea9894f9f1c",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/leadrun/runtime.py",
-      "sha256": "2682af0e5e1e011d5509f5613fa7d46efa4079d6131f73ba948d60ee316357a9"
+      "sha256": "593d13c12941bc9119c13999c75501f9594f8b2c34360ecd41ba168e97b1c9b5",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/notebook_runner.py",
-      "sha256": "fc0c1f5720dcab04afa386be4dd5158a4c872b1e390da05c139c80b2263e2d3b"
+      "sha256": "ae5a501b3069cf94ae92b5ca43bb964f85919ecc8ca5b4cd533bbc72c4155d27",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/tests/test_harness_smoke.py",
-      "sha256": "ccf4ee46ad504abcde044e6d606fabf42368a4f5e0bac5a692a6c35bd1a6d917"
+      "sha256": "ccf4ee46ad504abcde044e6d606fabf42368a4f5e0bac5a692a6c35bd1a6d917",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/ds_profile/__init__.py",
-      "sha256": "68d55186f0de7e7242a6ef1d139d15145baf447c8b3140e3bae32123fdcd9027"
+      "sha256": "68d55186f0de7e7242a6ef1d139d15145baf447c8b3140e3bae32123fdcd9027",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/ds_profile/__main__.py",
-      "sha256": "097b437e185ce0f4e39e42b83e3911739f995d58b7e23ec32d9aed279b2f185e"
+      "sha256": "097b437e185ce0f4e39e42b83e3911739f995d58b7e23ec32d9aed279b2f185e",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/ds_profile/cli.py",
-      "sha256": "86a5e12aff22d59041c7afd50859fe956c194d715c88704558b897e2e8ba468b"
+      "sha256": "9b9ee97ac9c5bb5bf7d9831eff8f0dd123eac8e0bc636c4adc7795606845f4e6",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/ds_profile/io_readers.py",
-      "sha256": "d78b6a5be5cf383e3f6ff436217162c2420dbcfc73d201098a514788e0bda6c2"
+      "sha256": "bc5f0efc5bb98fca35cbdd1e2d9527fcf589ae70032b0fcbdb8030562324dd9c",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/ds_profile/fingerprint.py",
-      "sha256": "edc9f56a271982bff86f9e320f54f3e2181a904dadf8c5f3d4d2b0aaab7a2f7f"
+      "sha256": "edc9f56a271982bff86f9e320f54f3e2181a904dadf8c5f3d4d2b0aaab7a2f7f",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/ds_profile/schema.py",
-      "sha256": "a0c87d08c2819d28087fe807fe51f21956b77d2107914213364522a5d053c442"
+      "sha256": "a0c87d08c2819d28087fe807fe51f21956b77d2107914213364522a5d053c442",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/ds_profile/column_stats.py",
-      "sha256": "3522230e4b0bd3254e448aee340beeefc4337db9ad89a32925aa064f2850fa61"
+      "sha256": "66f77e942808b74b89abf47f0580ba63db0d8c9adbb5cfdaf1dee7e191d29c3b",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/ds_profile/quality_flags.py",
-      "sha256": "29fef09fc25f4904838b0aa0a9e2d0af1f73b86b8767dfe623f4d0d1fd9d7f50"
+      "sha256": "29fef09fc25f4904838b0aa0a9e2d0af1f73b86b8767dfe623f4d0d1fd9d7f50",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/ds_profile/sampling.py",
-      "sha256": "401b99dd491a147cb55b7f088c2498b5a70087d6584a92b70bf65233419b2b7f"
+      "sha256": "32ca2e3832343364a48cd8d6e59434130100087fb985798d542aca234fce99d8",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/ds_profile/holdout_guard.py",
-      "sha256": "d88c691988b4ac05e9bb37c7fabbfa48b3b592d1097e8ae2b72c19cc95eddf05"
+      "sha256": "d88c691988b4ac05e9bb37c7fabbfa48b3b592d1097e8ae2b72c19cc95eddf05",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/ds_profile/report.py",
-      "sha256": "56fe03bf85d043a97133b96739f23afb8515cb9e481e69abe52123f8f8f5b31c"
+      "sha256": "ac2e671e95cc798a60f333b4b6b8c0f872df9d74666a596d82d0f058521b9394",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsimpact/__init__.py",
-      "sha256": "782e1e606c380e825daf1d9aa5d121dbd7ddbaa32631cc74ea83d9dd7de2e795"
+      "sha256": "e69ed74fe426073ac503df03706af001289d76228e70bc44d19784ab2b2c3672",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsimpact/__main__.py",
-      "sha256": "afc3053c8f120e9350a9d0c94b7772eb97428c80252aeba48daddf6e98a33dbc"
+      "sha256": "0cadb8276bf19062a30275937d7ca2e822cdc6f703de5f843f79f07262b0281b",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsimpact/cli.py",
-      "sha256": "12e2de0c606486786b090bf3f64a7dfc9387bddf22dbac973e82526756ed4e92"
+      "sha256": "539c562f1235b46103338d9cb18f4e462c4e05b68663212c4bbb92bba17a1afd",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsimpact/git_source.py",
-      "sha256": "1edad921b25782f3ed09cb5672b09d83cca9b0f5ef53c794b3053919ce415a77"
+      "sha256": "7e9b6ecb239119ef9f974b5730e680a8b88d3ea8b6c71fce00d255c21863d3d9",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsimpact/py_changes.py",
-      "sha256": "0bcb3840169f1aa5723a3344be0579b89d30883ee79fe62ccabf4dc55322cd37"
+      "sha256": "3109bb20136ab731cd0bcd4b6e9f92bbb573675059c3f26946da3745014de1c5",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsimpact/consumers_py.py",
-      "sha256": "e67b27e92d5215737e6462817abb6abd5dbc19ad820378c26e12764267a3dfdb"
+      "sha256": "85bf6737e86fb05a587150f1a4390f2e098e9fc67e4d27f54c3b456093558f80",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsimpact/consumers_text.py",
-      "sha256": "d07e04110e632942a566f2c5f8c8f9475e25f6ea6bf5fdc331103db6f8e0a25d"
+      "sha256": "f66c29d0ece90a1a699289c7c2971b163d25775f9e98b7b4ade2c4d055e00600",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsimpact/notebooks_source.py",
-      "sha256": "dd8f9a9b4d00d16733505158674a50a23a1e954abb7ed32f299186204d53ee33"
+      "sha256": "4ac65ec6b902fa6d933008da10ab4b7af0251051cdcc01ce1822a9373008d6e5",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsimpact/generic_filter.py",
-      "sha256": "9a36d9185b19211d38b88f809d5ae76da4d2f9f5d0da5347e037fccce5ee241c"
+      "sha256": "1676f57f35360004132e58e6d0ff1798ece96127678fa82164afb2f4f34cabcf",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsimpact/scan.py",
-      "sha256": "720b05740fafa60f6f27a18dedf79977b8f0714cbdeabc3b553fff945748406f"
+      "sha256": "5fd9b73bb405924ca1328e7a4db038263999260e601d07c5395c68ed147593de",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/__init__.py",
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/core.py",
-      "sha256": "d2073fad0e62a28d2fb4506a1bdaf1e88bd5d10d6e509c5eb21a65b9d165692f"
+      "sha256": "116b1e7d5791a65c3da41bdc87c933dc54de77f8faa3bb8930ca18d6d9fb9ce3",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/governance.py",
-      "sha256": "5bc4380ee668f659c71bbfc168dabbdd18369f096b54235d257fc9d77d5e54f9"
+      "sha256": "9d841df9f675b14f92b50a6beecef1403eae14678925e8382fefcdfcb00edacd",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/cli.py",
-      "sha256": "ddd3175ae84e80288fdf6936f02f850ecb451ed9f26c0c1532363b5b81099f98"
+      "sha256": "d82fc790c7840187d48210a50d4bdc6227fab3925189dd9d752cd285ce8c2e88",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/__main__.py",
-      "sha256": "27efb2e581bcc4dd04ab010eb12d13e45405537bcf8a584513940951dc9a2070"
+      "sha256": "4532b99842d04899bffcdea81941d88c3ac380d36581f7d41a06b4a0a633b89a",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/profiles/__init__.py",
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/profiles/eda.py",
-      "sha256": "78d7a30dc6219ac123cd79f7bab7b2ffe52a105ec639ba2e5a9ef08cfcf1ad29"
+      "sha256": "fa33b1100eb22c63df909eee4be24c7813530170982a74c07af3745fe4565bbc",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/examples/__init__.py",
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/examples/eda_generic.py",
-      "sha256": "3cc8a38ea6cc01ca3a385b5d50d2d295c5af9546e89611cb9390829adc440b30"
+      "sha256": "07763c75c84cdad265832d1ba12c11170c02dc3cb39f326e1bd77c8244686450",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/evidence.py",
-      "sha256": "788f5bc28e1169bcc9311a0c710ad25b5fb6020e604699ee49a88720d07dcf1f"
+      "sha256": "0fd1b06ef15599c5d919538d9c0b4bd202174dbf1b81096437be005f96e9beeb",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/validation.py",
-      "sha256": "edb28bb6cf0aa4a5152f49680296427e9bd4a7168bb0b814245d96ff99b87834"
+      "sha256": "7f1479dd0b641032abf77b00cfd56b1cd298183d7c3c7590532a00d4de622bde",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/style.py",
-      "sha256": "4e97839b55277316158ca8016aee859cbb7d824031e71fa9b153b0adc6e8a42d"
+      "sha256": "b38ae8214d900b17d9d3695a145b126b5db5ce9e1e87bbc15cd106678b9bd81e",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/plotly_backend.py",
-      "sha256": "ed8b1a128a0d9b33cfbb5c9227d7486c1fb16508e303ba614fa7718a9739bd21"
+      "sha256": "8339e91dcfff2882ea85d14c79430cad216f37684271eb6130ef55bbbeaa6113",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/render_html.py",
-      "sha256": "32c806eb6c561c6103e552e847e5b74af636f292103f0bf7de992c5edd9cd0e9"
+      "sha256": "7014a476b16b3a6b90f1b31cc2379d6547d5e0526b33749a929ae52b103c91e2",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/reporting/publish.py",
-      "sha256": "a1a7d81ce5850b74ace11f5eddc63d22a84d9e9ab492066684f1cb8d3f5c0bc6"
+      "sha256": "9524ebc63f35e7dcc27236ce5b64a3e97c3d138e2fd7765d9d10e91c67fdce5a",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/datacontracts/__init__.py",
-      "sha256": "364683643e8805099193be5c73a997036c78e6b4619babb594d7a277c2fa2c3e"
+      "sha256": "cb27333d4bd3f065a9c0b408896e0534dfb69f2c1a966af43aef36605eb5d9e4",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/datacontracts/core.py",
-      "sha256": "ca6b7f7fc0c81c94fd1ee0bef891a6e163372d146914b8775e6ec4e2059e8f8a"
+      "sha256": "84add0c43746145192d1cc3065b56cfa1537bb0439e3b70e7f489bf967f58d18",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/datacontracts/validation.py",
-      "sha256": "b666199bdd536685e33bbce18f4658198d8df9e1a64d0c34c24751b645ba192b"
+      "sha256": "ffee74ddd7b6500976052788c8fe3cf712d15c73cbc3e8f363fc8f4aeb46eb12",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/datacontracts/evolution.py",
-      "sha256": "dd7fb1b56a562e383b9b87cc8fe6a745c7377b49ac2323a1dbf1c68ab141d33b"
+      "sha256": "bd2805eb7c50dcebb14c265f55045914e0f456a2350e6635789330cae753e82c",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/autonomy/__init__.py",
-      "sha256": "f5e6d9eb75f08a33f8e9478671c1cee05afe496357ea1ac75b3a631935dae861"
+      "sha256": "7b6498c64520a5b3fac684bb85ee8546a17c1a6ca47c87e67d44f8b83fc39062",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/autonomy/core.py",
-      "sha256": "ab6f64dba5c1a7ae2cc62f7c5ec5702dc5c46b22f124ca31c08c88c4e3db6f86"
+      "sha256": "71a9011e02842d4ef2c7239c228f31024cc44b0b545cdac75fa0a2ab0a0e959a",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/autonomy/policy.py",
-      "sha256": "c0699a59f4bdd40f706b09eaf03ed19387937252a0f03a30705894b797fe0d50"
+      "sha256": "263ec72b323167ca9e352c7767fcd7b0d7c8b618a2b0b6f732fc288874811b45",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/datasources/__init__.py",
-      "sha256": "fca984d64a6647f84fb659574e6f2a3f09d2776bed184260f13e61e1d4a05926"
+      "sha256": "11c853de2edba1e99f27df7ad654d1db3577464ae4d38df3dbc8f35345c62915",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/datasources/core.py",
-      "sha256": "c75a094d7df040797668b516d9478d2765a9818ea88406abf01e14ebfbc7abdf"
+      "sha256": "0da0f51df8aa00af6ec3a6dc616d41ca55930024f410be8816f7ab11a1159161",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/datasources/scan.py",
-      "sha256": "86af51d6bbef415eba48b2096e9061ac6b9e68b279090fb2275cbbafbc66a0fc"
+      "sha256": "3345f0043dd80c6fb06dbb56811b5ee51cb401bbfc3d5ae6ddd4c9723452ed5e",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/datasources/registry.py",
-      "sha256": "8ff5ef1bea5a267df82e9d8797fb71f9fbd6116b6a39bc7d4878209daa83c779"
+      "sha256": "f153e03da66d1a49b2b3b268822a34fd50b132af963ef739716eabe4c50c7b09",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/datasources/runtime.py",
-      "sha256": "b1a704a677b1d73dafd4b47af25a800058ba7d586ece60c4ace3b697dff37e00"
+      "sha256": "dd7aab751f067ad1e62d11c061037f23a0f250b0b98e302afb45806c6ccfca7c",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/datasources/profile_bridge.py",
-      "sha256": "b869bc21c16f5412bf83e25681e61e4ff2fb2fcde8ba01f6c8c9a3675abf5c54"
+      "sha256": "6930ff20da3bb4e22c0d56b498e722555a1834c27d89dfcd571fc048073cc183",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/datasources/file_observer.py",
-      "sha256": "0cee085417778d7a8d45d5977d0b3bd0b97d18acb90174b709e344e67efbd542"
+      "sha256": "8850fb606b285defc6ef44d29db23dc90892b1b95ebf54e8f17a795ff8d5a46c",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/datacontracts/legacy_wording.py",
-      "sha256": "5bc6adf6d8ab721d03a06a2722347ffe9a7da0c5c35877b4677c4b690adf0618"
+      "sha256": "85ce9d3ffa50291b242a7a96c8ed09020cd0a9b2f2cc8ce0bb2ebfe5ad7c2af5",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/modelquality/__init__.py",
-      "sha256": "1211ac69ff27b4c75101b966db40167001a7d8f74d113f99655d755ebd50bf71"
+      "sha256": "af6fd0755525479f45386556426ce07b76c0006a9063aba1d1df44b46190115a",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/modelquality/core.py",
-      "sha256": "6789dde747e4f190845ee9c6e04edc618cd5880a14fde1c3bdefa2592875de09"
+      "sha256": "2108b1cb66f1bac2ef625b06d8fcfcf24a622f75fb4feefdf61f7c7ac8ab3108",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/modelquality/validation.py",
-      "sha256": "2bf0e3639698b5ba661a63ccb41a48eb3d094ee991e7c56d9e3eb5c94357264b"
+      "sha256": "165af18f36bc133ab2992538ebdb7c87c9cd0ef2c4213490f6c59b51acad0198",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/qualityevidence/__init__.py",
-      "sha256": "fe0939cbec953eb1b6a5428c86bea6fb504ac8b3a4071c3c99b888d1c773ab6c"
+      "sha256": "0e2eba4d40a167aaabb85345cc584fff2e267f397e2edd11977ee928d98b3996",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/qualityevidence/core.py",
-      "sha256": "96e812874a1b064c77649952a41fea9c54ece6099943c9b78f713b56427c6e05"
+      "sha256": "5a795a5793c380ca190cadb138b0ce52dbc1a42d0bfc04608231748eb5bad44f",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/qualityevidence/evidence.py",
-      "sha256": "39ec3e863047c15ffc7a0fbc86564da4af3f60655bc1b2055ddb195aba05b913"
+      "sha256": "2508562b0a213f7ee4b998c3aec35d63bbe854245bb06ab44183086df8daba9c",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/eda.md",
-      "sha256": "41a091e078f1dd87307ac17072933c7a9cbb0515a0138a54dacb116de8e8d1fa"
+      "sha256": "41a091e078f1dd87307ac17072933c7a9cbb0515a0138a54dacb116de8e8d1fa",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/templates/eda.md",
-      "sha256": "e97d190dafb2587f713118996a6402e5ab74c54fd9fbdfed8b816aa74653ae06"
+      "sha256": "e97d190dafb2587f713118996a6402e5ab74c54fd9fbdfed8b816aa74653ae06",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/settings.json",
-      "sha256": "6c26ca334c6ff074e909b2cd796303a8f3550a567bfe8498e6f8b2af70a8786e"
+      "sha256": "6c26ca334c6ff074e909b2cd796303a8f3550a567bfe8498e6f8b2af70a8786e",
+      "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "CLAUDE.md",
-      "sha256": "aa968cf1b56b6c4f51ebb188a3919cb48952c0d261821d3eb64dbdcc67ac0635"
+      "sha256": "aa968cf1b56b6c4f51ebb188a3919cb48952c0d261821d3eb64dbdcc67ac0635",
+      "hash_alg": "sha256/eol-lf/v1"
     }
   ],
   "installation_stage": "experiment",

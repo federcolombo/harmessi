@@ -451,6 +451,24 @@ MANIFEST: tuple = (
         descripcion="Semántica de ownership/escritores de un Change SDD",
     ),
     EntradaManifiesto(
+        fuente="tools/dsguard/guardrails_adoption.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/guardrails_adoption.py",
+        descripcion="Re-adopción gobernada de guardrails (closed list; importado por ds_guard.py)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/dsguard/human_presence.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/human_presence.py",
+        descripcion="Señal de presencia humana T1 console_confirmed (solo stdlib; importado por ds_guard.py)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/dsguard/scope_amendments.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/scope_amendments.py",
+        descripcion="Enmiendas gobernadas de scope (cadena append-only; importado por ds_guard.py)",
+    ),
+    EntradaManifiesto(
         fuente=".claude/guardrails.json",
         tratamiento=VERBATIM,
         destino=".claude/guardrails.json",

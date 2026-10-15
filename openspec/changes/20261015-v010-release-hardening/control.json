@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "change_id": "20261015-v010-release-hardening",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-15T03:24:34Z",
+  "baseline": {
+    "commit": "0970181fb5bfb80bf49eb8cc94cfc6cee1a72614",
+    "rama": "v0.10-dev",
+    "capturado_utc": "2026-10-15T03:24:34Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/agents/**",
+      ".claude/skills/lead-data-scientist/**",
+      ".ds_init/control.json",
+      "ARCHITECTURE.md",
+      "CITATION.cff",
+      "README.md",
+      "docs/**",
+      "openspec/changes/20261015-v010-release-hardening/amendments.jsonl",
+      "openspec/changes/20261015-v010-release-hardening/control.json",
+      "openspec/changes/20261015-v010-release-hardening/design.md",
+      "openspec/changes/20261015-v010-release-hardening/proposal.md",
+      "openspec/changes/20261015-v010-release-hardening/spec.md",
+      "openspec/changes/20261015-v010-release-hardening/tasks.md",
+      "openspec/changes/20261015-v010-release-hardening/verification.md",
+      "tools/**"
+    ],
+    "scope_hash": "3df953c8de60e61cd74f0d23fadea2ece757a413c05466449ad83d678b32a96f"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "8947c22b21b566387550690a3bebda89054274f1e36a3b224f59a6e71fa2ff6f",
+      "registrado_utc": "2026-10-15T03:26:20Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-15",
+      "alcance_aprobado": "Implementación, validación y publicación de Change 6 v0.10 Release Hardening",
+      "cita": "Autorización anticipada explícita del usuario (2026-10-14) para el loop autónomo hasta publicar v0.10.0, Change 6 Release Hardening"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "76d1e488b47c65f2869690c44aba9f0882407e0decc455b5ac9d21c8ad56f0d1",
+      "registrado_utc": "2026-10-15T03:26:22Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-15",
+      "alcance_aprobado": "Implementación, validación y publicación de Change 6 v0.10 Release Hardening",
+      "cita": "Autorización anticipada explícita del usuario (2026-10-14) para el loop autónomo hasta publicar v0.10.0, Change 6 Release Hardening"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "cf1cd2b0ef6f248ddd99c5ba817541fd7e99921d3b6deeb4f26b7f5a0afc4dd0",
+      "registrado_utc": "2026-10-15T03:26:23Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-15",
+      "alcance_aprobado": "Implementación, validación y publicación de Change 6 v0.10 Release Hardening",
+      "cita": "Autorización anticipada explícita del usuario (2026-10-14) para el loop autónomo hasta publicar v0.10.0, Change 6 Release Hardening"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-15T03:26:25Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-15T03:26:26Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-15T03:26:27Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-15T04:50:28Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-15T04:50:31Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-15T03:26:24Z",
+      "cierre_utc": "2026-10-15T04:50:33Z",
+      "modo": "prolongada",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 12,
+        "max_roles": 3,
+        "max_reintentos": 8,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 5
+      },
+      "deadline_utc": "2026-10-15T11:26:24Z",
+      "minutos_consumidos": 84.15,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-15T04:49:38Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-15T03:29:58Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

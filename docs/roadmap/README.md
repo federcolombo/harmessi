@@ -72,7 +72,7 @@ Si el usuario define otra política de commits para una versión concreta, esa i
 - `v0.8.0`: publicada — Autonomous Project Runtime (autonomía del harness instalado + abstracción de
   fuentes de datos). Ver `v0.8.md`.
 - `v0.9.0`: publicada — Cards & Model Governance (Data/Model Cards, Responsible AI / model risk evidence, correctivos operativos). Ver `v0.9.md`.
-- `v0.10`: en curso — Integration & Stabilization + Composable Data Science Skills; roadmap aprobado por Change 0 (Integration & Stabilization + Composable Data Science Skills); ver `v0.10.md`.
+- `v0.10.0`: publicada — Integration & Stabilization + Composable Data Science Skills. Ver `v0.10.md`.
 - `v1.0`: Stable Public Contracts.
 
 Nota: el contrato de autonomía de arriba gobierna **cómo se desarrolla Harmessi**. La autonomía del

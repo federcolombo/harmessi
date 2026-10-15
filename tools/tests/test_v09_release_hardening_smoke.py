@@ -46,10 +46,12 @@ class TestVersion(unittest.TestCase):
         control = json.loads((REPO / ".ds_init" / "control.json").read_text(encoding="utf-8"))
         self.assertEqual(control.get("harness_version"), HARNESS_VERSION)
 
-    def test_version_es_09(self):
+    def test_version_no_regresiona(self):
         from tools.ds_init.version import HARNESS_VERSION
 
-        self.assertEqual(HARNESS_VERSION, "0.9.0")
+        self.assertRegex(HARNESS_VERSION, r"^\d+\.\d+\.\d+$")
+        tupla = tuple(int(p) for p in HARNESS_VERSION.split("."))
+        self.assertGreaterEqual(tupla, (0, 9, 0))
 
     def test_versionados_internos_independientes(self):
         from tools.ds_profile import report, sampling
