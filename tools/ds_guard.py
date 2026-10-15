@@ -44,6 +44,7 @@ from dsguard import (  # noqa: E402
     core,
     decision,
     efficiency,
+    glossary,
     guardrails_adoption,
     human_presence,
     kdd,
@@ -132,6 +133,87 @@ def cmd_ownership_check(args: argparse.Namespace) -> int:
     exit_code = 1 if findings else 0
     _imprimir_findings(findings, exit_code, args.json)
     return exit_code
+
+
+# --- glossary (Change 20261014-domain-modeling, R4-R6) ------------------------
+
+def _resolver_glossary(repo_root: Path):
+    """Resolver de aprobaciones para el glossary: `ref_dict -> cards.approvals.resolve_approval_ref`.
+    Si el import falla => `None` (fail-closed: toda entrada approved queda inválida)."""
+    approvals = _importar_perezoso("cards", "approvals")
+    if approvals is None:
+        return None
+    try:
+        resolver = approvals.resolve_approval_ref
+        return lambda ref: resolver(repo_root, ref)
+    except Exception:  # noqa: BLE001 - fail-closed
+        return None
+
+
+def cmd_glossary_check(args: argparse.Namespace) -> int:
+    """Solo lectura: 0 válido, 1 hallazgos (o pendientes con --strict), 3 sin repo."""
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    ruta = repo_root / glossary.RUTA_GLOSSARY
+    if not ruta.exists():
+        if args.json:
+            print(json.dumps({"findings": [], "pendientes": [], "exit_code": 0, "mensaje": "sin GLOSSARY.md"}))
+        else:
+            print("sin GLOSSARY.md")
+        return 0
+    if not ruta.is_file():
+        print("GLOSSARY.md existe pero no es un archivo regular", file=sys.stderr)
+        return 2
+    try:
+        ruta.read_text(encoding="utf-8-sig")
+    except (OSError, UnicodeDecodeError) as e:
+        print(f"GLOSSARY.md ilegible: {e}", file=sys.stderr)
+        return 2
+    hallazgos, pendientes = glossary.evaluar_glossary(repo_root, _resolver_glossary(repo_root))
+    findings = list(hallazgos)
+    pendientes = [str(getattr(p, "termino", p)) for p in pendientes]
+    exit_code = 1 if (findings or (args.strict and pendientes)) else 0
+    if args.json:
+        datos = json.loads(core.formatear_findings_json(findings, exit_code))
+        datos["pendientes"] = pendientes
+        print(json.dumps(datos, ensure_ascii=False))
+    else:
+        print(core.formatear_findings_texto(findings))
+        for p in pendientes:
+            print(f"PENDIENTE (ambigüedad material): {p}")
+    return exit_code
+
+
+def cmd_glossary_hash(args: argparse.Namespace) -> int:
+    """Imprime solo el `definition_hash` de la entrada actual. 2 si no existe; 3 sin repo."""
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    ruta = repo_root / glossary.RUTA_GLOSSARY
+    if not ruta.is_file():
+        print("sin GLOSSARY.md", file=sys.stderr)
+        return 2
+    try:
+        entradas, _ = glossary.parsear_glossary(ruta.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeDecodeError) as e:
+        print(f"GLOSSARY.md ilegible: {e}", file=sys.stderr)
+        return 2
+    clave = getattr(glossary, "clave_termino", lambda t: t.strip().casefold())
+    buscado = clave(args.term)
+    for entrada in entradas:
+        if clave(entrada.termino) == buscado:
+            if not isinstance(entrada.definicion, str) or not entrada.definicion.strip():
+                print(f"la entrada '{entrada.termino}' no tiene definicion", file=sys.stderr)
+                return 2
+            print(glossary.definition_hash(entrada.termino, entrada.definicion))
+            return 0
+    print(f"término no encontrado en GLOSSARY.md: {args.term}", file=sys.stderr)
+    return 2
 
 
 # --- status -----------------------------------------------------------------
@@ -330,6 +412,9 @@ def cmd_validate(args: argparse.Namespace) -> int:
     # El scope en sí lo evalúa scope.evaluar_alcance más abajo: acá se descartan sus hallazgos.
     hallazgos_ownership, _ = _evaluar_ownership_change(change_dir, tasks_path, control)
     findings += hallazgos_ownership
+    # Domain modeling: solo si existe GLOSSARY.md (sin él, validate queda idéntico).
+    if (repo_root / glossary.RUTA_GLOSSARY).exists():
+        findings += glossary.evaluar_glossary(repo_root, _resolver_glossary(repo_root))[0]
     findings += skill_contract.validar_referencias_skills(
         _leer_texto_tasks(tasks_path), skill_contract.skills_existentes(repo_root)
     )
@@ -5638,6 +5723,16 @@ def construir_parser() -> argparse.ArgumentParser:
     p_scope_amend.add_argument("--dry-run", action="store_true", dest="dry_run")
     p_scope_amend.add_argument("--expected-scope-hash", default=None, dest="expected_scope_hash")
     p_scope_amend.set_defaults(func=cmd_scope_amend)
+
+    p_glossary = subparsers.add_parser("glossary", help="GLOSSARY.md del dominio (solo lectura).")
+    glossary_sub = p_glossary.add_subparsers(dest="subcomando_glossary", required=True)
+    p_glossary_check = glossary_sub.add_parser("check", help="Valida GLOSSARY.md y lista pendientes.")
+    p_glossary_check.add_argument("--json", action="store_true")
+    p_glossary_check.add_argument("--strict", action="store_true")
+    p_glossary_check.set_defaults(func=cmd_glossary_check)
+    p_glossary_hash = glossary_sub.add_parser("hash", help="Imprime el definition_hash de un término.")
+    p_glossary_hash.add_argument("--term", required=True)
+    p_glossary_hash.set_defaults(func=cmd_glossary_hash)
 
     p_ownership = subparsers.add_parser("ownership", help="Ownership de writers de un Change (solo lectura).")
     ownership_sub = p_ownership.add_subparsers(dest="subcomando_ownership", required=True)

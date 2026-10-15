@@ -98,9 +98,22 @@ class TestFormaManifiesto(unittest.TestCase):
             self.assertEqual(len(entradas), 1, destino)
             self.assertEqual(entradas[0].tratamiento, VERBATIM, destino)
             self.assertEqual(entradas[0].fuente, destino, destino)
+        # Única skill distribuida: domain-modeling (sin registry).
         self.assertEqual(
-            [e.destino for e in MANIFEST if "/lead-data-scientist/skills/" in e.destino], []
+            [e.destino for e in MANIFEST if "/lead-data-scientist/skills/" in e.destino],
+            [".claude/skills/lead-data-scientist/skills/domain-modeling.md"],
         )
+
+    def test_domain_modeling_skill_y_glossary_son_verbatim_sin_glossary_md(self):
+        for destino in (
+            ".claude/skills/lead-data-scientist/skills/domain-modeling.md",
+            "tools/dsguard/glossary.py",
+        ):
+            entradas = [e for e in MANIFEST if e.destino == destino]
+            self.assertEqual(len(entradas), 1, destino)
+            self.assertEqual(entradas[0].tratamiento, VERBATIM, destino)
+            self.assertEqual(entradas[0].fuente, destino, destino)
+        self.assertEqual([e.destino for e in MANIFEST if e.destino.upper() == "GLOSSARY.MD"], [])
 
     def test_smoke_test_generico_si_se_instala(self):
         destinos = [entrada.destino for entrada in MANIFEST]

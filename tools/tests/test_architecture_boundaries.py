@@ -39,6 +39,7 @@ MODULOS_CORE = (
     "tools/dsguard/ownership.py",
     "tools/dsguard/scope.py",
     "tools/dsguard/decision.py",
+    "tools/dsguard/glossary.py",
     "tools/dsguard/lifecycle.py",
     "tools/dsguard/kdd.py",
     "tools/dsguard/kdd_compat.py",
@@ -436,6 +437,35 @@ class TestFronteraSkillsYOwnership(unittest.TestCase):
             [],
             f"No debe existir registry/loader/marketplace de skills en v0.10: {encontrados}",
         )
+
+
+# --- Frontera de domain modeling (v0.10 Change 5: 20261014-domain-modeling) ---
+RUTA_GLOSSARY = "tools/dsguard/glossary.py"
+PROHIBIDOS_GLOSSARY = ("cards", "decision", "datacontracts", "human_presence")
+
+
+class TestFronteraGlossary(unittest.TestCase):
+    def test_glossary_importa_solo_stdlib_y_core(self):
+        violaciones = []
+        for nivel, nombre in _todos_los_imports(REPO_ORIGEN / RUTA_GLOSSARY):
+            raiz = nombre.split(".")[0]
+            if nivel == 1:
+                if raiz in PROHIBIDOS_GLOSSARY:
+                    violaciones.append(f"import prohibido: {nombre}")
+                elif raiz not in ("core", ""):
+                    violaciones.append(f"hermano no permitido: {nombre}")
+            elif nivel > 1:
+                violaciones.append(f"import relativo fuera del paquete: {nombre}")
+            elif raiz == "tools" or raiz not in sys.stdlib_module_names:
+                violaciones.append(f"no stdlib: {nombre}")
+            elif raiz in PROHIBIDOS_GLOSSARY or raiz in NOMBRES_PROVIDER:
+                violaciones.append(f"import prohibido: {nombre}")
+        self.assertEqual(violaciones, [], f"glossary.py viola su frontera: {violaciones}")
+
+    def test_glossary_no_contiene_nombres_de_proveedor_ni_sendmessage(self):
+        codigo = (REPO_ORIGEN / RUTA_GLOSSARY).read_text(encoding="utf-8")
+        encontrados = [n for n in NOMBRES_PROVEEDOR_Y_MENSAJERIA if n in codigo]
+        self.assertEqual(encontrados, [], f"glossary.py debe ser neutral: {encontrados}")
 
 
 if __name__ == "__main__":

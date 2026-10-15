@@ -471,9 +471,23 @@ class TestChange4InvariantesNoRegresion(unittest.TestCase):
 
 
 class TestChange4NoExistenSkillsNiGlosario(unittest.TestCase):
-    def test_no_existen_skills_domain_modeling_tdd_ni_glossary(self):
+    def test_domain_modeling_existe_y_pasa_skill_contract(self):
+        ruta = SKILL_DIR / "skills" / "domain-modeling.md"
+        self.assertTrue(ruta.exists())
+        roles = {"lead-data-scientist"} | {p.stem for p in AGENTES_DIR.glob("*.md")}
+        herramientas = str(TOOLS_DIR)
+        agregado = herramientas not in sys.path
+        if agregado:
+            sys.path.insert(0, herramientas)
+        try:
+            from dsguard import skill_contract
+        finally:
+            if agregado:
+                sys.path.remove(herramientas)
+        self.assertEqual(skill_contract.validar_skill(ruta, roles), [])
+
+    def test_no_existen_skill_tdd_ni_glossary_en_raiz(self):
         for ruta in (
-            SKILL_DIR / "skills" / "domain-modeling.md",
             SKILL_DIR / "skills" / "tdd.md",
             REPO_ORIGEN / "GLOSSARY.md",
         ):
@@ -499,6 +513,75 @@ class TestChange4NoExistenSkillsNiGlosario(unittest.TestCase):
         self.assertEqual(
             hallazgos, [], f"La plantilla no pasa skill_contract: {hallazgos}"
         )
+
+
+# --- Change 5 (20261014-domain-modeling) ---
+DOMAIN_MODELING_SKILL = SKILL_DIR / "skills" / "domain-modeling.md"
+
+
+class TestChange5DomainModeling(unittest.TestCase):
+    FRASES_METHODOLOGY = (
+        "## 33. Domain modeling",
+        "hypothesis",
+        "approved",
+        "Decision Ledger",
+        "Data Contract",
+        "Data Card",
+        "managed",
+        "console_confirmed",
+    )
+
+    def test_methodology_md_y_tmpl_identicos_con_frases(self):
+        md = _leer_norm(METHODOLOGY_RENDERIZADO)
+        tmpl = _leer_norm(METHODOLOGY_TMPL).replace("{{NOMBRE_PROYECTO}}", "harmessi")
+        self.assertEqual(tmpl, md)
+        for frase in self.FRASES_METHODOLOGY:
+            with self.subTest(frase=frase):
+                self.assertIn(frase, md)
+
+    def test_skill_contiene_frases_y_frontmatter_sin_claves_prohibidas(self):
+        contenido = _leer_norm(DOMAIN_MODELING_SKILL)
+        for frase in ("hypothesis", "approved", "ambigüedad material"):
+            with self.subTest(frase=frase):
+                self.assertIn(frase, contenido)
+        frontmatter = contenido.split("---\n")[1]
+        for clave in ("tools", "permissions", "hooks"):
+            with self.subTest(clave=clave):
+                self.assertNotRegex(frontmatter, rf"(?m)^{clave}\s*:")
+
+    def test_skill_md_y_tmpl_mencionan_domain_modeling(self):
+        for ruta in (SKILL_RENDERIZADO, SKILL_TMPL):
+            with self.subTest(archivo=ruta.name):
+                self.assertIn("domain-modeling", _leer_norm(ruta))
+
+    def test_verificador_md_y_tmpl_mencionan_glossary(self):
+        for ruta in (VERIFICADOR_RENDERIZADO, VERIFICADOR_TMPL):
+            contenido = _leer_norm(ruta)
+            for frase in ("glossary check", "glossary hash", "GLOSSARY-APROBACION-SIN-T1"):
+                with self.subTest(archivo=ruta.name, frase=frase):
+                    self.assertIn(frase, contenido)
+
+    def test_manifest_no_tiene_entrada_glossary(self):
+        herramientas = str(TOOLS_DIR)
+        agregado = herramientas not in sys.path
+        if agregado:
+            sys.path.insert(0, herramientas)
+        try:
+            from ds_init import manifest
+        finally:
+            if agregado:
+                sys.path.remove(herramientas)
+        destinos = [e.destino for e in manifest.MANIFEST]
+        self.assertNotIn("GLOSSARY.md", destinos)
+
+    def test_glossary_py_no_importa_human_presence(self):
+        codigo = _leer_norm(TOOLS_DIR / "dsguard" / "glossary.py")
+        self.assertNotIn("human_presence", codigo)
+
+    def test_roadmap_documenta_change_5(self):
+        contenido = _leer_norm(REPO_ORIGEN / "docs" / "roadmap" / "v0.10.md")
+        self.assertIn("Change 5 — Domain Modeling", contenido)
+        self.assertIn("GLOSSARY.md", contenido)
 
 
 if __name__ == "__main__":

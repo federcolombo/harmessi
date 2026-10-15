@@ -91,6 +91,13 @@ para salida estructurada. Exit codes generales: `0` correcto, `1` gate/validaci�
 - **`ownership check --change-id <id> [--json]`**: solo lectura; valida `## Ownership de writers`
   de `tasks.md` contra el scope efectivo. Exit 0 sin hallazgos / 1 con hallazgos / 2 uso.
   `validate` también lo incluye cuando la sección existe.
+- **`glossary check [--json] [--strict]`**: solo lectura; valida `GLOSSARY.md` de la raíz. Exit 0
+  válido o `GLOSSARY.md` ausente / 1 hallazgos (o pendientes con `--strict`) / 2 `GLOSSARY.md`
+  ilegible (no UTF-8) o no es un archivo regular / 3 repo no encontrado. Lista los pendientes por
+  ambigüedad material. `validate` lo incluye solo si el archivo existe.
+- **`glossary hash --term <t>`**: imprime solo el `definition_hash` de la entrada; exit 2 si el
+  término no existe, no hay `GLOSSARY.md` o la entrada no tiene definición / 3 repo no encontrado.
+  No valida el archivo: usar `glossary check` antes de confiar en el hash.
 - **`notebook-diff --change-id <id> (--path <ruta> [--path ...] | --tocados) [--contra baseline]
   [--max-celdas 200] [--json]`**: diff por celdas de uno o más `.ipynb` contra una revisión de git
   (por defecto `control["baseline"]["commit"]`). Nunca ejecuta el notebook.
@@ -259,6 +266,22 @@ comportamiento observable, mismo nivel que el resto de esta sección.
 - **`HARMESSI-SKILL-CONTRATO`**: Doctor la reporta agrupando los códigos de contrato de skill
   `SKILL-FRONTMATTER-AUSENTE`, `SKILL-CAMPO-FALTANTE`, `SKILL-CAMPO-NO-PERMITIDO`,
   `SKILL-NOMBRE-INVALIDO`, `SKILL-ROL-DESCONOCIDO` y `SKILL-ARTIFACT-INVALIDO`.
+- **`GLOSSARY-TERMINO-DUPLICADO`**: el mismo término aparece 2+ veces en `GLOSSARY.md`.
+- **`GLOSSARY-ESTADO-INVALIDO`**: el estado de una entrada no es `hypothesis` ni `approved`.
+- **`GLOSSARY-DEFINICION-AUSENTE`**: una entrada no tiene definición.
+- **`GLOSSARY-AMBIGUEDAD-INVALIDA`**: el bloque de ambigüedad de una entrada no es válido.
+- **`GLOSSARY-MALFORMADO`**: `GLOSSARY.md` o una entrada no se puede parsear.
+- **`GLOSSARY-CAMPO-DESCONOCIDO`**: una entrada declara un campo que el formato no reconoce.
+- **`GLOSSARY-CAMPO-INESPERADO`**: una entrada `hypothesis` trae campos propios de `approved`.
+- **`GLOSSARY-APROBACION-AUSENTE`**: una entrada `approved` no referencia ninguna aprobación.
+- **`GLOSSARY-APROBACION-OBSOLETA`**: la definición cambió después de aprobarse (el hash ya no coincide).
+- **`GLOSSARY-APROBACION-INVALIDA`**: el ref de aprobación es inválido o no está `verified`; fail-closed
+  sin resolver.
+- **`GLOSSARY-APROBACION-SIN-T1`**: la aprobación está solo declarada, sin señal T1 `console_confirmed`.
+- **`GLOSSARY-APROBACION-NO-VINCULA`**: el artefacto de aprobación no contiene el hash de la definición.
+- **`GLOSSARY-AMBIGUEDAD-EN-APPROVED`**: una entrada `approved` conserva una ambigüedad material pendiente.
+
+  Nota: T1 = señal de presencia interactiva, no identidad.
 
 ## 4. `control.json`
 

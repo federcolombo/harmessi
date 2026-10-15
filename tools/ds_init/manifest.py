@@ -433,6 +433,18 @@ MANIFEST: tuple = (
         descripcion="Validador estructural del contrato de skill componible (solo-stdlib)",
     ),
     EntradaManifiesto(
+        fuente=".claude/skills/lead-data-scientist/skills/domain-modeling.md",
+        tratamiento=VERBATIM,
+        destino=".claude/skills/lead-data-scientist/skills/domain-modeling.md",
+        descripcion="Skill componible de modelado de dominio (guidance, nunca authority)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/dsguard/glossary.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/glossary.py",
+        descripcion="Módulo de glosario de dominio (solo-stdlib de dsguard)",
+    ),
+    EntradaManifiesto(
         fuente="tools/dsguard/ownership.py",
         tratamiento=VERBATIM,
         destino="tools/dsguard/ownership.py",

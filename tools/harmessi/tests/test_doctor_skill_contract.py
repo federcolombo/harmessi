@@ -120,6 +120,9 @@ class TestDoctorInstalado(unittest.TestCase):
         self.assertTrue((self.repo / ".claude/skills/lead-data-scientist/templates/skill.md").is_file())
         self.assertTrue((self.repo / "tools/dsguard/skill_contract.py").is_file())
         self.assertTrue((self.repo / "tools/dsguard/ownership.py").is_file())
+        # La instalación ahora trae la skill domain-modeling (y no crea GLOSSARY.md).
+        self.assertTrue((self.repo / DIR_SKILLS / "domain-modeling.md").is_file())
+        self.assertFalse((self.repo / "GLOSSARY.md").exists())
         resultados = self._doctor()
         contrato = [r for r in resultados if r.codigo == "HARMESSI-SKILL-CONTRATO"]
         self.assertEqual([r.nivel for r in contrato], [doctor_mod.NIVEL_OK])

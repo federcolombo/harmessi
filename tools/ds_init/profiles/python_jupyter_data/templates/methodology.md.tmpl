@@ -404,7 +404,7 @@ Skills enseñan cómo razonar; Roles determinan quién puede actuar; Runtime hac
 - **Composición y precedencia**: varias skills pueden aplicar a la vez sin duplicar contexto. Ante conflicto gana: (1) governance/runtime, (2) contrato del rol, (3) contrato del proyecto (`CLAUDE.md`), (4) guidance de la skill. Dos skills en conflicto: el Lead se detiene y consulta; no hay motor de prioridades.
 - **Traza**: cuando una skill afecta decisiones o delegación de un Change se registra en `## Skills cargados` de `tasks.md` (`- <skill> — <tarea> — <motivo>`); `ds_guard validate` verifica que la skill citada exista.
 - **Skills de proyecto**: un proyecto puede agregar las suyas en `skills/` sin tocar el core; se validan igual.
-- **Alcance de v0.10**: solo la foundation; `domain-modeling` (Change 5) y `GLOSSARY.md` no existen todavía.
+- **Alcance de v0.10**: la foundation de skills (Change 4) y la primera skill, `domain-modeling` (Change 5, §33); `GLOSSARY.md` es del proyecto y el installer no lo crea.
 
 ## 29. TDD adaptado a Data Science (guideline)
 
@@ -445,3 +445,17 @@ Una intervención de emergencia es aceptable solo si el canal gobernado quedó i
 
 - Skills por puntero, no por copia; contexto mínimo por instancia (solo su ownership y la sección relevante de spec/tasks); handoffs cortos; no reenviar el repo; no re-auditar; reanudar la misma instancia en vez de relanzar. Más instancias multiplican el costo fijo (8 campos + lectura): por eso el default es serial. Sin accounting nuevo.
 - Los conceptos *role, writer instance, ownership, continuation, reviewer cycle, skill* son neutrales al proveedor. En Claude Code: lanzar = herramienta `Agent`, reanudar = `SendMessage`, la skill nativa empaqueta el rol Lead. No se codifica semántica central en primitivas de un proveedor.
+
+## 33. Domain modeling (skill `domain-modeling`)
+
+- La skill vive en `skills/domain-modeling.md` y se carga cuando un brief, Change o análisis usa conceptos de negocio (target, población, unidad de análisis, universo, cutoff, KPI, reglas de inclusión/exclusión) o hay dudas sobre un término.
+- `GLOSSARY.md` en la raíz del proyecto es project-owned, versionado en Git, NO managed, y el installer NO lo crea. Debe estar en el scope/ownership del Change antes de editarlo.
+- Estados: `hypothesis` (propuesta, no es verdad de negocio) y `approved` (definición aceptada explícitamente por una persona).
+- `approved` exige aprobación humana T1 (`console_confirmed`) verificable con `ds_guard glossary check`; si la definición cambia, la aprobación queda obsoleta.
+- Un LLM no promueve `hypothesis` a `approved`: ni por uso repetido ni por coherencia.
+- Ambigüedad material ⇒ entrada `hypothesis` con `ambiguedad: material` + resolución humana antes de avanzar la decisión que depende de ella.
+- Separación: Domain Model (qué significa un concepto) ≠ Decision Ledger (por qué se decidió) ≠ Data Contract (qué estructura/evidencia cumple el dato) ≠ Data Card (qué sabemos de un data product). Se referencian por id, no se duplican.
+- `console_confirmed` es una señal de presencia interactiva, no prueba de identidad ni autoría.
+- Límites: el vínculo entre la aprobación T1 y la definición es textual (el artefacto aprobado contiene el `definition_hash`); no prueba autoría ni intención. `control.json` no está autenticado.
+- El control real es el checkpoint humano: el humano debe LEER el artefacto antes de aprobarlo.
+- El agente NO ejecuta `ds_guard approve --channel console_confirmed` por su cuenta ni lo pide fuera de un checkpoint humano.

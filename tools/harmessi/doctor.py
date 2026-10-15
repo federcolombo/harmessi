@@ -101,6 +101,7 @@ _ARCHIVOS_SKILL_ESPERADOS = (
     ".claude/skills/lead-data-scientist/templates/tasks.md",
     ".claude/skills/lead-data-scientist/templates/verification.md",
     ".claude/skills/lead-data-scientist/templates/skill.md",
+    ".claude/skills/lead-data-scientist/skills/domain-modeling.md",
 )
 
 _LANZADORES_ESPERADOS = (

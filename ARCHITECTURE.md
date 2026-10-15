@@ -648,6 +648,24 @@ ni `GLOSSARY.md`, ni `tdd`) y `ml-engineer` no existe.
   autenticado. Deuda residual de sesión: el literal 90 en tres lugares (canónico en `_BUDGET_DEFAULTS`), sin warning anticipado ni pausa
   por T1. `.ds_init/control.json` se regenera en Change 6.
 
+### 7.3 Domain modeling (v0.10 Change 5)
+
+Change `20261014-domain-modeling`. Primera skill componible metodológica; usa la foundation de §7.2 sin agregar registry ni loader.
+
+- **Skill y artefacto.** `.claude/skills/lead-data-scientist/skills/domain-modeling.md` (roles `lead-data-scientist`, `python-data-engineer`,
+  `metodologo`, `data-science-reviewer`; `artifacts: [GLOSSARY.md]`). `GLOSSARY.md` vive en la raíz del proyecto: project-owned,
+  Git-versionable, no managed y no creado ni sobrescrito por el installer.
+- **Estados.** Cada entrada es `hypothesis` o `approved`. `approved` exige aprobación verificable T1 con `console_confirmed`, reutilizando
+  approvals sin tocar `human_presence.py`; sin ella es inválido (fail-closed). Nunca se infiere por uso repetido ni hay promoción por LLM.
+- **Ambigüedad material.** Definiciones plausibles alternativas que cambian target, población, unidad de análisis, cutoff, métrica o regla de
+  inclusión/exclusión disparan un checkpoint humano. Un sinónimo o wording menor no lo dispara.
+- **CLI.** `tools/dsguard/glossary.py` (stdlib; solo importa `.core`; no importa cards, decision, datacontracts ni proveedores) expone
+  `ds_guard glossary check` (códigos `GLOSSARY-*`, p. ej. `GLOSSARY-APROBACION-SIN-T1`) y `ds_guard glossary hash`.
+- **Separación.** Domain Model (qué significa un concepto) ≠ Decision Ledger (por qué se decidió) ≠ Data Contract (qué estructura/evidencia
+  cumple el dato) ≠ Data Card (qué describe un data product). Se referencian por id, sin duplicar.
+- **Límites honestos.** T1 es presencia humana, no identidad. El vínculo artefacto↔definición es textual, por hash. `control.json` no está
+  autenticado. No hay resolución semántica de sinónimos.
+
 ## 8. Dirección arquitectónica planificada para v0.9 (Cards = vistas de governance, NO implementada)
 
 Registrado 2026-10-02 (ver `docs/roadmap/v0.9.md` para el alcance congelado). **Nada de esta sección
