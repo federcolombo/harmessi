@@ -269,6 +269,12 @@ MANIFEST: tuple = (
         destino=".claude/skills/lead-data-scientist/templates/verification.md",
     ),
     EntradaManifiesto(
+        fuente=".claude/skills/lead-data-scientist/templates/skill.md",
+        tratamiento=VERBATIM,
+        destino=".claude/skills/lead-data-scientist/templates/skill.md",
+        descripcion="Plantilla de skill componible (guidance, nunca authority)",
+    ),
+    EntradaManifiesto(
         fuente="tools/ds_guard.py",
         tratamiento=VERBATIM,
         destino="tools/ds_guard.py",
@@ -419,6 +425,18 @@ MANIFEST: tuple = (
         tratamiento=VERBATIM,
         destino="tools/dsguard/pep440_subset.py",
         descripcion="Subconjunto de especificadores PEP 440 (módulo solo-stdlib de dsguard)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/dsguard/skill_contract.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/skill_contract.py",
+        descripcion="Validador estructural del contrato de skill componible (solo-stdlib)",
+    ),
+    EntradaManifiesto(
+        fuente="tools/dsguard/ownership.py",
+        tratamiento=VERBATIM,
+        destino="tools/dsguard/ownership.py",
+        descripcion="Semántica de ownership/escritores de un Change SDD",
     ),
     EntradaManifiesto(
         fuente=".claude/guardrails.json",

@@ -71,10 +71,12 @@ para salida estructurada. Exit codes generales: `0` correcto, `1` gate/validaci�
   `tasks.md` y agrega la entrada a `control["transiciones"]`. Atómico: si el gate falla, no se
   escribe nada.
 - **`session start --change-id <id> [--modo estandar] [--minutos 90] [--max-tareas 3]
-  [--max-roles 2] [--max-reintentos 2] [--max-rondas 2]`**: abre una sesión (`SesionYaActivaError`
+  [--max-roles 2] [--max-reintentos 2] [--max-rondas 2] [--max-continuaciones N]`**: abre una sesión (`SesionYaActivaError`
   si ya hay una activa → exit 2). La sesión nace con `deadline_utc`, `minutos_consumidos: 0.0`,
   `resultado: null`, `subagentes: {}` y `presupuesto.max_continuaciones_por_subagente` con
-  default `1`.
+  default `1`. `--max-continuaciones` (entero 1–5, default 1, fuera de rango ⇒ exit 2) fija
+  `presupuesto.max_continuaciones_por_subagente`; `session status` lo muestra. Una continuación
+  (reanudación por `maxTurns`) no es un reintento ni un ciclo de reviewer.
 - **`session note --change-id <id> --tipo planificada|reintento|ronda [--rol <rol>]
   [--tarea <id>]`**: `reintento` incrementa `reintentos`, `ronda` incrementa `rondas_revision`,
   `planificada` no incrementa nada. `--tarea` agrega el identificador a `sesiones[].tareas`
@@ -86,6 +88,9 @@ para salida estructurada. Exit codes generales: `0` correcto, `1` gate/validaci�
   (`SesionAusenteError` → exit 2 si no hay ninguna). Deriva `resultado` automáticamente e imprime
   uno de tres mensajes finales según `estado_final` + `resultado`, con **`resultado == "excedida"`
   con prioridad sobre `estado_final`**.
+- **`ownership check --change-id <id> [--json]`**: solo lectura; valida `## Ownership de writers`
+  de `tasks.md` contra el scope efectivo. Exit 0 sin hallazgos / 1 con hallazgos / 2 uso.
+  `validate` también lo incluye cuando la sección existe.
 - **`notebook-diff --change-id <id> (--path <ruta> [--path ...] | --tocados) [--contra baseline]
   [--max-celdas 200] [--json]`**: diff por celdas de uno o más `.ipynb` contra una revisión de git
   (por defecto `control["baseline"]["commit"]`). Nunca ejecuta el notebook.
@@ -238,6 +243,22 @@ comportamiento observable, mismo nivel que el resto de esta sección.
 - **`REMEDIACION-INEXISTENTE`**: `remediation resolve|extend` sobre un `--remediation-id` que no
   existe en `control["remediaciones"]`.
 - **`REMEDIACION-CAMPO-VACIO`**: `remediation extend` sin `--usuario`/`--fecha`/`--motivo`.
+- **`OWNERSHIP-SECCION-ILEGIBLE`**: la sección `## Ownership de writers` de `tasks.md` no se puede
+  parsear.
+- **`OWNERSHIP-ID-DUPLICADO`**: el mismo identificador de writer aparece 2+ veces en la sección.
+- **`OWNERSHIP-ROL-INVALIDO`**: el rol declarado para un writer no es un rol válido.
+- **`OWNERSHIP-VACIO`**: un writer declara ownership sin ningún patrón.
+- **`OWNERSHIP-PATRON-INVALIDO`**: un patrón de ownership no es válido (sintaxis o ruta no
+  admitida).
+- **`OWNERSHIP-SOLAPADO`**: los patrones de dos writers se solapan.
+- **`OWNERSHIP-FUERA-DE-ALCANCE`**: un patrón de ownership cae fuera del scope efectivo del cambio.
+- **`SDD-ESTADO-DIVERGENTE`**: el `estado:` de `tasks.md` difiere de la última transición
+  gobernada. Recuperar con `transition --a <estado>` idempotente o restaurando `estado:` desde
+  git; un writer no puede materializar transiciones.
+- **`SKILL-REFERENCIA-DESCONOCIDA`**: una skill citada en `## Skills cargados` no existe.
+- **`HARMESSI-SKILL-CONTRATO`**: Doctor la reporta agrupando los códigos de contrato de skill
+  `SKILL-FRONTMATTER-AUSENTE`, `SKILL-CAMPO-FALTANTE`, `SKILL-CAMPO-NO-PERMITIDO`,
+  `SKILL-NOMBRE-INVALIDO`, `SKILL-ROL-DESCONOCIDO` y `SKILL-ARTIFACT-INVALIDO`.
 
 ## 4. `control.json`
 
@@ -264,6 +285,12 @@ coinciden, pero nunca resuelve el conflicto por sí solo a favor de uno u otro.
 
 `sesiones[].tareas` es una **lista de identificadores únicos**, no un entero. `session note --tarea
 <id>` deduplica. `chequear_limites` cuenta `len(tareas)` contra `max_tareas`.
+
+**Semántica de sesión.** `autonomy.budgets.session_minutes` es la policy efectiva (`--minutos`
+explícito manda; 90 es el fallback documentado). El reloj es wall-clock: cuentan la espera humana
+T1, los tests largos y el trabajo en background. La expiración bloquea trabajo nuevo pero no
+invalida el previo. Recovery soportado: `session close` + `session start` (evidencia real: Change 3
+de v0.10, s1 vencida → s2). Ver `methodology.md` §30.
 
 ## 6. Límites reales
 

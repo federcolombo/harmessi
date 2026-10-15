@@ -10,6 +10,9 @@ verifica los puntos concretos y verificables por texto plano listados en
 """
 from __future__ import annotations
 
+import shutil
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -71,7 +74,7 @@ PROHIBICIONES_15 = (
     "No asumir datos o métricas que no salieron de una corrida real",
     "No abrir agentes de espera",
     "No delegarle escritura al `data-science-reviewer`",
-    "No permitir dos writers concurrentes",
+    "No permitir instancias writer sin ownership disjunto y predeclarado",
 )
 
 
@@ -294,6 +297,208 @@ class TestSincronizacionTmplRenderizado(unittest.TestCase):
                     contenido_renderizado,
                     f"Contenido desincronizado entre {tmpl} y {renderizado}",
                 )
+
+
+# --- Change 4 (20261014-composable-skills-writer-semantics) ---
+AGENTES_DIR = REPO_ORIGEN / ".claude" / "agents"
+SDD_RENDERIZADO = SKILL_DIR / "sdd.md"
+TOOLS_DIR = REPO_ORIGEN / "tools"
+
+PARES_AGENTES = (
+    ("python-data-engineer", TEMPLATES / "agent_python_data_engineer.md.tmpl"),
+    ("data-science-reviewer", TEMPLATES / "agent_data_science_reviewer.md.tmpl"),
+    ("metodologo", TEMPLATES / "agent_metodologo.md.tmpl"),
+)
+
+
+def _leer_norm(ruta: Path) -> str:
+    """Lee con EOL normalizado a `\\n`."""
+    return _leer(ruta).replace("\r\n", "\n")
+
+
+def _frontmatter_agente(nombre: str) -> str:
+    texto = _leer_norm(AGENTES_DIR / f"{nombre}.md")
+    partes = texto.split("---\n")
+    # texto = "" + "---\n" + frontmatter + "---\n" + cuerpo
+    return partes[1] if len(partes) >= 3 else texto
+
+
+class TestChange4SkillsYWriters(unittest.TestCase):
+    """Protege las decisiones de Change 4: skills componibles, semántica de
+    writers (ownership disjunto), ESTADO-AGENTE y continuaciones."""
+
+    FRASES_METHODOLOGY = (
+        "One writer = un ROL writer autorizado",
+        "Skills enseñan cómo razonar; Roles determinan quién puede actuar; Runtime hace cumplir y calcula",
+        "Guidance, nunca authority",
+        "(1) governance/runtime, (2) contrato del rol, (3) contrato del proyecto (`CLAUDE.md`), (4) guidance de la skill",
+        "`ml-engineer` NO existe",
+        "Evals ≠ tests",
+        "Anti-loop",
+        "ESTADO-AGENTE",
+        "Retry/reintento",
+        "SDD-ESTADO-DIVERGENTE",
+        "Intervenciones de emergencia",
+        "checkpoint Git limpio/conocido",
+        "N roles writer distintos escribiendo: no",
+    )
+    FRASES_AUSENTES = (
+        "Nunca** hay dos writers concurrentes",
+        "No permitir dos writers concurrentes",
+    )
+
+    def test_methodology_md_y_tmpl_contienen_las_frases(self):
+        for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
+            contenido = _leer_norm(ruta)
+            for frase in self.FRASES_METHODOLOGY:
+                with self.subTest(archivo=ruta.name, frase=frase):
+                    self.assertIn(frase, contenido)
+
+    def test_methodology_md_y_tmpl_no_contienen_frases_obsoletas(self):
+        for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
+            contenido = _leer_norm(ruta)
+            for frase in self.FRASES_AUSENTES:
+                with self.subTest(archivo=ruta.name, frase=frase):
+                    self.assertNotIn(frase, contenido)
+
+    def test_sdd_md_contiene_secciones_de_change_4(self):
+        contenido = _leer_norm(SDD_RENDERIZADO)
+        for frase in ("Ownership de writers", "Skills cargados", "Continuación"):
+            with self.subTest(frase=frase):
+                self.assertIn(frase, contenido)
+
+    def test_skill_md_documenta_skills_componibles_y_continuacion(self):
+        contenido = _leer_norm(SKILL_RENDERIZADO)
+        self.assertIn("## Skills componibles", contenido)
+        self.assertIn("continuación", contenido)
+
+    def test_verificador_md_documenta_ownership_y_continuaciones(self):
+        contenido = _leer_norm(VERIFICADOR_RENDERIZADO)
+        for frase in (
+            "ownership check",
+            "--max-continuaciones",
+            "SDD-ESTADO-DIVERGENTE",
+            "OWNERSHIP-SOLAPADO",
+        ):
+            with self.subTest(frase=frase):
+                self.assertIn(frase, contenido)
+
+    def test_estado_agente_en_agentes_skill_y_methodology(self):
+        formato = "ESTADO-AGENTE: completed|continue|blocked|needs-review"
+        rutas = (
+            [AGENTES_DIR / f"{nombre}.md" for nombre, _ in PARES_AGENTES]
+            + [tmpl for _, tmpl in PARES_AGENTES]
+            + [SKILL_RENDERIZADO, SKILL_TMPL, METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL]
+        )
+        for ruta in rutas:
+            with self.subTest(archivo=str(ruta)):
+                self.assertIn(formato, _leer_norm(ruta))
+
+    def test_sdd_fija_que_el_writer_no_edita_tasks_md(self):
+        # I3: el Lead dicta tasks.md; lo escribe una instancia de python-data-engineer.
+        for ruta in (SDD_RENDERIZADO, TEMPLATES / "sdd.md.tmpl"):
+            with self.subTest(archivo=ruta.name):
+                self.assertIn("no edita `tasks.md` por su cuenta", _leer_norm(ruta))
+
+    def test_paridad_exacta_md_tmpl_methodology_verificador_y_agentes(self):
+        pares = [
+            (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL),
+            (VERIFICADOR_RENDERIZADO, VERIFICADOR_TMPL),
+        ] + [(AGENTES_DIR / f"{nombre}.md", tmpl) for nombre, tmpl in PARES_AGENTES]
+        for renderizado, tmpl in pares:
+            with self.subTest(renderizado=renderizado.name):
+                self.assertEqual(
+                    _leer_norm(tmpl).replace("{{NOMBRE_PROYECTO}}", "harmessi"),
+                    _leer_norm(renderizado),
+                    f"Desincronizado: {tmpl} vs {renderizado}",
+                )
+
+
+class TestChange4InvariantesNoRegresion(unittest.TestCase):
+    """Invariantes que Change 4 no debe haber alterado."""
+
+    def test_max_turns_por_agente(self):
+        esperado = {
+            "python-data-engineer": 12,
+            "data-science-reviewer": 16,
+            "metodologo": 8,
+            "notebook-runner": 4,
+        }
+        for nombre, turnos in esperado.items():
+            with self.subTest(agente=nombre):
+                self.assertRegex(_frontmatter_agente(nombre), rf"(?m)^maxTurns: {turnos}\s*$")
+
+    def test_tools_por_agente(self):
+        esperado = {
+            "python-data-engineer": "Read, Edit, Write, NotebookEdit, Grep, Glob",
+            "data-science-reviewer": "Read, Grep, Glob",
+            "metodologo": "Read, Grep, Glob",
+            "notebook-runner": "Bash",
+        }
+        for nombre, herramientas in esperado.items():
+            with self.subTest(agente=nombre):
+                self.assertRegex(
+                    _frontmatter_agente(nombre), rf"(?m)^tools: {herramientas}\s*$"
+                )
+
+    def test_reviewer_y_metodologo_sin_bash_en_tools(self):
+        for nombre in ("data-science-reviewer", "metodologo"):
+            with self.subTest(agente=nombre):
+                self.assertNotIn("Bash", _frontmatter_agente(nombre))
+
+    def test_reviewer_no_menciona_bash_como_herramienta(self):
+        texto = _leer_norm(AGENTES_DIR / "data-science-reviewer.md")
+        for linea in texto.splitlines():
+            if "Bash" in linea:
+                self.assertIn("no tenés Bash", linea, f"Mención de Bash como herramienta: {linea!r}")
+
+    def test_no_existe_ml_engineer(self):
+        self.assertFalse((AGENTES_DIR / "ml-engineer.md").exists())
+
+    def test_ds_guard_conserva_budget_y_tope_de_continuaciones(self):
+        contenido = _leer_norm(TOOLS_DIR / "ds_guard.py")
+        self.assertIn('"session_minutes": 90', contenido)
+        self.assertIn("MAX_CONTINUACIONES_DURO = 5", contenido)
+
+    def test_sdd_conserva_default_de_continuaciones(self):
+        contenido = _leer_norm(TOOLS_DIR / "dsguard" / "sdd.py")
+        self.assertIn("max_continuaciones_por_subagente: int = 1", contenido)
+
+    def test_hook_presupuesto_no_cambio_prioridad_de_claves(self):
+        # H1 (identidad del subagente) esta UNCONFIRMED: el hook no se toca.
+        contenido = _leer_norm(TOOLS_DIR / "dsguard" / "hook_presupuesto.py")
+        self.assertIn('("agent_id", "agent_name", "id", "subagent_type", "name")', contenido)
+
+
+class TestChange4NoExistenSkillsNiGlosario(unittest.TestCase):
+    def test_no_existen_skills_domain_modeling_tdd_ni_glossary(self):
+        for ruta in (
+            SKILL_DIR / "skills" / "domain-modeling.md",
+            SKILL_DIR / "skills" / "tdd.md",
+            REPO_ORIGEN / "GLOSSARY.md",
+        ):
+            with self.subTest(ruta=str(ruta)):
+                self.assertFalse(ruta.exists(), f"No debería existir: {ruta}")
+
+    def test_plantilla_de_skill_existe_y_pasa_skill_contract(self):
+        plantilla = SKILL_DIR / "templates" / "skill.md"
+        self.assertTrue(plantilla.exists())
+        herramientas = str(TOOLS_DIR)
+        agregado = herramientas not in sys.path
+        if agregado:
+            sys.path.insert(0, herramientas)
+        try:
+            from dsguard import skill_contract
+        finally:
+            if agregado:
+                sys.path.remove(herramientas)
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = Path(tmp) / "nombre-de-skill.md"
+            shutil.copyfile(plantilla, destino)
+            hallazgos = skill_contract.validar_skill(destino, {"lead-data-scientist"})
+        self.assertEqual(
+            hallazgos, [], f"La plantilla no pasa skill_contract: {hallazgos}"
+        )
 
 
 if __name__ == "__main__":

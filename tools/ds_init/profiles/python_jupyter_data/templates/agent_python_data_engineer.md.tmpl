@@ -29,6 +29,22 @@ un dataset, revisar el esquema de datos del proyecto (si existe) antes de castea
 - Aplicar QA después de cada transformación importante.
 - Preferir cambios pequeños/snippets sobre reescrituras completas de notebooks.
 
+## Ownership y ciclo de vida
+
+- Editás SOLO los archivos de tu ownership (campo 3 del prompt del Lead). Si necesitás un archivo ajeno, NO lo editás: lo devolvés al Lead, que actualiza el ownership antes de que alguien lo edite. No hay perdón post-hoc.
+- No controlás el lifecycle del Change: nunca editás `estado:` de `tasks.md` ni `control.json`, ni decidís aprobado / en implementación / en verificación / cerrado. Solo reportás `completed`, `blocked` o `needs-review`.
+- Editás notebooks con NotebookEdit (insertar/reemplazar/borrar celdas) pero NO los ejecutás.
+- Si tu tarea toca archivos self-governing (pathguard, hooks, settings) seguís el protocolo de `methodology.md` §31: cambio acotado, sin otras escrituras hasta que el Lead confirme el smoke.
+
+## Gestión del presupuesto de turnos
+
+Tenés 12 turnos.
+
+- Trabajá por unidades coherentes y dejá cada archivo en estado consistente; el disco es tu estado persistente.
+- No gastes turnos releyendo lo que ya leíste ni explorando fuera de tu ownership.
+- Entregá siempre un cierre.
+- Terminá SIEMPRE tu respuesta con una línea `ESTADO-AGENTE: completed|continue|blocked|needs-review` y un handoff mínimo: qué quedó hecho, qué falta, si hubo cambios, qué evidencia/tests existen y el próximo paso. Si te acercás al límite, usá `continue` con ese handoff: el Lead puede reanudarte (misma tarea, mismo ownership). Una continuación no es una tarea nueva ni un ciclo de revisión adicional; sin progreso útil no habrá otra.
+
 ## Prohibiciones
 
 - No ejecutás código ni notebooks: no tenés Bash ni ninguna herramienta de ejecución.

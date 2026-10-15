@@ -558,7 +558,7 @@ y mensaje accionable. Sin dependencias nuevas.
 
 Registrado 2026-10-01 (feedback externo, preservado como línea de evolución -- ver `v0.10.md`,
 "Composable Engineering & Data Science Skills", para el desglose completo de candidatas y
-principios). **Nada de esta sección (la separación Role/Skill/Runtime y las Composable Skills) está implementado en v0.9.** Lo que sí existe en v0.9 es
+principios). **Nada de esta sección (la separación Role/Skill/Runtime y las Composable Skills) está implementado en v0.9.** (actualizado: la foundation de skills componibles y la semántica de writers se implementó en v0.10 Change 4; ver §7.2) Lo que sí existe en v0.9 es
 el contrato base de `tools/cards` (identidad, `EvidenceRef`, `HumanAttestation` declared/anchored, evaluación derivada
 `invalid > stale > incomplete > complete`), las Data/Model Cards, la governance de modelo y su integración (CLI, Doctor, capabilities, reporting; ver §8).
 `anchored` significa estructuralmente coherente
@@ -598,7 +598,7 @@ solo porque tenga otro nombre.
 
 ### 7.1 Congelado por Change 0 de v0.10 (aprobado 2026-10-08)
 
-Fijado por `20261008-v010-roadmap-and-architecture-audit`. Es dirección congelada: NADA de esto está implementado todavía.
+Fijado por `20261008-v010-roadmap-and-architecture-audit`. Es dirección congelada: Implementado por Change 4 salvo lo indicado en §7.2 (re-adopción de guardrails: Change 3; domain-modeling: Change 5).
 
 - **Role vs Skill vs Runtime; contrato de skill.** Una composable skill es un markdown pequeño, versionado, cargado bajo demanda y reusable, sin
   permisos/hooks propios (los permisos vienen del rol/runtime), sin instalar dependencias y sin bypass de STOP/governance. Frontmatter mínimo:
@@ -617,6 +617,36 @@ Fijado por `20261008-v010-roadmap-and-architecture-audit`. Es dirección congela
   Lead coordina y gobierna; no es writer.
 - **Re-adopción de guardrails.** Acotada a una closed list; no equivale a «aceptar el baseline actual» ni a ignorar drift. Fuera de la lista sigue
   siendo drift, y los controles de seguridad no se re-adoptan.
+
+### 7.2 Skills componibles y semántica de writers (v0.10 Change 4)
+
+Change `20261014-composable-skills-writer-semantics`. Es la foundation: no existe ninguna skill componible todavía (ni `domain-modeling`,
+ni `GLOSSARY.md`, ni `tdd`) y `ml-engineer` no existe.
+
+- **Capas.** Role (quién trabaja y con qué permisos) ≠ Skill (cómo abordar una clase de problema) ≠ Runtime (qué se ejecuta y deja
+  evidencia). Una skill no otorga permisos, hooks ni dependencias; los permisos vienen del rol/runtime.
+- **Contrato de skill.** Markdown en `.claude/skills/lead-data-scientist/`; plantilla `templates/skill.md`. Frontmatter cerrado
+  `name`/`purpose`/`when_to_load`/`roles` más `artifacts` opcional. `tools/dsguard/skill_contract.py` valida la estructura: claves
+  prohibidas, roles conocidos, `artifacts` sin comodines; importa `sdd` de forma perezosa. Sin registry. Doctor lo expone como
+  `HARMESSI-SKILL-CONTRATO` (WARN, nunca FAIL) y `ds_guard validate` agrega `SKILL-REFERENCIA-DESCONOCIDA`.
+- **Ownership de writers.** `## Ownership de writers` en `tasks.md`, validado por `tools/dsguard/ownership.py` y
+  `ds_guard ownership check`. Gramática chica: archivo exacto o `dir/**`. Valida ids únicos, rol writer conocido, no vacío, solape
+  determinista y ownership ⊆ scope efectivo. El escaneo propio de la sección detecta un encabezado con sufijo y una sección duplicada.
+  Un solo rol writer; N instancias solo con ownership disjunto declarado antes de lanzar. El Lead coordina y no es writer.
+- **Lifecycle.** `sdd.chequear_estado_divergente` (`SDD-ESTADO-DIVERGENTE`) detecta un `estado:` de `tasks.md` editado a mano que
+  difiere del de `control.json`. Integrado en `ds_guard validate`.
+- **Continuación vs retry vs ciclo de reviewer.** La continuación reanuda al mismo subagente con la misma tarea y ownership tras
+  `ESTADO-AGENTE: continue`; no es una tarea nueva ni un ciclo de revisión. El retry repite una tarea fallida; el ciclo de reviewer es la
+  revisión. Cada agente cierra con `ESTADO-AGENTE: completed|continue|blocked|needs-review` y un handoff. `ds_guard session start
+  --max-continuaciones N` (1-5, default 1) se muestra en `session status`.
+- **Sin cambio.** `maxTurns` (12/16/8/4), default `max_continuaciones_por_subagente = 1`, sesión de 90 min wall-clock, hooks,
+  pathguard, scope/amendments, trust tiers y hashing managed.
+- **Self-governing.** El protocolo de `methodology.md` §31 y las intervenciones de emergencia son contractuales, sin enforcement.
+- **Límites honestos.** La validación de ownership es previa a la delegación: no hay hook por instancia ni atribución post-hoc de
+  ediciones. H1 (hook: `subagent_type` vs `name`, posible reset del contador) quedó UNCONFIRMED y el hook intacto, por lo que las
+  continuaciones son cooperativas. `SDD-ESTADO-DIVERGENTE` detecta ediciones manuales de `estado:`, pero `control.json` no está
+  autenticado. Deuda residual de sesión: el literal 90 en tres lugares (canónico en `_BUDGET_DEFAULTS`), sin warning anticipado ni pausa
+  por T1. `.ds_init/control.json` se regenera en Change 6.
 
 ## 8. Dirección arquitectónica planificada para v0.9 (Cards = vistas de governance, NO implementada)
 

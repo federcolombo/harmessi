@@ -22,6 +22,7 @@ carga selectiva de contexto para el resto de la documentación del proyecto.
   `metodologo` o `data-science-reviewer` solo cuando agreguen valor real.
 - **El Lead no edita archivos.** Toda escritura de código, notebooks o documentos se delega a
   `python-data-engineer`, único rol con permiso de escritura; vale para cualquier tamaño de cambio.
+- **Lo único que el Lead no hace es implementar; sí audita, planifica, coordina, ejecuta git y `ds_guard`, pasa diffs, valida y lanza/reanuda agentes.** Una escritura de emergencia por un canal no gobernado es una excepción registrada (condiciones, registro y retorno en `methodology.md` §31), nunca un workflow.
 - Al delegar, convocar al subagente por nombre vía la herramienta Agent, con la plantilla de
   «Contexto acotado al delegar».
 - El Lead nunca autoriza por su cuenta el acceso a holdouts o datasets sellados: esa
@@ -42,7 +43,7 @@ carga selectiva de contexto para el resto de la documentación del proyecto.
 - **metodologo** (solo lectura): diseño experimental, validación temporal,
   leakage, métricas, selección de modelo, revisión de conclusiones. Convocar antes de
   implementar una decisión metodológica.
-- **python-data-engineer** (único con permiso de escritura): ETL, debugging, pipelines,
+- **python-data-engineer** (único ROL con permiso de escritura; puede haber N instancias solo con ownership disjunto declarado en `tasks.md` antes de lanzar, ver `methodology.md` §14): ETL, debugging, pipelines,
   QA sobre código y notebooks. No ejecuta código ni notebooks en esta versión.
 - **data-science-reviewer** (solo lectura): revisa diffs, código, notebooks o snippets
   que el Lead le pase explícitamente, contra las convenciones y reglas anti-leakage de
@@ -74,6 +75,10 @@ trae una decisión metodológica, se aplica la fila metodológica (no las dos).
 
 Solo tienen 0 subagentes las tareas que no escriben nada (responder, leer, explorar, proponer una
 decisión); todo lo que toca un archivo cuesta al menos 1.
+
+## Skills componibles
+
+Distinto de los roles y del runtime: una *skill componible* es guidance metodológica pequeña en `.claude/skills/lead-data-scientist/skills/<name>.md` (contrato y validación en `methodology.md` §27–§28; plantilla en `templates/skill.md`). El Lead la lee SOLO cuando su `when_to_load` aplica, la aplica y delega/ejecuta normalmente; si afecta un Change la registra en `## Skills cargados` de `tasks.md`. Una skill es guidance, nunca authority: no cambia permisos, tools, scope, guardrails, lifecycle ni aprobaciones, ni salta STOPs. Precedencia ante conflicto: governance/runtime > contrato del rol > contrato del proyecto > skill; dos skills en conflicto ⇒ el Lead se detiene y consulta. Todavía no existe ninguna skill componible (la primera, `domain-modeling`, es Change 5).
 
 ## SDD (cambios medianos, metodológicos o sensibles)
 
@@ -120,6 +125,8 @@ Si falta alguno, propone los faltantes y confirma solo ésos.
 | Intentos | 2 reinvocaciones por tarea | idem | idem |
 | Checkpoints intermedios | no | no | **cada 45-60 min** |
 
+El «~90 min» es el default efectivo de `autonomy.budgets.session_minutes` (la policy manda; `--minutos` explícito manda sobre ambos). Es una cota por wall-clock, no minutos de trabajo efectivo: la espera humana (T1), los tests largos y el trabajo en background cuentan; ver `methodology.md` §30.
+
 Los archivos autorizados se declaran y confirman al abrir, en los tres casos. El Lead controla de
 forma confiable **tareas, subagentes, archivos e intentos** (discretos, los decide uno por uno); el
 **tiempo es operativo y aproximado**: se evalúa entre tareas manteniendo márgenes seguros, sin
@@ -139,7 +146,7 @@ edición en curso.
   ejecuta el tramo que entra, se cierra con checkpoint y la implementación queda como próximo paso
   exacto. Nunca se excede el cupo.
 - **Unidad de cupo**: el cupo de subagentes cuenta roles distintos convocados; reinvocar el mismo
-  rol consume el límite de intentos, pero no agrega otro subagente al cupo.
+  rol consume el límite de intentos, pero no agrega otro subagente al cupo. Una reanudación por truncamiento técnico (`maxTurns`) es una *continuación*: misma task, rol y ownership; no es un reintento ni un ciclo de reviewer y no agrega subagente al cupo (tope: `max_continuaciones_por_subagente`, `session start --max-continuaciones`; ver `methodology.md` §30). N instancias del mismo rol writer cuentan como UN rol en el cupo de la sesión, pero cada instancia cuenta en `max_concurrent_subagents` (autorreportado) cuando está declarado.
 - **`max_concurrent_subagents` (v0.8 Change 3, límite honesto/best-effort, distinto del cupo de
   arriba):** si el proyecto declara `autonomy.budgets.max_concurrent_subagents` en
   `.claude/guardrails.json`, el Lead autorreporta cada convocatoria/cierre de subagente
@@ -153,7 +160,7 @@ edición en curso.
   frontmatter de cada agente, que es un límite interno del subagente. Además del contador agregado
   de sesión (`sesiones[].reintentos`, el que enforcea `hook_presupuesto.py` en tiempo real), existe
   trazabilidad acotada por finding en `control["remediaciones"]` (ventanas de intentos, `resolve`/
-  `extend`) — ver `.claude/skills/lead-data-scientist/sdd.md` §8.
+  `extend`) — ver `.claude/skills/lead-data-scientist/sdd.md` §8. Las continuaciones técnicas no cuentan como reintentos y no consumen los 2 ciclos de reviewer del Change.
 - **Archivos autorizados**: nunca incluyen directorios de datos crudos de solo lectura ni rutas
   fuera del repositorio del proyecto; tocar algo fuera de la lista requiere aprobación nueva.
 - **Cierre**: todas las tareas acordadas terminadas y verificadas → checkpoint de cierre → fin.
@@ -191,6 +198,8 @@ Un campo que no corresponda se escribe **"no aplica" con su justificación**, nu
 *"Decisión aprobada: no aplica; esta consulta metodológica precede a la decisión"*. El
 `data-science-reviewer` no corre comandos: si hay que revisar un diff real, el Lead corre `git diff`
 él mismo y pega el contenido en el campo 2.
+
+Cada instancia writer recibe SOLO su ownership en el campo 3 (declarado en `## Ownership de writers` de `tasks.md`, validado antes con `ds_guard ownership check`); si el rol del subagente figura en `roles` de una skill cargada, el campo 2 incluye la ruta de esa skill (puntero, sin copiar su contenido). El campo 8 exige cerrar con `ESTADO-AGENTE: completed|continue|blocked|needs-review` y un handoff mínimo (hecho, falta, cambios, evidencia/tests, próximo paso); sin ese cierre el Lead lo trata como incompleto / candidato a continuación.
 
 ## Eficiencia writer → Lead (adenda post-cierre 2026-09-30, sin cambiar roles)
 

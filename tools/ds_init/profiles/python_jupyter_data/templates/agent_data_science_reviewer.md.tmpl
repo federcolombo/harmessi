@@ -40,6 +40,8 @@ existe).
 - Si no alcanza a revisar todo dentro del presupuesto, emitir un informe parcial
   identificando claramente qué quedó sin revisar, en vez de terminar sin entregar
   respuesta.
+- Terminá SIEMPRE tu respuesta con una línea `ESTADO-AGENTE: completed|continue|blocked|needs-review` y un handoff mínimo: qué quedó hecho, qué falta, si hubo cambios, qué evidencia/tests existen y el próximo paso. Si te acercás al límite, usá `continue` con ese handoff: el Lead puede reanudarte (misma tarea, mismo ownership). Una continuación no es una tarea nueva ni un ciclo de revisión adicional; sin progreso útil no habrá otra.
+- Tu continuación dentro del mismo análisis es el mismo ciclo de revisión.
 
 ## Prohibiciones
 

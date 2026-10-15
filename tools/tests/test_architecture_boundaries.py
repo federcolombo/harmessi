@@ -35,6 +35,8 @@ MODULOS_CORE = (
     "tools/dsguard/repo.py",
     "tools/dsguard/checks.py",
     "tools/dsguard/sdd.py",
+    "tools/dsguard/skill_contract.py",
+    "tools/dsguard/ownership.py",
     "tools/dsguard/scope.py",
     "tools/dsguard/decision.py",
     "tools/dsguard/lifecycle.py",
@@ -381,6 +383,58 @@ class TestFronteraEnmiendasGobernadas(unittest.TestCase):
             violaciones,
             [],
             f"Cards/datasources/reporting/ds_profile no deben importar enmiendas/adopciones: {violaciones}",
+        )
+
+
+# --- Frontera de skills componibles y ownership (v0.10 Change 4: 20261014-composable-skills-writer-semantics) ---
+# `skill_contract.py` y `ownership.py` son validadores puros: stdlib + módulos hermanos de `dsguard`
+# (import relativo nivel 1), neutrales respecto de proveedores. No hay registry/loader/marketplace
+# de skills: el Lead lee los archivos directamente.
+RUTAS_SKILLS_OWNERSHIP = (
+    "tools/dsguard/skill_contract.py",
+    "tools/dsguard/ownership.py",
+)
+NOMBRES_PROVEEDOR_Y_MENSAJERIA = ("Claude", "Codex", "Gemini", "SendMessage")
+
+
+class TestFronteraSkillsYOwnership(unittest.TestCase):
+    def test_modulos_importan_solo_stdlib_y_hermanos_dsguard(self):
+        violaciones = []
+        for ruta in RUTAS_SKILLS_OWNERSHIP:
+            for nivel, nombre in _todos_los_imports(REPO_ORIGEN / ruta):
+                raiz = nombre.split(".")[0]
+                if nivel == 1:
+                    continue  # import relativo de un módulo hermano de dsguard
+                if nivel > 1:
+                    violaciones.append(f"{ruta}: import relativo fuera del paquete: {nombre}")
+                elif raiz == "tools" or raiz not in sys.stdlib_module_names:
+                    violaciones.append(f"{ruta}: no stdlib: {nombre}")
+        self.assertEqual(
+            violaciones,
+            [],
+            f"skill_contract/ownership deben usar solo stdlib + hermanos dsguard: {violaciones}",
+        )
+
+    def test_modulos_no_contienen_nombres_de_proveedor_ni_sendmessage(self):
+        violaciones = []
+        for ruta in RUTAS_SKILLS_OWNERSHIP:
+            codigo = (REPO_ORIGEN / ruta).read_text(encoding="utf-8")
+            for nombre in NOMBRES_PROVEEDOR_Y_MENSAJERIA:
+                if nombre in codigo:
+                    violaciones.append(f"{ruta} contiene '{nombre}'")
+        self.assertEqual(violaciones, [], f"Módulos deben ser neutrales al proveedor: {violaciones}")
+
+    def test_no_existe_registry_loader_ni_marketplace_de_skills(self):
+        encontrados = []
+        for patron in ("skill_registry*", "skill_loader*", "skill_marketplace*"):
+            encontrados.extend(
+                p.relative_to(REPO_ORIGEN).as_posix()
+                for p in (REPO_ORIGEN / "tools").rglob(patron)
+            )
+        self.assertEqual(
+            encontrados,
+            [],
+            f"No debe existir registry/loader/marketplace de skills en v0.10: {encontrados}",
         )
 
 

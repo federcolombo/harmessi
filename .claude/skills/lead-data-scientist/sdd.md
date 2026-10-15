@@ -39,6 +39,8 @@ delegación — el subagente ejecuta, no redacta la decisión de fondo. El campo
 únicamente en `tasks.md` — ningún otro artefacto, `proposal.md` incluido, lleva su propio campo
 `estado`, para no crear una segunda fuente de verdad.
 
+El writer NO controla el lifecycle: no edita `estado:` ni `control.json` (solo el Lead, vía `ds_guard transition`); `ds_guard validate` emite `SDD-ESTADO-DIVERGENTE` si `estado:` no coincide con la última transición gobernada. Una escritura de emergencia por parte del Lead es una excepción registrada, no el camino normal (ver `methodology.md` §31).
+
 ## 5. Contenido mínimo y cuándo nace cada archivo
 
 | Archivo | Contenido | Nace | ¿Abreviado? |
@@ -163,7 +165,7 @@ cumplir técnicamente (`tools/dsguard/core.py::validar_usuario_sin_email`,
 
 ## 8. Invocaciones planificadas vs. reintentos vs. rondas de revisión
 
-Tres contadores distintos, ninguno se confunde con otro:
+Cuatro contadores distintos, ninguno se confunde con otro:
 
 - **Invocación planificada**: parte prevista del mismo cambio (ej. cierre/verificación,
   metodólogo revisando resultados). Se enumera en `tasks.md` desde el primer borrador. No
@@ -173,7 +175,33 @@ Tres contadores distintos, ninguno se confunde con otro:
   aprobación. Máximo 2 por sesión; agotadas sin acuerdo → `pausada_bloqueada`.
 - **Reintento/reinvocación correctiva**: se reabre un artefacto **ya aprobado**, o se corrige un
   hallazgo de `data-science-reviewer` sobre código ya implementado, porque no cumplió su criterio
-  de aceptación. Cuenta contra el límite de 2 reinvocaciones de `SKILL.md`.
+  de aceptación. Cuenta contra el límite de 2 reinvocaciones de `SKILL.md`. Un reintento (retry) es distinto de una continuación.
+- **Continuación**: reanudar la MISMA task, rol y ownership (y el mismo ciclo de reviewer) que se cortó por límite técnico (`maxTurns`). No es una task nueva, no reinicia la auditoría, no consume reintentos ni ciclos de reviewer; se cuenta solo contra `max_continuaciones_por_subagente` (default 1, `session start --max-continuaciones N`, máximo duro 5). Exige progreso útil respecto de la anterior; con el tope agotado no hay continuaciones ocultas (replantear, dividir, blocked o escalar). Ver `methodology.md` §30.
+
+### Ownership de writers (`tasks.md`)
+
+Una sola instancia writer no necesita declararlo (ejecución serial, limitada por el scope del Change). Para lanzar DOS O MÁS instancias de `python-data-engineer` en paralelo, `tasks.md` declara ANTES de lanzar:
+
+```
+## Ownership de writers
+### W1 — python-data-engineer — T1
+- tools/dsguard/foo.py
+- tools/tests/test_foo.py
+### W2 — python-data-engineer — T2
+- tools/dsguard/bar/**
+## Historial de ownership
+- 2026-10-15 — W1 — tools/dsguard/baz.py — dependencia hallada al implementar T1
+```
+
+Entradas: ruta repo-relativa con `/`, archivo exacto o directorio terminado en `/**`; sin `*` intermedio, `?` ni `[]`. `ds_guard ownership check --change-id <id>` (y `validate`) fallan ANTES de delegar ante: id duplicado, rol desconocido, ownership vacío, patrón inválido, solape (archivo==archivo, `dir/**` vs archivo o subdirectorio, directorios anidados, equivalentes tras normalización) u ownership fuera del scope efectivo. Ownership ⊆ scope efectivo; una enmienda de scope no asigna ownership y un cambio de ownership no amplía scope. Si un writer necesita un archivo ajeno, no lo edita: lo devuelve al Lead, que decide y dicta la actualización, que escribe una instancia de `python-data-engineer` con `tasks.md` en su ownership (nunca toca `estado:`) ANTES de que se edite el archivo nuevo; el Lead no edita `tasks.md` por su cuenta. Una entrada literal que nombra un directorio (sin `/**`) NO equivale al directorio: usar `dir/**` para poseerlo. Serial por defecto; concurrente solo con tareas independientes, ownership disjunto y overhead razonable. Un único ROL writer, N instancias; nunca N roles writer distintos. Archivos self-governing: protocolo de `methodology.md` §31 (serial, un solo owner).
+
+### Skills cargados (`tasks.md`)
+
+Si una skill componible afecta decisiones o delegación de un Change, el Lead la registra en `## Skills cargados` (`- <skill> — <tarea> — <motivo>`). `ds_guard validate` emite `SKILL-REFERENCIA-DESCONOCIDA` si la skill citada no existe en `.claude/skills/lead-data-scientist/skills/`. Sin la sección no se valida nada.
+
+### Intervenciones de emergencia (`verification.md`)
+
+Si el Lead debió escribir por un canal no gobernado (solo si el canal gobernado quedó inoperante, con el contenido producido por el writer), se registra en `verification.md` bajo `## Intervenciones de emergencia`: UTC, causa, archivo, canal, autor del contenido, sha256 del diff, smoke posterior. Es una excepción: seguida de smoke + revisión del diff, nunca un workflow (`methodology.md` §31).
 
 ### Bounded remediation (`control["remediaciones"]`)
 

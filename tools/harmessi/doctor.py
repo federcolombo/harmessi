@@ -45,6 +45,11 @@ except ImportError:  # pragma: no cover
 from tools.dsguard import maturity
 from tools.dsguard import pathguard
 
+try:  # instalación vieja sin skills componibles: el check reporta WARN (nunca FAIL)
+    from tools.dsguard import skill_contract
+except ImportError:  # pragma: no cover
+    skill_contract = None
+
 NIVEL_OK = "OK"
 NIVEL_WARN = "WARN"
 NIVEL_ERROR = "ERROR"
@@ -95,6 +100,7 @@ _ARCHIVOS_SKILL_ESPERADOS = (
     ".claude/skills/lead-data-scientist/templates/design.md",
     ".claude/skills/lead-data-scientist/templates/tasks.md",
     ".claude/skills/lead-data-scientist/templates/verification.md",
+    ".claude/skills/lead-data-scientist/templates/skill.md",
 )
 
 _LANZADORES_ESPERADOS = (
@@ -804,6 +810,41 @@ def _check_skill_lead_data_scientist(destino: Path) -> list:
             "HARMESSI-SKILL",
             "La skill lead-data-scientist está completa",
         )
+    ]
+
+
+def _check_skill_contrato(destino: Path) -> list:
+    """Valida `skills/*.md` con `skill_contract.validar_directorio_skills`. Directorio
+    ausente => PASS (todavía no hay skills). Un incumplimiento de contrato es WARN, no
+    FAIL: una skill es guidance y no desactiva ningún guardrail (mismo criterio que
+    `HARMESSI-SKILL-FALTANTE`, degradación). Solo lectura; incluye archivos de proyecto
+    no gestionados (el drift solo mira entradas del manifiesto)."""
+    if skill_contract is None:
+        return [
+            checks.CheckResult(
+                checks.STATUS_WARN,
+                "HARMESSI-SKILL-CONTRATO",
+                "skill_contract no disponible en esta instalación (instalación incompleta o "
+                "anterior a v0.10); las skills no se validan",
+            )
+        ]
+    hallazgos = skill_contract.validar_directorio_skills(destino)
+    if not hallazgos:
+        return [
+            checks.CheckResult(
+                checks.STATUS_PASS,
+                "HARMESSI-SKILL-CONTRATO",
+                "Las skills componibles cumplen el contrato (o no hay skills)",
+            )
+        ]
+    return [
+        checks.CheckResult(
+            checks.STATUS_WARN,
+            "HARMESSI-SKILL-CONTRATO",
+            f"[{h.codigo}] {h.mensaje}",
+            subject=getattr(h, "ubicacion", None),
+        )
+        for h in hallazgos
     ]
 
 
@@ -1831,6 +1872,9 @@ def ejecutar(destino) -> tuple:
     resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-AGENTE", _check_agents, destino, control_data)
     resultados += _ejecutar_check(
         SECCION_HARMESSI, "HARMESSI-SKILL", _check_skill_lead_data_scientist, destino
+    )
+    resultados += _ejecutar_check(
+        SECCION_HARMESSI, "HARMESSI-SKILL-CONTRATO", _check_skill_contrato, destino
     )
 
     settings_data, resultados_settings = _ejecutar_check_con_dato(

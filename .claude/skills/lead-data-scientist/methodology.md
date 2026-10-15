@@ -184,14 +184,15 @@ menor, cada promoción, ni información que ya vive en `stage_history`/`control[
 criterio es: ¿esto vale la pena poder citar después sin releer el chat original? Si no, no se
 registra.
 
-## 14. One writer
+## 14. One writer: un ROL, N instancias con ownership
 
-`python-data-engineer` es el único subagente con permiso de escritura sobre código/notebooks. El
-Lead decide y orquesta, nunca edita archivos él mismo. `metodologo` hace revisión metodológica de
-solo lectura; `data-science-reviewer` hace revisión técnica de solo lectura; `notebook-runner`
-ejecuta de forma controlada, sin editar. **Nunca** hay dos writers concurrentes sobre el mismo
-cambio, y **nunca** un subagente delega a otro — ninguno tiene la herramienta Agent (ya así en
-`SKILL.md`).
+**One writer = un ROL writer autorizado** (`python-data-engineer`), no «una única instancia serial». Hay exactamente un rol con permiso de escritura sobre código/notebooks; el Lead decide y orquesta y nunca edita implementación. `metodologo` (solo lectura), `data-science-reviewer` (solo lectura: Read/Grep/Glob, sin Bash; observa y recomienda, el writer corrige) y `notebook-runner` (ejecución controlada, sin editar) no escriben. Ningún subagente delega a otro (ninguno tiene la herramienta Agent). `python-data-engineer` edita notebooks con `NotebookEdit` (insertar/reemplazar/borrar celdas) pero NO los ejecuta: la ejecución es de `notebook-runner`/runtime. N instancias del MISMO rol: sí; N roles writer distintos escribiendo: no, salvo que una arquitectura futura lo apruebe explícitamente.
+
+- **Serial por defecto.** Concurrente solo si: tareas independientes, ownership disjunto y válido, scope válido, overhead razonable (cada instancia paga los 8 campos + handoff) y ninguna toca archivos self-governing (§31). Decide el Lead; no hay scheduler ni locks.
+- **Ownership predeclarado.** Antes de lanzar dos o más instancias, `tasks.md` declara `## Ownership de writers` (`### <id> — <rol> — <tareas>` + bullets `- ruta` o `- dir/**`; sin `*` intermedio, `?` ni `[]`). `ds_guard ownership check` (y `validate`) detectan id duplicado, rol desconocido, ownership vacío, patrón inválido, solape (archivo==archivo, `dir/**` contra archivo o subdirectorio, directorios anidados, equivalentes tras normalización) y ownership fuera del scope efectivo. Ante cualquier hallazgo: no se delega. No hay hook por instancia ni se espera al conflicto Git. Una entrada literal que nombra un directorio (`tools/dsguard`, sin `/**`) NO equivale al directorio: para poseer un directorio usar `dir/**`.
+- **Ownership ≠ scope.** Scope = qué puede tocar el Change; ownership = el subconjunto que puede tocar ESA instancia; ownership ⊆ scope efectivo. Una enmienda de scope no asigna ownership; actualizar ownership no amplía scope.
+- **Archivo ajeno.** Si un writer necesita un archivo que no es suyo, no lo edita: lo devuelve al Lead; el Lead decide y dicta la actualización del ownership (y de `## Historial de ownership`), que escribe una instancia de `python-data-engineer` con `tasks.md` en su ownership —nunca toca `estado:`—, ANTES de que alguien edite el archivo nuevo; el Lead no edita `tasks.md` por su cuenta. Sin perdón post-hoc.
+- **El writer no controla el lifecycle.** Puede reportar `completed`, `blocked` o `needs-review`, pero no decide aprobado / en_implementacion / en_verificacion / cerrado ni edita `estado:` ni `control.json`. Motivación real: en Change 0 de v0.10 un writer adelantó `estado:` a mano antes de la aprobación. `ds_guard validate` emite `SDD-ESTADO-DIVERGENTE` si `estado:` no coincide con la última transición gobernada. Autoridad del lifecycle = Lead + `ds_guard transition`.
 
 ## 15. Delegación proporcional
 
@@ -313,7 +314,7 @@ circunstancia, sin excepción implícita:
 13. No abrir agentes de espera (ningún subagente que quede "esperando" sin un objetivo síncrono
     concreto).
 14. No delegarle escritura al `data-science-reviewer` (es de solo lectura, siempre).
-15. No permitir dos writers concurrentes sobre el mismo cambio.
+15. No permitir instancias writer sin ownership disjunto y predeclarado, ni más de un ROL writer distinto.
 16. No inventar un PASS de scientific validity que el engine no reportó.
 17. No tratar un N/A de scientific validity como evidencia de que la regla no aplica al proyecto
     real, sin verificar antes si lo que falta es declarar la política.
@@ -386,3 +387,61 @@ adicional.
   deuda del change) — solo sesiones/remediaciones ya registradas explícitamente por el Lead.
 - Cuándo correrlo: al cerrar un change, o si el Lead sospecha que una sesión se volvió ineficiente
   — nunca obligatorio.
+
+## 27. Role, Skill y Runtime
+
+- **Role**: quién puede actuar y con qué permisos (tool surface, responsabilidad, límites). Roles reales: Lead (empaquetado como la skill nativa del proveedor `lead-data-scientist`), `python-data-engineer`, `data-science-reviewer`, `metodologo`, `notebook-runner`. `ml-engineer` NO existe; si se menciona es una idea futura no implementada.
+- **Skill** (componible de Harmessi): cómo razonar; metodología reutilizable, chica, en markdown, cargada bajo demanda. Sin permisos, tools, hooks, instalación de dependencias, bypass ni autonomía propia.
+- **Runtime/Tool**: cálculo, ejecución, enforcement y evidencia deterministas (`ds_guard`, hooks, `nbrunner`, `ds_init`, helpers).
+
+Skills enseñan cómo razonar; Roles determinan quién puede actuar; Runtime hace cumplir y calcula. No se mezclan las capas. Clasificación actual (sin mover archivos): `SKILL.md` = Role (Lead) + política de sesión + documentación de Runtime; `.claude/agents/*.md` = Roles; `methodology.md`, `eda.md`, `kdd.md` = referencias metodológicas (skills «de facto», sin frontmatter); `sdd.md`, `verificador.md`, `decision-ledger.md` = documentación de proceso/Runtime; `templates/` = scaffolding; `tools/**` = Runtime. El metodólogo es un ROL: una skill metodológica nunca se convierte en agente.
+
+## 28. Skills componibles (contrato, carga y composición)
+
+- **Ubicación y formato**: `.claude/skills/lead-data-scientist/skills/<name>.md` con frontmatter de lista cerrada. Obligatorios: `name` (kebab-case, igual al nombre de archivo), `purpose`, `when_to_load`, `roles` (lista inline de roles conocidos). Opcional: `artifacts` (rutas repo-relativas literales que la skill lee o escribe; sirven al Lead para planificar scope/ownership y NO otorgan acceso). Plantilla: `templates/skill.md`. Sin otras claves (ni `tools`, `permissions`, `hooks`, `model`, `maxTurns`, `install`, `dependencies`, `requires`, `priority`, `autonomy`, `description`). Validación solo estructural y barata (Doctor `HARMESSI-SKILL-CONTRATO`); la calidad metodológica la juzga la revisión humana/reviewer, no el binario.
+- **Carga**: el Lead detecta una necesidad metodológica → lee la skill relevante (solo cuando aplica; nunca «todas siempre») → aplica sus instrucciones → delega/ejecuta normalmente. A un subagente se le da el puntero a la skill en el campo 2 de los 8 campos si su rol figura en `roles`; no se copia su contenido al prompt.
+- **Guidance, nunca authority**: una skill no modifica permisos, no concede herramientas, no amplía scope, no cambia guardrails, no altera el lifecycle, no aprueba artifacts, no salta STOPs, no delega ni ejecuta. No tiene lifecycle propio: se versiona como código y cambia por un Change normal.
+- **Composición y precedencia**: varias skills pueden aplicar a la vez sin duplicar contexto. Ante conflicto gana: (1) governance/runtime, (2) contrato del rol, (3) contrato del proyecto (`CLAUDE.md`), (4) guidance de la skill. Dos skills en conflicto: el Lead se detiene y consulta; no hay motor de prioridades.
+- **Traza**: cuando una skill afecta decisiones o delegación de un Change se registra en `## Skills cargados` de `tasks.md` (`- <skill> — <tarea> — <motivo>`); `ds_guard validate` verifica que la skill citada exista.
+- **Skills de proyecto**: un proyecto puede agregar las suyas en `skills/` sin tocar el core; se validan igual.
+- **Alcance de v0.10**: solo la foundation; `domain-modeling` (Change 5) y `GLOSSARY.md` no existen todavía.
+
+## 29. TDD adaptado a Data Science (guideline)
+
+- **Código determinista** (parsers, transforms, funciones de features, métricas, validación, CLI, contratos): test-first cuando sea razonable.
+- **Exploración**: no se exige test antes de explorar. Pregunta/hipótesis → correr → inspeccionar → formalizar el invariante → test si pasa a lógica reutilizable o productiva.
+- **Modelos**: no se testea «accuracy == 0.83». Se testea schema, ausencia de leakage, split temporal, cotas de reproducibilidad, que existan las métricas esperadas, umbrales/políticas cuando están aprobados, ausencia de NaN/inf e invariantes.
+- **Notebooks**: tests sobre la lógica extraída/reutilizable y sobre outputs/contratos relevantes, no sobre el orden de las celdas.
+- **Evals ≠ tests**: los tests validan comportamiento determinista; las evals miden calidad/fitness de agentes, modelos u outputs. Una eval no sustituye a un test ni es gate equivalente sin un contrato explícito. No hay skill `tdd` en v0.10.
+
+## 30. Turnos, continuaciones, sesión y recovery
+
+**Vocabulario (no se solapan)**
+- *Continuación*: reanudar la MISMA task, rol, ownership y (si aplica) ciclo de reviewer que se cortó por límite técnico (`maxTurns`). No es una task nueva, no reinicia la auditoría y no consume otro ciclo de reviewer.
+- *Retry/reintento*: reejecución por fallo técnico o intento fallido, o reinvocación tras un resultado insatisfactorio (cuenta contra `reintentos`/remediación, `sdd.md` §8).
+- *Ciclo de reviewer*: nueva revisión DESPUÉS de fixes (máximo 2 por Change). Una continuación del reviewer dentro del mismo análisis sigue siendo el mismo ciclo. Un diff grande puede partirse en invocaciones planificadas del mismo ciclo. No confundir con los ciclos de remediación por finding de §16.
+- *Ronda*: ajuste del usuario a un borrador antes de la primera aprobación.
+
+**Handoff y reanudación.** Cada agente cierra su respuesta con `ESTADO-AGENTE: completed|continue|blocked|needs-review` más un handoff mínimo: qué quedó hecho, qué falta, si hubo cambios, qué evidencia/tests existen y el próximo paso. Sin línea de estado válida (terminación por límite sin handoff) el Lead lo trata como incompleto / candidato a continuación, nunca como completed. Al truncarse, el Lead lee el estado en disco (`git diff --stat`, archivos del ownership), arma un handoff corto (~10 líneas), verifica progreso útil y, si sigue dentro de scope y presupuesto, reanuda la MISMA instancia (conserva contexto) en vez de relanzar desde cero. Tope: `max_continuaciones_por_subagente` (default 1; `session start --max-continuaciones N`, máximo duro 5). **Anti-loop**: sin progreso útil (diff del ownership sin cambios / ningún hallazgo nuevo) no hay otra continuación; con el tope agotado no hay continuaciones ocultas: el Lead replantea la task, la divide, declara blocked o escala si hay decisión material. Los `maxTurns` actuales (writer 12, reviewer 16, metodólogo 8, runner 4) no se cambian: el objetivo es trabajo acotado + reanudable, no subir el número. Limitación declarada: la cuenta de continuaciones del hook depende de que la clave registrada coincida con el destino del mensaje; con payloads reales sin verificar (H1, UNCONFIRMED) se trata como cooperativa.
+
+**Sesión.** `autonomy.budgets.session_minutes` es la policy efectiva (`--minutos` explícito manda); el 90 es solo el fallback documentado (canónico: `_BUDGET_DEFAULTS` en `ds_guard.py`; fallback de sesiones legacy en `dsguard/core.py`; default de firma en `dsguard/sdd.py`, que la CLI siempre pasa). El reloj es wall-clock: la espera humana (T1), los tests largos y el trabajo en background cuentan; 90 min no significa 90 min de trabajo efectivo. Vencida la sesión el hook bloquea trabajo nuevo, pero no invalida el trabajo previo. Recovery soportado: cerrar la sesión y abrir otra (acotado por `max_sessions`/`aggregate_minutes` si existen). Evidencia real: en Change 3 de v0.10 `s1` venció por reloj con trabajo válido en curso y se abrió `s2`.
+
+**Recovery (tabla)**
+| Caso | Respuesta |
+|---|---|
+| writer / reviewer en `maxTurns` | handoff + continuación (arriba) |
+| sesión vencida | `session close` + `session start` |
+| hook/pathguard self-locking | protocolo self-governing (§31) |
+| PATH de Bash roto, PowerShell/Git Bash/VS Code | incidente de ENTORNO, no de Harmessi: se documenta, se usa otra shell, sin fix en Harmessi |
+
+## 31. Archivos self-governing y emergencias
+
+Archivos que gobiernan su propio enforcement: `pathguard.py`, los hooks y sus launchers (`hook_rutas`, `hook_presupuesto`, `tools/nbrunner/hook_launcher.py`, `hook_validar_comando.py`), `.claude/settings.json`, y parsers u otro código equivalente que pueda bloquear toda escritura (p. ej. `core.py`/`repo.py` por import). Motivación real: en Change 3 `pathguard.py` quedó self-locking dos veces (nombres sin definir ⇒ el hook, fail-closed, denegó toda escritura) y una reparación debió hacerse por Bash. La lección NO es «Bash es el escape oficial» sino «los cambios self-governing necesitan validación inmediata y rollback seguro». Protocolo:
+1. trabajo serial; 2. un único writer owner; 3. checkpoint Git limpio/conocido antes de editar; 4. modificación acotada; 5. inmediatamente smoke de sintaxis/import + tests dirigidos mínimos del propio enforcement; 6. ninguna otra escritura hasta que el smoke pase; 7. si rompe el enforcement: rollback al checkpoint (`git restore -- <archivo>`) y corrección por el writer; 8. todo bypass/reparación de emergencia es excepcional, se documenta en `verification.md` (sección `## Intervenciones de emergencia`: UTC, causa, archivo, canal, autor del contenido, sha256 del diff, smoke posterior), se valida después y nunca se vuelve workflow.
+
+Una intervención de emergencia es aceptable solo si el canal gobernado quedó inoperante por el propio enforcement o por una falla de entorno, el contenido exacto lo produjo el writer (el Lead solo lo transporta), el archivo está en scope y ownership y es lo mínimo para restaurar el canal. Retorno al estado gobernado: smoke en verde + diff revisado por el reviewer + mención en el checkpoint. Dos emergencias en un Change ⇒ pausa y consulta. No se usa de forma preventiva ni para trabajo de feature.
+
+## 32. Eficiencia de tokens y neutralidad de proveedor
+
+- Skills por puntero, no por copia; contexto mínimo por instancia (solo su ownership y la sección relevante de spec/tasks); handoffs cortos; no reenviar el repo; no re-auditar; reanudar la misma instancia en vez de relanzar. Más instancias multiplican el costo fijo (8 campos + lectura): por eso el default es serial. Sin accounting nuevo.
+- Los conceptos *role, writer instance, ownership, continuation, reviewer cycle, skill* son neutrales al proveedor. En Claude Code: lanzar = herramienta `Agent`, reanudar = `SendMessage`, la skill nativa empaqueta el rol Lead. No se codifica semántica central en primitivas de un proveedor.

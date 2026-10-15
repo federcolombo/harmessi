@@ -577,6 +577,49 @@ def transition(
     return True, []
 
 
+def chequear_estado_divergente(control: dict, tasks_path) -> list:
+    """Hallazgo `SDD-ESTADO-DIVERGENTE` (R15, v0.10): el `estado:` de tasks.md
+    debe coincidir con el último estado gobernado, es decir
+    `control["transiciones"][-1]["hacia"]` (o `propuesta_pendiente` si no hay
+    transiciones).
+
+    Motivación: en el Change 0 de v0.10 un writer adelantó `estado:` a mano
+    antes de la aprobación. Un writer no puede materializar transiciones; solo
+    `transition` (que corre el gate) escribe `estado:` y registra la entrada.
+
+    Función pura (solo lee tasks.md). Si `read_estado` falla (ilegible o
+    duplicado) devuelve `[]`: ya lo reportan SDD-ESTADO-ILEGIBLE/DUPLICADO."""
+    tasks_path = Path(tasks_path)
+    estado, err = read_estado(tasks_path)
+    if err or estado is None:
+        return []
+    transiciones = control.get("transiciones") or []
+    gobernado = transiciones[-1].get("hacia") if transiciones else "propuesta_pendiente"
+    if estado == gobernado:
+        return []
+    change_id = tasks_path.parent.name
+    base = (
+        f"'estado:' en tasks.md es '{estado}' pero el último estado gobernado es "
+        f"'{gobernado}'. Un writer no puede materializar transiciones. "
+    )
+    if es_transicion_valida(control, gobernado, estado):
+        # Ventana legítima interrumpida: transition corre el gate y reconcilia.
+        recuperacion = (
+            f"La transición {gobernado} -> {estado} es válida: ejecutar "
+            f"`ds_guard transition --change-id {change_id} --a {estado}` (idempotente; "
+            f"corre el gate y reconcilia). Si el gate falla, restaurar 'estado:' desde git."
+        )
+    else:
+        # Salto ilegítimo: no sugerir reconciliar (transition no valida alcanzabilidad
+        # cuando estado == destino).
+        recuperacion = (
+            f"La transición {gobernado} -> {estado} NO es válida (salto): no reconciliar. "
+            f"Restaurar 'estado:' a '{gobernado}' desde git y avanzar con "
+            f"`ds_guard transition` paso a paso."
+        )
+    return [Finding("SDD-ESTADO-DIVERGENTE", base + recuperacion, str(tasks_path))]
+
+
 # --- Bounded remediation (control["remediaciones"]) ---------------------------
 
 REMEDIATION_TIPOS = frozenset({"retry_tecnico", "bug", "metodologica"})

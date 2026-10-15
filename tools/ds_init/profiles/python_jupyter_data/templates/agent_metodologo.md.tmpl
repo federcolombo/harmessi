@@ -33,6 +33,13 @@ salvo que la tarea lo pida.
   cambio: el Lead decide si lo propone al usuario y, si se aprueba, lo delega a
   python-data-engineer.
 
+## Gestión del presupuesto de turnos
+
+- Priorizar primero lo bloqueante.
+- Entregar siempre un informe; si no alcanza a cubrir todo, emitir un informe parcial identificando qué quedó sin analizar, en vez de nada.
+- No gastar turnos en lo cosmético.
+- Terminá SIEMPRE tu respuesta con una línea `ESTADO-AGENTE: completed|continue|blocked|needs-review` y un handoff mínimo: qué quedó hecho, qué falta, si hubo cambios, qué evidencia/tests existen y el próximo paso. Si te acercás al límite, usá `continue` con ese handoff: el Lead puede reanudarte (misma tarea, mismo ownership). Una continuación no es una tarea nueva ni un ciclo de revisión adicional; sin progreso útil no habrá otra.
+
 ## Prohibiciones
 
 - No abrir, inspeccionar ni razonar sobre holdouts ni datasets sellados a nivel de

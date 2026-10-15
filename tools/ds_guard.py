@@ -53,6 +53,7 @@ from dsguard import (  # noqa: E402
     mlops_evidence,
     mlops_foundations,
     notebooks,
+    ownership,
     pathguard,
     readiness,
     repo,
@@ -60,8 +61,13 @@ from dsguard import (  # noqa: E402
     scope,
     scope_amendments,
     sdd,
+    skill_contract,
     status,
 )
+
+# Tope duro de continuaciones por subagente (R20 del Change composable-skills-writer-semantics):
+# nunca infinito, no configurable por policy.
+MAX_CONTINUACIONES_DURO = 5
 
 
 # --- Helpers compartidos --------------------------------------------------
@@ -99,6 +105,33 @@ def _imprimir_findings(findings: list, exit_code: int, como_json: bool) -> None:
         print(core.formatear_findings_json(findings, exit_code))
     else:
         print(core.formatear_findings_texto(findings))
+
+
+def _leer_texto_tasks(tasks_path: Path) -> str:
+    return Path(tasks_path).read_text(encoding="utf-8")
+
+
+def _evaluar_ownership_change(change_dir: Path, tasks_path: Path, control: dict) -> tuple:
+    """`(hallazgos_ownership, hallazgos_alcance)`: ownership validado contra el scope efectivo
+    (ownership debe ser subconjunto). Sin sección `## Ownership de writers` => ownership `[]`."""
+    rutas, hallazgos_alcance = scope.alcance_efectivo(change_dir, control)
+    hallazgos = ownership.evaluar_ownership(_leer_texto_tasks(tasks_path), list(rutas))
+    return hallazgos, hallazgos_alcance
+
+
+def cmd_ownership_check(args: argparse.Namespace) -> int:
+    """Solo lectura: 0 sin hallazgos, 1 con hallazgos, 2 uso/Change inexistente, 3 entorno."""
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+    hallazgos, hallazgos_alcance = _evaluar_ownership_change(change_dir, tasks_path, control)
+    findings = list(hallazgos_alcance) + list(hallazgos)
+    exit_code = 1 if findings else 0
+    _imprimir_findings(findings, exit_code, args.json)
+    return exit_code
 
 
 # --- status -----------------------------------------------------------------
@@ -290,6 +323,16 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
     estado, err = sdd.read_estado(tasks_path)
     findings += err
+
+    # v0.10: estado adelantado a mano, ownership de writers y referencias a skills.
+    # Sin las secciones correspondientes en tasks.md no se agrega ningún hallazgo nuevo.
+    findings += sdd.chequear_estado_divergente(control, tasks_path)
+    # El scope en sí lo evalúa scope.evaluar_alcance más abajo: acá se descartan sus hallazgos.
+    hallazgos_ownership, _ = _evaluar_ownership_change(change_dir, tasks_path, control)
+    findings += hallazgos_ownership
+    findings += skill_contract.validar_referencias_skills(
+        _leer_texto_tasks(tasks_path), skill_contract.skills_existentes(repo_root)
+    )
 
     sesion_activa = sdd._sesion_activa(control)
 
@@ -1052,6 +1095,13 @@ def cmd_session_start(args: argparse.Namespace) -> int:
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         return 3
+    max_continuaciones = args.max_continuaciones
+    if not 1 <= max_continuaciones <= MAX_CONTINUACIONES_DURO:
+        print(
+            f"--max-continuaciones debe estar entre 1 y {MAX_CONTINUACIONES_DURO} (recibido: {max_continuaciones})",
+            file=sys.stderr,
+        )
+        return 2
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     try:
@@ -1112,6 +1162,7 @@ def cmd_session_start(args: argparse.Namespace) -> int:
             max_roles=args.max_roles,
             max_reintentos=args.max_reintentos,
             max_rondas_revision=args.max_rondas,
+            max_continuaciones_por_subagente=max_continuaciones,
         )
     except sdd.SesionYaActivaError as e:
         print(str(e), file=sys.stderr)
@@ -1178,6 +1229,11 @@ def cmd_session_status(args: argparse.Namespace) -> int:
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     estado = sdd.session_status(control)
+    if estado.get("activa"):
+        # Sesiones viejas sin la clave: 1 (comportamiento histórico).
+        estado["max_continuaciones_por_subagente"] = (
+            (estado.get("presupuesto") or {}).get("max_continuaciones_por_subagente", 1)
+        )
 
     # Sección de límites agregados efectivos (aditiva, informativa: nunca cambia el exit code).
     limites_agregados = None
@@ -1203,6 +1259,7 @@ def cmd_session_status(args: argparse.Namespace) -> int:
                 f"tareas={estado['tareas']} roles={estado['roles']} "
                 f"reintentos={estado['reintentos']} rondas_revision={estado['rondas_revision']}"
             )
+            print(f"max_continuaciones_por_subagente={estado['max_continuaciones_por_subagente']}")
             for f in estado["findings"]:
                 print(f"  [{f['codigo']}] {f['mensaje']}")
         for aviso in avisos:
@@ -5009,6 +5066,10 @@ def construir_parser() -> argparse.ArgumentParser:
     p_session_start.add_argument("--max-roles", type=int, default=2)
     p_session_start.add_argument("--max-reintentos", type=int, default=2)
     p_session_start.add_argument("--max-rondas", type=int, default=2)
+    p_session_start.add_argument(
+        "--max-continuaciones", type=int, default=1, dest="max_continuaciones",
+        help=f"Continuaciones máximas por subagente (1..{MAX_CONTINUACIONES_DURO}; default 1).",
+    )
     p_session_start.set_defaults(func=cmd_session_start)
 
     p_session_note = session_sub.add_parser("note")
@@ -5577,6 +5638,15 @@ def construir_parser() -> argparse.ArgumentParser:
     p_scope_amend.add_argument("--dry-run", action="store_true", dest="dry_run")
     p_scope_amend.add_argument("--expected-scope-hash", default=None, dest="expected_scope_hash")
     p_scope_amend.set_defaults(func=cmd_scope_amend)
+
+    p_ownership = subparsers.add_parser("ownership", help="Ownership de writers de un Change (solo lectura).")
+    ownership_sub = p_ownership.add_subparsers(dest="subcomando_ownership", required=True)
+    p_ownership_check = ownership_sub.add_parser(
+        "check", help="Valida '## Ownership de writers' de tasks.md contra el scope efectivo."
+    )
+    p_ownership_check.add_argument("--change-id", required=True, dest="change_id")
+    p_ownership_check.add_argument("--json", action="store_true")
+    p_ownership_check.set_defaults(func=cmd_ownership_check)
 
     p_guardrails = subparsers.add_parser("guardrails", help="Re-adopción gobernada de guardrails (closed list aditiva).")
     guardrails_sub = p_guardrails.add_subparsers(dest="subcomando_guardrails", required=True)

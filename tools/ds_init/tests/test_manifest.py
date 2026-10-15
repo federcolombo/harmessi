@@ -86,6 +86,22 @@ class TestFormaManifiesto(unittest.TestCase):
                 or entrada.destino.startswith("tools/tests/test_nbrunner"),
             )
 
+    def test_skills_componibles_modulos_y_plantilla_son_verbatim(self):
+        # Solo los 2 módulos y la plantilla; sin entradas por skill ni registry.
+        esperados = (
+            "tools/dsguard/skill_contract.py",
+            "tools/dsguard/ownership.py",
+            ".claude/skills/lead-data-scientist/templates/skill.md",
+        )
+        for destino in esperados:
+            entradas = [e for e in MANIFEST if e.destino == destino]
+            self.assertEqual(len(entradas), 1, destino)
+            self.assertEqual(entradas[0].tratamiento, VERBATIM, destino)
+            self.assertEqual(entradas[0].fuente, destino, destino)
+        self.assertEqual(
+            [e.destino for e in MANIFEST if "/lead-data-scientist/skills/" in e.destino], []
+        )
+
     def test_smoke_test_generico_si_se_instala(self):
         destinos = [entrada.destino for entrada in MANIFEST]
         self.assertIn("tools/tests/test_harness_smoke.py", destinos)
