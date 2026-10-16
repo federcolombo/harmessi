@@ -4,6 +4,7 @@ JSON de bajo nivel (usa `core.py` para eso).
 """
 from __future__ import annotations
 
+import copy
 import fnmatch
 import re
 from datetime import timedelta
@@ -13,7 +14,17 @@ from typing import Optional
 from . import pep440_subset
 from . import repo as repo_mod
 from . import scope
-from .core import Finding, ahora_utc, escribir_control, hash_lf_v1, leer_control, minutos_restantes, parsear_utc
+from .core import (
+    SESSION_MINUTES_DEFAULT,
+    UMBRAL_AVISO_MINUTOS,
+    Finding,
+    ahora_utc,
+    escribir_control,
+    hash_lf_v1,
+    leer_control,
+    minutos_restantes,
+    parsear_utc,
+)
 
 # `tools/` ya está en `sys.path` en todo contexto real donde `dsguard.sdd` se
 # importa (CLI: `ds_guard.py:23`; tests: `sys.path.insert(0, tools/)` antes de
@@ -821,19 +832,49 @@ def _sesion_activa(control: dict) -> Optional[dict]:
     return None
 
 
+class SesionPreviaAusenteError(Exception):
+    """`session start --retomar` sin ninguna sesión cerrada previa."""
+
+
+def _ultima_sesion_cerrada(control: dict) -> Optional[dict]:
+    """La sesión no activa de mayor índice (`sN`); ante ids no numéricos, la
+    última de la lista."""
+    cerradas = [s for s in control.get("sesiones", []) if s.get("estado_final") != "activa"]
+    if not cerradas:
+        return None
+
+    def _indice(s: dict):
+        m = re.fullmatch(r"s(\d+)", str(s.get("id", "")))
+        return int(m.group(1)) if m else -1
+
+    mejor = cerradas[0]
+    for s in cerradas:
+        if _indice(s) >= _indice(mejor):
+            mejor = s
+    return mejor
+
+
 def session_start(
     control: dict,
     modo: str = "estandar",
-    minutos: int = 90,
+    minutos: int = SESSION_MINUTES_DEFAULT,
     max_tareas: int = 3,
     max_roles: int = 2,
     max_reintentos: int = 2,
     max_rondas_revision: int = 2,
     max_continuaciones_por_subagente: int = 1,
+    retomar: bool = False,
 ) -> dict:
     activa = _sesion_activa(control)
     if activa is not None:
         raise SesionYaActivaError(f"Ya hay una sesión activa: {activa.get('id')}")
+    previa = None
+    if retomar:
+        previa = _ultima_sesion_cerrada(control)
+        if previa is None:
+            raise SesionPreviaAusenteError(
+                "No hay sesión cerrada previa de este Change: no se puede usar --retomar"
+            )
     sesiones = control.setdefault("sesiones", [])
     nuevo_id = f"s{len(sesiones) + 1}"
     inicio_utc = ahora_utc()
@@ -868,6 +909,20 @@ def session_start(
         "rondas_revision": 0,
         "estado_final": "activa",
     }
+    if previa is not None:
+        # Se hereda solo estado de gobernanza (D3): presupuesto y deadline son
+        # nuevos. Los límites se evalúan con los valores heredados (R5).
+        entrada["rondas_revision"] = previa.get("rondas_revision", 0)
+        entrada["reintentos"] = previa.get("reintentos", 0)
+        entrada["roles"] = list(previa.get("roles") or [])
+        tareas_previas = previa.get("tareas")
+        entrada["tareas"] = list(tareas_previas) if isinstance(tareas_previas, list) else []
+        subs_previos = previa.get("subagentes")
+        if isinstance(subs_previos, dict):
+            for agente, datos in subs_previos.items():
+                if isinstance(datos, dict) and "continuaciones" in datos:
+                    entrada["subagentes"][agente] = copy.deepcopy(datos)
+        entrada["retomada_de"] = previa.get("id")
     sesiones.append(entrada)
     return entrada
 
@@ -1014,6 +1069,31 @@ def chequear_limites(sesion: dict) -> list:
     return findings
 
 
+def _texto_aviso_vencimiento(sesion: dict, restantes: float, change_id: Optional[str] = None) -> str:
+    cid = change_id or "<change-id>"
+    return (
+        f"La sesión {sesion.get('id')} vence en {restantes:.1f} min. Para no perder trabajo: "
+        f"pausá con 'python tools/ds_guard.py session close --change-id {cid} --estado pausada' "
+        f"y retomá con 'python tools/ds_guard.py session start --change-id {cid} --retomar'."
+    )
+
+
+def aviso_sesion_por_vencer(control: dict, change_id: str) -> Optional[str]:
+    """Línea `AVISO-SESION-POR-VENCER` si hay sesión activa con
+    `0 < restantes <= UMBRAL_AVISO_MINUTOS`; si no, `None`. Nunca levanta: un
+    deadline ilegible se trata como sin aviso."""
+    try:
+        activa = _sesion_activa(control)
+        if activa is None:
+            return None
+        restantes = minutos_restantes(activa)
+    except (ValueError, TypeError, KeyError, AttributeError):
+        return None
+    if not (0 < restantes <= UMBRAL_AVISO_MINUTOS):
+        return None
+    return "AVISO-SESION-POR-VENCER: " + _texto_aviso_vencimiento(activa, restantes, change_id)
+
+
 def session_status(control: dict) -> dict:
     activa = _sesion_activa(control)
     if activa is None:
@@ -1023,9 +1103,14 @@ def session_status(control: dict) -> dict:
     inicio = parsear_utc(activa["inicio_utc"])
     minutos_transcurridos = (datetime.now(timezone.utc) - inicio).total_seconds() / 60.0
     findings = chequear_limites(activa)
+    restantes = minutos_restantes(activa)
+    resultado_tiempo = {"minutos_restantes": restantes, "vencida": restantes <= 0}
+    if 0 < restantes <= UMBRAL_AVISO_MINUTOS:
+        resultado_tiempo["aviso"] = _texto_aviso_vencimiento(activa, restantes)
     return {
         "activa": True,
         "id": activa.get("id"),
+        **resultado_tiempo,
         "minutos_transcurridos": minutos_transcurridos,
         "presupuesto": activa.get("presupuesto"),
         "tareas": activa.get("tareas"),

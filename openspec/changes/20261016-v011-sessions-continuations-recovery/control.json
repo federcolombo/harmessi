@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "change_id": "20261016-v011-sessions-continuations-recovery",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-16T18:16:04Z",
+  "baseline": {
+    "commit": "3c3f6bb21bf254cf883e29951f8666b4d67d91d1",
+    "rama": "v0.11-dev",
+    "capturado_utc": "2026-10-16T18:16:04Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/SKILL.md",
+      ".claude/skills/lead-data-scientist/methodology.md",
+      ".claude/skills/lead-data-scientist/verificador.md",
+      "docs/roadmap/v0.11.md",
+      "openspec/changes/20261016-v011-sessions-continuations-recovery/**",
+      "openspec/changes/20261016-v011-sessions-continuations-recovery/amendments.jsonl",
+      "openspec/changes/20261016-v011-sessions-continuations-recovery/control.json",
+      "openspec/changes/20261016-v011-sessions-continuations-recovery/design.md",
+      "openspec/changes/20261016-v011-sessions-continuations-recovery/proposal.md",
+      "openspec/changes/20261016-v011-sessions-continuations-recovery/spec.md",
+      "openspec/changes/20261016-v011-sessions-continuations-recovery/tasks.md",
+      "openspec/changes/20261016-v011-sessions-continuations-recovery/verification.md",
+      "tools/ds_guard.py",
+      "tools/ds_init/profiles/**",
+      "tools/dsguard/core.py",
+      "tools/dsguard/hook_presupuesto.py",
+      "tools/dsguard/sdd.py",
+      "tools/tests/**"
+    ],
+    "scope_hash": "7eae1dfcc45dd8ca6cfc735d76ccc7b1e2ad5094a363b9e22942926554d7dee8"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "15f0e49eb46870bd08ba476c50adb93191d004a7efbf62ed5569fec6adf0557a",
+      "registrado_utc": "2026-10-16T18:16:07Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261016-v011-sessions-continuations-recovery",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "7fb3423969e6db8db4299b33937def329bade3ca14bfd6a7d2a645e60ea28431",
+      "registrado_utc": "2026-10-16T18:16:08Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261016-v011-sessions-continuations-recovery",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "39a5997512290ffcc52de3646fab76293ce53837600d13533d1d0cfebeda0c76",
+      "registrado_utc": "2026-10-16T18:16:09Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261016-v011-sessions-continuations-recovery",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-16T18:16:10Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-16T18:16:12Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-16T18:16:11Z",
+      "cierre_utc": "2026-10-16T18:28:38Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-17T02:16:11Z",
+      "minutos_consumidos": 12.45,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-16T18:16:24Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-16T18:26:52Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    }
+  ]
+}

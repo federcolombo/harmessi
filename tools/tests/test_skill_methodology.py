@@ -457,7 +457,11 @@ class TestChange4InvariantesNoRegresion(unittest.TestCase):
 
     def test_ds_guard_conserva_budget_y_tope_de_continuaciones(self):
         contenido = _leer_norm(TOOLS_DIR / "ds_guard.py")
-        self.assertIn('"session_minutes": 90', contenido)
+        # Cambio de contrato (v0.11 Change 3): el valor 90 queda intacto pero el
+        # literal es único, definido en core.py y referenciado desde ds_guard.py.
+        self.assertIn('"session_minutes": core.SESSION_MINUTES_DEFAULT', contenido)
+        contenido_core = _leer_norm(TOOLS_DIR / "dsguard" / "core.py")
+        self.assertIn("SESSION_MINUTES_DEFAULT = 90", contenido_core)
         self.assertIn("MAX_CONTINUACIONES_DURO = 5", contenido)
 
     def test_sdd_conserva_default_de_continuaciones(self):

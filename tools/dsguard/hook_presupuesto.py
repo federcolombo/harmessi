@@ -183,8 +183,9 @@ def mensaje_recuperacion(interprete: Optional[str], change_id: Optional[str]) ->
         "\nRecuperación (status/close permitidos aun con el presupuesto vencido):\n"
         f"  1. Ver estado:\n{_formas(f'status --change-id {change_id}')}\n"
         f"  2. Cerrar sesión:\n{_formas(f'close --change-id {change_id} --estado pausada')}\n"
-        "  3. Después de cerrar, iniciar una sesión nueva (no permitido antes de cerrar):\n"
-        f"{_formas(f'start --change-id {change_id}')}"
+        "  3. Después de cerrar, retomar con una sesión nueva que hereda rondas/reintentos "
+        "(no permitido antes de cerrar):\n"
+        f"{_formas(f'start --change-id {change_id} --retomar')}"
     )
 
 

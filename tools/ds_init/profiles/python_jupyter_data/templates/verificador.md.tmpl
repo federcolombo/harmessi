@@ -332,8 +332,10 @@ coinciden, pero nunca resuelve el conflicto por sí solo a favor de uno u otro.
 **Semántica de sesión.** `autonomy.budgets.session_minutes` es la policy efectiva (`--minutos`
 explícito manda; 90 es el fallback documentado). El reloj es wall-clock: cuentan la espera humana
 T1, los tests largos y el trabajo en background. La expiración bloquea trabajo nuevo pero no
-invalida el previo. Recovery soportado: `session close` + `session start` (evidencia real: Change 3
-de v0.10, s1 vencida → s2). Ver `methodology.md` §30.
+invalida el previo. Recovery soportado: `session close` + `session start --retomar` (hereda `rondas_revision`,
+`reintentos`, `roles`, `tareas` y continuaciones; `retomada_de`; evidencia real: Change 3 de v0.10,
+s1 vencida → s2). `session status` informa `minutos_restantes`/`aviso`/`vencida` y con ≤10 min se
+emite `AVISO-SESION-POR-VENCER` por stderr. Ver `methodology.md` §30.
 
 ## 6. Límites reales
 

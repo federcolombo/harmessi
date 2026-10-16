@@ -39,6 +39,15 @@ def hash_lf_v1(path: Path) -> str:
 
 # --- Fecha/hora ---------------------------------------------------------------
 
+# Única definición funcional del default de minutos de sesión (v0.11 Change 3,
+# R1). `sdd.session_start`, `ds_guard._BUDGET_DEFAULTS` y el fallback de
+# `minutos_restantes` la referencian; la policy `autonomy.budgets.session_minutes`
+# sigue siendo la fuente efectiva.
+SESSION_MINUTES_DEFAULT = 90
+
+# Umbral (minutos) a partir del cual se emite el aviso anticipado de vencimiento.
+UMBRAL_AVISO_MINUTOS = 10
+
 def ahora_utc() -> str:
     """Timestamp UTC en formato `YYYY-MM-DDTHH:MM:SSZ` (sin microsegundos)."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -58,7 +67,7 @@ def minutos_restantes(sesion: dict) -> float:
 
     Compatibilidad hacia atrás: si `deadline_utc` está ausente/`None`/vacío
     (sesión activa de esquema viejo, previo a esta clave), se deriva como
-    `inicio_utc + presupuesto.minutos` (default 90 si `presupuesto.minutos`
+    `inicio_utc + presupuesto.minutos` (default `SESSION_MINUTES_DEFAULT` si `presupuesto.minutos`
     también falta) en vez de levantar `KeyError`. Las sesiones ya cerradas no
     se tocan ni se migran en disco -- este fallback es solo para el cálculo en
     caliente. Si `deadline_utc` está presente, se usa tal cual. Puede levantar
@@ -69,7 +78,7 @@ def minutos_restantes(sesion: dict) -> float:
     if deadline_utc:
         deadline = parsear_utc(deadline_utc)
     else:
-        minutos_presupuesto = sesion.get("presupuesto", {}).get("minutos", 90)
+        minutos_presupuesto = sesion.get("presupuesto", {}).get("minutos", SESSION_MINUTES_DEFAULT)
         deadline = parsear_utc(sesion.get("inicio_utc")) + timedelta(minutes=minutos_presupuesto)
     ahora = datetime.now(timezone.utc)
     return (deadline - ahora).total_seconds() / 60.0

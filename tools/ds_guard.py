@@ -88,9 +88,12 @@ def _change_dir(repo_root: Path, change_id: str) -> Path:
     return repo_root / "openspec" / "changes" / change_id
 
 
-def _cargar_change(repo_root: Path, change_id: str):
+def _cargar_change(repo_root: Path, change_id: str, avisar: bool = True):
     """Devuelve (change_dir, tasks_path, control_path, control) o levanta
-    SystemExit con el código de error apropiado si algo no está en orden."""
+    SystemExit con el código de error apropiado si algo no está en orden.
+
+    Si hay sesión activa con <= `UMBRAL_AVISO_MINUTOS` restantes, emite UNA
+    línea `AVISO-SESION-POR-VENCER` por stderr (nunca stdout; v0.11 Change 3)."""
     change_dir = _change_dir(repo_root, change_id)
     tasks_path = change_dir / "tasks.md"
     control_path = change_dir / "control.json"
@@ -105,6 +108,10 @@ def _cargar_change(repo_root: Path, change_id: str):
     except core.ControlJsonError as e:
         print(str(e), file=sys.stderr)
         raise SystemExit(2)
+    if avisar:
+        aviso = sdd.aviso_sesion_por_vencer(control, change_id)
+        if aviso:
+            print(aviso, file=sys.stderr)
     return change_dir, tasks_path, control_path, control
 
 
@@ -768,7 +775,7 @@ def cmd_transition(args: argparse.Namespace) -> int:
 # mismo patrón de composición que `_resolver_aprobacion_exec` (Change 2).
 
 _BUDGET_DEFAULTS = {
-    "session_minutes": 90,
+    "session_minutes": core.SESSION_MINUTES_DEFAULT,
     "aggregate_minutes": None,
     "max_sessions": None,
     "max_concurrent_subagents": None,
@@ -1262,13 +1269,17 @@ def cmd_session_start(args: argparse.Namespace) -> int:
             max_reintentos=args.max_reintentos,
             max_rondas_revision=args.max_rondas,
             max_continuaciones_por_subagente=max_continuaciones,
+            retomar=args.retomar,
         )
-    except sdd.SesionYaActivaError as e:
+    except (sdd.SesionYaActivaError, sdd.SesionPreviaAusenteError) as e:
         print(str(e), file=sys.stderr)
         return 2
 
     core.escribir_control(control_path, control)
-    print(f"Sesión iniciada: {entrada['id']}")
+    if entrada.get("retomada_de"):
+        print(f"Sesión iniciada: {entrada['id']} (retomada de {entrada['retomada_de']})")
+    else:
+        print(f"Sesión iniciada: {entrada['id']}")
     return 0
 
 
@@ -1328,6 +1339,8 @@ def cmd_session_status(args: argparse.Namespace) -> int:
     change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
 
     estado = sdd.session_status(control)
+    if estado.get("aviso"):
+        estado["aviso"] = estado["aviso"].replace("<change-id>", args.change_id)
     if estado.get("activa"):
         # Sesiones viejas sin la clave: 1 (comportamiento histórico).
         estado["max_continuaciones_por_subagente"] = (
@@ -1359,6 +1372,11 @@ def cmd_session_status(args: argparse.Namespace) -> int:
                 f"reintentos={estado['reintentos']} rondas_revision={estado['rondas_revision']}"
             )
             print(f"max_continuaciones_por_subagente={estado['max_continuaciones_por_subagente']}")
+            print(f"minutos_restantes={estado['minutos_restantes']:.1f}")
+            if estado["vencida"]:
+                print("vencida: true (cerrá con 'session close' y retomá con 'session start --retomar')")
+            if estado.get("aviso"):
+                print(f"aviso: {estado['aviso']}")
             for f in estado["findings"]:
                 print(f"  [{f['codigo']}] {f['mensaje']}")
         for aviso in avisos:
@@ -1378,7 +1396,7 @@ def cmd_session_close(args: argparse.Namespace) -> int:
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         return 3
-    change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id)
+    change_dir, tasks_path, control_path, control = _cargar_change(repo_root, args.change_id, avisar=False)
 
     try:
         cerrada = sdd.session_close(control, args.estado)
@@ -5260,6 +5278,10 @@ def construir_parser() -> argparse.ArgumentParser:
     p_session_start.add_argument(
         "--max-continuaciones", type=int, default=1, dest="max_continuaciones",
         help=f"Continuaciones máximas por subagente (1..{MAX_CONTINUACIONES_DURO}; default 1).",
+    )
+    p_session_start.add_argument(
+        "--retomar", action="store_true",
+        help="Hereda rondas_revision, reintentos, roles, tareas y continuaciones de la última sesión cerrada.",
     )
     p_session_start.set_defaults(func=cmd_session_start)
 

@@ -125,7 +125,7 @@ Si falta alguno, propone los faltantes y confirma solo ésos.
 | Intentos | 2 reinvocaciones por tarea | idem | idem |
 | Checkpoints intermedios | no | no | **cada 45-60 min** |
 
-El «~90 min» es el default efectivo de `autonomy.budgets.session_minutes` (la policy manda; `--minutos` explícito manda sobre ambos). Es una cota por wall-clock, no minutos de trabajo efectivo: la espera humana (T1), los tests largos y el trabajo en background cuentan; ver `methodology.md` §30.
+El «~90 min» es el default efectivo de `autonomy.budgets.session_minutes` (la policy manda; `--minutos` explícito manda sobre ambos). Es una cota por wall-clock, no minutos de trabajo efectivo: la espera humana (T1), los tests largos y el trabajo en background cuentan; ver `methodology.md` §30. Con ≤10 min restantes se emite `AVISO-SESION-POR-VENCER` (stderr); el recovery sin pérdida es `session close --estado pausada` + `session start --retomar` (hereda rondas, reintentos y continuaciones).
 
 Los archivos autorizados se declaran y confirman al abrir, en los tres casos. El Lead controla de
 forma confiable **tareas, subagentes, archivos e intentos** (discretos, los decide uno por uno); el
