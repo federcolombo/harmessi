@@ -118,10 +118,12 @@ para salida estructurada. Exit codes generales: `0` correcto, `1` gate/validaci�
   automático. Exige: `estado: cerrada` en `tasks.md`, gate de cierre en verde, el directorio
   versionado (`git ls-files`) y working tree limpio. Por defecto es dry-run; `--execute` hace el
   `git mv` real y reescribe `control.json` en el destino con `control["archivado"] = {utc, destino}`.
-- **`decision add|supersede|revoke|list|show`** (Bloque 5, `openspec/decisions/ledger.jsonl`):
+- **`decision add|supersede|revoke|correct|verify|list|show`** (Bloque 5, `openspec/decisions/ledger.jsonl`):
   ninguno requiere `--change-id` de un cambio SDD — el ledger es de proyecto. `add`/`supersede`
   exigen `--decision-id --tipo --resumen --rationale --usuario --fecha --cita`
-  (`supersede` agrega `--referencia`); `revoke` exige `--referencia --motivo --usuario --fecha`.
+  (`supersede` agrega `--referencia`); `revoke` exige `--referencia --motivo --usuario --fecha`;
+  `correct` exige `--decision-id --set campo=valor (repetible) --motivo --usuario --fecha`
+  (`--evidencia` repetible opcional); `verify` es solo lectura (exit `1` con hallazgos).
   `list` acepta `--tipo`/`--estado`/`--change-id` opcionales; `show` exige `--decision-id`. Detalle
   completo en `.claude/skills/lead-data-scientist/decision-ledger.md`.
 - **`remediation resolve --change-id <id> --remediation-id <id> --resultado <texto> [--json]`**:
@@ -135,8 +137,8 @@ para salida estructurada. Exit codes generales: `0` correcto, `1` gate/validaci�
   solo es válido junto con `--tipo reintento` (si no, error de uso, exit 2). Detalle de ventanas y
   tipos en `.claude/skills/lead-data-scientist/sdd.md` §8.
 
-Exit codes del Bloque 5, tal como están implementados hoy: `decision add/supersede/revoke` devuelve
-`2` en fallo (mismo criterio que `approve`/`init`: rehúso por dato inválido/ya existente — no un
+Exit codes del Bloque 5, tal como están implementados hoy: `decision add/supersede/revoke/correct`
+devuelve `2` en fallo (`decision verify` devuelve `1` con hallazgos de integridad, `0` si está íntegro) (mismo criterio que `approve`/`init`: rehúso por dato inválido/ya existente — no un
 gate de contenido, por eso no usan `1`). `remediation resolve/extend` devuelve `1` en fallo (gate
 de validación sobre `control["remediaciones"]`, findings vía `_imprimir_findings`). `session note`
 devuelve `2` cuando la falla es `RemediacionLimiteError` (mismo criterio de "rehúso de uso", no
@@ -241,9 +243,16 @@ comportamiento observable, mismo nivel que el resto de esta sección.
 - **`KDD-SIN-EVIDENCIA`**: se pidió cerrar una etapa sin ninguna entrada en su `evidencia`.
 - **`DECISION-LINEA-CORRUPTA`**: una línea de `ledger.jsonl` no parsea como JSON; se omite del
   resultado de `list`/`show`, no aborta la lectura del resto.
-- **`DECISION-LEDGER-CORRUPTO`**: al escribir (`add`/`supersede`/`revoke`), alguna línea existente
-  del ledger no parsea como JSON; la escritura se rehúsa entera, nada se agrega.
-- **`DECISION-CAMPO-VACIO`**: falta un campo obligatorio en `add`/`supersede`/`revoke`.
+- **`DECISION-LEDGER-CORRUPTO`**: al escribir (`add`/`supersede`/`revoke`/`correct`), alguna línea
+  existente del ledger no parsea como JSON; la escritura se rehúsa entera, nada se agrega.
+- **`DECISION-LEDGER-INCONSISTENTE`**: al escribir, el ledger tiene hallazgos de integridad; se
+  rehúsa entera (el detalle son los códigos de `decision verify`).
+- **`DECISION-LINEA-CORRUPTA`**, **`DECISION-SEQ-ROTO`**, **`DECISION-REFERENCIA-COLGANTE`**,
+  **`DECISION-CADENA-ROTA`**, **`DECISION-CADENA-FALTANTE`**: hallazgos de `decision verify`
+  (`DECISION-ID-DUPLICADO` también). Tamper-evidence, no autenticidad.
+- **`DECISION-CAMPO-NO-CORREGIBLE`**: `decision correct` sobre un campo fuera de la lista cerrada
+  (`resumen`, `rationale`, `cita`, `evidencia`, `change_id`, `kdd_etapa`).
+- **`DECISION-CAMPO-VACIO`**: falta un campo obligatorio en `add`/`supersede`/`revoke`/`correct`.
 - **`DECISION-TIPO-INVALIDO`**: `--tipo` no está en el catálogo de tipos de decisión.
 - **`DECISION-ID-DUPLICADO`**: `--decision-id` ya existe en el ledger (cualquier `accion`).
 - **`DECISION-REFERENCIA-INVALIDA`**: `--referencia` de `supersede`/`revoke` no existe como

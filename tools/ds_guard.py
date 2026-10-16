@@ -1953,6 +1953,68 @@ def cmd_decision_revoke(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_decision_correct(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+    error_usuario = core.validar_usuario_sin_email(args.usuario)
+    if error_usuario:
+        print(error_usuario, file=sys.stderr)
+        return 2
+
+    # `--set campo=valor` (repetible) + `--evidencia` (repetible, lista).
+    campos = {}
+    for par in args.set or []:
+        campo, separador, valor = par.partition("=")
+        if not separador or not campo.strip():
+            print("--set espera el formato campo=valor, recibido: " + par, file=sys.stderr)
+            return 2
+        campo = campo.strip()
+        if campo == "evidencia":
+            print("evidencia se corrige con --evidencia (repetible), no con --set.", file=sys.stderr)
+            return 2
+        if campo in campos:
+            print("campo repetido en --set: " + campo, file=sys.stderr)
+            return 2
+        campos[campo] = valor
+    if args.evidencia:
+        campos["evidencia"] = list(args.evidencia)
+
+    ok, findings = decision.decision_correct(
+        repo_root, args.decision_id, campos, args.motivo, args.usuario, args.fecha
+    )
+    if not ok:
+        _imprimir_findings(findings, 2, args.json)
+        return 2
+
+    if args.json:
+        print(
+            json.dumps(
+                {"accion": "corregir", "referencia": args.decision_id, "campos": sorted(campos)},
+                ensure_ascii=False,
+            )
+        )
+    else:
+        print("Decisión corregida: " + args.decision_id + " (" + ", ".join(sorted(campos)) + ")")
+    return 0
+
+
+def cmd_decision_verify(args: argparse.Namespace) -> int:
+    try:
+        repo_root = _repo_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 3
+
+    # Solo lectura: exit 1 con hallazgos de integridad (gate), 0 si está íntegro.
+    findings = decision.verificar_integridad(repo_root)
+    codigo = 1 if findings else 0
+    _imprimir_findings(findings, codigo, args.json)
+    return codigo
+
+
 def cmd_decision_list(args: argparse.Namespace) -> int:
     try:
         repo_root = _repo_root()
@@ -1975,7 +2037,10 @@ def cmd_decision_list(args: argparse.Namespace) -> int:
         for f in findings:
             print(f"  [{f.codigo}] {f.mensaje}")
         for e in entradas:
-            print(f"{e.get('decision_id')} [{e.get('tipo')}] estado={e.get('estado')}: {e.get('resumen')}")
+            efectivo = e.get("efectivo") or {}
+            resumen_efectivo = efectivo.get("resumen", e.get("resumen"))
+            marca = " (corregido)" if resumen_efectivo != e.get("resumen") else ""
+            print(f"{e.get('decision_id')} [{e.get('tipo')}] estado={e.get('estado')}: {resumen_efectivo}{marca}")
     return 0
 
 
@@ -1996,6 +2061,10 @@ def cmd_decision_show(args: argparse.Namespace) -> int:
     else:
         for clave, valor in entrada.items():
             print(f"{clave}: {valor}")
+        # Valores efectivos de los campos corregidos (no verificados: usar `decision verify`).
+        for campo, valor in (entrada.get("efectivo") or {}).items():
+            if valor != entrada.get(campo):
+                print("efectivo." + campo + ": " + str(valor) + " (corregido)")
         for f in findings:
             print(f"  [{f.codigo}] {f.mensaje}")
     return 0
@@ -5719,6 +5788,20 @@ def construir_parser() -> argparse.ArgumentParser:
     p_decision_revoke.add_argument("--fecha", required=True)
     p_decision_revoke.add_argument("--json", action="store_true")
     p_decision_revoke.set_defaults(func=cmd_decision_revoke)
+
+    p_decision_correct = decision_sub.add_parser("correct")
+    p_decision_correct.add_argument("--decision-id", required=True, dest="decision_id")
+    p_decision_correct.add_argument("--set", action="append", default=None)
+    p_decision_correct.add_argument("--evidencia", action="append", default=None)
+    p_decision_correct.add_argument("--motivo", required=True)
+    p_decision_correct.add_argument("--usuario", required=True)
+    p_decision_correct.add_argument("--fecha", required=True)
+    p_decision_correct.add_argument("--json", action="store_true")
+    p_decision_correct.set_defaults(func=cmd_decision_correct)
+
+    p_decision_verify = decision_sub.add_parser("verify")
+    p_decision_verify.add_argument("--json", action="store_true")
+    p_decision_verify.set_defaults(func=cmd_decision_verify)
 
     p_decision_list = decision_sub.add_parser("list")
     p_decision_list.add_argument("--tipo", default=None, choices=sorted(decision.TIPOS_DECISION))

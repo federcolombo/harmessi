@@ -27,7 +27,8 @@ original.
 
 `openspec/decisions/ledger.jsonl`: nace perezoso (no lo crea `ds_init`) con el primer
 `ds_guard decision add`. Un objeto JSON por línea, nunca reescrita: cada línea es un evento
-inmutable con `accion` ∈ {`registrar`, `supersede`, `revocar`}.
+inmutable con `accion` ∈ {`registrar`, `supersede`, `revocar`, `corregir`}. Toda escritura es
+append: las líneas previas quedan byte a byte idénticas (no se reserializa el archivo).
 
 El **estado** de una decisión (`activa`/`superseded`/`revocada`) nunca se almacena: se deriva
 siempre escaneando el archivo completo (mismo criterio ya aplicado a `tasks.md estado:` frente a
@@ -47,6 +48,38 @@ Campos de una entrada `revocar`: `schema_version`, `seq`, `decision_id: null`, `
 `accion: "revocar"`, `referencia` (obligatoria), `motivo`, `aprobado_por`, `fecha_aprobacion`,
 `registrado_por`. No admite `tipo`/`resumen`/`rationale`/`evidencia`/`kdd_etapa`.
 
+Campos de una entrada `corregir`: `schema_version`, `seq`, `prev_hash`, `decision_id: null`, `utc`,
+`accion: "corregir"`, `referencia` (el `decision_id` corregido), `campos` (nuevos valores),
+`valores_previos` (valores efectivos al momento de corregir), `motivo`, `aprobado_por`,
+`fecha_aprobacion`, `registrado_por`. Campos corregibles (lista cerrada): `resumen`, `rationale`,
+`cita`, `evidencia`, `change_id`, `kdd_etapa`. No se corrigen `tipo`, `decision_id` ni relaciones:
+eso es `supersede`/`revocar`. Se puede corregir una decisión ya corregida: el **valor efectivo** de
+cada campo es el de la última corrección (orden de `seq`) y toda la historia se conserva. `list`/
+`show` exponen `correcciones` (historia) y `efectivo` (valores vigentes) sin alterar los campos
+originales; las correcciones no cambian el estado derivado.
+
+**Integridad.** Las entradas nuevas llevan `schema_version: 2` y `prev_hash` = sha256 hex de la
+línea anterior exacta (sin terminador). Se leen `schema_version` 1 y 2: un ledger v0.10 (sin
+`prev_hash`) no se migra; la cadena arranca en la primera entrada que tiene `prev_hash` y desde ahí
+es obligatoria. Es tamper-evidence contra edición manual ingenua, **no** autenticidad: quien
+recalcule la cadena no es detectado, y editar o borrar la última línea tampoco (ninguna entrada
+posterior la referencia); borrar las últimas K líneas completas tampoco se detecta. Límites
+honestos adicionales:
+
+- En un ledger v0.10 el prefijo legacy **no** queda protegido: solo la última línea legacy se
+  encadena (la primera entrada nueva guarda su hash). Editar las anteriores no se detecta.
+- `efectivo` y `correcciones` en `list`/`show` son una vista derivada y **no están verificados**:
+  usar `decision verify` para confirmar la integridad.
+- Las escrituras son read-modify-write sin lock de archivo: dos escrituras concurrentes pueden
+  perder una entrada. El flujo previsto es un solo escritor (el Lead).
+- `correct` se acepta también sobre decisiones `revocada`/`superseded`; la corrección de
+  `evidencia` reemplaza la lista completa (no agrega ítems). Una corrección que no cambia ningún
+  valor efectivo se rehúsa (`DECISION-CORRECCION-SIN-CAMBIO`). `list --change-id` filtra por el
+  `change_id` efectivo.
+- Ante `DECISION-LEDGER-INCONSISTENTE` (también en un ledger v0.10): diagnosticar con `decision
+  verify`, corregir a mano el hallazgo señalado y volver a verificar. No hay auto-reparación; la
+  reparación asistida queda fuera de v0.11.
+
 ## 3. Comandos
 
 Ninguno requiere `--change-id` de un cambio SDD como los demás comandos de `ds_guard` — el ledger
@@ -64,8 +97,18 @@ es de proyecto, no de cambio.
   su estado derivado pasa a `superseded`.
 - **`decision revoke --referencia <id> --motivo <texto> --usuario <u> --fecha <f>`**: revoca una
   decisión existente (sin `--cita`, sin `--tipo`). Misma validación de referencia que `supersede`.
+- **`decision correct --decision-id <id> --set <campo>=<valor> [--set ...] [--evidencia <puntero>
+  ...] --motivo <texto> --usuario <u> --fecha <f> [--json]`**: agrega una entrada `corregir` sobre
+  una decisión existente (`registrar`/`supersede`). Campos corregibles: `resumen`, `rationale`,
+  `cita`, `evidencia` (solo vía `--evidencia`), `change_id`, `kdd_etapa` (validada contra el
+  catálogo KDD). Rechaza campos desconocidos, valores vacíos y `decision_id` inexistente
+  (`DECISION-REFERENCIA-INVALIDA`); en todos los casos nada se escribe.
+- **`decision verify [--json]`**: solo lectura. Exit `0` si el ledger es íntegro, `1` con
+  hallazgos: `DECISION-SEQ-ROTO`, `DECISION-ID-DUPLICADO`, `DECISION-REFERENCIA-COLGANTE`,
+  `DECISION-CADENA-ROTA` (el hash no coincide), `DECISION-CADENA-FALTANTE`,
+  `DECISION-LINEA-CORRUPTA`.
 
-En los tres comandos anteriores, `--usuario` es siempre un nombre humano (p. ej. `Federico
+En los comandos de escritura anteriores (`add`, `supersede`, `revoke`, `correct`), `--usuario` es siempre un nombre humano (p. ej. `Federico
 Colombo`), nunca un email u otro dato de contacto personal -- `ds_guard` lo hace cumplir
 técnicamente (`tools/dsguard/core.py::validar_usuario_sin_email`,
 `openspec/changes/20260917-remove-personal-email/`).
@@ -77,8 +120,10 @@ técnicamente (`tools/dsguard/core.py::validar_usuario_sin_email`,
   `decision_id` que la supersedió). `DECISION-ID-INEXISTENTE` si no existe.
 
 Lectura (`list`/`show`) tolerante: una línea corrupta se reporta como `DECISION-LINEA-CORRUPTA` y
-se omite, sin abortar el resto. Escritura (`add`/`supersede`/`revoke`) fail-closed: cualquier línea
-corrupta existente bloquea la escritura entera (`DECISION-LEDGER-CORRUPTO`).
+se omite, sin abortar el resto. Escritura (`add`/`supersede`/`revoke`/`correct`) fail-closed:
+cualquier línea corrupta existente bloquea la escritura entera (`DECISION-LEDGER-CORRUPTO`) y
+cualquier otro hallazgo de integridad también (`DECISION-LEDGER-INCONSISTENTE`, con el detalle de
+`decision verify`).
 
 ## 4. Ownership: quién propone, quién registra, quién aprueba
 
@@ -87,7 +132,7 @@ corrupta existente bloquea la escritura entera (`DECISION-LEDGER-CORRUPTO`).
 - **Aprueba**: el usuario, de forma explícita, igual que cualquier decisión relevante de
   `CLAUDE.md` §3. El campo `--cita` del comando debe reflejar esa aprobación real, no una
   inferencia del Lead.
-- **Registra**: el Lead, único rol con Bash, corriendo `ds_guard decision add/supersede/revoke`
+- **Registra**: el Lead, único rol con Bash, corriendo `ds_guard decision add/supersede/revoke/correct`
   con los valores exactos ya aprobados (mismo patrón que ya aplica con `approve`/`transition`/
   `session note`: ejecución mecánica del comando, sin redactar ni re-decidir el contenido).
   Consistente con el default `registrado_por="lead"` de `tools/dsguard/decision.py`.
