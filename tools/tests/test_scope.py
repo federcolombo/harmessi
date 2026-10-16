@@ -71,11 +71,13 @@ class TestArchivosTocadosDesdeBaseline(unittest.TestCase):
         finally:
             shutil.rmtree(repo, ignore_errors=True)
 
-    def test_referencia_invalida_no_lanza_devuelve_vacio(self):
+    def test_referencia_invalida_propaga_git_command_error(self):
+        # v0.11 (git-scope-fail-closed): antes devolvía [] (fail-open).
         repo = _crear_repo()
         try:
-            resultado = scope.archivos_tocados_desde_baseline(repo, "0" * 40)
-            self.assertEqual(resultado, [])
+            from dsguard import repo as repo_mod
+            with self.assertRaises(repo_mod.GitCommandError):
+                scope.archivos_tocados_desde_baseline(repo, "0" * 40)
         finally:
             shutil.rmtree(repo, ignore_errors=True)
 
@@ -99,7 +101,8 @@ class TestArchivosTocadosDesdeBaseline(unittest.TestCase):
             _git(repo, "commit", "-q", "-m", "rename")
             resultado = scope.archivos_tocados_desde_baseline(repo, baseline)
             self.assertIn("openspec/renombrado.py", resultado)
-            self.assertNotIn("openspec/dentro.py", resultado)
+            # v0.11: rename incluye también la ruta vieja.
+            self.assertIn("openspec/dentro.py", resultado)
         finally:
             shutil.rmtree(repo, ignore_errors=True)
 
@@ -220,6 +223,8 @@ class TestEvaluarAlcance(unittest.TestCase):
             # Sigue detectando vía working tree, aunque la referencia sea
             # inválida.
             self.assertIn(("ALCANCE-RUTA", "fuera.py"), codigos_ubicaciones)
+            # v0.11: además emite ALCANCE-GIT-ILEGIBLE (antes fail-open).
+            self.assertIn("ALCANCE-GIT-ILEGIBLE", {f.codigo for f in findings})
         finally:
             shutil.rmtree(repo, ignore_errors=True)
 

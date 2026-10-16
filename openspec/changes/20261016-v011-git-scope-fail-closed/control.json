@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "change_id": "20261016-v011-git-scope-fail-closed",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-16T14:20:44Z",
+  "baseline": {
+    "commit": "744b806891b9fd3b51f1fbc6969f90e9f699c3e5",
+    "rama": "v0.11-dev",
+    "capturado_utc": "2026-10-16T14:20:44Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/verificador.md",
+      "docs/roadmap/v0.11.md",
+      "openspec/changes/20261016-v011-git-scope-fail-closed/**",
+      "openspec/changes/20261016-v011-git-scope-fail-closed/amendments.jsonl",
+      "openspec/changes/20261016-v011-git-scope-fail-closed/control.json",
+      "openspec/changes/20261016-v011-git-scope-fail-closed/design.md",
+      "openspec/changes/20261016-v011-git-scope-fail-closed/proposal.md",
+      "openspec/changes/20261016-v011-git-scope-fail-closed/spec.md",
+      "openspec/changes/20261016-v011-git-scope-fail-closed/tasks.md",
+      "openspec/changes/20261016-v011-git-scope-fail-closed/verification.md",
+      "tools/ds_guard.py",
+      "tools/ds_init/profiles/**",
+      "tools/ds_init/tests/**",
+      "tools/dsguard/mlops_foundations.py",
+      "tools/dsguard/notebooks.py",
+      "tools/dsguard/repo.py",
+      "tools/dsguard/scope.py",
+      "tools/tests/**"
+    ],
+    "scope_hash": "c8e4252ef3274336c90a53b3b52b3e64be759d21dd62455a2493e068419da466"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "6f3405fbafa52e5e7f5abbaed9d8fd62991edfb1f6bea960627d2122ac51a634",
+      "registrado_utc": "2026-10-16T14:20:47Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261016-v011-git-scope-fail-closed",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "120a1345f6cb6f137e6d0c5325086c6dc6528c55cccd8e11302a09a343d2f187",
+      "registrado_utc": "2026-10-16T14:20:48Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261016-v011-git-scope-fail-closed",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "d77b94a729c35e5b0e373c572363522dc4210fa5633a71f8092f00e21b0f181e",
+      "registrado_utc": "2026-10-16T14:20:49Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261016-v011-git-scope-fail-closed",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-16T14:20:50Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-16T14:20:52Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-16T17:59:49Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-16T14:20:51Z",
+      "cierre_utc": "2026-10-16T15:55:53Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-16T15:50:51Z",
+      "minutos_consumidos": 95.03333333333333,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-16T14:21:06Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-16T15:56:00Z",
+      "cierre_utc": "2026-10-16T17:33:46Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-16T17:26:00Z",
+      "minutos_consumidos": 97.76666666666667,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-16T15:56:17Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s3",
+      "inicio_utc": "2026-10-16T17:33:49Z",
+      "cierre_utc": "2026-10-16T17:59:53Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-16T19:03:49Z",
+      "minutos_consumidos": 26.066666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

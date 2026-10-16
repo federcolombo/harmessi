@@ -190,6 +190,17 @@ comportamiento observable, mismo nivel que el resto de esta sección.
   también cambios fuera de scope ya commiteados dentro del Change, no solo archivos sucios).
 - **`ALCANCE-WHITESPACE`**: línea no vacía de `git diff --check` (whitespace o conflicto sin
   resolver).
+- **`ALCANCE-GIT-ILEGIBLE`**: no se pudo leer el estado de Git, por lo que el alcance no puede
+  verificarse (fail-closed: estado de Git desconocido != limpio). Orígenes: comando git fallido
+  (returncode != 0, p. ej. repo corrupto), ref inválida (baseline borrada/inexistente o que empieza
+  con `-`), Git ausente del entorno, o salida malformada de `git diff --name-status -z`. Se emite
+  UN solo hallazgo con el motivo; el resto de los `ALCANCE-RUTA` se sigue emitiendo. Rename evalúa
+  ambas rutas (origen y destino); copy, el destino. `validate` (y el gate de cierre) con Git
+  fallido dentro de `evaluar_alcance` emiten este hallazgo (exit 1, no lanzan). Los callers directos
+  de Git (`status`, el `diff --check` de `validate`, `archive`, `init`, `notebook-diff`) terminan con
+  exit 3 (error de entorno/git) y un mensaje explícito en vez de traceback. `init` en un repo sin
+  commits (sin `HEAD`) también termina en exit 3: sin baseline posible no se crea el Change; hay
+  que hacer al menos un commit inicial.
 - **`ALCANCE-TREE-SUCIO`**: working tree no limpio cuando `archive` lo requiere.
 - **`SDD-ESTADO-ILEGIBLE`**: no hay línea `estado:` en `tasks.md`, o el valor no es un estado SDD
   válido.

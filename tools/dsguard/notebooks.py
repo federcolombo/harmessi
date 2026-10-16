@@ -51,13 +51,32 @@ def obtener_revision(repo_root: Path, rev: str, ruta_posix: str):
     uso: revisión desconocida). Si `rev` resuelve pero el archivo no existía
     ahí (notebook nuevo), `existe_en_esa_revision` es `False` con
     `rev_valida=True` y `texto=None`."""
-    resultado = repo_mod._git(repo_root, "show", f"{rev}:{ruta_posix}")
+    try:
+        repo_mod.validar_ref(rev)  # una ref con '-' inicial se confundiría con una opción
+    except repo_mod.GitCommandError:
+        return False, None, False
+    # (a) ¿la revisión resuelve a un commit? Git ausente -> RuntimeError (propaga).
+    verif_rev = repo_mod._git(repo_root, "rev-parse", "--verify", f"{rev}^0")
+    if verif_rev.returncode != 0:
+        # Distinguir «rev desconocida» de «git roto»: si ni siquiera hay repo legible, es un fallo.
+        repo_ok = repo_mod._git(repo_root, "rev-parse", "--git-dir")
+        if repo_ok.returncode != 0:
+            raise repo_mod.GitCommandError(
+                f"git rev-parse falló (código {repo_ok.returncode}): {repo_ok.stderr.strip()}"
+            )
+        return False, None, False
+    objeto = f"{rev}:{ruta_posix}"
+    resultado = repo_mod._git(repo_root, "show", objeto)
     if resultado.returncode == 0:
         return True, resultado.stdout, True
-    verificacion = repo_mod._git(repo_root, "rev-parse", "--verify", rev)
-    if verificacion.returncode != 0:
-        return False, None, False
-    return False, None, True
+    # (b) la revisión resuelve pero el archivo no existía ahí: notebook nuevo.
+    verif_obj = repo_mod._git(repo_root, "rev-parse", "--verify", objeto)
+    if verif_obj.returncode != 0:
+        return False, None, True
+    # (c) el objeto existe pero `show` falló: no es «nuevo», es un fallo de git.
+    raise repo_mod.GitCommandError(
+        f"git show {objeto} falló (código {resultado.returncode}): {resultado.stderr.strip()}"
+    )
 
 
 # --- Hash y resumen de celdas ---------------------------------------------------

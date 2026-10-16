@@ -28,25 +28,27 @@ class GitIlegibleError(ValueError):
 def archivos_tocados_desde_baseline(repo_root: Path, baseline_commit: Optional[str]) -> list:
     """`git diff --name-status -z -M <baseline_commit>` contra el working tree actual (incluye
     commits ya hechos desde baseline Y cambios sin confirmar en una sola diff -- misma semántica
-    que `git diff <ref>` nativo). Devuelve rutas relativas POSIX (lado nuevo para renombres/copias),
-    parseadas con `repo.parse_name_status_z` (inmune a `core.quotepath`). Degradación SILENCIOSA
-    (devuelve []) SOLO si `baseline_commit` es None/vacío, o si el comando falla (ref inválida,
-    rebase que la borró, etc.) -- ver design.md §3, decisión deliberada de fail-open. Si git
-    responde OK pero la salida es malformada, lanza `GitIlegibleError` (no es «sin archivos»)."""
+    que `git diff <ref>` nativo). Devuelve rutas relativas POSIX, parseadas con
+    `repo.parse_name_status_z` (inmune a `core.quotepath`): rename -> ambas rutas (nueva y vieja),
+    copy -> solo el destino. Devuelve [] SOLO si `baseline_commit` es None/vacío. Fail-closed
+    (v0.11): un comando fallido (ref inválida/borrada) propaga `GitCommandError`, Git ausente
+    propaga `RuntimeError`; si git responde OK pero la salida es malformada, lanza
+    `GitIlegibleError`. `evaluar_alcance` traduce todo a `ALCANCE-GIT-ILEGIBLE`."""
     if not baseline_commit:
         return []
     try:
         entradas = repo_mod.diff_name_status(repo_root, baseline_commit)
     except repo_mod.GitCommandError:
-        # git terminó con returncode != 0 (ref inválida, etc.): fail-open documentado.
-        return []
+        raise
     except repo_mod.GitOutputError as exc:
         # git respondió OK pero la salida es ilegible: fail-closed (no es «sin archivos»).
         raise GitIlegibleError(str(exc)) from exc
-    except Exception:  # noqa: BLE001 - fallo de ejecución (RuntimeError/AssertionError/OSError):
-        # degradación silenciosa EXISTENTE, no se amplía; nunca rompe validate/cierre.
-        return []
-    return [Path(nueva).as_posix() for _codigo, nueva, _vieja in entradas]
+    rutas = []
+    for codigo, nueva, vieja in entradas:
+        rutas.append(Path(nueva).as_posix())
+        if codigo.startswith("R") and vieja:
+            rutas.append(Path(vieja).as_posix())
+    return list(dict.fromkeys(rutas))
 
 
 _PREFIJO_EXECUTIONS = ".harmessi/executions/"
@@ -132,15 +134,24 @@ def evaluar_alcance(repo_root: Path, control: dict, change_dir=None) -> list:
         rutas_autorizadas, findings_alcance = alcance_efectivo(change_dir, control)
     baseline_commit = control.get("baseline", {}).get("commit")
 
-    tocados = set(repo_mod.list_dirty_files(repo_root))
+    tocados = set()
     findings = list(findings_alcance)
+    motivos = []
+    _errores_git = (repo_mod.GitCommandError, GitIlegibleError, repo_mod.GitOutputError, RuntimeError,
+                   ValueError, OSError)
+    try:
+        tocados |= set(repo_mod.list_dirty_files(repo_root))
+    except _errores_git as exc:
+        motivos.append(f"working tree: {exc}")
     try:
         tocados |= set(archivos_tocados_desde_baseline(repo_root, baseline_commit))
-    except GitIlegibleError as exc:
-        # Fail-closed: no se puede afirmar que el historial desde baseline respete el alcance.
+    except _errores_git as exc:
+        motivos.append(f"diff desde baseline: {exc}")
+    if motivos:
+        # Fail-closed: un único hallazgo; unknown Git state != clean Git state.
         findings.append(Finding(
             "ALCANCE-GIT-ILEGIBLE",
-            f"No se pudo leer la salida de git para el diff desde baseline ({exc}); "
+            "No se pudo leer el estado de git (" + "; ".join(motivos) + "); "
             "el alcance no puede verificarse.",
             None,
         ))

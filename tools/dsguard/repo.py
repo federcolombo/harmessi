@@ -21,16 +21,38 @@ def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
         primero = args[0] if args else "(vacío)"
         raise AssertionError(f"Subcomando git no permitido: {primero!r}")
     try:
-        return subprocess.run(
+        # Se captura en bytes y se decodifica a mano: `text=True` aplicaría universal
+        # newlines y alteraría un `\r` dentro de un nombre de archivo POSIX.
+        crudo = subprocess.run(
             ["git", *args],
             cwd=str(cwd),
             capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
         )
-    except FileNotFoundError as e:
+    except OSError as e:  # FileNotFoundError, PermissionError, etc.: git no ejecutable
         raise RuntimeError(f"git no disponible: {e}") from e
+    return subprocess.CompletedProcess(
+        crudo.args,
+        crudo.returncode,
+        (crudo.stdout or b"").decode("utf-8", errors="replace"),
+        (crudo.stderr or b"").decode("utf-8", errors="replace"),
+    )
+
+
+def validar_ref(ref) -> str:
+    """Rechaza una ref vacía o que empiece con `-` (se confundiría con una opción
+    de git). Devuelve la ref sin cambios; si no es válida lanza `GitCommandError`."""
+    if not isinstance(ref, str) or not ref.strip() or ref.startswith("-"):
+        raise GitCommandError(f"Ref de git inválida: {ref!r}")
+    return ref
+
+
+def _verificar(resultado: subprocess.CompletedProcess, descripcion: str) -> subprocess.CompletedProcess:
+    """Chequeo único de returncode (D1): returncode != 0 -> `GitCommandError`."""
+    if resultado.returncode != 0:
+        raise GitCommandError(
+            f"{descripcion} falló (código {resultado.returncode}): {resultado.stderr.strip()}"
+        )
+    return resultado
 
 
 def find_repo_root(desde: Path) -> Path:
@@ -46,8 +68,10 @@ def find_repo_root(desde: Path) -> Path:
 
 def get_head(repo_root: Path) -> tuple:
     """(commit, rama) del HEAD actual."""
-    commit = _git(repo_root, "rev-parse", "HEAD").stdout.strip()
-    rama = _git(repo_root, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+    commit = _verificar(_git(repo_root, "rev-parse", "HEAD"), "git rev-parse HEAD").stdout.strip()
+    rama = _verificar(
+        _git(repo_root, "rev-parse", "--abbrev-ref", "HEAD"), "git rev-parse --abbrev-ref HEAD"
+    ).stdout.strip()
     return commit, rama
 
 
@@ -58,7 +82,12 @@ def list_dirty_files(repo_root: Path) -> list:
     El formato `-z` separa entradas por `\\0` sin escapar rutas. Para
     renombres/copias (`R`/`C`), la entrada trae dos campos consecutivos: la
     ruta NUEVA primero (la que se reporta) y la ruta VIEJA después (se
-    descarta).
+    devuelve también).
+
+    Rename (`R`): se devuelven AMBAS rutas (nueva y vieja), porque el origen
+    también se modifica (desaparece). Copy (`C`): solo el destino (el origen no
+    cambia). `git status --porcelain=v1 -z` entrega primero la nueva y luego la
+    vieja. returncode != 0 -> `GitCommandError` (nunca `[]` por un fallo).
 
     `--untracked-files=all` es obligatorio: sin él, Git colapsa un directorio
     enteramente nuevo/untracked en una sola línea (`?? tools/`) en vez de
@@ -71,6 +100,7 @@ def list_dirty_files(repo_root: Path) -> list:
     resultado = _git(
         repo_root, "status", "--porcelain=v1", "--untracked-files=all", "-z"
     )
+    _verificar(resultado, "git status")
     salida = resultado.stdout
     if not salida:
         return []
@@ -81,11 +111,17 @@ def list_dirty_files(repo_root: Path) -> list:
     i = 0
     while i < len(partes):
         entrada = partes[i]
+        if len(entrada) < 4:
+            raise GitOutputError(f"Entrada malformada en la salida de git status -z: {entrada!r}")
         codigo = entrada[:2]
         ruta = entrada[3:]
-        if codigo and codigo[0] in ("R", "C"):
-            # El campo siguiente es la ruta VIEJA (git la reporta primero la
-            # nueva, después la vieja) — se saltea, no se usa para nada.
+        if "R" in codigo or "C" in codigo:
+            # R/C pueden venir en la columna X o en la Y. El campo siguiente es la ruta
+            # VIEJA (git reporta primero la nueva). Rename: se evalúan ambas; copy: solo el destino.
+            if i + 1 >= len(partes):
+                raise GitOutputError("Registro R/C truncado en la salida de git status -z")
+            if "R" in codigo:
+                archivos.append(partes[i + 1])
             i += 1
         archivos.append(ruta)
         i += 1
@@ -127,10 +163,8 @@ def parse_name_status_z(salida: str) -> list:
     El estado se valida completo: `[AMDTUXB]` o `[RC]` seguido de 1 a 3
     dígitos (p. ej. `R100`, `C75`).
 
-    Limitación preexistente: `_git` usa `text=True` (universal newlines), por
-    lo que un `\\r` dentro de un nombre de archivo POSIX se convierte en `\\n`.
-    Afecta también a `list_dirty_files` y queda fuera de este corrective; las
-    rutas con `\\t` y `\\n` sí se preservan.
+    `_git` captura bytes (sin universal newlines): `\\r`, `\\t` y `\\n` dentro
+    de un nombre de archivo se preservan.
     """
     if not salida:
         return []
@@ -173,12 +207,16 @@ def diff_name_status(repo_root: Path, *args: str) -> list:
     y la ruta no coincidirá con ningún alcance: falla cerrado). Sin
     normalización Unicode NFC/NFD. NO depende de `core.quotepath`.
 
-    Limitación preexistente: `_git` usa `text=True` (universal newlines), por
-    lo que un `\\r` en un nombre de archivo POSIX se convierte en `\\n`; afecta
-    también a `list_dirty_files`, fuera de este corrective. Las rutas con `\\t`
-    y `\\n` sí se preservan.
+    `_git` captura bytes (sin universal newlines): `\\r`, `\\t` y `\\n` en un
+    nombre de archivo se preservan. Refs: validadas con `validar_ref` y
+    seguidas de `--`.
     """
-    resultado = _git(repo_root, "diff", "--name-status", "-z", "-M", *args)
+    # Las refs (todo lo que no sea `--`) se validan: nada que empiece con `-`; y se
+    # agrega `--` final para separar refs de rutas.
+    for a in args:
+        if a not in ("--", "--staged", "--cached"):
+            validar_ref(a)
+    resultado = _git(repo_root, "diff", "--name-status", "-z", "-M", *args, *(() if "--" in args else ("--",)))
     if resultado.returncode != 0:
         raise GitCommandError(
             f"git diff --name-status falló (código {resultado.returncode}): "
@@ -195,6 +233,14 @@ def diff_check(repo_root: Path) -> list:
     """Cada línea no vacía de `git diff --check` es un hallazgo de whitespace o
     marca de conflicto sin resolver (`ALCANCE-WHITESPACE`)."""
     resultado = _git(repo_root, "diff", "--check")
+    # `git diff --check` sale con código != 0 (2) cuando HAY hallazgos de whitespace:
+    # eso es salida legítima. Es un fallo si el código es >= 128 o si falla sin salida.
+    if resultado.returncode >= 128 or (
+        resultado.returncode != 0 and not resultado.stdout.strip()
+    ):
+        raise GitCommandError(
+            f"git diff --check falló (código {resultado.returncode}): {resultado.stderr.strip()}"
+        )
     hallazgos = []
     for linea in resultado.stdout.splitlines():
         if linea.strip():

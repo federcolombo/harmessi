@@ -140,9 +140,10 @@ class TestScopeUnicode(unittest.TestCase):
                 (repo / "datos_área" / "viejo_ñandú.txt").rename(
                     repo / "datos_área" / "nuevo_información.txt")
                 _commit(repo)
+                # v0.11 (git-scope-fail-closed): rename -> ambas rutas (nueva y vieja).
                 self.assertEqual(
                     scope.archivos_tocados_desde_baseline(repo, base),
-                    ["datos_área/nuevo_información.txt"],
+                    ["datos_área/nuevo_información.txt", "datos_área/viejo_ñandú.txt"],
                 )
 
     def test_salida_malformada_es_fail_closed(self):
@@ -195,20 +196,23 @@ class TestScopeUnicode(unittest.TestCase):
             hall = scope.evaluar_alcance(repo, _control(base, ["datos_á/ficha.txt"]))
         self.assertEqual(_codigos_ubic(hall), {("ALCANCE-RUTA", ruta_rota)})
 
-    def test_returncode_distinto_de_cero_con_stdout_basura_degrada_a_vacio(self):
+    # v0.11 (git-scope-fail-closed): antes estos casos degradaban a [] (fail-open); ahora propagan.
+    def test_returncode_distinto_de_cero_con_stdout_basura_propaga(self):
         repo = self._con_repo("true")
         base = _head(repo)
         falso = SimpleNamespace(returncode=128, stdout="basura\0\0M", stderr="fatal")
         with mock.patch.object(repo_mod, "_git", return_value=falso):
-            self.assertEqual(scope.archivos_tocados_desde_baseline(repo, base), [])
+            with self.assertRaises(repo_mod.GitCommandError):
+                scope.archivos_tocados_desde_baseline(repo, base)
 
-    def test_excepcion_de_ejecucion_degrada_a_vacio(self):
+    def test_excepcion_de_ejecucion_propaga_y_evaluar_alcance_la_traduce(self):
         repo = self._con_repo("true")
         base = _head(repo)
-        for exc in (RuntimeError("x"), AssertionError("x"), OSError("x")):
-            with self.subTest(exc=type(exc).__name__):
-                with mock.patch.object(repo_mod, "_git", side_effect=exc):
-                    self.assertEqual(scope.archivos_tocados_desde_baseline(repo, base), [])
+        with mock.patch.object(repo_mod, "_git", side_effect=RuntimeError("git no disponible")):
+            with self.assertRaises(RuntimeError):
+                scope.archivos_tocados_desde_baseline(repo, base)
+            hall = scope.evaluar_alcance(repo, _control(base, ["**"]))
+        self.assertEqual([f.codigo for f in hall], ["ALCANCE-GIT-ILEGIBLE"])
 
     def test_scope_usa_diff_name_status(self):
         repo = self._con_repo("true")
@@ -218,12 +222,15 @@ class TestScopeUnicode(unittest.TestCase):
         ) as m:
             resultado = scope.archivos_tocados_desde_baseline(repo, "abc123")
         m.assert_called_once_with(repo, "abc123")
-        self.assertEqual(resultado, ["a/nuevo_ñ.txt", "b.txt"])
+        self.assertEqual(resultado, ["a/nuevo_ñ.txt", "a/viejo.txt", "b.txt"])
 
-    def test_ref_invalida_sigue_degradando_silenciosamente(self):
+    def test_ref_invalida_es_fail_closed(self):
+        # v0.11: antes degradaba a [] (fail-open); ahora ALCANCE-GIT-ILEGIBLE.
         repo = self._con_repo("true")
-        self.assertEqual(scope.archivos_tocados_desde_baseline(repo, "0" * 40), [])
-        self.assertEqual(scope.evaluar_alcance(repo, _control("0" * 40, ["**"])), [])
+        with self.assertRaises(repo_mod.GitCommandError):
+            scope.archivos_tocados_desde_baseline(repo, "0" * 40)
+        hall = scope.evaluar_alcance(repo, _control("0" * 40, ["**"]))
+        self.assertEqual([f.codigo for f in hall], ["ALCANCE-GIT-ILEGIBLE"])
 
     def test_baseline_none_sin_hallazgos(self):
         for qp in QUOTEPATH:

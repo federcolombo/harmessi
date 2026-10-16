@@ -38,7 +38,21 @@ def _crear_dir_temporal(prefix: str = "kdd_test_") -> Path:
 def _crear_repo_git_temporal() -> Path:
     repo = _crear_dir_temporal("kdd_cli_test_")
     subprocess.run(["git", "init", "-q"], cwd=str(repo), check=True)
+    # v0.11 (git-scope-fail-closed): el baseline debe ser un commit real; un repo sin commits o un
+    # baseline falso ("0"*40) ahora da ALCANCE-GIT-ILEGIBLE.
+    subprocess.run(
+        ["git", "-c", "user.email=test@example.com", "-c", "user.name=Test",
+         "-c", "commit.gpgsign=false", "commit", "--allow-empty", "-q", "-m", "inicial"],
+        cwd=str(repo), check=True,
+    )
     return repo
+
+
+def _head_real(repo: Path) -> str:
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=str(repo), check=True, capture_output=True,
+        text=True, encoding="utf-8",
+    ).stdout.strip()
 
 
 def _correr_ds_guard(args: list, cwd: Path) -> subprocess.CompletedProcess:
@@ -84,7 +98,7 @@ def _crear_change_cerrable(repo: Path, change_id: str, kdd_decl: dict = None) ->
         "modo": "completo",
         "origen": "test",
         "creado_utc": core.ahora_utc(),
-        "baseline": {"commit": "0" * 40, "rama": "main", "capturado_utc": core.ahora_utc()},
+        "baseline": {"commit": _head_real(repo), "rama": "main", "capturado_utc": core.ahora_utc()},
         "alcance": {"rutas_autorizadas": rutas_autorizadas},
         "aprobaciones": [],
         "transiciones": [

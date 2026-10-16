@@ -77,6 +77,13 @@ def _repo_root() -> Path:
     return repo.find_repo_root(Path.cwd())
 
 
+def _error_git(exc: Exception) -> int:
+    """Fallo de Git (comando, ref, ausencia o salida ilegible): mensaje explícito a stderr y
+    exit 3 (error de entorno/git). Un estado de Git desconocido nunca equivale a limpio."""
+    print(f"ALCANCE-GIT-ILEGIBLE: no se pudo leer el estado de git: {exc}", file=sys.stderr)
+    return 3
+
+
 def _change_dir(repo_root: Path, change_id: str) -> Path:
     return repo_root / "openspec" / "changes" / change_id
 
@@ -343,9 +350,12 @@ def cmd_status(args: argparse.Namespace) -> int:
 
     # Scope efectivo vía función única (aprobado + enmiendas gobernadas); sin enmiendas = caché.
     rutas_autorizadas, hallazgos_alcance = scope.alcance_efectivo(change_dir, control)
-    fuera_de_alcance = [
-        r for r in repo.files_out_of_scope(repo_root, rutas_autorizadas) if not scope.es_output_intrinseco(r)
-    ]
+    try:
+        fuera_de_alcance = [
+            r for r in repo.files_out_of_scope(repo_root, rutas_autorizadas) if not scope.es_output_intrinseco(r)
+        ]
+    except (repo.GitOutputError, RuntimeError) as e:
+        return _error_git(e)
 
     # Verificación informativa de los checkpoints pre-aprobados (no cambia exit codes).
     checkpoints_estado = sdd.verificar_checkpoints(repo_root, control) if control.get("decisiones_preaprobadas") else []
@@ -431,7 +441,11 @@ def cmd_validate(args: argparse.Namespace) -> int:
     if not gate_cierre_va_a_correr:
         findings += scope.evaluar_alcance(repo_root, control, change_dir=change_dir)
 
-    for linea in repo.diff_check(repo_root):
+    try:
+        lineas_whitespace = repo.diff_check(repo_root)
+    except (repo.GitOutputError, RuntimeError) as e:
+        return _error_git(e)
+    for linea in lineas_whitespace:
         findings.append(core.Finding("ALCANCE-WHITESPACE", linea))
 
     if args.gate:
@@ -2000,7 +2014,15 @@ def cmd_notebook_diff(args: argparse.Namespace) -> int:
     estado, err_estado = sdd.read_estado(tasks_path)
 
     if args.tocados:
-        rutas = [r for r in repo.list_dirty_files(repo_root) if r.endswith(".ipynb")]
+        try:
+            # Se ignoran los .ipynb que ya no existen en disco (ruta vieja de rename, borrados):
+            # no hay nada que diffear y no deben abortar el lote.
+            rutas = [
+                r for r in repo.list_dirty_files(repo_root)
+                if r.endswith(".ipynb") and (repo_root / r).is_file()
+            ]
+        except (repo.GitOutputError, RuntimeError) as e:
+            return _error_git(e)
     else:
         rutas = list(args.path or [])
     if not rutas:
@@ -2021,7 +2043,10 @@ def cmd_notebook_diff(args: argparse.Namespace) -> int:
     conteos_total = {"agregadas": 0, "eliminadas": 0, "modificadas": 0, "solo_ejecucion": 0}
 
     for ruta in rutas:
-        resultado = notebooks.diff_archivo(repo_root, ruta, rev, estado)
+        try:
+            resultado = notebooks.diff_archivo(repo_root, ruta, rev, estado)
+        except (repo.GitOutputError, RuntimeError) as e:
+            return _error_git(e)
         if resultado.get("error_uso") is not None:
             print(resultado["error_uso"].mensaje, file=sys.stderr)
             return 2
@@ -3966,7 +3991,12 @@ def cmd_archive(args: argparse.Namespace) -> int:
         return 1
 
     ruta_relativa_change = change_dir.relative_to(repo_root).as_posix()
-    resultado_ls = repo._git(repo_root, "ls-files", "--", ruta_relativa_change)
+    try:
+        resultado_ls = repo._verificar(
+            repo._git(repo_root, "ls-files", "--", ruta_relativa_change), "git ls-files"
+        )
+    except (repo.GitOutputError, RuntimeError) as e:
+        return _error_git(e)
     if not resultado_ls.stdout.strip():
         finding = core.Finding(
             "SDD-ARCHIVO-NO-VERSIONADO",
@@ -3976,7 +4006,11 @@ def cmd_archive(args: argparse.Namespace) -> int:
         _imprimir_findings([finding], 1, args.json)
         return 1
 
-    if not repo.is_tree_clean(repo_root):
+    try:
+        arbol_limpio = repo.is_tree_clean(repo_root)
+    except (repo.GitOutputError, RuntimeError) as e:
+        return _error_git(e)
+    if not arbol_limpio:
         finding = core.Finding(
             "ALCANCE-TREE-SUCIO",
             "El working tree no está limpio: no se puede archivar",
@@ -4499,7 +4533,10 @@ def cmd_init(args: argparse.Namespace) -> int:
         core.escribir_texto_atomico(change_dir / f"{nombre}.md", texto)
         archivos_creados.append(f"{nombre}.md")
 
-    commit, rama = repo.get_head(repo_root)
+    try:
+        commit, rama = repo.get_head(repo_root)
+    except (repo.GitOutputError, RuntimeError) as e:
+        return _error_git(e)
     baseline = {
         "commit": commit,
         "rama": rama,

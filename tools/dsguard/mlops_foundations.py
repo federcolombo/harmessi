@@ -95,8 +95,18 @@ def check_reproducibilidad(repo_root: Path, project_stage: Optional[str]) -> lis
         return [checks.CheckResult(checks.STATUS_NA, CODIGO_REPRODUCIBILIDAD, motivo_na)]
 
     repo_root = Path(repo_root)
-    commit, _rama = repo.get_head(repo_root)
-    sucio = bool(repo.list_dirty_files(repo_root))
+    try:
+        commit, _rama = repo.get_head(repo_root)
+        sucio = bool(repo.list_dirty_files(repo_root))
+    except (repo.GitOutputError, RuntimeError) as exc:
+        # Estado de Git desconocido != limpio: resultado explícito, nunca PASS.
+        return [
+            checks.CheckResult(
+                checks.STATUS_WARN,
+                CODIGO_REPRODUCIBILIDAD,
+                f"Reproducibilidad no verificable: no se pudo leer el estado de git ({exc}).",
+            )
+        ]
     tiene_data = _tiene_data_con_contenido(repo_root)
     tiene_fingerprint = _tiene_fingerprint_evidencia(repo_root)
     tiene_lock = _tiene_lockfile(repo_root)
@@ -135,7 +145,16 @@ def check_versionado(repo_root: Path, project_stage: Optional[str]) -> list:
         return [checks.CheckResult(checks.STATUS_NA, CODIGO_VERSIONADO, motivo_na)]
 
     repo_root = Path(repo_root)
-    commit, _rama = repo.get_head(repo_root)
+    try:
+        commit, _rama = repo.get_head(repo_root)
+    except (repo.GitOutputError, RuntimeError) as exc:
+        return [
+            checks.CheckResult(
+                checks.STATUS_WARN,
+                CODIGO_VERSIONADO,
+                f"Versionado no verificable: no se pudo leer HEAD de git ({exc}).",
+            )
+        ]
     tiene_data = _tiene_data_con_contenido(repo_root)
     tiene_fingerprint = _tiene_fingerprint_evidencia(repo_root)
 
