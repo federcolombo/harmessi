@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "change_id": "20261016-v011-roadmap-and-operational-audit",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-16T14:07:44Z",
+  "baseline": {
+    "commit": "2e769567400defa5cc792e8caf530b3e9cbd2488",
+    "rama": "v0.11-dev",
+    "capturado_utc": "2026-10-16T14:07:44Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "docs/roadmap/README.md",
+      "docs/roadmap/v0.11.md",
+      "openspec/changes/20261016-v011-roadmap-and-operational-audit/**",
+      "openspec/changes/20261016-v011-roadmap-and-operational-audit/amendments.jsonl",
+      "openspec/changes/20261016-v011-roadmap-and-operational-audit/control.json",
+      "openspec/changes/20261016-v011-roadmap-and-operational-audit/design.md",
+      "openspec/changes/20261016-v011-roadmap-and-operational-audit/proposal.md",
+      "openspec/changes/20261016-v011-roadmap-and-operational-audit/spec.md",
+      "openspec/changes/20261016-v011-roadmap-and-operational-audit/tasks.md",
+      "openspec/changes/20261016-v011-roadmap-and-operational-audit/verification.md"
+    ],
+    "scope_hash": "842f68944a1f65a5a0107ddfa5c0b6796b92ed74e10ac6bbc557c540b269a3dd"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "3ac46ffb59bb76cc1ee1c6ecaad6c2c14bcdfe58bd04abc704f0bc61142c4f57",
+      "registrado_utc": "2026-10-16T14:09:53Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Roadmap y auditoría operacional de Harmessi v0.11",
+      "cita": "Autorización humana explícita para definir y congelar el roadmap de Harmessi v0.11"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "9f2732138c5dd5cb957759be0db0e3111d083b9df6cd418e2417c6e130c06a8d",
+      "registrado_utc": "2026-10-16T14:09:54Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Roadmap y auditoría operacional de Harmessi v0.11",
+      "cita": "Autorización humana explícita para definir y congelar el roadmap de Harmessi v0.11"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "70aa4424239fedff78c2c3d37b448a9c13f82d58107f776616dfb153c8a31786",
+      "registrado_utc": "2026-10-16T14:09:55Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Roadmap y auditoría operacional de Harmessi v0.11",
+      "cita": "Autorización humana explícita para definir y congelar el roadmap de Harmessi v0.11"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-16T14:10:07Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-16T14:10:19Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-16T14:11:02Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-16T14:11:09Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-16T14:10:18Z",
+      "cierre_utc": "2026-10-16T14:11:18Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-16T15:40:18Z",
+      "minutos_consumidos": 1.0,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}
