@@ -1,6 +1,6 @@
 # Tareas — 20261016-v011-git-scope-fail-closed
 
-estado: en_verificacion
+estado: cerrada
 
 ## Invocaciones planificadas
 - Lead: audita, coordina, valida, git. Writer único `python-data-engineer` (serial). Reviewer `data-science-reviewer` (máx. 2 ciclos).

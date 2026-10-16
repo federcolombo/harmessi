@@ -80,6 +80,11 @@
       "utc": "2026-10-16T17:59:49Z",
       "desde": "en_implementacion",
       "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-16T18:00:10Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
     }
   ],
   "sesiones": [
@@ -156,6 +161,31 @@
       },
       "deadline_utc": "2026-10-16T19:03:49Z",
       "minutos_consumidos": 26.066666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    },
+    {
+      "id": "s4",
+      "inicio_utc": "2026-10-16T18:00:08Z",
+      "cierre_utc": "2026-10-16T18:00:11Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-17T02:00:08Z",
+      "minutos_consumidos": 0.05,
       "resultado": "dentro_de_presupuesto",
       "subagentes": {
         "conteo": 0

@@ -9,7 +9,7 @@ Change 1 de v0.11: Git & Scope fail-closed. Un fallo de Git (comando, ref invál
 ## Reviewer
 Ciclo 1 (data-science-reviewer): 0 altos, 5 medios (M1–M5), 8 bajos. Todos resueltos salvo M4 (`dsimpact/git_source.py`, fuera de scope → DIFERIDA, registrada en el roadmap). M3 (`init` en repo sin commits → exit 3) es intencional y está documentado. No se usó el ciclo 2: sin blockers ni HIGH; el fix posterior (`^{commit}` → `^0`) es mecánico.
 
-## Evidencia de tests
+## Evidencia obtenida
 - Dirigidos: 128 OK / 1 skipped (`test_git_failclosed`, `test_git_failclosed_cli`, `test_scope`, `test_git_paths_unicode_consumers`, `test_git_name_status_z`).
 - Primera corrida amplia (209 módulos, paralela): 28 módulos con fallo; los 28 fallaban igual en el baseline (worktree de `main`) → preexistentes/entorno, no atribuibles.
 - Corrida focalizada de 50 módulos (P=2): reveló una regresión real: el instalador rechaza `{{commit}}` en `notebooks.py` («Placeholder sin resolver»). Corregida (`^0`).
@@ -28,3 +28,6 @@ design D1 nombra `_git_ok`; el código usa `_verificar`. R5: `show`/`rev-parse` 
 
 ## Pendientes
 Change 2. Regresión completa en Change 6.
+
+## Resultado final
+Change 1 verificado: gate técnico satisfecho con tests dirigidos (128 OK / 1 skipped) y confirmación serial del fix del instalador; sin hallazgos abiertos del reviewer salvo la deuda diferida M4.
