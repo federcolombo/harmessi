@@ -17,7 +17,7 @@ estado: en_implementacion
 ## Tareas
 - [x] T1a — R1 test de completitud del manifest + R5 escritura atómica de control.json y backup en migrate-hashes
 - [x] T1b — R2/R3/R7 `upgrade` (plan, transacción con journal persistente, lock)
-- [ ] T1c — R4 `recover` + detección por fase
+- [x] T1c — R4 `recover` + detección por fase
 - [ ] T1d — R6 Doctor
 - [ ] T1e — R8/R9/R10 fixtures v0.10, E2E, inyección de fallos, byte-identidad, docs
 - [ ] T2 — Reviewer (1 ciclo) y fixes

@@ -30,6 +30,7 @@ from pathlib import Path
 from . import control as control_mod
 from . import legacy as legacy_mod
 from . import lock as lock_mod
+from . import recover as recover_mod
 from . import writer
 from .manifest import (
     CAPABILITIES_CONOCIDAS,
@@ -83,8 +84,9 @@ def construir_parser() -> argparse.ArgumentParser:
         "accion",
         nargs="?",
         default="install",
-        choices=["install", "sync", "migrate-hashes", "upgrade"],
-        help="Operación a realizar: 'install' (default, instala un destino nuevo), 'upgrade' "
+        choices=["install", "sync", "migrate-hashes", "upgrade", "recover"],
+        help="Operación a realizar: 'install' (default, instala un destino nuevo), 'recover' "
+        "(revierte una operación interrumpida desde su journal; dry-run por defecto), 'upgrade' "
         "(actualiza los archivos managed pristine a la versión actual del harness; dry-run por "
         "defecto, --execute para aplicar), 'sync' "
         "(amplía un destino ya instalado hasta un --stage objetivo mayor) o 'migrate-hashes' "
@@ -780,6 +782,58 @@ def _main_upgrade(parser: argparse.ArgumentParser, args: argparse.Namespace, des
     return 0
 
 
+def _main_recover(destino: Path, execute: bool) -> int:
+    """`recover` (R4): revierte una transacción interrumpida al estado previo.
+    Dry-run por defecto. Exit 2 (sin tocar nada) si un journal es ilegible o
+    falta un backup necesario."""
+    if not destino.is_dir():
+        print(f"[ABORTADO] El destino no existe o no es un directorio: {destino}", file=sys.stderr)
+        return 1
+    estado = recover_mod.detectar(destino)
+    if estado.vacio:
+        print("[RECOVER] Nada que recuperar: no hay journal ni staging huérfano.")
+        return 0
+
+    print(f"[RECOVER] {len(estado.journals)} journal(s), {len(estado.staging)} staging(s) huérfano(s):")
+    for info in estado.journals:
+        for linea in recover_mod.describir(info, destino):
+            print(linea)
+    for staging in estado.staging:
+        print(f"Staging {staging}: se eliminará")
+    if lock_mod.ruta_lock(destino).exists():
+        print(
+            f"AVISO: existe {lock_mod.ruta_lock(destino)}. Si ningún proceso de ds_init está en "
+            "ejecución, borrarlo a mano antes de --execute."
+        )
+
+    if estado.problemas:
+        for p in estado.problemas:
+            print(f"[PROBLEMA] {p}", file=sys.stderr)
+        print("[ABORTADO] " + recover_mod.instruccion_manual(estado), file=sys.stderr)
+        return 2
+
+    if not execute:
+        print("\n[DRY-RUN] No se escribió ni modificó nada. Usá --execute para aplicar el recover.")
+        return 0
+
+    try:
+        with lock_mod.lock_instalacion(destino, "recover"):
+            fallos = recover_mod.ejecutar(destino, estado)
+    except lock_mod.LockOcupadoError as exc:
+        print(f"[ABORTADO] {exc}", file=sys.stderr)
+        return 1
+    if fallos:
+        detalle = "; ".join(f"{f['destino']} ({f['error']})" for f in fallos)
+        print(
+            f"[ABORTADO] No se pudo revertir por completo: {detalle}. El journal se conservó; "
+            "resolver a mano esas rutas desde su carpeta backups/ y reintentar.",
+            file=sys.stderr,
+        )
+        return 1
+    print("\n[EXECUTE] Recover completo: destino restaurado y journal/staging eliminados.")
+    return 0
+
+
 def main(argv: list = None) -> int:
     parser = construir_parser()
     args = parser.parse_args(argv)
@@ -794,6 +848,8 @@ def main(argv: list = None) -> int:
         return _main_migrate_hashes(args, destino)
     if args.accion == "upgrade":
         return _main_upgrade(parser, args, destino)
+    if args.accion == "recover":
+        return _main_recover(destino, bool(args.execute))
 
     parser.error(f"acción desconocida: {args.accion!r}")
     return 2  # inalcanzable: parser.error() ya hizo sys.exit(2)

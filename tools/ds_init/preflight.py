@@ -39,6 +39,8 @@ def _detectar_staging_huerfano(ruta: Path) -> list:
     --execute` anterior interrumpida a mitad de camino. No intenta repararlo
     ni reanudarlo, solo lo señala para revisión manual (alcance de esta
     versión: sin recuperación automática)."""
+    # Desde v0.11 la reparación existe como acción explícita:
+    # `python -m tools.ds_init recover --destino X` (dry-run) y `--execute`.
     if not ruta.is_dir():
         return []
     huerfanos = sorted(

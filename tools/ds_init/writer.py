@@ -27,9 +27,9 @@ Flujo de `instalar()` (`design.md` §5, ajustado en la reliability v0.2.0):
    bien (journal aplicado + `control.json` generado) como si hubo que
    revertir. Esta garantía cubre excepciones manejadas dentro del proceso: si
    el proceso termina de forma abrupta (`kill`, corte de luz) a mitad de
-   camino, el staging queda en disco para revisión manual — `ds_init` no lo
-   repara ni lo reanuda automáticamente (ver `preflight.validar_destino`,
-   que detecta y señala ese caso en la próxima corrida).
+   camino, el staging y el journal persistente quedan en disco; las acciones
+   de `ds_init` abortan indicando `python -m tools.ds_init recover --destino X`
+   (revierte al estado previo, ver `recover.py`; nunca reanuda hacia adelante).
 """
 from __future__ import annotations
 
