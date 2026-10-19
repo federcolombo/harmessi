@@ -41,7 +41,8 @@ class TestRecover(_BaseUpgrade):
 
         parches = [mock.patch.object(writer, "_revertir_journal", return_value=_FALLO_ROLLBACK)]
         if fase == "preparado":
-            parches.append(mock.patch.object(writer, "_aplicar_journal", side_effect=OSError("corte")))
+            # Corte antes de que la transacción persista la fase `aplicando`.
+            parches.append(mock.patch.object(writer, "_preparar_backups", side_effect=OSError("corte")))
         elif fase == "aplicando":
             parches.append(mock.patch("os.replace", _replace_falla_en_2))
         elif fase == "control_pendiente":
@@ -99,12 +100,7 @@ class TestRecover(_BaseUpgrade):
 
     def test_completo_sin_limpiar_es_housekeeping(self):
         self.simular_v010()
-        real_rmtree = writer._rmtree_seguro
-
-        def _no_borra_journal(ruta):
-            return None if "journal" in str(ruta) else real_rmtree(ruta)
-
-        with mock.patch.object(writer, "_rmtree_seguro", side_effect=_no_borra_journal):
+        with mock.patch.object(writer, "_borrar_journal_seguro", return_value=None):
             codigo, _out, err = self.correr_upgrade("--execute")
         self.assertEqual(codigo, 0, err)
         journals = list((self.repo / ".ds_init" / "journal").iterdir())

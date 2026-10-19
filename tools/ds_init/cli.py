@@ -134,6 +134,13 @@ def construir_parser() -> argparse.ArgumentParser:
         f"cualquiera de {ORDEN_STAGES} (obligatorio).",
     )
 
+    parser.add_argument(
+        "--forzar",
+        action="store_true",
+        help="Solo 'recover': revierte aunque un archivo haya sido editado tras la interrupción "
+        "(conserva la copia actual como <ruta>.recover-bak).",
+    )
+
     modo = parser.add_mutually_exclusive_group()
     modo.add_argument("--dry-run", action="store_true", help="Informa el plan, no escribe nada (comportamiento por defecto).")
     modo.add_argument("--execute", action="store_true", help="Ejecuta la escritura real, tras preflight exitoso.")
@@ -473,7 +480,22 @@ def _main_migrate_hashes(args: argparse.Namespace, destino: Path) -> int:
         return 1
 
     try:
-        informe = control_mod.migrar_hashes(destino, ejecutar=bool(args.execute))
+        if args.execute:
+            huerfanos = _detectar_staging_huerfano(destino)
+            if huerfanos:
+                print(
+                    f"[ABORTADO] Hay staging/journal huérfano ({', '.join(huerfanos)}). Ejecutar "
+                    f"primero: python -m tools.ds_init recover --destino {destino}",
+                    file=sys.stderr,
+                )
+                return 1
+            with lock_mod.lock_instalacion(destino, "migrate-hashes"):
+                informe = control_mod.migrar_hashes(destino, ejecutar=True)
+        else:
+            informe = control_mod.migrar_hashes(destino, ejecutar=False)
+    except lock_mod.LockOcupadoError as exc:
+        print(f"[ABORTADO] {exc}", file=sys.stderr)
+        return 1
     except (OSError, ValueError) as exc:
         print(f"[ABORTADO] No se pudo migrar los hashes: {exc}", file=sys.stderr)
         return 1
@@ -782,10 +804,11 @@ def _main_upgrade(parser: argparse.ArgumentParser, args: argparse.Namespace, des
     return 0
 
 
-def _main_recover(destino: Path, execute: bool) -> int:
+def _main_recover(destino: Path, execute: bool, forzar: bool = False) -> int:
     """`recover` (R4): revierte una transacción interrumpida al estado previo.
-    Dry-run por defecto. Exit 2 (sin tocar nada) si un journal es ilegible o
-    falta un backup necesario."""
+    Dry-run por defecto. Exit 2 (sin tocar nada) si un journal es ilegible,
+    tiene rutas inválidas, falta un backup necesario o un archivo a revertir
+    fue editado tras la interrupción (salvo `--forzar`)."""
     if not destino.is_dir():
         print(f"[ABORTADO] El destino no existe o no es un directorio: {destino}", file=sys.stderr)
         return 1
@@ -816,9 +839,23 @@ def _main_recover(destino: Path, execute: bool) -> int:
         print("\n[DRY-RUN] No se escribió ni modificó nada. Usá --execute para aplicar el recover.")
         return 0
 
+    if estado.editados and not forzar:
+        print("[ABORTADO] " + recover_mod.instruccion_editados(estado), file=sys.stderr)
+        return 2
+
     try:
         with lock_mod.lock_instalacion(destino, "recover"):
-            fallos = recover_mod.ejecutar(destino, estado)
+            # Se vuelve a detectar con el lock tomado: el estado pudo cambiar.
+            estado = recover_mod.detectar(destino)
+            if estado.problemas:
+                for p in estado.problemas:
+                    print(f"[PROBLEMA] {p}", file=sys.stderr)
+                print("[ABORTADO] " + recover_mod.instruccion_manual(estado), file=sys.stderr)
+                return 2
+            if estado.editados and not forzar:
+                print("[ABORTADO] " + recover_mod.instruccion_editados(estado), file=sys.stderr)
+                return 2
+            fallos = recover_mod.ejecutar(destino, estado, forzar=forzar)
     except lock_mod.LockOcupadoError as exc:
         print(f"[ABORTADO] {exc}", file=sys.stderr)
         return 1
@@ -849,7 +886,7 @@ def main(argv: list = None) -> int:
     if args.accion == "upgrade":
         return _main_upgrade(parser, args, destino)
     if args.accion == "recover":
-        return _main_recover(destino, bool(args.execute))
+        return _main_recover(destino, bool(args.execute), bool(args.forzar))
 
     parser.error(f"acción desconocida: {args.accion!r}")
     return 2  # inalcanzable: parser.error() ya hizo sys.exit(2)

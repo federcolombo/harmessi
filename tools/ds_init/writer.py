@@ -33,6 +33,7 @@ Flujo de `instalar()` (`design.md` §5, ajustado en la reliability v0.2.0):
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -92,6 +93,9 @@ FASE_APLICANDO = "aplicando"
 FASE_CONTROL_PENDIENTE = "control_pendiente"
 FASE_COMPLETO = "completo"
 
+# Alias del `os.replace` real tomado al importar (ver `_escribir_journal`).
+_REEMPLAZO_ATOMICO = os.replace
+
 ACCION_JOURNAL_CREAR = "crear"
 ACCION_JOURNAL_REEMPLAZAR_MERGE = "reemplazar-merge"
 
@@ -125,6 +129,25 @@ def _rmtree_seguro(staging: Path) -> Optional[str]:
     if staging.exists():
         return str(staging)
     return None
+
+
+def _borrar_journal_seguro(dir_journal: Path) -> Optional[str]:
+    """Borra el directorio de un journal dejando `journal.json` para el final
+    (si el proceso muere a mitad de la limpieza, `recover` sigue viendo un
+    journal legible o, a lo sumo, un directorio residual limpiable).
+    Devuelve la ruta remanente (str) o `None`."""
+    try:
+        for p in dir_journal.iterdir():
+            if p.name == NOMBRE_JOURNAL:
+                continue
+            if p.is_dir():
+                shutil.rmtree(p, ignore_errors=True)
+            else:
+                p.unlink()
+        (dir_journal / NOMBRE_JOURNAL).unlink()
+    except OSError:
+        pass
+    return _rmtree_seguro(dir_journal)
 
 
 def _limpiar_padres_vacios(ruta: Path, destino: Path) -> None:
@@ -324,10 +347,28 @@ def _preparar_backups(entradas_journal: list, destino: Path, staging: Path) -> N
 
 
 def _escribir_journal(journal_path: Path, entradas_journal: list, fase: str = FASE_APLICANDO) -> None:
+    """Escribe `journal.json` de forma atómica: temporal en el mismo directorio,
+    fsync y `os.replace` (alias capturado al importar, para que parchear
+    `os.replace` en tests de fallo de aplicación no afecte al journal)."""
     journal_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(journal_path, "w", encoding="utf-8", newline="") as f:
-        json.dump({"fase": fase, "entradas": entradas_journal}, f, indent=2, ensure_ascii=False)
-        f.write("\n")
+    tmp = journal_path.with_name(f"{journal_path.name}.tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8", newline="") as f:
+            json.dump({"fase": fase, "entradas": entradas_journal}, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+            f.flush()
+            os.fsync(f.fileno())
+        _REEMPLAZO_ATOMICO(tmp, journal_path)
+    except BaseException:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        raise
+
+
+def _sha256_bytes(ruta: Path) -> str:
+    return hashlib.sha256(Path(ruta).read_bytes()).hexdigest()
 
 
 def _aplicar_journal(entradas_journal: list, journal_path: Path, destino: Path, staging: Path) -> None:
@@ -370,9 +411,11 @@ def _revertir_journal(entradas_journal: list, destino: Path, staging: Path) -> l
                 _limpiar_padres_vacios(destino_final, destino)
             elif entrada["accion"] == ACCION_JOURNAL_REEMPLAZAR_MERGE:
                 backup_path = staging / NOMBRE_DIR_BACKUP / rel
-                if backup_path.exists():
-                    destino_final.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(backup_path, destino_final)
+                if not backup_path.exists():
+                    # Falta el backup necesario: es un fallo, no un skip silencioso.
+                    raise FileNotFoundError(f"falta el backup {backup_path}")
+                destino_final.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(backup_path, destino_final)
         except Exception as exc:
             fallos.append({"destino": rel, "error": str(exc)})
 
@@ -459,7 +502,13 @@ def instalar(plan: list, destino, config: dict) -> ResultadoInstalacion:
     try:
         _escribir_journal(journal_path, entradas_journal, FASE_PREPARADO)
         _preparar_backups(entradas_journal, destino, dir_journal)
-        _escribir_journal(journal_path, entradas_journal, FASE_PREPARADO)
+        # Hash esperado del contenido que escribirá la transacción (lo usa
+        # `recover` para detectar ediciones posteriores a la interrupción).
+        for entrada_j in entradas_journal:
+            entrada_j["sha256_nuevo"] = _sha256_bytes(staging / entrada_j["destino"])
+        # La fase `aplicando` se persiste ANTES del primer movimiento: nunca
+        # queda `preparado` con algo ya aplicado (M1).
+        _escribir_journal(journal_path, entradas_journal, FASE_APLICANDO)
         _aplicar_journal(entradas_journal, journal_path, destino, staging)
 
         archivos_aplicados = [entrada["destino"] for entrada in entradas_journal]
@@ -526,7 +575,7 @@ def instalar(plan: list, destino, config: dict) -> ResultadoInstalacion:
         remanente_journal = None
         if not fallos_rollback:
             # Rollback exitoso: el journal ya no hace falta.
-            remanente_journal = _rmtree_seguro(dir_journal)
+            remanente_journal = _borrar_journal_seguro(dir_journal)
             _limpiar_dirs_journal_vacios(destino)
 
         if fallos_rollback:
@@ -558,7 +607,7 @@ def instalar(plan: list, destino, config: dict) -> ResultadoInstalacion:
             f"No se pudo borrar completamente el staging tras una instalación exitosa: {remanente}"
         )
     # Fase "completo" confirmada: recién ahora se elimina el journal persistente.
-    remanente_journal = _rmtree_seguro(dir_journal)
+    remanente_journal = _borrar_journal_seguro(dir_journal)
     _limpiar_dirs_journal_vacios(destino)
     if remanente_journal:
         advertencias.append(

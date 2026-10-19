@@ -343,15 +343,26 @@ python -m tools.ds_init recover --destino <path> --execute   # revert
 from its journal and backups, then removes the staging and journal. It is
 rollback only, never roll-forward; after it, `upgrade`/`install` converge. If
 the journal is unreadable or a needed backup is missing it exits with code 2,
-touches nothing, and prints the exact manual steps. A journal in phase
-`completo` is treated as clean (housekeeping: it is just deleted).
+touches nothing, and prints the exact manual steps; the same happens if a
+journal path is invalid (absolute, `..`, `:` in a component, inside `.git/`,
+resolving outside the destination, or not in the MANIFEST nor under
+`.ds_init/`). If a file to be reverted was edited after the interruption
+(its hash is neither the one the transaction wrote nor the backup's),
+`recover --execute` aborts with exit 2 and lists it; `--forzar` reverts it
+anyway and keeps your copy as `<path>.recover-bak`. A journal in phase
+`completo` is treated as clean (housekeeping: it is just deleted), and a
+journal directory without `journal.json` is a cleanable leftover.
+`migrate-hashes --execute` also takes the lock and refuses to run with an
+orphan staging/journal; the `control.json.bak-<timestamp>` backups it creates
+are kept (they are not cleaned up by `recover`).
 `harmessi doctor` reports `HARMESSI-VERSION` (WARN with the `upgrade` remedy)
 and `HARMESSI-MIGRACION` (FAIL on partial staging/journal, WARN on a leftover
 lock or completed journal).
 
 Honest limits: no downgrade; no data migration; `.ds_init/lock` is a
-cooperative lock, not a defense against a hostile actor, and an orphan lock is
-reported and must be removed by hand; Doctor runs from the Harmessi checkout;
+cooperative lock, not a defense against a hostile actor; after a kill the
+lock can remain (`.ds_init/lock`): delete it by hand if no `ds_init` process
+is alive (there is no pid detection, on purpose); Doctor runs from the Harmessi checkout;
 `upgrade` does not re-create a managed file you deleted by hand (restore it
 from Git).
 

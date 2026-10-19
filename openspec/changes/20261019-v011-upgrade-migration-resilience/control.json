@@ -84,7 +84,7 @@
     {
       "id": "s1",
       "inicio_utc": "2026-10-19T17:10:13Z",
-      "cierre_utc": null,
+      "cierre_utc": "2026-10-19T19:16:55Z",
       "modo": "estandar",
       "presupuesto": {
         "minutos": 480,
@@ -95,20 +95,24 @@
         "max_continuaciones_por_subagente": 1
       },
       "deadline_utc": "2026-10-20T01:10:13Z",
-      "minutos_consumidos": 0.0,
-      "resultado": null,
+      "minutos_consumidos": 126.7,
+      "resultado": "dentro_de_presupuesto",
       "subagentes": {
         "conteo": 0,
         "python-data-engineer": {
           "continuaciones": 0,
           "ultimo_evento_utc": "2026-10-19T18:11:15Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-19T19:01:29Z"
         }
       },
       "tareas": [],
       "roles": [],
       "reintentos": 0,
       "rondas_revision": 0,
-      "estado_final": "activa"
+      "estado_final": "pausada"
     }
   ]
 }

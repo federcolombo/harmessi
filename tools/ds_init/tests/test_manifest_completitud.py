@@ -8,8 +8,10 @@ alguno alcanzable no está en el MANIFEST ni en la allowlist «solo checkout».
 from __future__ import annotations
 
 import ast
+import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tools.ds_init import manifest as manifest_mod
 
@@ -71,6 +73,17 @@ def _imports_de(ruta: str) -> set:
 def calcular_faltantes(destinos_manifest) -> list:
     """Módulos `.py` runtime alcanzables desde los entrypoints del manifest
     que no están en `destinos_manifest` ni en la allowlist solo-checkout."""
+    return _recorrer(destinos_manifest)[0]
+
+
+def calcular_imports_prohibidos(destinos_manifest) -> list:
+    """Pares `(modulo_instalado, dependencia)` donde un módulo instalado (o
+    alcanzable desde uno) importa un módulo de la allowlist «solo checkout»:
+    en el destino esa dependencia no existe, así que es una rotura latente."""
+    return _recorrer(destinos_manifest)[1]
+
+
+def _recorrer(destinos_manifest) -> tuple:
     destinos = set(destinos_manifest)
     raices = sorted(
         d for d in destinos
@@ -80,16 +93,21 @@ def calcular_faltantes(destinos_manifest) -> list:
     vistos = set(raices)
     pendientes = list(raices)
     faltantes = set()
+    prohibidos = set()
     while pendientes:
         actual = pendientes.pop()
         for dep in _imports_de(actual):
-            if dep in vistos or _es_solo_checkout(dep):
+            if _es_solo_checkout(dep):
+                # Un módulo instalado no puede depender de código solo-checkout.
+                prohibidos.add((actual, dep))
+                continue
+            if dep in vistos:
                 continue
             vistos.add(dep)
             if dep not in destinos:
                 faltantes.add(dep)
             pendientes.append(dep)
-    return sorted(faltantes)
+    return sorted(faltantes), sorted(prohibidos)
 
 
 class TestManifestCompletitud(unittest.TestCase):
@@ -100,6 +118,21 @@ class TestManifestCompletitud(unittest.TestCase):
             faltantes, [],
             f"Módulos runtime alcanzables ausentes del MANIFEST: {faltantes}",
         )
+
+    def test_ningun_modulo_instalado_importa_solo_checkout(self):
+        destinos = [e.destino for e in manifest_mod.MANIFEST]
+        prohibidos = calcular_imports_prohibidos(destinos)
+        self.assertEqual(
+            prohibidos, [],
+            f"Módulos instalados que importan código solo-checkout (no existe en el destino): {prohibidos}",
+        )
+
+    def test_detecta_import_solo_checkout_desde_modulo_instalado(self):
+        # El detector debe marcar el par aunque el módulo origen esté instalado.
+        falso = lambda ruta: {"tools/ds_init/manifest.py"} if ruta == "tools/dsguard/scope.py" else set()  # noqa: E731
+        with mock.patch.object(sys.modules[__name__], "_imports_de", falso):
+            prohibidos = calcular_imports_prohibidos(["tools/dsguard/scope.py"])
+        self.assertIn(("tools/dsguard/scope.py", "tools/ds_init/manifest.py"), prohibidos)
 
     def test_detecta_modulo_removido_del_manifest(self):
         destinos = [e.destino for e in manifest_mod.MANIFEST]

@@ -383,5 +383,9 @@ GLOSSARY, notebooks, data) y un `guardrails.json` existente quedan byte-idéntic
 Journal persistente en `.ds_init/journal/`, backups y `control.json` atómico dentro de la transacción; `recover`
 hace rollback (nunca roll-forward) y `upgrade` es idempotente.
 
-Límites: el lock `.ds_init/lock` es cooperativo, no defensa ante un actor hostil; sin downgrade; sin migración de datos;
+`recover` aborta (exit 2, sin tocar nada) ante journal ilegible, backup ausente, ruta inválida del journal o un
+archivo editado tras la interrupción (`--forzar` lo revierte y conserva la copia como `<ruta>.recover-bak`).
+
+Límites: el lock `.ds_init/lock` es cooperativo, no defensa ante un actor hostil; tras un kill puede quedar y se
+borra a mano si no hay proceso vivo (sin detección de pid); sin downgrade; sin migración de datos;
 Doctor corre desde el checkout; `upgrade` no recrea un managed borrado a mano (se restaura desde Git).
