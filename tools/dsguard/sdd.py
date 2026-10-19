@@ -858,11 +858,11 @@ def session_start(
     control: dict,
     modo: str = "estandar",
     minutos: int = SESSION_MINUTES_DEFAULT,
-    max_tareas: int = 3,
-    max_roles: int = 2,
-    max_reintentos: int = 2,
-    max_rondas_revision: int = 2,
-    max_continuaciones_por_subagente: int = 1,
+    max_tareas: Optional[int] = None,
+    max_roles: Optional[int] = None,
+    max_reintentos: Optional[int] = None,
+    max_rondas_revision: Optional[int] = None,
+    max_continuaciones_por_subagente: Optional[int] = None,
     retomar: bool = False,
 ) -> dict:
     activa = _sesion_activa(control)
@@ -875,6 +875,28 @@ def session_start(
             raise SesionPreviaAusenteError(
                 "No hay sesión cerrada previa de este Change: no se puede usar --retomar"
             )
+    # R4b: tope `None` = no pasado. Con --retomar se hereda el `max_*` de la
+    # sesión previa (un valor explícito reemplaza solo ese tope); sin --retomar
+    # (o si la previa no lo tiene) rige el default de siempre.
+    presupuesto_previo = (previa.get("presupuesto") if previa is not None else None) or {}
+    if not isinstance(presupuesto_previo, dict):
+        presupuesto_previo = {}
+
+    def _tope(valor: Optional[int], clave: str, default: int) -> int:
+        if valor is not None:
+            return valor
+        heredado = presupuesto_previo.get(clave)
+        if isinstance(heredado, int) and not isinstance(heredado, bool):
+            return heredado
+        return default
+
+    max_tareas = _tope(max_tareas, "max_tareas", 3)
+    max_roles = _tope(max_roles, "max_roles", 2)
+    max_reintentos = _tope(max_reintentos, "max_reintentos", 2)
+    max_rondas_revision = _tope(max_rondas_revision, "max_rondas_revision", 2)
+    max_continuaciones_por_subagente = _tope(
+        max_continuaciones_por_subagente, "max_continuaciones_por_subagente", 1
+    )
     sesiones = control.setdefault("sesiones", [])
     nuevo_id = f"s{len(sesiones) + 1}"
     inicio_utc = ahora_utc()

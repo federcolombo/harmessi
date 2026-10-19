@@ -466,7 +466,9 @@ class TestChange4InvariantesNoRegresion(unittest.TestCase):
 
     def test_sdd_conserva_default_de_continuaciones(self):
         contenido = _leer_norm(TOOLS_DIR / "dsguard" / "sdd.py")
-        self.assertIn("max_continuaciones_por_subagente: int = 1", contenido)
+        # Change 3 (R4b): el parametro es Optional y el default efectivo sigue siendo 1.
+        self.assertIn("max_continuaciones_por_subagente: Optional[int] = None", contenido)
+        self.assertIn('"max_continuaciones_por_subagente", 1', contenido)
 
     def test_hook_presupuesto_no_cambio_prioridad_de_claves(self):
         # H1 (identidad del subagente) esta UNCONFIRMED: el hook no se toca.

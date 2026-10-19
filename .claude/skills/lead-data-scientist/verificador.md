@@ -71,8 +71,8 @@ para salida estructurada. Exit codes generales: `0` correcto, `1` gate/validaci�
   `tasks.md` y agrega la entrada a `control["transiciones"]`. Atómico: si el gate falla, no se
   escribe nada.
 - **`session start --change-id <id> [--modo estandar] [--minutos 90] [--max-tareas 3]
-  [--max-roles 2] [--max-reintentos 2] [--max-rondas 2] [--max-continuaciones N]`**: abre una sesión (`SesionYaActivaError`
-  si ya hay una activa → exit 2). La sesión nace con `deadline_utc`, `minutos_consumidos: 0.0`,
+  [--max-roles 2] [--max-reintentos 2] [--max-rondas 2] [--max-continuaciones N] [--retomar]`**: abre una sesión (`SesionYaActivaError`
+  si ya hay una activa → exit 2). Con `--retomar` hereda además los topes `max_*` de la última sesión cerrada (un `--max-*` explícito reemplaza solo ese tope). La sesión nace con `deadline_utc`, `minutos_consumidos: 0.0`,
   `resultado: null`, `subagentes: {}` y `presupuesto.max_continuaciones_por_subagente` con
   default `1`. `--max-continuaciones` (entero 1–5, default 1, fuera de rango ⇒ exit 2) fija
   `presupuesto.max_continuaciones_por_subagente`; `session status` lo muestra. Una continuación

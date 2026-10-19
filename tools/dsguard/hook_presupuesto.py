@@ -185,7 +185,10 @@ def mensaje_recuperacion(interprete: Optional[str], change_id: Optional[str]) ->
         f"  2. Cerrar sesión:\n{_formas(f'close --change-id {change_id} --estado pausada')}\n"
         "  3. Después de cerrar, retomar con una sesión nueva que hereda rondas/reintentos "
         "(no permitido antes de cerrar):\n"
-        f"{_formas(f'start --change-id {change_id} --retomar')}"
+        f"{_formas(f'start --change-id {change_id} --retomar')}\n"
+        "     --retomar hereda el contador de reintentos/remediación ya consumido y los topes "
+        "max_* de la sesión previa; si se agotó, puede requerirse 'remediation extend' o un "
+        "--max-reintentos explícitamente mayor al retomar. No se aumentan límites automáticamente."
     )
 
 

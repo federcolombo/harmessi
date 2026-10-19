@@ -1202,7 +1202,9 @@ def cmd_session_start(args: argparse.Namespace) -> int:
         print(str(e), file=sys.stderr)
         return 3
     max_continuaciones = args.max_continuaciones
-    if not 1 <= max_continuaciones <= MAX_CONTINUACIONES_DURO:
+    # `None` = flag no pasado (M1 / R4b): `sdd.session_start` resuelve el valor
+    # (heredado de la sesión previa si hay --retomar; default de siempre si no).
+    if max_continuaciones is not None and not 1 <= max_continuaciones <= MAX_CONTINUACIONES_DURO:
         print(
             f"--max-continuaciones debe estar entre 1 y {MAX_CONTINUACIONES_DURO} (recibido: {max_continuaciones})",
             file=sys.stderr,
@@ -5271,17 +5273,20 @@ def construir_parser() -> argparse.ArgumentParser:
     # declarada) -- ver `_resolver_budgets`. Un `--minutos` explícito manda
     # siempre, sin consultar policy.
     p_session_start.add_argument("--minutos", type=int, default=None)
-    p_session_start.add_argument("--max-tareas", type=int, default=3)
-    p_session_start.add_argument("--max-roles", type=int, default=2)
-    p_session_start.add_argument("--max-reintentos", type=int, default=2)
-    p_session_start.add_argument("--max-rondas", type=int, default=2)
+    # Defaults `None` (R4b): permiten distinguir "no pasado" de "pasado" para que
+    # --retomar herede los topes de la sesión previa. Sin --retomar,
+    # `sdd.session_start` aplica los defaults de siempre (3/2/2/2/1).
+    p_session_start.add_argument("--max-tareas", type=int, default=None)
+    p_session_start.add_argument("--max-roles", type=int, default=None)
+    p_session_start.add_argument("--max-reintentos", type=int, default=None)
+    p_session_start.add_argument("--max-rondas", type=int, default=None)
     p_session_start.add_argument(
-        "--max-continuaciones", type=int, default=1, dest="max_continuaciones",
-        help=f"Continuaciones máximas por subagente (1..{MAX_CONTINUACIONES_DURO}; default 1).",
+        "--max-continuaciones", type=int, default=None, dest="max_continuaciones",
+        help=f"Continuaciones máximas por subagente (1..{MAX_CONTINUACIONES_DURO}; default 1, o el de la sesión previa con --retomar).",
     )
     p_session_start.add_argument(
         "--retomar", action="store_true",
-        help="Hereda rondas_revision, reintentos, roles, tareas y continuaciones de la última sesión cerrada.",
+        help="Hereda rondas_revision, reintentos, roles, tareas, continuaciones y topes max_* de la última sesión cerrada (un --max-* explícito reemplaza solo ese tope).",
     )
     p_session_start.set_defaults(func=cmd_session_start)
 

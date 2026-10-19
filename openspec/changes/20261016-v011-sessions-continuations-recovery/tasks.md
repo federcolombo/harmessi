@@ -1,14 +1,14 @@
 # Tareas — 20261016-v011-sessions-continuations-recovery
 
-estado: en_implementacion
+estado: cerrada
 
 ## Invocaciones planificadas
 - Lead coordina/valida; writer único `python-data-engineer` (serial); reviewer 1 ciclo.
 
 ## Tareas
 - [x] T1 — Implementación + tests (writer) — hecho; tests OK: test_session_recovery 22, test_operational_session_recovery 26, test_operational_budgets 28, test_ds_guard_budgets_cli 36, test_skill_methodology 52, test_manifest_dsguard_parity 11
-- [ ] T2 — Reviewer y fixes
-- [ ] T3 — verification, cierre, commit
+- [x] T2 — Reviewer ciclo 1 y fixes (M1 R4b, M2, m3, m4) — hecho
+- [x] T3 — verification, cierre, commit — hecho
 
 ## PUNTO DE CORTE (2026-10-16, fin de jornada)
 Estado: Change 3 en `en_implementacion`, implementación completa y tests dirigidos verdes. WIP commiteado localmente en `v0.11-dev`.

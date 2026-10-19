@@ -22,6 +22,8 @@ from test_ds_guard_budgets_cli import (  # noqa: E402
     _crear_repo_git_temporal,
     _leer_control,
     _escribir_control,
+    _escribir_guardrails,
+    _guardrails_con_budgets,
 )
 
 CHANGE_ID = "20261016-test-session-recovery"
@@ -294,12 +296,81 @@ class TestRetomar(_BaseCli):
         self.assertEqual(s3["reintentos"], 2)
 
 
+class TestRetomarHeredaTopes(_BaseCli):
+    """R4b: --retomar hereda los topes max_* de la última sesión cerrada."""
+
+    def _s1_con_consumo(self):
+        r = self.sesion_cli("start", "--max-tareas", "10", "--max-rondas", "5")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        for i in range(8):
+            r = self.sesion_cli("note", "--rol", "writer", "--tipo", "planificada", "--tarea", f"t{i}")
+            self.assertEqual(r.returncode, 0, r.stderr)
+        for _ in range(4):
+            r = self.sesion_cli("note", "--rol", "reviewer", "--tipo", "ronda", "--tarea", "t0")
+            self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.sesion_cli("close", "--estado", "pausada").returncode, 0)
+
+    def test_retomar_sin_flags_hereda_topes_y_contadores(self):
+        self._s1_con_consumo()
+        r = self.sesion_cli("start", "--retomar")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        s2 = _leer_control(self.repo, CHANGE_ID)["sesiones"][-1]
+        self.assertEqual(s2["presupuesto"]["max_tareas"], 10)
+        self.assertEqual(s2["presupuesto"]["max_rondas_revision"], 5)
+        self.assertEqual(s2["presupuesto"]["max_reintentos"], 2)
+        self.assertEqual(len(s2["tareas"]), 8)
+        self.assertEqual(s2["rondas_revision"], 4)
+        payload = json.loads(self.sesion_cli("status", "--json").stdout)
+        codigos = [f["codigo"] for f in payload["findings"]]
+        self.assertNotIn("SESION-LIMITE-TAREAS", codigos)
+        self.assertNotIn("SESION-LIMITE-RONDAS", codigos)
+
+    def test_retomar_con_flag_explicito_reemplaza_solo_ese_tope(self):
+        self._s1_con_consumo()
+        r = self.sesion_cli("start", "--retomar", "--max-tareas", "12")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        s2 = _leer_control(self.repo, CHANGE_ID)["sesiones"][-1]
+        self.assertEqual(s2["presupuesto"]["max_tareas"], 12)
+        self.assertEqual(s2["presupuesto"]["max_rondas_revision"], 5)
+
+    def test_sin_retomar_usa_defaults(self):
+        self._s1_con_consumo()
+        self.assertEqual(self.sesion_cli("start").returncode, 0)
+        p = _leer_control(self.repo, CHANGE_ID)["sesiones"][-1]["presupuesto"]
+        self.assertEqual((p["max_tareas"], p["max_roles"], p["max_reintentos"], p["max_rondas_revision"]), (3, 2, 2, 2))
+
+    def test_max_sessions_se_verifica_al_retomar(self):
+        _escribir_guardrails(self.repo, _guardrails_con_budgets({"max_sessions": 1}))
+        self.assertEqual(self.sesion_cli("start").returncode, 0)
+        self.assertEqual(self.sesion_cli("close", "--estado", "pausada").returncode, 0)
+        r = self.sesion_cli("start", "--retomar")
+        self.assertEqual(r.returncode, 2, r.stdout)
+        self.assertEqual(len(_leer_control(self.repo, CHANGE_ID)["sesiones"]), 1)
+
+    def test_aggregate_minutes_se_verifica_al_retomar(self):
+        _escribir_guardrails(self.repo, _guardrails_con_budgets({"aggregate_minutes": 100}))
+        self.assertEqual(self.sesion_cli("start").returncode, 0)
+        self.assertEqual(self.sesion_cli("close", "--estado", "pausada").returncode, 0)
+        control = _leer_control(self.repo, CHANGE_ID)
+        control["sesiones"][0]["minutos_consumidos"] = 150.0
+        _escribir_control(self.repo, control, CHANGE_ID)
+        r = self.sesion_cli("start", "--retomar")
+        self.assertEqual(r.returncode, 2, r.stdout)
+        self.assertEqual(len(_leer_control(self.repo, CHANGE_ID)["sesiones"]), 1)
+
+
 class TestMensajeRecuperacionRetomar(unittest.TestCase):
     def test_paso_3_usa_retomar(self):
         msg = hp.mensaje_recuperacion(sys.executable, CHANGE_ID)
         base = f'"{sys.executable}" tools/ds_guard.py session'
         self.assertIn(f"{base} start --change-id {CHANGE_ID} --retomar", msg)
         self.assertIn(f"{base} close --change-id {CHANGE_ID} --estado pausada", msg)
+
+    def test_paso_3_aclara_herencia_de_reintentos(self):
+        msg = hp.mensaje_recuperacion(sys.executable, CHANGE_ID)
+        self.assertIn("hereda el contador de reintentos", msg)
+        self.assertIn("remediation extend", msg)
+        self.assertIn("--max-reintentos", msg)
 
 
 class TestSdd(unittest.TestCase):
