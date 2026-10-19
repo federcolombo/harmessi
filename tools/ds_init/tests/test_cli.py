@@ -472,11 +472,14 @@ class TestCliSync(unittest.TestCase):
                 codigo = main(["sync", "--destino", str(self.repo), "--stage", "experiment", "--execute"])
 
         self.assertNotEqual(codigo, 0)
-        self.assertIn("[ABORTADO-PARCIAL]", stderr.getvalue())
+        # v0.11 Change 5: regenerar_control corre dentro de la transacción; si
+        # falla se revierte todo (sin estado mixto ni ABORTADO-PARCIAL).
+        self.assertIn("[ABORTADO]", stderr.getvalue())
+        self.assertNotIn("ABORTADO-PARCIAL", stderr.getvalue())
         self.assertNotIn("[EXECUTE] Sync completo", stdout.getvalue())
-        # Los archivos de 'experiment' SÍ se aplicaron (writer.instalar ya
-        # había terminado con éxito antes de que fallara el paso siguiente).
-        self.assertTrue((self.repo / ".claude" / "agents" / "python-data-engineer.md").exists())
+        self.assertFalse((self.repo / ".claude" / "agents" / "python-data-engineer.md").exists())
+        self.assertFalse((self.repo / ".ds_init" / "lock").exists())
+        self.assertFalse((self.repo / ".ds_init" / "journal").exists())
 
     def test_sync_sin_control_json_previo_error_claro(self):
         stderr = io.StringIO()

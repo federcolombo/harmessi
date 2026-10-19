@@ -17,6 +17,7 @@ from pathlib import Path
 # luz) antes de llegar a su propia limpieza final — el rollback de
 # `writer.py` solo cubre excepciones manejadas dentro del mismo proceso.
 PREFIJO_STAGING_HUERFANO = ".ds_init_staging_"
+DIR_JOURNAL = ".ds_init/journal"
 
 
 class DestinoInvalidoError(Exception):
@@ -40,11 +41,19 @@ def _detectar_staging_huerfano(ruta: Path) -> list:
     versión: sin recuperación automática)."""
     if not ruta.is_dir():
         return []
-    return sorted(
+    huerfanos = sorted(
         p.name
         for p in ruta.iterdir()
         if p.is_dir() and p.name.startswith(PREFIJO_STAGING_HUERFANO)
     )
+    # Journal persistente residual (`.ds_init/journal/<ts>/`): transacción
+    # interrumpida o con rollback fallido.
+    dir_journal = ruta / DIR_JOURNAL
+    if dir_journal.is_dir():
+        huerfanos.extend(
+            f"{DIR_JOURNAL}/{p.name}" for p in sorted(dir_journal.iterdir()) if p.is_dir()
+        )
+    return huerfanos
 
 
 def validar_destino(ruta: Path) -> None:
@@ -79,10 +88,8 @@ def validar_destino(ruta: Path) -> None:
             f"El destino tiene staging de ds_init sin limpiar ({nombres}): "
             f"parece haber quedado una instalación anterior interrumpida a "
             f"mitad de camino (el proceso terminó antes de completar el "
-            f"rollback o la limpieza final). ds_init no repara ni reanuda "
-            f"instalaciones interrumpidas automáticamente — revisar el "
-            f"contenido de ese directorio a mano (incluye journal.json y, si "
-            f"corresponde, backups en '.backup/') antes de reintentar."
+            f"rollback o la limpieza final). Para repararlo, "
+            f"ejecutar: python -m tools.ds_init recover --destino {ruta}"
         )
 
     # (d) working tree limpio.

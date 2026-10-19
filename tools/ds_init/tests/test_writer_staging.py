@@ -455,7 +455,7 @@ class TestRollbackResilienteAntePropioFallo(unittest.TestCase):
             # Distingue la copia de creación del backup (origen bajo el
             # destino real) de la restauración durante el rollback (origen
             # bajo `staging/.backup/`) — solo la segunda debe fallar.
-            if ".backup" in str(origen):
+            if "journal" in str(origen) and "backups" in str(origen):
                 raise OSError("fallo inyectado por el test al restaurar el backup")
             return _COPY2_REAL(origen, destino_final, *args, **kwargs)
 
@@ -477,10 +477,14 @@ class TestRollbackResilienteAntePropioFallo(unittest.TestCase):
         self.assertIn(".claude/settings.json", str(excepcion))
 
         snapshot_despues = _snapshot_arbol(self.repo)
+        # v0.11 Change 5: si el rollback falla, el journal persistente queda
+        # en `.ds_init/journal/` (insumo de `recover`); se verifica y se excluye.
+        self.assertTrue((self.repo / ".ds_init" / "journal").is_dir())
         rutas_distintas = {
             ruta
             for ruta in set(snapshot_antes) | set(snapshot_despues)
             if snapshot_antes.get(ruta) != snapshot_despues.get(ruta)
+            and ".ds_init" not in Path(ruta).parts
         }
         # Único archivo que no pudo volver a su estado original: aquel cuyo
         # backup no se pudo restaurar. Todo lo demás sí se revirtió, a pesar

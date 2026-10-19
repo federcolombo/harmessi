@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "change_id": "20261019-v011-upgrade-migration-resilience",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-19T17:08:42Z",
+  "baseline": {
+    "commit": "cc553647ac301e1a0dadca3d2cf5e693a56e9cac",
+    "rama": "v0.11-dev",
+    "capturado_utc": "2026-10-19T17:08:42Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/SKILL.md",
+      ".claude/skills/lead-data-scientist/methodology.md",
+      ".claude/skills/lead-data-scientist/verificador.md",
+      "ARCHITECTURE.md",
+      "README.md",
+      "docs/**",
+      "openspec/changes/20261019-v011-upgrade-migration-resilience/**",
+      "openspec/changes/20261019-v011-upgrade-migration-resilience/amendments.jsonl",
+      "openspec/changes/20261019-v011-upgrade-migration-resilience/control.json",
+      "openspec/changes/20261019-v011-upgrade-migration-resilience/design.md",
+      "openspec/changes/20261019-v011-upgrade-migration-resilience/proposal.md",
+      "openspec/changes/20261019-v011-upgrade-migration-resilience/spec.md",
+      "openspec/changes/20261019-v011-upgrade-migration-resilience/tasks.md",
+      "openspec/changes/20261019-v011-upgrade-migration-resilience/verification.md",
+      "tools/ds_guard.py",
+      "tools/ds_init/**",
+      "tools/dsguard/core.py",
+      "tools/dsguard/repo.py",
+      "tools/harmessi/**",
+      "tools/launcher_common.py",
+      "tools/tests/**"
+    ],
+    "scope_hash": "52cfac8ccf9eedc59f091ef0ff533f267bde2933271bb77d24d9b43c45cacd91"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "da9bdd4bd41a157471b6dddba82fe4b687b599364c418a60d298899ff5090ecc",
+      "registrado_utc": "2026-10-19T17:10:08Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-19",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261019-v011-upgrade-migration-resilience",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "2dab595ed0767083a1aeefe27300d1d324286b53f3e5a3cfd3c342e4ecc461f5",
+      "registrado_utc": "2026-10-19T17:10:09Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-19",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261019-v011-upgrade-migration-resilience",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "c785bfc2cb6d93d3eff1b618e75dadeef54b0d35b665f77116a58ad46967b3cf",
+      "registrado_utc": "2026-10-19T17:10:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-19",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261019-v011-upgrade-migration-resilience",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-19T17:10:11Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-19T17:10:14Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-19T17:10:13Z",
+      "cierre_utc": null,
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-20T01:10:13Z",
+      "minutos_consumidos": 0.0,
+      "resultado": null,
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-19T17:19:04Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "activa"
+    }
+  ]
+}

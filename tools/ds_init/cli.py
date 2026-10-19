@@ -26,6 +26,7 @@ from pathlib import Path
 
 from . import control as control_mod
 from . import legacy as legacy_mod
+from . import lock as lock_mod
 from . import writer
 from .manifest import (
     CAPABILITIES_CONOCIDAS,
@@ -222,8 +223,9 @@ def _main_install(parser: argparse.ArgumentParser, args: argparse.Namespace, des
 
     if args.execute:
         try:
-            resultado = writer.instalar(plan, destino, config)
-        except writer.InstalacionAbortadaError as exc:
+            with lock_mod.lock_instalacion(destino, "install"):
+                resultado = writer.instalar(plan, destino, config)
+        except (writer.InstalacionAbortadaError, lock_mod.LockOcupadoError) as exc:
             print(f"[ABORTADO] {exc}", file=sys.stderr)
             return 1
         print(
@@ -382,23 +384,12 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
         print("\n[DRY-RUN] No se escribió ni modificó ningún archivo del destino.")
         return 0
 
-    try:
-        resultado = writer.instalar(plan, destino, config)
-    except writer.InstalacionAbortadaError as exc:
-        print(f"[ABORTADO] {exc}", file=sys.stderr)
-        return 1
-
-    # `writer.instalar` ya generó un control.json consistente con el delta de
-    # esta corrida (R5); lo completamos con el set ACUMULADO completo hasta
-    # `target` (archivos de corridas anteriores + los recién agregados), vía
-    # `regenerar_control` (design.md §5) — nunca reescribe `writer.py`. Este
-    # paso corre DESPUÉS de que `writer.instalar` ya aplicó los archivos al
-    # destino con éxito (con su propio rollback ya completado si algo hubiera
-    # fallado ahí) — un fallo ACÁ no puede revertirse con el mismo mecanismo
-    # (los archivos ya están aplicados correctamente), así que se informa de
-    # forma explícita y no ambigua en vez de dejar escapar la excepción o
-    # imprimir el mensaje de éxito de todas formas.
-    try:
+    # `regenerar_control` (design.md §5) completa el control con el set
+    # ACUMULADO hasta `target`. Desde v0.11 (Change 5) corre DENTRO de la
+    # transacción de `writer.instalar` (hook `post_aplicar`, fase journal
+    # "control_pendiente"): si falla, se revierte todo (archivos y control) en
+    # vez de dejar un estado parcial.
+    def _regenerar(resultado_tx):
         # Modo conservador (R28): se pasa el control PREVIO original y la
         # clasificación calculada antes de escribir; el drift se conserva tal cual.
         control_mod.regenerar_control(
@@ -409,21 +400,16 @@ def _main_sync(parser: argparse.ArgumentParser, args: argparse.Namespace, destin
             installation_stage=target,
             capabilities_habilitadas=capabilities_habilitadas,
             clasificacion=clasificacion,
-            resultado=resultado,
+            resultado=resultado_tx,
             preexistentes=preexistentes,
         )
-    except Exception as exc:  # noqa: BLE001 - fallo real, nunca debe pasar desapercibido
-        print(
-            f"[ABORTADO-PARCIAL] Los archivos de '{target}' se instalaron correctamente en el "
-            f"destino, pero no se pudo completar el registro acumulado en "
-            f"{ruta_control}: {exc}. El stage ya quedó persistido, así que volver a correr "
-            f"'sync --stage {target}' NO repite la reconciliación. control.json conserva las "
-            f"entradas previas (el drift nunca se adopta) pero puede no incluir los archivos "
-            f"nuevos de esta corrida. Revisá el estado con 'python -m tools.harmessi doctor' y, "
-            f"si hay entradas legacy, corré 'python -m tools.ds_init migrate-hashes --destino "
-            f"<destino>'.",
-            file=sys.stderr,
-        )
+
+    config["post_aplicar"] = _regenerar
+    try:
+        with lock_mod.lock_instalacion(destino, "sync"):
+            resultado = writer.instalar(plan, destino, config)
+    except (writer.InstalacionAbortadaError, lock_mod.LockOcupadoError) as exc:
+        print(f"[ABORTADO] {exc}", file=sys.stderr)
         return 1
 
     print(

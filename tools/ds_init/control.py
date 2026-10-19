@@ -10,6 +10,9 @@ staging (AC13 de `spec.md`).
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -143,11 +146,42 @@ def generar_control(
     dir_control = destino / DIR_CONTROL
     dir_control.mkdir(parents=True, exist_ok=True)
     ruta_control = dir_control / NOMBRE_ARCHIVO_CONTROL
-    with open(ruta_control, "w", encoding="utf-8", newline="") as f:
-        json.dump(control, f, indent=2, ensure_ascii=False)
-        f.write("\n")
+    _escribir_control_atomico(ruta_control, control)
 
     return control
+
+
+def _escribir_control_atomico(ruta_control: Path, control: dict) -> None:
+    """Escribe `control` en `ruta_control` de forma atómica (R5 del Change
+    `20261019-v011-upgrade-migration-resilience`): archivo temporal en el MISMO
+    directorio + `os.replace`. Si algo falla, el temporal se elimina y el
+    control original queda intacto."""
+    ruta_control = Path(ruta_control)
+    ruta_tmp = ruta_control.with_name(
+        f"{ruta_control.name}.tmp-{os.getpid()}-{uuid.uuid4().hex[:8]}"
+    )
+    try:
+        with open(ruta_tmp, "w", encoding="utf-8", newline="") as f:
+            json.dump(control, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(ruta_tmp, ruta_control)
+    except BaseException:
+        try:
+            ruta_tmp.unlink()
+        except OSError:
+            pass
+        raise
+
+
+def _crear_backup_control(ruta_control: Path) -> Path:
+    """Copia el control actual a `control.json.bak-<timestamp-utc>` junto al
+    archivo y devuelve la ruta del backup."""
+    sello = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    ruta_bak = ruta_control.with_name(f"{ruta_control.name}.bak-{sello}")
+    shutil.copy2(ruta_control, ruta_bak)
+    return ruta_bak
 
 
 def _entradas_previas_validas(control_previo: dict) -> list:
@@ -341,8 +375,8 @@ def regenerar_control(
     - Se excluye del manifiesto la entrada `.ds_init/control.json` (misma
       exclusión que ya aplica `tools/harmessi/doctor.py` al verificar
       archivos esperados), porque ese archivo se verifica aparte.
-    - No introduce escritura atómica nueva: reutiliza el mismo patrón
-      no-atómico de `generar_control` (escritura directa con `open`/`write`).
+    - Delega la escritura en `generar_control`, que es atómica (temporal en
+      el mismo directorio + `os.replace`).
 
     Modo conservador (`clasificacion` no es `None`, usado por `sync`, R27/R28):
     en vez de rebaseline total, `clasificacion` (salida de `clasificar_baseline`
@@ -491,8 +525,7 @@ def migrar_hashes(destino, *, ejecutar: bool = False) -> InformeMigracion:
             informe.no_verificables.append(ruta)
 
     if ejecutar and informe.migradas:
-        with open(ruta_control, "w", encoding="utf-8", newline="") as f:
-            json.dump(control, f, indent=2, ensure_ascii=False)
-            f.write("\n")
+        _crear_backup_control(ruta_control)
+        _escribir_control_atomico(ruta_control, control)
 
     return informe
