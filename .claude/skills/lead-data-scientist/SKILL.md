@@ -238,6 +238,15 @@ documentación del proyecto sigue siendo un acto aparte con su propia aprobació
 sesiones», y ahí el campo 2 es obligatorio. Limitación declarada: el checkpoint es estructurado pero
 vive en el chat, así que no es persistente ni reproducible desde una sesión nueva.
 
+## Upgrade y recovery del harness instalado
+
+Para actualizar un proyecto a la versión actual: `python -m tools.ds_init upgrade --destino <ruta>`
+(dry-run) y luego `python -m tools.ds_init upgrade --destino <ruta> --execute`. Si una operación quedó
+interrumpida (Doctor `HARMESSI-MIGRACION` en FAIL, o `upgrade`/`install`/`sync` abortan): `python -m
+tools.ds_init recover --destino <ruta>` y luego `... recover --destino <ruta> --execute`. Solo el Lead
+los corre; no se delegan. Garantías y límites (rollback, sin downgrade, sin migración de datos, no
+recrea managed borrados a mano) en `methodology.md` §35 y `verificador.md` §8.
+
 ## Restricción de esta versión
 
 Ninguno de los subagentes tiene la herramienta Agent: no pueden convocar a otro subagente.

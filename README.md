@@ -248,15 +248,18 @@ usage: python -m tools.ds_init [-h] --destino DESTINO [--nombre NOMBRE]
                                [--venv-dir VENV_DIR] [--integrar-claude]
                                [--stage {discovery,experiment,production_candidate,production}]
                                [--dry-run | --execute]
-                               [{install,sync}]
+                               [{install,sync,migrate-hashes,upgrade,recover}]
 
 Inicializador/sincronizador del harness de agentes/tooling para proyectos de
 ciencia de datos (perfil python-jupyter-data).
 
 positional arguments:
-  {install,sync}        'install' (default, instala un destino nuevo) o
+  {install,sync,migrate-hashes,upgrade,recover}
+                        'install' (default, instala un destino nuevo),
                         'sync' (amplia un destino ya instalado hasta un
-                        --stage objetivo mayor).
+                        --stage objetivo mayor), 'upgrade' (actualiza a la
+                        version actual), 'recover' (revierte una operacion
+                        interrumpida) o 'migrate-hashes'.
 
 options:
   -h, --help            show this help message and exit
@@ -301,14 +304,56 @@ rollback failure on one individual entry doesn't stop the rest from being
 reverted, and any entry that still couldn't be restored is named in the
 error message.
 
-This guarantee covers exceptions handled within the same process — it does
-not cover the process itself being killed or the machine losing power
-mid-installation. In that case the destination can be left with a stray
-`.ds_init_staging_<timestamp>/` directory (holding the journal and any
-backups). `ds_init` detects that on the next run and refuses to proceed with
-a specific message, but it does not repair or resume the interrupted
-installation automatically — recovering from that state (inspecting and,
-once safe, deleting the leftover staging directory) is a manual step.
+The in-process rollback does not cover the process itself being killed or the
+machine losing power mid-installation. In that case the destination can be
+left with a stray `.ds_init_staging_<timestamp>/` directory and a persistent
+journal under `.ds_init/journal/<timestamp>/` (journal phase plus backups).
+`ds_init install|sync|upgrade` detect that on the next run and refuse to
+proceed, pointing to `recover` (see below).
+
+#### Upgrading an installed project (`upgrade`)
+
+```
+python -m tools.ds_init upgrade --destino <path>             # dry-run (default)
+python -m tools.ds_init upgrade --destino <path> --execute   # apply
+```
+
+`upgrade` brings an already-installed project to the current harness version.
+It shows installed vs. current version and a summary (to update / to create /
+drift / preserved / blocking). It only updates managed files that are still
+pristine (match their recorded baseline), creates managed files that are new
+in the manifest (for the persisted stage and capabilities), and merges
+`settings.json` as before. It never touches project-owned files (notebooks,
+data, Cards, Data Contracts, decision ledger, amendments, `GLOSSARY.md`,
+approvals in `openspec/changes/**/control.json`), never overwrites an existing
+`guardrails.json`, and reports drifted files without touching or adopting
+them. `--execute` re-computes the plan, takes `.ds_init/lock`, and applies
+everything (files plus the regenerated `control.json`, written atomically) in
+one journaled transaction with backups. It is idempotent: a second run
+changes nothing. With nothing pending it prints "Nada que hacer" and exits 0.
+
+#### Recovering from an interrupted run (`recover`)
+
+```
+python -m tools.ds_init recover --destino <path>             # dry-run (default)
+python -m tools.ds_init recover --destino <path> --execute   # revert
+```
+
+`recover` reverts an interrupted transaction to the previous consistent state
+from its journal and backups, then removes the staging and journal. It is
+rollback only, never roll-forward; after it, `upgrade`/`install` converge. If
+the journal is unreadable or a needed backup is missing it exits with code 2,
+touches nothing, and prints the exact manual steps. A journal in phase
+`completo` is treated as clean (housekeeping: it is just deleted).
+`harmessi doctor` reports `HARMESSI-VERSION` (WARN with the `upgrade` remedy)
+and `HARMESSI-MIGRACION` (FAIL on partial staging/journal, WARN on a leftover
+lock or completed journal).
+
+Honest limits: no downgrade; no data migration; `.ds_init/lock` is a
+cooperative lock, not a defense against a hostile actor, and an orphan lock is
+reported and must be removed by hand; Doctor runs from the Harmessi checkout;
+`upgrade` does not re-create a managed file you deleted by hand (restore it
+from Git).
 
 ### `harmessi providers`
 

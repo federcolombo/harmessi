@@ -801,3 +801,15 @@ Change `20261013-governed-amendments`. Comandos: `ds_guard scope amend|show` y `
 - **Límites honestos.** Sin criptografía. T1 es presencia, no identidad. pathguard no autentica el registro: la seguridad es
   T1 + binding + cadena + validación + Git. Un agente que escriba fuera de pathguard o sintetice input puede falsificar.
   `readopt` requiere el clon de Harmessi (plantilla del repo origen, como Doctor) y `--destino`.
+
+### 8.5 Upgrade transaccional y recovery (v0.11 Change 5)
+
+Change `20261019-v011-upgrade-migration-resilience`. Comandos: `python -m tools.ds_init upgrade|recover --destino <ruta> [--execute]` (dry-run por defecto).
+
+- **Upgrade transaccional.** Reusa la transacción de `writer.instalar`: staging, journal y backups; `control.json` se regenera DENTRO de la transacción (hook `post_aplicar`) y se escribe de forma atómica (temporal + `os.replace`).
+- **Journal persistente.** Vive en `.ds_init/journal/<ts>/` (fuera del staging descartable) con fase (`preparado`, `aplicando`, `control_pendiente`, `completo`) y backups; solo se borra tras éxito o rollback exitoso.
+- **Rollback, no roll-forward.** `recover` restaura backups, borra lo creado y elimina staging y journal; si el journal es ilegible o falta un backup, aborta (exit 2) sin tocar nada. Un journal `completo` se trata como housekeeping.
+- **Plan de upgrade.** Solo managed pristine (`ok`/`ok_legacy`) con contenido distinto, managed nuevos del manifest (stage y capabilities persistidos) y merge de `settings.json`; drift reportado sin adoptar; project-owned, `EXCLUSIONES_PERMANENTES` y un `guardrails.json` existente nunca se tocan. Idempotente.
+- **Lock.** `.ds_init/lock` (`O_EXCL`, pid y timestamp) serializa install/sync/upgrade/recover; un lock existente nunca se ignora ni se roba.
+- **Doctor.** `HARMESSI-VERSION` (WARN con remedio `upgrade`) y `HARMESSI-MIGRACION` (FAIL ante staging/journal parcial, WARN ante lock o journal completo residual).
+- **Límites honestos.** Sin downgrade; sin migración de datos; el lock es cooperativo, no defensa ante un actor hostil; Doctor corre desde el checkout; `upgrade` no recrea un managed borrado a mano (se restaura desde Git); un corte entre `os.replace` y la marca `aplicado` se cubre restaurando siempre el backup de los `reemplazar-merge`.

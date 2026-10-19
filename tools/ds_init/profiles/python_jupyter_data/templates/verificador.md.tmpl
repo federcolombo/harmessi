@@ -367,3 +367,21 @@ emite `AVISO-SESION-POR-VENCER` por stderr. Ver `methodology.md` §30.
 El Lead, único rol con Bash. `python-data-engineer` y `data-science-reviewer` no lo corren — si el
 Lead necesita que un subagente actúe sobre lo que `ds_guard` reportó (p. ej. corregir un archivo
 fuera de alcance), se lo indica en el prompt de delegación, no delega la ejecución del comando.
+
+## 8. Upgrade y recovery de la instalación (`ds_init`, v0.11)
+
+`ds_guard` no instala ni repara el harness: eso es de `ds_init`, que corre el Lead. Comandos literales
+(dry-run por defecto, `--execute` aplica):
+
+- `python -m tools.ds_init upgrade --destino <ruta>` y luego `python -m tools.ds_init upgrade --destino <ruta> --execute`.
+- `python -m tools.ds_init recover --destino <ruta>` y luego `python -m tools.ds_init recover --destino <ruta> --execute`
+  (tras una interrupción; `upgrade`/`install`/`sync` abortan indicando `recover`).
+
+Garantías: solo se actualizan managed pristine, se crean managed nuevos y se hace merge de `settings.json`;
+los archivos del proyecto (Cards, Data Contracts, ledger, `amendments.jsonl`, aprobaciones de `control.json`,
+GLOSSARY, notebooks, data) y un `guardrails.json` existente quedan byte-idénticos; el drift se reporta sin adoptarse.
+Journal persistente en `.ds_init/journal/`, backups y `control.json` atómico dentro de la transacción; `recover`
+hace rollback (nunca roll-forward) y `upgrade` es idempotente.
+
+Límites: el lock `.ds_init/lock` es cooperativo, no defensa ante un actor hostil; sin downgrade; sin migración de datos;
+Doctor corre desde el checkout; `upgrade` no recrea un managed borrado a mano (se restaura desde Git).
