@@ -20,7 +20,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
+import tempfile
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,15 +34,27 @@ from . import writer
 from .manifest import (
     CAPABILITIES_CONOCIDAS,
     CAPABILITIES_VALIDAS,
+    EXCLUSIONES_PERMANENTES,
+    MERGE,
     ORDEN_STAGES,
+    PLANTILLA,
     capabilities_efectivas_sync,
+    manifest_para_perfil_stage_y_capabilities,
     manifest_para_perfil_y_stage,
     raiz_repo_origen,
     validar_capabilities,
 )
-from .managed_hash import ESTADO_ALG_DESCONOCIDO, ESTADO_DRIFT
-from .planner import ACCION_MERGE, construir_plan, formatear_plan
-from .preflight import DestinoInvalidoError, validar_destino
+from .managed_hash import ESTADO_ALG_DESCONOCIDO, ESTADO_DRIFT, ESTADO_OK, ESTADO_OK_LEGACY
+from .planner import (
+    ACCION_ACTUALIZAR_MANAGED,
+    ACCION_CREAR,
+    ACCION_MERGE,
+    ACCION_PLANTILLA,
+    AccionPlan,
+    construir_plan,
+    formatear_plan,
+)
+from .preflight import DestinoInvalidoError, _detectar_staging_huerfano, validar_destino
 from .version import HARNESS_VERSION
 
 # Identificador público de CLI (R2). El mapeo a su directorio real bajo
@@ -68,8 +83,10 @@ def construir_parser() -> argparse.ArgumentParser:
         "accion",
         nargs="?",
         default="install",
-        choices=["install", "sync", "migrate-hashes"],
-        help="Operación a realizar: 'install' (default, instala un destino nuevo), 'sync' "
+        choices=["install", "sync", "migrate-hashes", "upgrade"],
+        help="Operación a realizar: 'install' (default, instala un destino nuevo), 'upgrade' "
+        "(actualiza los archivos managed pristine a la versión actual del harness; dry-run por "
+        "defecto, --execute para aplicar), 'sync' "
         "(amplía un destino ya instalado hasta un --stage objetivo mayor) o 'migrate-hashes' "
         "(migra al algoritmo de hash vigente las entradas legacy que verifican; dry-run por "
         "defecto, --execute para aplicar).",
@@ -485,6 +502,284 @@ def _main_migrate_hashes(args: argparse.Namespace, destino: Path) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------
+# upgrade (v0.11 Change 5, R2/R3/R7)
+# ---------------------------------------------------------------------------
+
+ACCION_REPORTAR_DRIFT = "reportar-drift"
+_RUTA_CONTROL_MANIFEST = ".ds_init/control.json"
+# Rutas del proyecto que, si ya existen, upgrade nunca sobrescribe aunque el
+# manifest las distribuya (R10 del manifest: guardrails.json customizable).
+_RUTAS_NUNCA_SOBRESCRIBIR = ("CLAUDE.md", ".claude/guardrails.json")
+
+
+@dataclass
+class _PlanUpgrade:
+    """Resultado de calcular un upgrade (sin mutar el destino)."""
+
+    plan: list = field(default_factory=list)  # AccionPlan que va a writer.instalar
+    actualizar: list = field(default_factory=list)
+    crear: list = field(default_factory=list)
+    drift: list = field(default_factory=list)
+    preservados: list = field(default_factory=list)  # (ruta, motivo)
+    bloqueantes: list = field(default_factory=list)
+    clasificacion: dict = field(default_factory=dict)
+    version_distinta: bool = False
+
+    @property
+    def hay_cambios(self) -> bool:
+        return bool(self.plan) or self.version_distinta
+
+
+def _calcular_plan_upgrade(
+    destino: Path, control_previo: dict, perfil: str, stage: str, capabilities, placeholders: dict
+) -> _PlanUpgrade:
+    """Calcula (sin escribir en el destino) qué haría `upgrade`. Reusa
+    `writer._armar_staging` sobre un directorio temporal EXTERNO al destino,
+    de modo que dry-run y execute decidan exactamente igual qué cambia."""
+    resultado = _PlanUpgrade()
+    resultado.version_distinta = control_previo.get("harness_version") != HARNESS_VERSION
+    resultado.clasificacion = control_mod.clasificar_baseline(destino, control_previo)
+    rutas_baseline = {
+        e["ruta"]
+        for e in (control_previo.get("archivos") or [])
+        if isinstance(e, dict) and isinstance(e.get("ruta"), str)
+    }
+
+    entradas = manifest_para_perfil_stage_y_capabilities(perfil, stage, capabilities)
+    entradas_por_destino = {e.destino: e for e in entradas}
+    candidatos = []
+    for entrada in entradas:
+        rel = entrada.destino
+        if rel == _RUTA_CONTROL_MANIFEST:
+            continue
+        if any(rel == x or rel.startswith(x) for x in EXCLUSIONES_PERMANENTES):
+            continue  # nunca (project-owned / exclusiones permanentes)
+        existe = (destino / rel).exists()
+        info = resultado.clasificacion.get(rel)
+        estado = info.get("estado") if info else None
+
+        if entrada.tratamiento == MERGE:
+            # settings.json: solo merge (si no existe se crea).
+            accion = ACCION_MERGE if existe else ACCION_CREAR
+            candidatos.append(AccionPlan(rel, accion, entrada.descripcion))
+        elif rel in _RUTAS_NUNCA_SOBRESCRIBIR:
+            if existe:
+                resultado.preservados.append((rel, "archivo del proyecto, nunca se sobrescribe"))
+            elif rel in rutas_baseline:
+                resultado.preservados.append((rel, "ausente del disco pero en el baseline; no se recrea"))
+            else:
+                candidatos.append(AccionPlan(rel, ACCION_CREAR, entrada.descripcion))
+        elif existe:
+            if estado in (ESTADO_OK, ESTADO_OK_LEGACY):
+                candidatos.append(AccionPlan(rel, ACCION_ACTUALIZAR_MANAGED, entrada.descripcion))
+            elif estado in _ESTADOS_DRIFT:
+                resultado.drift.append(rel)
+            else:
+                resultado.preservados.append((rel, "existente sin baseline; no se toca ni se adopta"))
+        elif rel in rutas_baseline:
+            resultado.preservados.append((rel, "ausente del disco pero en el baseline; no se recrea"))
+        else:
+            accion = ACCION_PLANTILLA if entrada.tratamiento == PLANTILLA else ACCION_CREAR
+            candidatos.append(AccionPlan(rel, accion, entrada.descripcion))
+
+    tmp = Path(tempfile.mkdtemp(prefix="ds_init_upgrade_calc_"))
+    try:
+        try:
+            journal, _omitidos, actualizados, _sin_cambios = writer._armar_staging(
+                candidatos, entradas_por_destino, destino, tmp, placeholders
+            )
+            writer._validar_staging(tmp)
+        except Exception as exc:  # staging inválido, merge incompatible, E/S
+            resultado.bloqueantes.append(f"{type(exc).__name__}: {exc}")
+            return resultado
+        reales = set(actualizados)
+        merges_cambiados = []
+        for entrada_j in journal:
+            rel = entrada_j["destino"]
+            if rel in actualizados:
+                continue
+            if entrada_j["accion"] == writer.ACCION_JOURNAL_CREAR:
+                reales.add(rel)
+                resultado.crear.append(rel)
+            else:  # merge (settings.json): solo si cambia el contenido
+                if (tmp / rel).read_bytes() != (destino / rel).read_bytes():
+                    reales.add(rel)
+                    merges_cambiados.append(rel)
+        resultado.actualizar = sorted(actualizados) + merges_cambiados
+        resultado.plan = [a for a in candidatos if a.destino in reales]
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return resultado
+
+
+def _imprimir_plan_upgrade(plan_up: _PlanUpgrade, version_instalada) -> None:
+    print(f"[UPGRADE] Versión instalada: {version_instalada!r} | versión disponible: {HARNESS_VERSION!r}")
+    print(
+        f"Resumen: a actualizar {len(plan_up.actualizar)}, a crear {len(plan_up.crear)}, "
+        f"drift {len(plan_up.drift)}, preservados {len(plan_up.preservados)}, "
+        f"bloqueantes {len(plan_up.bloqueantes)}"
+    )
+    for ruta in plan_up.actualizar:
+        print(f"  [{ACCION_ACTUALIZAR_MANAGED:18s}] {ruta}")
+    for ruta in plan_up.crear:
+        print(f"  [{ACCION_CREAR:18s}] {ruta}")
+    for ruta in plan_up.drift:
+        print(f"  [{ACCION_REPORTAR_DRIFT:18s}] {ruta} — modificado respecto del baseline; upgrade no lo toca ni lo adopta")
+    for ruta, motivo in plan_up.preservados:
+        print(f"  [preservado        ] {ruta} — {motivo}")
+    for bloqueante in plan_up.bloqueantes:
+        print(f"  [BLOQUEANTE] {bloqueante}")
+
+
+def _main_upgrade(parser: argparse.ArgumentParser, args: argparse.Namespace, destino: Path) -> int:
+    if args.stage or args.enable_capability or args.disable_capability:
+        parser.error(
+            "'upgrade' no acepta --stage/--enable-capability/--disable-capability: usa el "
+            "stage y las capabilities persistidos en control.json (para ampliarlos, 'sync')"
+        )
+
+    ruta_control = destino / control_mod.DIR_CONTROL / control_mod.NOMBRE_ARCHIVO_CONTROL
+    if not ruta_control.exists():
+        print(f"[ABORTADO] No existe {ruta_control}: nada que actualizar (correr 'install' primero).", file=sys.stderr)
+        return 1
+    try:
+        control_previo = json.loads(ruta_control.read_text(encoding="utf-8"))
+        if not isinstance(control_previo, dict) or not isinstance(control_previo.get("configuracion"), dict):
+            raise ValueError("estructura inesperada (se esperaba un objeto con 'configuracion')")
+    except (OSError, ValueError) as exc:
+        print(f"[ABORTADO] control.json ilegible o inválido ({ruta_control}): {exc}", file=sys.stderr)
+        return 2
+
+    # Staging / journal huérfano: la transacción anterior quedó a medias.
+    huerfanos = _detectar_staging_huerfano(destino)
+    if huerfanos:
+        print(
+            f"[ABORTADO] Hay staging/journal huérfano ({', '.join(huerfanos)}): una operación "
+            f"anterior quedó interrumpida. Ejecutar primero: python -m tools.ds_init recover "
+            f"--destino {destino}",
+            file=sys.stderr,
+        )
+        return 1
+
+    perfil = control_previo.get("perfil") or PERFIL_MVP
+    stage = control_previo.get("installation_stage")
+    if stage is None:
+        stage = legacy_mod.inferir_installation_stage(destino, perfil)
+    if stage not in ORDEN_STAGES:
+        print(f"[ABORTADO] installation_stage inválido en control.json: {stage!r}", file=sys.stderr)
+        return 2
+
+    persistidas = control_previo.get("capabilities_habilitadas")
+    if persistidas is not None:
+        if not isinstance(persistidas, list) or not all(isinstance(c, str) for c in persistidas):
+            print("[ABORTADO] control.json inválido: capabilities_habilitadas debe ser lista de strings", file=sys.stderr)
+            return 2
+        errores = validar_capabilities(persistidas)
+        if errores:
+            print("[ABORTADO] control.json inválido: " + "; ".join(errores), file=sys.stderr)
+            return 2
+    capabilities = frozenset(persistidas) if persistidas is not None else frozenset(CAPABILITIES_CONOCIDAS)
+
+    try:
+        validar_destino(destino)
+    except DestinoInvalidoError as exc:
+        print(f"[ABORTADO] {exc}", file=sys.stderr)
+        return 1
+
+    conf = control_previo["configuracion"]
+    nombre, notebooks_dir, venv_dir = conf.get("nombre"), conf.get("notebooks_dir"), conf.get("venv_dir")
+    placeholders = _contexto_placeholders(nombre, notebooks_dir, venv_dir)
+    # La fecha de instalación original se conserva: si no, toda plantilla que
+    # la use cambiaría en cada corrida (rompe idempotencia, R7).
+    if control_previo.get("fecha_utc"):
+        placeholders["FECHA_INSTALACION"] = control_previo["fecha_utc"]
+    version_instalada = control_previo.get("harness_version")
+
+    def _calcular() -> _PlanUpgrade:
+        return _calcular_plan_upgrade(destino, control_previo, perfil, stage, capabilities, placeholders)
+
+    try:
+        plan_up = _calcular()
+    except ValueError as exc:  # p. ej. perfil desconocido
+        print(f"[ABORTADO] {exc}", file=sys.stderr)
+        return 1
+    _imprimir_plan_upgrade(plan_up, version_instalada)
+
+    if plan_up.bloqueantes:
+        print("[ABORTADO] Hay bloqueantes; no se aplica nada.", file=sys.stderr)
+        return 1
+    if not plan_up.hay_cambios:
+        print("\n[UPGRADE] Nada que hacer: el destino ya está al día.")
+        return 0
+    if not args.execute:
+        print("\n[DRY-RUN] No se escribió ni modificó ningún archivo del destino. Usá --execute para aplicar.")
+        return 0
+
+    try:
+        with lock_mod.lock_instalacion(destino, "upgrade"):
+            # Se recalcula con el lock tomado, antes de mutar.
+            plan_up = _calcular()
+            if plan_up.bloqueantes:
+                print("[ABORTADO] Hay bloqueantes tras recalcular: " + "; ".join(plan_up.bloqueantes), file=sys.stderr)
+                return 1
+            if not plan_up.hay_cambios:
+                print("\n[UPGRADE] Nada que hacer: el destino ya está al día.")
+                return 0
+
+            plan = plan_up.plan
+            clasificacion = plan_up.clasificacion
+            rutas_drift = {
+                r for r, info in clasificacion.items() if (info or {}).get("estado") in _ESTADOS_DRIFT
+            }
+            merge_sin_baseline = {
+                a.destino for a in plan if a.accion == ACCION_MERGE and clasificacion.get(a.destino) is None
+            }
+            preexistentes = {a.destino for a in plan if (destino / a.destino).exists()}
+            config = {
+                "perfil": perfil,
+                "nombre": nombre,
+                "notebooks_dir": notebooks_dir,
+                "venv_dir": venv_dir,
+                "destino": args.destino,
+                "integrar_claude": False,
+                "stage": stage,
+                "placeholders": placeholders,
+                "capabilities_habilitadas": sorted(persistidas) if persistidas is not None else None,
+                "entradas_conservadas": list(control_previo.get("archivos") or []),
+                "rutas_drift": sorted(rutas_drift | merge_sin_baseline),
+            }
+
+            def _regenerar(resultado_tx):
+                # Dentro de la transacción: harness_version queda actualizada.
+                control_mod.regenerar_control(
+                    destino,
+                    control_previo,
+                    perfil=perfil,
+                    stage=stage,
+                    installation_stage=stage,
+                    capabilities_habilitadas=persistidas,
+                    clasificacion=clasificacion,
+                    resultado=resultado_tx,
+                    preexistentes=preexistentes,
+                )
+
+            config["post_aplicar"] = _regenerar
+            resultado = writer.instalar(plan, destino, config)
+    except (writer.InstalacionAbortadaError, lock_mod.LockOcupadoError) as exc:
+        print(f"[ABORTADO] {exc}", file=sys.stderr)
+        return 1
+
+    print(
+        f"\n[EXECUTE] Upgrade completo ({version_instalada!r} -> {HARNESS_VERSION!r}): "
+        f"{len(resultado.actualizados)} actualizado(s), "
+        f"{len(resultado.aplicados) - len(resultado.actualizados)} creado(s)/mergeado(s), "
+        f"{len(plan_up.drift)} con drift preservado."
+    )
+    print(f"Archivo de control: {resultado.control_path}")
+    return 0
+
+
 def main(argv: list = None) -> int:
     parser = construir_parser()
     args = parser.parse_args(argv)
@@ -497,6 +792,8 @@ def main(argv: list = None) -> int:
         return _main_sync(parser, args, destino)
     if args.accion == "migrate-hashes":
         return _main_migrate_hashes(args, destino)
+    if args.accion == "upgrade":
+        return _main_upgrade(parser, args, destino)
 
     parser.error(f"acción desconocida: {args.accion!r}")
     return 2  # inalcanzable: parser.error() ya hizo sys.exit(2)
