@@ -633,7 +633,10 @@ def _check_hashes_drift(destino: Path, control_data: Optional[dict]) -> list:
                 checks.CheckResult(
                     checks.STATUS_FAIL,
                     "HARMESSI-DRIFT-FALTANTE",
-                    f"Archivo administrado listado en control.json pero ausente: {ruta_rel}",
+                    f"Archivo administrado listado en control.json pero ausente: {ruta_rel} "
+                    "(instalación incompleta, no es drift de contenido). Remedio: restaurarlo desde "
+                    f"el control de versiones (git checkout -- {ruta_rel}); 'upgrade' no recrea "
+                    "archivos del baseline ausentes (puede ser un borrado intencional)",
                     subject=ruta_rel,
                 )
             )
@@ -1245,7 +1248,7 @@ def _check_ownership_5_vias(destino: Path, control_data: Optional[dict]) -> list
     return resultados
 
 
-def _check_coherencia_version(control_data: Optional[dict]) -> list:
+def _check_coherencia_version(control_data: Optional[dict], destino: Optional[Path] = None) -> list:
     if control_data is None:
         return [
             checks.CheckResult(
@@ -1263,14 +1266,87 @@ def _check_coherencia_version(control_data: Optional[dict]) -> list:
                 f"Instalado con la versión actual del harness ({HARNESS_VERSION})",
             )
         ]
+    ruta = str(destino) if destino is not None else "<ruta>"
     return [
         checks.CheckResult(
             checks.STATUS_WARN,
             "HARMESSI-VERSION",
             f"Instalado con harness_version={version_instalada!r}, la versión actual de "
-            f"este checkout es {HARNESS_VERSION!r} -- puede haber drift de manifiesto",
+            f"este checkout es {HARNESS_VERSION!r} -- puede haber drift de manifiesto. Remedio: "
+            f"python -m tools.ds_init upgrade --destino {ruta} (dry-run) y luego "
+            f"python -m tools.ds_init upgrade --destino {ruta} --execute",
         )
     ]
+
+
+def _check_migracion(destino: Path) -> list:
+    """`HARMESSI-MIGRACION` (v0.11 Change 5, R6): solo lectura. Detecta una
+    instalación/migración interrumpida (staging o journal no completo: FAIL),
+    y restos limpiables (lock huérfano o journal `completo` sin limpiar: WARN)."""
+    ruta = str(destino)
+    comando_recover = (
+        f"python -m tools.ds_init recover --destino {ruta} (dry-run) y luego "
+        f"python -m tools.ds_init recover --destino {ruta} --execute"
+    )
+    parciales = []
+    completos = []
+    for p in sorted(destino.iterdir()) if destino.is_dir() else []:
+        if p.is_dir() and p.name.startswith(".ds_init_staging_"):
+            parciales.append(p.name)
+    dir_journal = destino / ".ds_init" / "journal"
+    if dir_journal.is_dir():
+        for p in sorted(dir_journal.iterdir()):
+            if not p.is_dir():
+                continue
+            try:
+                fase = json.loads((p / "journal.json").read_text(encoding="utf-8")).get("fase")
+            except (OSError, ValueError, AttributeError):
+                fase = None  # ilegible: se trata como parcial (fail-closed)
+            if fase == "completo":
+                completos.append(f".ds_init/journal/{p.name}")
+            else:
+                parciales.append(f".ds_init/journal/{p.name}")
+    resultados = []
+    if parciales:
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_FAIL,
+                "HARMESSI-MIGRACION",
+                "Instalación/migración parcial (staging o journal sin completar): "
+                + ", ".join(parciales)
+                + f". Remedio: {comando_recover}",
+            )
+        )
+    if completos:
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_WARN,
+                "HARMESSI-MIGRACION",
+                "Journal completo sin limpiar (la transacción terminó bien, solo falta limpiar): "
+                + ", ".join(completos)
+                + f". Remedio: {comando_recover}",
+            )
+        )
+    ruta_lock = destino / ".ds_init" / "lock"
+    if ruta_lock.exists():
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_WARN,
+                "HARMESSI-MIGRACION",
+                f"Existe el lock {ruta_lock}: otra operación de ds_init en curso o lock huérfano. "
+                "Si ningún proceso de ds_init está corriendo, borrar ese archivo a mano; si hubo una "
+                f"interrupción, correr primero recover ({comando_recover})",
+            )
+        )
+    if not resultados:
+        resultados.append(
+            checks.CheckResult(
+                checks.STATUS_PASS,
+                "HARMESSI-MIGRACION",
+                "Sin staging, journal ni lock residuales de ds_init",
+            )
+        )
+    return resultados
 
 
 def _check_installation_stage(destino: Path, control_data: Optional[dict]) -> list:
@@ -1889,8 +1965,9 @@ def ejecutar(destino) -> tuple:
         SECCION_HARMESSI, "M12-FUENTE-EXTERNA-PERMISOS", _check_fuentes_externas_permisos_os, destino
     )
     resultados += _ejecutar_check(
-        SECCION_HARMESSI, "HARMESSI-VERSION", _check_coherencia_version, control_data
+        SECCION_HARMESSI, "HARMESSI-VERSION", _check_coherencia_version, control_data, destino
     )
+    resultados += _ejecutar_check(SECCION_HARMESSI, "HARMESSI-MIGRACION", _check_migracion, destino)
     resultados += _ejecutar_check(
         SECCION_HARMESSI, "HARMESSI-INSTALLATION-STAGE", _check_installation_stage, destino, control_data
     )

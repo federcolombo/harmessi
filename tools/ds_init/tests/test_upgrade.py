@@ -22,7 +22,9 @@ from tools.ds_init.cli import main
 from tools.ds_init.manifest import contenido_de, raiz_repo_origen
 from tools.ds_init.version import HARNESS_VERSION
 
-RUTA_DEGRADADO_A = "tools/ds_guard.py"
+# Versión simulada de un proyecto previo: claramente distinta de HARNESS_VERSION.
+VERSION_PREVIA = "0.0.1-previa"
+RUTA_DEGRADADO_A ="tools/ds_guard.py"
 RUTA_DEGRADADO_B = ".claude/agents/metodologo.md"
 RUTA_NUEVA = "tools/dsguard/scope_amendments.py"  # se simula 'managed nuevo'
 RUTA_DRIFT = "tools/dsguard/guardrails_drift.py"
@@ -128,7 +130,7 @@ class _BaseUpgrade(unittest.TestCase):
     def simular_v010(self, con_drift: bool = False) -> None:
         """Convierte la instalación actual en un 'v0.10' sintético y commitea."""
         control = _leer_control(self.repo)
-        control["harness_version"] = "0.10.0"
+        control["harness_version"] = VERSION_PREVIA
         for ruta in (RUTA_DEGRADADO_A, RUTA_DEGRADADO_B):
             with open(self.repo / ruta, "a", encoding="utf-8", newline="") as f:
                 f.write("\n# contenido v0.10 degradado\n")
@@ -162,7 +164,7 @@ class TestUpgrade(_BaseUpgrade):
         self.assertEqual(codigo, 0)
         self.assertEqual(antes, _hashes_arbol(self.repo))
         self.assertIn("DRY-RUN", salida)
-        self.assertIn("0.10.0", salida)
+        self.assertIn(VERSION_PREVIA, salida)
         self.assertIn(RUTA_DEGRADADO_A, salida)
         self.assertIn(RUTA_NUEVA, salida)
 
@@ -243,7 +245,7 @@ class TestUpgrade(_BaseUpgrade):
 
     def test_solo_version_distinta_actualiza_control(self):
         control = _leer_control(self.repo)
-        control["harness_version"] = "0.10.0"
+        control["harness_version"] = VERSION_PREVIA
         _escribir_control(self.repo, control)
         _commit_todo(self.repo, "version vieja")
         codigo, _out, err = self.correr_upgrade("--execute")
