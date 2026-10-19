@@ -559,7 +559,7 @@ def transition(
         # Ya estamos en el destino pedido: ventana de reconciliación (spec
         # 5.8) o repetición idempotente de una transición ya aplicada.
         findings = _findings_del_gate(hacia, control, tasks_path, sesion_activa, repo_root)
-        if findings:
+        if scope.bloqueantes(findings):
             return False, findings
         if ultima_hacia == hacia:
             # Ya reconciliado: la última transición registrada ya termina en
@@ -576,7 +576,7 @@ def transition(
         ]
 
     findings = _findings_del_gate(hacia, control, tasks_path, sesion_activa, repo_root)
-    if findings:
+    if scope.bloqueantes(findings):
         return False, findings
 
     escrito = write_estado(tasks_path, hacia)

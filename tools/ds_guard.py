@@ -475,7 +475,8 @@ def cmd_validate(args: argparse.Namespace) -> int:
     if sesion_activa is not None:
         findings += sdd.chequear_limites(sesion_activa)
 
-    exit_code = 1 if findings else 0
+    # Los hallazgos informativos (p. ej. ALCANCE-ATRIBUIDA-OTRO-CHANGE) se muestran pero no dan exit 1.
+    exit_code = 1 if scope.bloqueantes(findings) else 0
     _imprimir_findings(findings, exit_code, args.json)
     return exit_code
 
@@ -4075,7 +4076,7 @@ def cmd_archive(args: argparse.Namespace) -> int:
         return 1
 
     findings_gate = sdd.gate_cierre(control, tasks_path, None, repo_root)
-    if findings_gate:
+    if scope.bloqueantes(findings_gate):
         _imprimir_findings(findings_gate, 1, args.json)
         return 1
 

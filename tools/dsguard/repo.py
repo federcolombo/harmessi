@@ -11,6 +11,7 @@ from __future__ import annotations
 import fnmatch
 import re
 import subprocess
+from typing import Optional
 from pathlib import Path
 
 COMANDOS_PERMITIDOS = {"rev-parse", "status", "diff", "show", "log", "ls-files", "mv"}
@@ -223,6 +224,28 @@ def diff_name_status(repo_root: Path, *args: str) -> list:
             f"{resultado.stderr.strip()}"
         )
     return parse_name_status_z(resultado.stdout)
+
+
+def leer_en_commit(repo_root: Path, commit, ruta: str) -> Optional[bytes]:
+    """Contenido (UTF-8) del blob `ruta` en `commit` (`git show <commit>:<ruta>`, subcomando de la
+    lista blanca) o `None` ante cualquier fallo (ref inválida, ruta ausente, Git ilegible). Nunca
+    lanza. Un byte no UTF-8 se reemplaza (U+FFFD) al decodificar `_git`: el hash resultante no
+    coincidirá con ninguna aprobación (fail-closed). Solo lectura."""
+    try:
+        validar_ref(commit)
+        if not isinstance(ruta, str) or not ruta or ruta.startswith("-"):
+            return None
+        resultado = _git(repo_root, "show", f"{commit}:{ruta}")
+    except (GitCommandError, RuntimeError, OSError, ValueError):
+        return None
+    if resultado.returncode != 0:
+        return None
+    return resultado.stdout.encode("utf-8")
+
+
+def existe_en_commit(repo_root: Path, commit, ruta: str) -> bool:
+    """True si el blob `ruta` existe en el árbol de `commit`. Fail-closed (nunca lanza)."""
+    return leer_en_commit(repo_root, commit, ruta) is not None
 
 
 def is_tree_clean(repo_root: Path) -> bool:

@@ -31,7 +31,11 @@ def hash_lf_v1(path: Path) -> str:
     codificar a UTF-8 y hashear esos bytes. Reproduce exactamente el algoritmo
     ya usado a mano para los hashes de aprobación existentes en `control.json`.
     """
-    crudo = Path(path).read_bytes()
+    return hash_lf_v1_bytes(Path(path).read_bytes())
+
+
+def hash_lf_v1_bytes(crudo: bytes) -> str:
+    """Mismo algoritmo que `hash_lf_v1` sobre bytes ya leídos (p. ej. un blob de `git show`)."""
     texto = crudo.decode("utf-8-sig")
     texto = texto.replace("\r\n", "\n").replace("\r", "\n")
     return hashlib.sha256(texto.encode("utf-8")).hexdigest()

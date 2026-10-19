@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "change_id": "20261019-v011-parallel-change-isolation",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-19T12:55:11Z",
+  "baseline": {
+    "commit": "36164f1135b7d24625edc45f643169669eade7b5",
+    "rama": "v0.11-dev",
+    "capturado_utc": "2026-10-19T12:55:11Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/methodology.md",
+      ".claude/skills/lead-data-scientist/verificador.md",
+      "docs/roadmap/v0.11.md",
+      "openspec/changes/20261019-v011-parallel-change-isolation/**",
+      "openspec/changes/20261019-v011-parallel-change-isolation/amendments.jsonl",
+      "openspec/changes/20261019-v011-parallel-change-isolation/control.json",
+      "openspec/changes/20261019-v011-parallel-change-isolation/design.md",
+      "openspec/changes/20261019-v011-parallel-change-isolation/proposal.md",
+      "openspec/changes/20261019-v011-parallel-change-isolation/spec.md",
+      "openspec/changes/20261019-v011-parallel-change-isolation/tasks.md",
+      "openspec/changes/20261019-v011-parallel-change-isolation/verification.md",
+      "tools/ds_guard.py",
+      "tools/ds_init/profiles/**",
+      "tools/dsguard/core.py",
+      "tools/dsguard/repo.py",
+      "tools/dsguard/scope.py",
+      "tools/dsguard/sdd.py",
+      "tools/tests/**"
+    ],
+    "scope_hash": "d93b302ff9d838e12ad12214d87ee6bf9420bd0310990cc6ece60442d68c9e11"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ec9a64372b425161d1992e4791f72c83dc9cc6890f6249e28dfe25561f5bb106",
+      "registrado_utc": "2026-10-19T12:56:12Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-19",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261019-v011-parallel-change-isolation",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "6e68f86526bdaba606ff7606ab46567f041cff567344b71cd565a2be657d1140",
+      "registrado_utc": "2026-10-19T12:56:13Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-19",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261019-v011-parallel-change-isolation",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "cf5220e98857dcc538b41bb2ed440449f698ad1522e188ce4bd5e41ee53ac124",
+      "registrado_utc": "2026-10-19T12:56:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-19",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261019-v011-parallel-change-isolation",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "cacb1049246ae12d3080d69dc8bf44a19de8ce969ddc35e4277ff16f288f2e9f",
+      "registrado_utc": "2026-10-19T16:48:49Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-19",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261019-v011-parallel-change-isolation (re-registro tras cambio de spec/design por reviewer 4B)",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "cff884124f00423eb0a1cd23cc0e9e16e12cece3e9a501deb29ddcfb90e6cd43",
+      "registrado_utc": "2026-10-19T16:48:51Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-19",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261019-v011-parallel-change-isolation (re-registro tras cambio de spec/design por reviewer 4B)",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-19T12:56:20Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-19T12:56:29Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-19T17:03:40Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-19T17:03:44Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-19T12:56:23Z",
+      "cierre_utc": "2026-10-19T17:03:52Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-19T20:56:23Z",
+      "minutos_consumidos": 247.48333333333332,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-19T16:47:09Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-19T13:41:35Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

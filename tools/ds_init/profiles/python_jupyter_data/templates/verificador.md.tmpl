@@ -204,6 +204,20 @@ comportamiento observable, mismo nivel que el resto de esta sección.
   commits (sin `HEAD`) también termina en exit 3: sin baseline posible no se crea el Change; hay
   que hacer al menos un commit inicial.
 - **`ALCANCE-TREE-SUCIO`**: working tree no limpio cuando `archive` lo requiere.
+- **Changes paralelos (v0.11)**: cada ruta tocada fuera del alcance propio se clasifica contra el
+  alcance efectivo (con enmiendas) de los demás Changes activos y aprobados
+  (`openspec/changes/*` con `tasks.md` en `aprobada_implementacion`/`en_implementacion`/
+  `en_verificacion`; estado y aprobación de todos los artefactos requeridos del modo se verifican
+  en el snapshot del commit baseline propio (SHA completo), con `scope_hash` igual al de disco
+  (ancla inmutable); un ajeno aprobado después del baseline no atribuye; los demás estados, `archive` y los patrones ajenos
+  catch-all o protegidos como `**` o `.claude/**` se ignoran). Sin dueño o con un único dueño
+  de cadena inválida: `ALCANCE-RUTA`. Un solo otro dueño: `ALCANCE-ATRIBUIDA-OTRO-CHANGE`
+  (informativo: se muestra, NO da exit 1 ni bloquea gates/transiciones; nunca amplía el alcance
+  propio). Ruta en el alcance propio y en el de otro Change activo, o en el de 2+ ajenos sin ser
+  propia: `ALCANCE-CONFLICTO-CHANGES` (bloquea). `control.json` ajeno ilegible o cadena de
+  enmiendas ajena inválida: `ALCANCE-OTRO-CHANGE-INVALIDO` (bloquea; se emite si hay rutas fuera
+  del alcance propio; ese Change no autoriza nada). Sin otros Changes activos, o con Git
+  ilegible, el comportamiento es el previo.
 - **`SDD-ESTADO-ILEGIBLE`**: no hay línea `estado:` en `tasks.md`, o el valor no es un estado SDD
   válido.
 - **`SDD-ESTADO-DUPLICADO`**: hay 2+ líneas `estado:` en `tasks.md`.

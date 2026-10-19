@@ -459,3 +459,9 @@ Una intervención de emergencia es aceptable solo si el canal gobernado quedó i
 - Límites: el vínculo entre la aprobación T1 y la definición es textual (el artefacto aprobado contiene el `definition_hash`); no prueba autoría ni intención. `control.json` no está autenticado.
 - El control real es el checkpoint humano: el humano debe LEER el artefacto antes de aprobarlo.
 - El agente NO ejecuta `ds_guard approve --channel console_confirmed` por su cuenta ni lo pide fuera de un checkpoint humano.
+
+## 34. Changes paralelos y atribución de alcance
+
+- Con varios Changes abiertos, `validate`/`gate_cierre` atribuyen una ruta fuera del alcance propio al Change activo y aprobado (estado de implementación/verificación y aprobación de TODOS los artefactos requeridos de su modo, verificados contra sus hashes en el snapshot del commit baseline del Change propio, que debe ser un SHA completo; el `scope_hash` en disco debe ser igual al del baseline, ancla inmutable; propuestas, pausados, Changes sin aprobación verificada y patrones catch-all o protegidos no cuentan). Limitación: un ajeno aprobado después del baseline propio no atribuye (fail-closed); uno legítimo que edita sus archivos en paralelo sigue atribuyendo. La atribución es honesta, no autenticada: eleva el costo de la evasión pero no sustituye al alcance propio que la posee (`ALCANCE-ATRIBUIDA-OTRO-CHANGE`, informativo, no bloquea): es clasificación de hallazgos, nunca autoriza escritura ni amplía el alcance propio.
+- Rutas sin dueño (`ALCANCE-RUTA`), con doble dueño (`ALCANCE-CONFLICTO-CHANGES`) o con un Change ajeno cuyo alcance no es verificable (`ALCANCE-OTRO-CHANGE-INVALIDO`) siguen bloqueando. Un conflicto se resuelve con una enmienda de alcance gobernada, no ignorando el hallazgo.
+- Sin scheduler, locks ni worktrees: la atribución por runtime en el hook (4A) no está implementada.
