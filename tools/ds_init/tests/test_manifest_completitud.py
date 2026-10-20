@@ -30,6 +30,20 @@ SOLO_CHECKOUT = (
 )
 
 
+# Imports PEREZOSOS permitidos desde un módulo instalado hacia código solo-checkout
+# (importador exacto, prefijo de destino). `tools/ds_guard.py` importa `tools/ds_init/*`
+# dentro de `_ruta_plantilla_guardrails` (con try/except y fallback): `guardrails
+# readopt` exige el clone de Harmessi por diseño. `tools/dsguard/status.py` consume
+# `tools/ds_init/*` y `tools/harmessi/*` EXCLUSIVAMENTE vía import perezoso opcional
+# (ver su docstring): en un proyecto instalado esos paquetes no existen. Solo se aplica
+# a la verificación de imports prohibidos, no a la de completitud.
+IMPORTS_PEREZOSOS_PERMITIDOS = {
+    ("tools/ds_guard.py", "tools/ds_init/"),
+    ("tools/dsguard/status.py", "tools/ds_init/"),
+    ("tools/dsguard/status.py", "tools/harmessi/"),
+}
+
+
 def _es_solo_checkout(ruta: str) -> bool:
     return "__pycache__" in ruta or any(ruta.startswith(p) for p in SOLO_CHECKOUT)
 
@@ -99,7 +113,8 @@ def _recorrer(destinos_manifest) -> tuple:
         for dep in _imports_de(actual):
             if _es_solo_checkout(dep):
                 # Un módulo instalado no puede depender de código solo-checkout.
-                prohibidos.add((actual, dep))
+                if not any(actual == imp and dep.startswith(pref) for imp, pref in IMPORTS_PEREZOSOS_PERMITIDOS):
+                    prohibidos.add((actual, dep))
                 continue
             if dep in vistos:
                 continue

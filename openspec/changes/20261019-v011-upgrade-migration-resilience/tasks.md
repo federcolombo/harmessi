@@ -1,6 +1,6 @@
 # Tareas — 20261019-v011-upgrade-migration-resilience
 
-estado: en_implementacion
+estado: cerrada
 
 ## Invocaciones planificadas
 - Lead coordina/valida; writer único `python-data-engineer` (serial, varias invocaciones T1a–T1e); reviewer 1 ciclo (segundo solo si blocker/HIGH).
@@ -20,8 +20,8 @@ estado: en_implementacion
 - [x] T1c — R4 `recover` + detección por fase
 - [x] T1d — R6 Doctor
 - [x] T1e — R8/R9/R10 fixtures v0.10, E2E, inyección de fallos, byte-identidad, docs
-- [ ] T2 — Reviewer (1 ciclo) y fixes
-- [ ] T3 — verification, cierre, commit
+- [x] T2 — Reviewer (1 ciclo) y fixes
+- [x] T3 — verification, cierre, commit
 
 ## Dependencias
 

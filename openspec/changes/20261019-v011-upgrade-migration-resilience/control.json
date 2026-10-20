@@ -78,6 +78,16 @@
       "utc": "2026-10-19T17:10:14Z",
       "desde": "aprobada_implementacion",
       "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-20T14:51:51Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-20T14:51:54Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
     }
   ],
   "sesiones": [
@@ -113,6 +123,40 @@
       "reintentos": 0,
       "rondas_revision": 0,
       "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-20T14:16:35Z",
+      "cierre_utc": "2026-10-20T14:51:56Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-20T22:16:35Z",
+      "minutos_consumidos": 35.35,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-19T18:11:15Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-19T19:01:29Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada",
+      "retomada_de": "s1"
     }
   ]
 }
