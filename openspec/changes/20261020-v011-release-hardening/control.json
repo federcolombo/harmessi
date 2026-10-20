@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "change_id": "20261020-v011-release-hardening",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-20T14:52:48Z",
+  "baseline": {
+    "commit": "7fbba292d683747ef2aa4e4792309e956929548d",
+    "rama": "v0.11-dev",
+    "capturado_utc": "2026-10-20T14:52:48Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/agents/**",
+      ".claude/skills/**",
+      ".ds_init/control.json",
+      ".gitignore",
+      "ARCHITECTURE.md",
+      "CITATION.cff",
+      "README.md",
+      "docs/**",
+      "openspec/changes/20261020-v011-release-hardening/**",
+      "openspec/changes/20261020-v011-release-hardening/amendments.jsonl",
+      "openspec/changes/20261020-v011-release-hardening/control.json",
+      "openspec/changes/20261020-v011-release-hardening/design.md",
+      "openspec/changes/20261020-v011-release-hardening/proposal.md",
+      "openspec/changes/20261020-v011-release-hardening/spec.md",
+      "openspec/changes/20261020-v011-release-hardening/tasks.md",
+      "openspec/changes/20261020-v011-release-hardening/verification.md",
+      "openspec/decisions/ledger.jsonl",
+      "tools/**"
+    ],
+    "scope_hash": "7a01d893ae37b21dd3c2b67860130c0ca68dedb035e0572e22b1f2477c82c156"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "b2ccb916d0a4bcbcc1944814f1eb07c99f7164fe4424fa58fd672ea76c2295f3",
+      "registrado_utc": "2026-10-20T14:52:52Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261020-v011-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "0c13836e1b4480ed777b1e1affc13c78008aef827bbce1026f2f2be16cf322db",
+      "registrado_utc": "2026-10-20T14:52:53Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261020-v011-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e26df0bbb98e476fdc81d9698c66cb788861eb741ec689d684e772dcfa0e159a",
+      "registrado_utc": "2026-10-20T14:53:17Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-20",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261020-v011-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "b2ccb916d0a4bcbcc1944814f1eb07c99f7164fe4424fa58fd672ea76c2295f3",
+      "registrado_utc": "2026-10-20T14:53:19Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-20",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261020-v011-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "0c13836e1b4480ed777b1e1affc13c78008aef827bbce1026f2f2be16cf322db",
+      "registrado_utc": "2026-10-20T14:53:20Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-20",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261020-v011-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-20T14:53:21Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-20T14:53:22Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-20T14:52:56Z",
+      "cierre_utc": null,
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-20T22:52:56Z",
+      "minutos_consumidos": 0.0,
+      "resultado": null,
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-20T14:53:52Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "activa"
+    }
+  ]
+}

@@ -117,6 +117,13 @@ science project.
   project-owned `GLOSSARY.md` (`ds_guard glossary check|hash`).
   `console_confirmed` is an interactive-presence signal, not proof of identity
   or authorship. See `docs/releases/v0.10.0.md`.
+- **Operational Robustness & Recovery (v0.11)** — Git/scope failures now fail
+  closed (`ALCANCE-GIT-ILEGIBLE`), the decision ledger gains append-only
+  corrections and an integrity check (`ds_guard decision correct|verify`,
+  tamper-evidence, not authenticity), `session start --retomar` and an
+  early-expiry warning, attribution of paths to other open Changes, and
+  transactional `ds_init upgrade` / `ds_init recover` (dry-run by default).
+  H1 (hook payload) remains UNCONFIRMED. See `docs/releases/v0.11.0.md`.
 
 ## Requirements
 

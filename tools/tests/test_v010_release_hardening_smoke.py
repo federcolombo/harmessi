@@ -57,19 +57,30 @@ def _estado_tasks(change_id: str):
     return None
 
 
+def _semver(v: str) -> tuple:
+    """Parsea `X.Y.Z` (ignora sufijos prerelease) a una tupla comparable."""
+    m = re.match(r"^(\d+)\.(\d+)\.(\d+)", v)
+    return tuple(int(x) for x in m.groups()) if m else (-1, -1, -1)
+
+
 class TestVersion010(unittest.TestCase):
+    # Desde v0.11 la versión vigente avanza: estos chequeos exigen «>= 0.10.0» y coherencia con HARNESS_VERSION.
     def test_version_es_010(self):
         from tools.ds_init.version import HARNESS_VERSION
 
-        self.assertEqual(HARNESS_VERSION, "0.10.0")
+        self.assertGreaterEqual(_semver(HARNESS_VERSION), (0, 10, 0))
 
     def test_citation_coherente(self):
+        from tools.ds_init.version import HARNESS_VERSION
+
         cff = (REPO / "CITATION.cff").read_text(encoding="utf-8")
-        self.assertIn("version: 0.10.0", cff)
+        self.assertIn(f"version: {HARNESS_VERSION}", cff)
 
     def test_control_json_coherente(self):
+        from tools.ds_init.version import HARNESS_VERSION
+
         control = json.loads((REPO / ".ds_init" / "control.json").read_text(encoding="utf-8"))
-        self.assertEqual(control.get("harness_version"), "0.10.0")
+        self.assertEqual(control.get("harness_version"), HARNESS_VERSION)
         archivos = control.get("archivos", [])
         self.assertTrue(archivos, "control.json sin entradas en `archivos`")
         validos = {"sha256/eol-lf/v1", "sha256/bin/v1"}
