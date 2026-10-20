@@ -112,8 +112,12 @@ class TestNotasRelease011(unittest.TestCase):
             "tamper-evidence",
             "Known limitations",
             "Upgrading",
+            "Rename: both sides",
+            "destination only",
         ):
             self.assertIn(clave, txt, f"las notas de v0.11.0 deben mencionar «{clave}»")
+        # 4A (runtime attribution) debe figurar como NO incluida.
+        self.assertRegex(txt, r"4A \(runtime attribution\) did not ship", "4A debe declararse como no incluida")
 
     def test_sin_sobrepromesa(self):
         bajo = self._txt().lower()
