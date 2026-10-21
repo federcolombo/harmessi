@@ -197,7 +197,7 @@ Entradas: ruta repo-relativa con `/`, archivo exacto o directorio terminado en `
 
 ### Skills cargados (`tasks.md`)
 
-Si una skill componible afecta decisiones o delegación de un Change, el Lead la registra en `## Skills cargados` (`- <skill> — <tarea> — <motivo>`). `ds_guard validate` emite `SKILL-REFERENCIA-DESCONOCIDA` si la skill citada no existe en `.claude/skills/lead-data-scientist/skills/`. Sin la sección no se valida nada.
+El Lead registra una skill componible en `## Skills cargados` (`- <skill> — <tarea> — <motivo>`, un bullet por skill) solo si influyó materialmente: la skill cambió una decisión, un criterio de aceptación, la delegación (incluido el puntero a la skill en el campo 2), el scope/ownership o el diseño; si sin ella el resultado habría sido otro. Una lectura exploratoria sin efecto no lleva bullet, ni tampoco una skill que perdió un conflicto sin influir. Si hubo conflicto entre skills, el criterio queda en el motivo del bullet de la que ganó; sin `tasks.md` (sin SDD), en el mensaje al humano (`methodology.md` §40). `ds_guard validate` emite `SKILL-REFERENCIA-DESCONOCIDA` si la skill citada no existe en `.claude/skills/lead-data-scientist/skills/`. Sin la sección no se valida nada.
 
 ### Intervenciones de emergencia (`verification.md`)
 

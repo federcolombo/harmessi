@@ -832,5 +832,141 @@ class TestV012SuperficiesDelHarness(unittest.TestCase):
                 self.assertIn(frase, contenido)
 
 
+# --- Change 5 v0.12 (20261021-v012-skill-selection-composition) ---
+class TestV012SeleccionComposicionTraza(unittest.TestCase):
+    def _seccion40(self, ruta: Path) -> str:
+        contenido = _leer_norm(ruta)
+        self.assertIn("## 40. Selección, composición y traza de skills", contenido)
+        cuerpo = contenido.split("## 40. ")[1]
+        cuerpo = re.split(r"(?m)^## ", cuerpo)[0]  # hasta la siguiente sección `## `
+        return re.sub(r"\s+", " ", cuerpo)
+
+    def _seccion28(self, ruta: Path) -> str:
+        contenido = _leer_norm(ruta)
+        return re.sub(r"\s+", " ", contenido.split("## 28. ")[1].split("## 29. ")[0])
+
+    def test_tabla_de_seleccion_contiene_todas_las_skills_distribuidas(self):
+        nombres = sorted(p.stem for p in (SKILL_DIR / "skills").glob("*.md"))
+        self.assertGreaterEqual(len(nombres), 4)
+        for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
+            s40 = self._seccion40(ruta)
+            for nombre in nombres:
+                with self.subTest(archivo=ruta.name, skill=nombre):
+                    # Fila de la tabla: "| `skill` | ..." (espacios normalizados).
+                    self.assertIn(f"| `{nombre}` |", s40)
+
+    def test_regla_de_conflicto_nueva_presente_y_vieja_ausente(self):
+        for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
+            s40 = self._seccion40(ruta)
+            s28 = self._seccion28(ruta)
+            for frase in ("resuelve semánticamente sin violar las capas superiores",
+                          "deja el criterio en el motivo de la traza",
+                          "gana esa capa y rigen los STOPs vigentes", "No hay merge engine"):
+                with self.subTest(archivo=ruta.name, frase=frase):
+                    self.assertIn(frase, s40)
+            with self.subTest(archivo=ruta.name, seccion="28"):
+                self.assertIn("(§40)", s28)
+                self.assertIn("resuelve semánticamente", s28)
+            with self.subTest(archivo=ruta.name, vieja="28/40"):
+                self.assertNotIn("el lead se detiene y consulta", (s28 + " " + s40).lower())
+        for ruta in (SKILL_RENDERIZADO, SKILL_TMPL):
+            with self.subTest(archivo=ruta.name):
+                contenido = _leer_norm(ruta)
+                self.assertNotIn("el lead se detiene y consulta", contenido.lower())
+                self.assertIn("resuelve semánticamente", contenido)
+
+    def test_regla_de_conflicto_menciona_stops_capas_y_fallback_al_humano(self):
+        for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL, SKILL_RENDERIZADO, SKILL_TMPL):
+            if ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
+                texto = self._seccion40(ruta)
+            else:
+                texto = re.sub(r"\s+", " ", _leer_norm(ruta))
+            for frase in ("capa superior", "STOPs", "propone al humano en vez de resolver",
+                          "más restrictiva", "checkpoint humano"):
+                with self.subTest(archivo=ruta.name, frase=frase):
+                    self.assertIn(frase, texto)
+        for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
+            with self.subTest(archivo=ruta.name, frase="no permite saltar STOPs"):
+                self.assertIn("no permite saltar STOPs", self._seccion40(ruta))
+
+    def test_sdd_tmpl_cubre_los_encabezados_de_sdd_md_y_no_tiene_nombres_propios(self):
+        encabezados = re.compile(r"(?m)^#{2,3} .+$")
+        md = set(encabezados.findall(_leer_norm(SDD_RENDERIZADO)))
+        tmpl_texto = _leer_norm(TEMPLATES / "sdd.md.tmpl")
+        tmpl = set(encabezados.findall(tmpl_texto))
+        self.assertTrue(md)
+        self.assertEqual(sorted(md - tmpl), [], "sdd.md.tmpl perdió secciones de sdd.md")
+        self.assertNotIn("Federico", tmpl_texto)
+        self.assertNotIn("remove-personal-email", tmpl_texto)
+
+    def test_traza_por_influencia_material(self):
+        for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
+            s40 = self._seccion40(ruta)
+            for frase in ("influencia material", "cambió una decisión, un criterio de aceptación",
+                          "incluido el puntero a la skill en el campo 2",
+                          "si sin ella el resultado habría sido otro",
+                          "Una lectura exploratoria sin efecto no lleva bullet",
+                          "perdió un conflicto sin influir", "mensaje al humano",
+                          "un bullet por skill", "Sin telemetría"):
+                with self.subTest(archivo=ruta.name, frase=frase):
+                    self.assertIn(frase.lower(), s40.lower())
+        for ruta in (SDD_RENDERIZADO, TEMPLATES / "sdd.md.tmpl",
+                     SKILL_DIR / "templates" / "tasks.md", SKILL_RENDERIZADO, SKILL_TMPL):
+            with self.subTest(archivo=ruta.name):
+                contenido = re.sub(r"\s+", " ", _leer_norm(ruta))
+                self.assertIn("incluido el puntero a la skill en el campo 2", contenido)
+                self.assertIn("si sin ella el resultado habría sido otro", contenido)
+                self.assertIn("perdió un conflicto sin influir", contenido)
+                self.assertIn("<skill> — <tarea> — <motivo>", contenido)
+
+    def test_sin_resolver_registry_marketplace_y_foundation_preservada(self):
+        for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
+            s40 = self._seccion40(ruta)
+            for frase in ("No existe resolver de dependencias, grafo, registry, marketplace ni plugins",
+                          "markdown, bajo demanda, sin permisos, sin hooks y sin ejecución",
+                          "nunca «todas siempre»", "`problem-framing` → `domain-modeling`",
+                          "`diagnosing-bugs` → `codebase-design`", "`when_to_load`"):
+                with self.subTest(archivo=ruta.name, frase=frase):
+                    self.assertIn(frase, s40)
+        for ruta in (SKILL_RENDERIZADO, SKILL_TMPL):
+            with self.subTest(archivo=ruta.name):
+                contenido = _leer_norm(ruta)
+                self.assertIn("methodology.md` §40", contenido)
+                self.assertIn("Sin resolver de dependencias, grafo, registry, marketplace ni plugins",
+                              contenido)
+
+    def test_alcance_28_incluye_skills_v012(self):
+        for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
+            s28 = self._seccion28(ruta)
+            for skill in ("problem-framing", "diagnosing-bugs", "codebase-design"):
+                with self.subTest(archivo=ruta.name, skill=skill):
+                    self.assertIn(skill, s28)
+
+    def test_architecture_documenta_seleccion_y_composicion(self):
+        contenido = _leer_norm(REPO_ORIGEN / "ARCHITECTURE.md")
+        for frase in ("### 9.4 Selección y composición de skills (v0.12)", "sin merge engine"):
+            with self.subTest(frase=frase):
+                self.assertIn(frase, contenido)
+
+    def test_traza_con_un_bullet_por_skill_compuesta_sigue_valida(self):
+        herramientas = str(TOOLS_DIR.parent)
+        agregado = herramientas not in sys.path
+        if agregado:
+            sys.path.insert(0, herramientas)
+        try:
+            from tools.dsguard import skill_contract as sc
+        finally:
+            if agregado:
+                sys.path.remove(herramientas)
+        texto = (
+            "## Skills cargados\n"
+            "- problem-framing — T1 — acotó el objetivo\n"
+            "- domain-modeling — T1 — definió el target; prevalece problem-framing en el alcance\n"
+        )
+        skills = {"problem-framing", "domain-modeling"}
+        self.assertEqual(sc.referencias_skills_cargados(texto), ["problem-framing", "domain-modeling"])
+        self.assertEqual(sc.validar_referencias_skills(texto, skills), [])
+
+
 if __name__ == "__main__":
     unittest.main()

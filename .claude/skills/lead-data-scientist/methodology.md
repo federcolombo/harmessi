@@ -402,10 +402,10 @@ Skills enseñan cómo razonar; Roles determinan quién puede actuar; Runtime hac
 - **Carga**: el Lead detecta una necesidad metodológica → lee la skill relevante (solo cuando aplica; nunca «todas siempre») → aplica sus instrucciones → delega/ejecuta normalmente. A un subagente se le da el puntero a la skill en el campo 2 de los 8 campos si su rol figura en `roles`; no se copia su contenido al prompt.
 - **Guidance, nunca authority**: una skill no modifica permisos, no concede herramientas, no amplía scope, no cambia guardrails, no altera el lifecycle, no aprueba artifacts, no salta STOPs, no delega ni ejecuta. No tiene lifecycle propio: se versiona como código y cambia por un Change normal.
 - **`artifacts` y superficies**: `artifacts` no puede apuntar a una superficie Protected (§36), ni para lectura ni para escritura (`SKILL-ARTIFACT-SUPERFICIE-PROTEGIDA`).
-- **Composición y precedencia**: varias skills pueden aplicar a la vez sin duplicar contexto. Ante conflicto gana: (1) governance/runtime, (2) contrato del rol, (3) contrato del proyecto (`CLAUDE.md`), (4) guidance de la skill. Dos skills en conflicto: el Lead se detiene y consulta; no hay motor de prioridades.
-- **Traza**: cuando una skill afecta decisiones o delegación de un Change se registra en `## Skills cargados` de `tasks.md` (`- <skill> — <tarea> — <motivo>`); `ds_guard validate` verifica que la skill citada exista.
+- **Composición y precedencia**: varias skills pueden aplicar a la vez sin duplicar contexto. Ante conflicto gana: (1) governance/runtime, (2) contrato del rol, (3) contrato del proyecto (`CLAUDE.md`), (4) guidance de la skill. Conflicto entre dos skills: el Lead lo resuelve semánticamente sin violar las capas superiores y deja el criterio en el motivo de la traza; si involucra una capa superior gana esa capa y rigen los STOPs vigentes; no hay motor de prioridades ni merge engine (§40).
+- **Traza**: se registra en `## Skills cargados` de `tasks.md` (`- <skill> — <tarea> — <motivo>`) solo cuando la skill influye materialmente (§40); `ds_guard validate` verifica que la skill citada exista.
 - **Skills de proyecto**: un proyecto puede agregar las suyas en `skills/` sin tocar el core; se validan igual.
-- **Alcance de v0.10**: la foundation de skills (Change 4) y la primera skill, `domain-modeling` (Change 5, §33); `GLOSSARY.md` es del proyecto y el installer no lo crea.
+- **Alcance de v0.10**: la foundation de skills (Change 4) y la primera skill, `domain-modeling` (Change 5, §33); `GLOSSARY.md` es del proyecto y el installer no lo crea. v0.12 suma `problem-framing` (§37), `diagnosing-bugs` (§38) y `codebase-design` (§39), y fija selección, composición y traza en §40.
 
 ## 29. TDD adaptado a Data Science (guideline)
 
@@ -508,3 +508,21 @@ Una intervención de emergencia es aceptable solo si el canal gobernado quedó i
 - Una dependencia entre módulos del proyecto no es una dependencia externa (paquete). Bajar al escalón 4 (subsistema/framework) o sumar una dependencia externa nueva relevante es una propuesta que espera aprobación humana (CLAUDE.md §3 y §1); el Lead no lo decide solo. El rollback es un plan escrito, no una acción: prohibido `git reset`/`checkout`/`stash`/`clean` sobre el árbol del usuario.
 - Asesora al Lead; el writer solo actúa dentro de su ownership, el reviewer lee y revisa que se respete el diseño y la escalera, y el `metodologo` interviene si el diseño toca la validez metodológica. Un cambio incompatible, una dependencia nueva relevante o una expansión de scope siguen siendo decisión humana / STOP.
 - Es guidance, nunca authority: no cambia permisos, runtime, scope, aprobaciones ni STOPs.
+
+## 40. Selección, composición y traza de skills
+
+**Tabla de selección** (el Lead elige por la señal del pedido):
+| Skill | La dispara | NO la dispara |
+|---|---|---|
+| `problem-framing` | brief ambiguo o pedido de analizar/construir sin objetivo, decisión o criterio de éxito claros | tarea pequeña con objetivo explícito |
+| `domain-modeling` | un concepto de negocio (target, población, unidad de análisis, universo, cutoff, KPI, reglas de inclusión/exclusión) o un término dudoso | tarea puramente técnica sin términos de negocio |
+| `diagnosing-bugs` | test o pipeline roto o resultado inesperado de causa no evidente | fallo trivial (typo, import evidente) |
+| `codebase-design` | cambio estructural en la codebase del proyecto (módulo nuevo, mover responsabilidades, cambiar un contrato, dependencia entre módulos) | cambio local |
+
+Las skills de proyecto (en `skills/`) se seleccionan por su `when_to_load`.
+
+- **Carga mínima**: se cargan solo las skills pertinentes; si ninguna aplica, no se carga ninguna; nunca «todas siempre». La skill se lee cuando se necesita, no por adelantado, para ahorrar contexto y tokens.
+- **Composición por pares**: pares razonables como `problem-framing` → `domain-modeling` (cuando la ambigüedad es semántica: primero se enmarca el problema, luego se define el término) y `diagnosing-bugs` → `codebase-design` (cuando la causa raíz exige un cambio estructural: primero el diagnóstico, luego el diseño). Otras combinaciones solo si el `when_to_load` de ambas aplica. No existe resolver de dependencias, grafo, registry, marketplace ni plugins: el orden lo decide el Lead leyendo cada skill.
+- **Conflicto**: la precedencia no cambia (governance/runtime > contrato del rol > contrato del proyecto > guidance de skill). Entre dos skills el Lead resuelve semánticamente sin violar las capas superiores y deja el criterio en el motivo de la traza. Si el conflicto involucra una capa superior, gana esa capa y rigen los STOPs vigentes; la regla de conflicto no permite saltar STOPs. Si la resolución implica una decisión de §19 / `CLAUDE.md` §3 (target, features, validación, definición del problema, qué se descarta) o hay duda sobre si involucra una capa superior, el Lead propone al humano en vez de resolver. Ante empate prevalece la guidance más restrictiva, la que exige checkpoint humano (p. ej. el «supuesto trazable» de `problem-framing` frente a una hypothesis material de `domain-modeling` ⇒ checkpoint). No hay merge engine.
+- **Traza**: se registra en `## Skills cargados` (`- <skill> — <tarea> — <motivo>`) solo ante influencia material: la skill cambió una decisión, un criterio de aceptación, la delegación (incluido el puntero a la skill en el campo 2), el scope/ownership o el diseño; si sin ella el resultado habría sido otro. Una lectura exploratoria sin efecto no lleva bullet, ni tampoco una skill que perdió un conflicto sin influir. Composición = un bullet por skill; si hubo conflicto, el criterio queda en el motivo del bullet de la que ganó; sin `tasks.md` (sin SDD), en el mensaje al humano. Sin telemetría.
+- **Foundation v0.10 preservada**: las skills siguen siendo markdown, bajo demanda, sin permisos, sin hooks y sin ejecución; esta sección es criterio, no runtime nuevo.

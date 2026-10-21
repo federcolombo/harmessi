@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "change_id": "20261021-v012-skill-selection-composition",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-21T12:50:10Z",
+  "baseline": {
+    "commit": "408479a1e4ea3ecb9c62c097d7295883e3f21720",
+    "rama": "v0.12-dev",
+    "capturado_utc": "2026-10-21T12:50:10Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/SKILL.md",
+      ".claude/skills/lead-data-scientist/methodology.md",
+      ".claude/skills/lead-data-scientist/sdd.md",
+      ".claude/skills/lead-data-scientist/templates/tasks.md",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.12.md",
+      "openspec/changes/20261021-v012-skill-selection-composition/**",
+      "openspec/changes/20261021-v012-skill-selection-composition/amendments.jsonl",
+      "openspec/changes/20261021-v012-skill-selection-composition/control.json",
+      "openspec/changes/20261021-v012-skill-selection-composition/design.md",
+      "openspec/changes/20261021-v012-skill-selection-composition/proposal.md",
+      "openspec/changes/20261021-v012-skill-selection-composition/spec.md",
+      "openspec/changes/20261021-v012-skill-selection-composition/tasks.md",
+      "openspec/changes/20261021-v012-skill-selection-composition/verification.md",
+      "tools/ds_init/profiles/python_jupyter_data/templates/SKILL_lead_data_scientist.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/methodology.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/sdd.md.tmpl",
+      "tools/ds_init/tests/test_manifest.py",
+      "tools/harmessi/tests/test_doctor_skill_contract.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/tests/test_skill_contract.py",
+      "tools/tests/test_skill_methodology.py"
+    ],
+    "scope_hash": "eead193311fe6383bcf93822a6fea0817141047e1ccd65518a283bef5442ffa9"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f2f789e866341d86541fc9cf229e68580bd8921e890743a807da4a7006aca66e",
+      "registrado_utc": "2026-10-21T12:50:13Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.12 20261021-v012-skill-selection-composition",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.12.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "92e4665a3bf687008a17a327308393812a520d63a4f082d73009e233f06e1621",
+      "registrado_utc": "2026-10-21T12:50:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.12 20261021-v012-skill-selection-composition",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.12.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "4e52437647ef0672307088fef5250e01dab1bd149f411d27980f0de7b85f0865",
+      "registrado_utc": "2026-10-21T12:50:16Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.12 20261021-v012-skill-selection-composition",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.12.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-21T12:50:17Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-21T12:50:19Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-21T13:05:20Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-21T13:05:23Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-21T12:50:18Z",
+      "cierre_utc": "2026-10-21T13:05:24Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-21T16:50:18Z",
+      "minutos_consumidos": 15.1,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T12:50:34Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T12:56:38Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}
