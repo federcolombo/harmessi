@@ -92,6 +92,7 @@ MODULOS_CORE = (
     "tools/datasources/runtime.py",
     "tools/datasources/profile_bridge.py",
     "tools/datasources/file_observer.py",
+    "tools/datasources/conformance.py",
     "tools/modelquality/core.py",
     "tools/modelquality/validation.py",
     "tools/qualityevidence/core.py",

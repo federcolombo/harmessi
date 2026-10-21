@@ -396,6 +396,60 @@ fabricate a signal. `--json` reports, per provider, `available`,
 real session), `version`, and declared capabilities. Run it from a Harmessi
 source checkout, the same way as `harmessi doctor`.
 
+#### Provider conformance (checkout only)
+
+```
+python -m tools.providers.conformance [--provider ID] [--smoke] [--live] [--json]
+```
+
+Checks each adapter against test doubles (no credentials, no network) and
+reports a support level: `contract-tested`, `locally-smoke-tested`
+(`--smoke`: real `detect()` on this host) or `live-validated` (`--live` AND
+`HARMESSI_LIVE_PROVIDER=1`; may cost money, never runs by default). Exit 0 if
+every evaluated provider reaches at least `contract-tested`, 1 otherwise, 2
+if `--live` is used without the environment variable (nothing is invoked).
+The declared table is `SOPORTE_DECLARADO` in `tools/providers/conformance.py`:
+all four providers are declared `contract-tested`; none is declared
+`locally-smoke-tested` or `live-validated` (Claude Code's `detect()` was
+observed on the development host, with no evidence recorded in CI). The
+report also lists `advertencias` (e.g. `codex: ignora model`) when an adapter
+does not forward `model`/`effort`; they never fail the check. The doubles
+cover `subprocess.run/Popen/check_output/check_call/call` and `shutil.which`
+(also from-imports in the adapter's module), and no synthetic API key set in
+the environment may reach the command, `env=` or `input=`.
+
+The test that runs the real `detect()` of `claude` is opt-in: set
+`HARMESSI_SMOKE_LOCAL=1` (and have `claude` in PATH), otherwise it is skipped.
+
+#### Source observer conformance (installed in projects)
+
+```python
+from tools.datasources import conformance
+
+reporte = conformance.verificar_observer(
+    mi_factory,                       # factory(source_id, options)
+    source_id="mi-fuente",
+    options={"path": "data/archivo.csv"},
+    request={"source_id": "mi-fuente"},
+    evidencia="real",                 # "fixture" or "real": declared by you
+    options_error={"path": "data/no_existe.csv"},  # optional: must make the observer fail
+)
+print(reporte.to_json())              # reporte.ok is the global verdict
+```
+
+It validates shape, capabilities, `SourceObservation` parsing, no invented
+facets, rejection of invalid `source_id` and errors as bounded exceptions
+(`SourceError`, `RuntimeError`, `ValueError`, `FileNotFoundError`,
+`OSError`; a `KeyError`/`TypeError`/... fails and names the type), no secrets
+or absolute paths, reproducible `content_sha256`, and no installers or process
+launchers (static AST check over the factory's file: `subprocess`/`pip`/`uv`/
+`poetry`/`setuptools`/`runpy`/`ctypes` imports at any level except under
+`TYPE_CHECKING`, `__import__`/`import_module` of them, `os.system/popen/
+spawn*/exec*`; not exhaustive, sibling modules are not followed). If
+`options_error` is not given, the `error_acotado` check is not evaluated and
+the report is `ok=False`, `completo=False` unless you pass
+`permitir_no_evaluados=True`. Heuristic, not a security guarantee.
+
 ### `harmessi routing`
 
 ```

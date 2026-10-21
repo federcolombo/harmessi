@@ -39,7 +39,9 @@ REGISTRY = "tools/datasources/registry.py"
 RUNTIME = "tools/datasources/runtime.py"
 PROFILE_BRIDGE = "tools/datasources/profile_bridge.py"
 FILE_OBSERVER = "tools/datasources/file_observer.py"
+CONFORMANCE = "tools/datasources/conformance.py"
 
+IMPORTS_CONFORMANCE = {"__future__", "ast", "copy", "dataclasses", "inspect", "json", "typing"}
 IMPORTS_CORE = {"__future__", "dataclasses", "typing", "re", "json", "hashlib", "unicodedata"}
 IMPORTS_SCAN = {"__future__", "re", "typing"}
 IMPORTS_REGISTRY = {"__future__", "re", "typing"}
@@ -201,6 +203,28 @@ class TestRuntimeIOEImportlib(unittest.TestCase):
             )
 
 
+class TestConformanceSoloStdlibYCore(unittest.TestCase):
+    """v0.13 Change 3 (R7): `conformance.py` solo stdlib + `.core`/`.scan`; sin
+    `subprocess`, red ni providers."""
+
+    def test_imports_de_conformance_pertenecen_al_set_permitido(self):
+        imports = _imports_todos(_requerir(CONFORMANCE))
+        violaciones = _violaciones(imports, IMPORTS_CONFORMANCE, {"core", "scan"})
+        self.assertEqual(
+            violaciones,
+            [],
+            f"conformance.py importa fuera de {sorted(IMPORTS_CONFORMANCE)} y `.core`/`.scan`: {violaciones}",
+        )
+
+    def test_conformance_no_importa_subprocess_ni_providers(self):
+        for _nivel, modulo, nombres in _imports_todos(_requerir(CONFORMANCE)):
+            partes = set(modulo.split(".")) | set(nombres)
+            self.assertFalse(
+                partes & {"subprocess", "socket", "urllib", "http", "providers"},
+                f"conformance.py no debe importar subprocess/red/providers: {modulo or nombres}",
+            )
+
+
 class TestProfileBridgePuro(unittest.TestCase):
     def test_imports_de_profile_bridge_pertenecen_al_set_permitido(self):
         imports = _imports_todos(_requerir(PROFILE_BRIDGE))
@@ -301,7 +325,7 @@ class TestDatasourcesEnModulosCore(unittest.TestCase):
         especificacion = importlib.util.spec_from_file_location("_arch_boundaries_v08_ds", ruta)
         modulo = importlib.util.module_from_spec(especificacion)
         especificacion.loader.exec_module(modulo)
-        for ruta_relativa in (CORE, SCAN, REGISTRY, RUNTIME, PROFILE_BRIDGE, FILE_OBSERVER):
+        for ruta_relativa in (CORE, SCAN, REGISTRY, RUNTIME, PROFILE_BRIDGE, FILE_OBSERVER, CONFORMANCE):
             self.assertIn(ruta_relativa, modulo.MODULOS_CORE)
 
 

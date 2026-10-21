@@ -878,6 +878,13 @@ MANIFEST: tuple = (
         stage_minimo="discovery",
     ),
     EntradaManifiesto(
+        fuente="tools/datasources/conformance.py",
+        tratamiento=VERBATIM,
+        destino="tools/datasources/conformance.py",
+        descripcion="Suite reusable de conformance de observers de fuente (verificar_observer, reporte con evidencia real|fixture), solo stdlib + core/scan, sin subprocess ni red (v0.13 Change 3)",
+        stage_minimo="discovery",
+    ),
+    EntradaManifiesto(
         fuente="tools/datasources/registry.py",
         tratamiento=VERBATIM,
         destino="tools/datasources/registry.py",
