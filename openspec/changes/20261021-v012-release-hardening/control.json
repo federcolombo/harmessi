@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "change_id": "20261021-v012-release-hardening",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-21T13:06:32Z",
+  "baseline": {
+    "commit": "0298d256c599bd0ab9674ea8c470004fbcddebac",
+    "rama": "v0.12-dev",
+    "capturado_utc": "2026-10-21T13:06:32Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/SKILL.md",
+      ".claude/skills/lead-data-scientist/methodology.md",
+      ".claude/skills/lead-data-scientist/sdd.md",
+      ".claude/skills/lead-data-scientist/skills/codebase-design.md",
+      ".claude/skills/lead-data-scientist/skills/diagnosing-bugs.md",
+      ".claude/skills/lead-data-scientist/skills/domain-modeling.md",
+      ".claude/skills/lead-data-scientist/skills/problem-framing.md",
+      ".claude/skills/lead-data-scientist/templates/skill.md",
+      ".claude/skills/lead-data-scientist/templates/tasks.md",
+      ".claude/skills/lead-data-scientist/verificador.md",
+      ".ds_init/control.json",
+      "ARCHITECTURE.md",
+      "CITATION.cff",
+      "README.md",
+      "docs/releases/v0.12.0.md",
+      "docs/roadmap/README.md",
+      "docs/roadmap/v0.12.md",
+      "openspec/changes/20261021-v012-release-hardening/**",
+      "openspec/changes/20261021-v012-release-hardening/amendments.jsonl",
+      "openspec/changes/20261021-v012-release-hardening/control.json",
+      "openspec/changes/20261021-v012-release-hardening/design.md",
+      "openspec/changes/20261021-v012-release-hardening/proposal.md",
+      "openspec/changes/20261021-v012-release-hardening/spec.md",
+      "openspec/changes/20261021-v012-release-hardening/tasks.md",
+      "openspec/changes/20261021-v012-release-hardening/verification.md",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/profiles/python_jupyter_data/templates/SKILL_lead_data_scientist.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/methodology.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/sdd.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/verificador.md.tmpl",
+      "tools/ds_init/tests/test_glossary_install.py",
+      "tools/ds_init/tests/test_manifest.py",
+      "tools/ds_init/version.py",
+      "tools/dsguard/skill_contract.py",
+      "tools/harmessi/doctor.py",
+      "tools/harmessi/tests/test_doctor_skill_contract.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/tests/test_harness_smoke.py",
+      "tools/tests/test_skill_contract.py",
+      "tools/tests/test_skill_methodology.py",
+      "tools/tests/test_v010_release_hardening_smoke.py",
+      "tools/tests/test_v011_release_hardening_smoke.py",
+      "tools/tests/test_v012_release_hardening_smoke.py",
+      "tools/tests/test_v07_release_hardening_smoke.py",
+      "tools/tests/test_v09_release_hardening_smoke.py"
+    ],
+    "scope_hash": "48e57859745423f64cc4babe4f6f136c830a5f339feb9ed811db3079298770da"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "010bc1bbdf71c7d741223abd5e2c18b36d5f83f816f3f4dbbf833111f38b83a8",
+      "registrado_utc": "2026-10-21T13:06:34Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.12 20261021-v012-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.12.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a78d04effe79c0c810fe12ad929b7ae68da77163666f94282dc675c2a05f22d5",
+      "registrado_utc": "2026-10-21T13:06:36Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.12 20261021-v012-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.12.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "40ef15719c54c9d337cc39a49ba7f214abae3956baf0f961dcae4cdfba57487c",
+      "registrado_utc": "2026-10-21T13:06:37Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.12 20261021-v012-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.12.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-21T13:06:38Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-21T13:06:40Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-21T15:16:00Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-21T15:16:03Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-21T13:06:39Z",
+      "cierre_utc": "2026-10-21T15:16:04Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-21T17:06:39Z",
+      "minutos_consumidos": 129.41666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T13:06:55Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T15:10:23Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

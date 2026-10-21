@@ -20,7 +20,7 @@ _EXCLUIDOS_SWEEP = re.compile(r"^openspec/changes/[^/]*(release-hardening|remove
 _ESTE_ARCHIVO = "tools/tests/test_v011_release_hardening_smoke.py"
 _SMOKE_V010 = "tools/tests/test_v010_release_hardening_smoke.py"
 
-_VERSION = "0.11.0"
+_VERSION_MINIMA = (0, 11, 0)
 _CHANGE_RELEASE = "20261020-v011-release-hardening"
 _CHANGES_CERRADOS = (
     "20261016-v011-roadmap-and-operational-audit",
@@ -59,14 +59,19 @@ def _estado_tasks(change_id: str):
 
 
 class TestVersion011(unittest.TestCase):
+    # Desde v0.12 la versión vigente avanza: se exige «>= 0.11.0» y coherencia con HARNESS_VERSION.
     def test_version_es_011(self):
         from tools.ds_init.version import HARNESS_VERSION
 
-        self.assertEqual(HARNESS_VERSION, _VERSION)
+        m = re.match(r"^(\d+)\.(\d+)\.(\d+)", HARNESS_VERSION)
+        self.assertIsNotNone(m, f"versión no semver: {HARNESS_VERSION}")
+        self.assertGreaterEqual(tuple(int(x) for x in m.groups()), _VERSION_MINIMA)
 
     def test_citation_coherente(self):
+        from tools.ds_init.version import HARNESS_VERSION
+
         cff = (REPO / "CITATION.cff").read_text(encoding="utf-8")
-        self.assertIn(f"version: {_VERSION}", cff)
+        self.assertIn(f"version: {HARNESS_VERSION}", cff)
 
     def test_readme_menciona_release(self):
         readme = (REPO / "README.md").read_text(encoding="utf-8")

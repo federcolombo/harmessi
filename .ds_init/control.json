@@ -1,5 +1,5 @@
 {
-  "harness_version": "0.11.0",
+  "harness_version": "0.12.0",
   "perfil": "python-jupyter-data",
   "fecha_utc": "2026-09-09T18:08:09Z",
   "configuracion": {
@@ -31,17 +31,17 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/SKILL.md",
-      "sha256": "bedac6b61d180823b9f3fa8ed293717af0bdb659993425927b2d563da906bd29",
+      "sha256": "7e8beb3665644dc9a7c458baf9621dd9b40f16b10dec9f671f182f77886fd4c1",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/sdd.md",
-      "sha256": "886b79b49ff3e6d892b95144d8dcf3acb0967a1db2215626930a2abea2a478e6",
+      "sha256": "64adfa76c19e7d9c23c0879a15ce7d39b3cdffcc50691cfbb775260a932e1077",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/verificador.md",
-      "sha256": "659aa675a0b1769a36c0c3166547f49a479e17d341e1cd6962b82c66837cc21d",
+      "sha256": "a60a0e03fd5555a72a7b751885dcfe14b8001637d6aa1b9c73faf57a6e2d5440",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {
@@ -56,7 +56,7 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/methodology.md",
-      "sha256": "742a1af065dbfc09cdbed01a3dd4c2b2f3b77859a23f5fe646e7cc53141a7db0",
+      "sha256": "e1a4d2247bc46862000e89851653e3c6f6333aacb7c6c43d6b7b4bf8c2e2f334",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {
@@ -76,7 +76,7 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/templates/tasks.md",
-      "sha256": "4e39c64168fec8fd552deb28a61f71d2c1b3bfa283b84bda8ef84278ddf8ff5e",
+      "sha256": "8c0194d9fca87308214731a11149aef724c33b3d51627167ae68fa393dfba277",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {
@@ -86,7 +86,7 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/templates/skill.md",
-      "sha256": "3ff123b23b73b8ddceb3b938ec4a8c2f3fa38f43f4517ca37d87f9d3473f2683",
+      "sha256": "bd0bfaf7493829ca88c7cd50cfc4804b6a01eabcb325c446f1074b54add86625",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {
@@ -221,12 +221,27 @@
     },
     {
       "ruta": "tools/dsguard/skill_contract.py",
-      "sha256": "1850841941ea8d0d8a07a6580d669bcf14402181c77b0a3829d06dad66dba84a",
+      "sha256": "e8fa3d27dc65ab710bd7dfcd7a7f6dd9d9f9283c4c57d7190a139271e530320c",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/skills/domain-modeling.md",
       "sha256": "27b3c95d4087fe7994960f4dd8a468ec9c43fe1b6848afe406e3cccb364167b5",
+      "hash_alg": "sha256/eol-lf/v1"
+    },
+    {
+      "ruta": ".claude/skills/lead-data-scientist/skills/problem-framing.md",
+      "sha256": "82916074bbaaa1b8467709b1ed1cff45a1328f204f698be3bdcf750e5af8fb62",
+      "hash_alg": "sha256/eol-lf/v1"
+    },
+    {
+      "ruta": ".claude/skills/lead-data-scientist/skills/diagnosing-bugs.md",
+      "sha256": "60af4bd9b4107cf475bc9b8f7e8ae3ca4c1f2cd64588838505aacadd5a9ce329",
+      "hash_alg": "sha256/eol-lf/v1"
+    },
+    {
+      "ruta": ".claude/skills/lead-data-scientist/skills/codebase-design.md",
+      "sha256": "aec7ae21d92e354d472936957252068379cfdf59aa706c2af9896e96daef3ad0",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {

@@ -124,6 +124,14 @@ science project.
   early-expiry warning, attribution of paths to other open Changes, and
   transactional `ds_init upgrade` / `ds_init recover` (dry-run by default).
   H1 (hook payload) remains UNCONFIRMED. See `docs/releases/v0.11.0.md`.
+- **Data Scientist Experience & Composable Skills (v0.12)** — an explicit
+  Harness Surfaces model (Protected / Optimizable / Project-owned, derived from
+  the path), three new methodological skills (`problem-framing` with an opt-in
+  `grill-me` mode, `diagnosing-bugs`, `codebase-design`), and rules for
+  selecting, composing and tracing skills. Skills are guidance only: no new
+  roles, permissions or hooks. Limits: skills are guidance with no quality
+  enforcement, the skill trace is cooperative, only Windows was validated, and
+  H1 (hook payload) remains UNCONFIRMED. See `docs/releases/v0.12.0.md`.
 
 ## Requirements
 
