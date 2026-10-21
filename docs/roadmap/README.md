@@ -75,7 +75,7 @@ Si el usuario define otra política de commits para una versión concreta, esa i
 - `v0.10.0`: publicada — Integration & Stabilization + Composable Data Science Skills. Ver `v0.10.md`.
 - `v0.11.0`: publicada — Operational Robustness & Recovery. Ver `v0.11.md` y `docs/releases/v0.11.0.md`.
 - `v0.12.0`: publicada — Data Scientist Experience & Composable Skills. Ver `v0.12.md` y `docs/releases/v0.12.0.md`.
-- `v0.13` (Portability, Evaluation & Contract Hardening): en desarrollo. Ver `v0.13.md`.
+- `v0.13.0`: publicada — Portability, Evaluation & Contract Hardening. Ver `v0.13.md` y `docs/releases/v0.13.0.md`.
 - `v0.14` (Evidence-Driven Harness Improvement): solo dirección registrada en `v0.13.md`, sin contrato.
 - `v1.0`: Stable Public Contracts.
 

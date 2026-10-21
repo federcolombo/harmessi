@@ -132,6 +132,18 @@ science project.
   roles, permissions or hooks. Limits: skills are guidance with no quality
   enforcement, the skill trace is cooperative, only Windows was validated, and
   H1 (hook payload) remains UNCONFIRMED. See `docs/releases/v0.12.0.md`.
+- **Portability, Evaluation & Contract Hardening (v0.13)** — a versioned
+  evaluation and benchmark foundation (versioned cases, suites and results,
+  a deterministic four-state baseline-vs-candidate verdict), reproducible run
+  manifests with resume safety, provider and source-adapter conformance with
+  honest support levels, fail-closed `dsimpact` evidence, a portability smoke
+  workflow, and a classified contract inventory with a compatibility window and
+  a minimal deprecation convention (`docs/contracts/`, `docs/versioning.md`,
+  `docs/deprecation.md`, `docs/portability.md`). v0.13 enables evidence-based
+  comparison but does NOT automatically improve or promote harness changes.
+  Limits: evals are deterministic text proxies, only Windows was validated by
+  execution, remote CI execution was not observed, and providers reach at most
+  `contract-tested`. See `docs/releases/v0.13.0.md`.
 
 ## Requirements
 

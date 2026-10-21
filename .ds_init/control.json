@@ -1,5 +1,5 @@
 {
-  "harness_version": "0.12.0",
+  "harness_version": "0.13.0",
   "perfil": "python-jupyter-data",
   "fecha_utc": "2026-09-09T18:08:09Z",
   "configuracion": {
@@ -36,7 +36,7 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/sdd.md",
-      "sha256": "64adfa76c19e7d9c23c0879a15ce7d39b3cdffcc50691cfbb775260a932e1077",
+      "sha256": "55e1aaddef400332fb5b4d651e50207e5e2f226eeb56524ca334e4b48767eb46",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {
@@ -56,7 +56,7 @@
     },
     {
       "ruta": ".claude/skills/lead-data-scientist/methodology.md",
-      "sha256": "e1a4d2247bc46862000e89851653e3c6f6333aacb7c6c43d6b7b4bf8c2e2f334",
+      "sha256": "4f01538f258658878cc8e5a21673d88dbf8f21b577df6fdd858aaccb76e3f852",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {
@@ -221,7 +221,7 @@
     },
     {
       "ruta": "tools/dsguard/skill_contract.py",
-      "sha256": "e8fa3d27dc65ab710bd7dfcd7a7f6dd9d9f9283c4c57d7190a139271e530320c",
+      "sha256": "2bba5d7272d9e041bf09f045bdb8b39d459ac49c13e315e37fa227578fe1deac",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {
@@ -421,12 +421,12 @@
     },
     {
       "ruta": "tools/dsimpact/cli.py",
-      "sha256": "539c562f1235b46103338d9cb18f4e462c4e05b68663212c4bbb92bba17a1afd",
+      "sha256": "ba4a3d68d5575ed013d8fbd8cb92fae2b3dff324708684229f6f395752055c4a",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {
       "ruta": "tools/dsimpact/git_source.py",
-      "sha256": "7e9b6ecb239119ef9f974b5730e680a8b88d3ea8b6c71fce00d255c21863d3d9",
+      "sha256": "a76fa758291dc11c15828b2df2b9b564f55a5da208b1763ead7a4a5385d88daa",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {
@@ -456,7 +456,7 @@
     },
     {
       "ruta": "tools/dsimpact/scan.py",
-      "sha256": "5fd9b73bb405924ca1328e7a4db038263999260e601d07c5395c68ed147593de",
+      "sha256": "e2a2729d727f365a0b6d543fd0e8414b78857be8d439ee03a59eda2b0276a98b",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {
@@ -582,6 +582,11 @@
     {
       "ruta": "tools/datasources/scan.py",
       "sha256": "3345f0043dd80c6fb06dbb56811b5ee51cb401bbfc3d5ae6ddd4c9723452ed5e",
+      "hash_alg": "sha256/eol-lf/v1"
+    },
+    {
+      "ruta": "tools/datasources/conformance.py",
+      "sha256": "9568b1a222b86ed2c1b44a223006b65edea40dabebc34af3769ea2020a84bc45",
       "hash_alg": "sha256/eol-lf/v1"
     },
     {

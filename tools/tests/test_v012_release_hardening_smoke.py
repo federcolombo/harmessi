@@ -294,7 +294,12 @@ class TestPrivacidad012(unittest.TestCase):
 
     def test_sin_restos_privados_en_archivos_versionados(self):
         hallazgos = []
-        propios = (_ESTE_ARCHIVO, _SMOKE_V010, "tools/tests/test_v011_release_hardening_smoke.py")
+        propios = (
+            _ESTE_ARCHIVO,
+            _SMOKE_V010,
+            "tools/tests/test_v011_release_hardening_smoke.py",
+            "tools/tests/test_v013_release_hardening_smoke.py",
+        )
         for rel in _tracked():
             if rel in propios or _EXCLUIDOS_SWEEP.match(rel) or rel == ".ds_init/control.json":
                 continue

@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "change_id": "20261021-v013-release-hardening",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-21T19:04:54Z",
+  "baseline": {
+    "commit": "ecae1d2e824789273afe6ec73e7e20b47cd6983c",
+    "rama": "v0.13-dev",
+    "capturado_utc": "2026-10-21T19:04:54Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".ds_init/control.json",
+      "CITATION.cff",
+      "README.md",
+      "docs/contracts/README.md",
+      "docs/contracts/inventory.json",
+      "docs/releases/v0.13.0.md",
+      "docs/roadmap/README.md",
+      "docs/roadmap/v0.13.md",
+      "docs/versioning.md",
+      "openspec/changes/20261021-v013-release-hardening/**",
+      "openspec/changes/20261021-v013-release-hardening/amendments.jsonl",
+      "openspec/changes/20261021-v013-release-hardening/control.json",
+      "openspec/changes/20261021-v013-release-hardening/design.md",
+      "openspec/changes/20261021-v013-release-hardening/proposal.md",
+      "openspec/changes/20261021-v013-release-hardening/spec.md",
+      "openspec/changes/20261021-v013-release-hardening/tasks.md",
+      "openspec/changes/20261021-v013-release-hardening/verification.md",
+      "tools/ds_init/version.py",
+      "tools/tests/test_v012_release_hardening_smoke.py",
+      "tools/tests/test_v013_contract_inventory.py",
+      "tools/tests/test_v013_release_hardening_smoke.py"
+    ],
+    "scope_hash": "742797733d546e34a357017492e63d2cc4e2ab4785193ec967643bf525dae12f"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "bec74fa1630e2aa6037e9e2adca4adf1c388844c6e398ec9d2b7bcf931b4fab8",
+      "registrado_utc": "2026-10-21T19:05:42Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "37182285eb306fc55fe77f64daef46b94d95f8b15c7bdab16b7b83fb117ccfe4",
+      "registrado_utc": "2026-10-21T19:05:44Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "b88e740a12a01e510258c11cea832aa0b8330990a65c74524485932c2f3dbe42",
+      "registrado_utc": "2026-10-21T19:05:45Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-21T19:05:46Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-21T19:05:48Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-21T19:05:47Z",
+      "cierre_utc": null,
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-21T23:05:47Z",
+      "minutos_consumidos": 0.0,
+      "resultado": null,
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T19:06:04Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "activa"
+    }
+  ]
+}
