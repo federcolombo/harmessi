@@ -16,6 +16,8 @@ puedan probar directamente.
 """
 from __future__ import annotations
 
+import ast
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -55,14 +57,20 @@ def _evidence_type(tipo_base: str, changed_item: str, targets_path: set, consume
 
 # --- Extracción de changed items por archivo ----------------------------------
 
+def _leer_antes_despues(repo_root: Path, since: Optional[str], staged: bool, cambio) -> tuple:
+    """Lee los contenidos antes/después según el status (fail-closed: si el
+    contenido debía existir y no se pudo leer, `GitSourceError` se propaga)."""
+    origen = cambio.old_path if cambio.status == git_source.STATUS_RENAMED and cambio.old_path else cambio.path
+    antes = git_source.contenido_before(repo_root, since, staged, origen, status=cambio.status)
+    despues = git_source.contenido_after(repo_root, staged, cambio.path, status=cambio.status)
+    return antes, despues
+
+
 def _procesar_py(repo_root: Path, since: Optional[str], staged: bool, cambio) -> dict:
     """Devuelve un dict "fuente" con `changed_entry`, `targets_simbolos`,
     `targets_strings`, `targets_path` (siempre vacío acá -- solo
     deleted/renamed generan path-reference targets)."""
-    texto_antes = None if cambio.status == git_source.STATUS_ADDED else git_source.contenido_before(
-        repo_root, since, staged, cambio.path
-    )
-    texto_despues = git_source.contenido_after(repo_root, staged, cambio.path)
+    texto_antes, texto_despues = _leer_antes_despues(repo_root, since, staged, cambio)
 
     simbolos, parse_error = py_changes.diff_simbolos(texto_antes, texto_despues)
     strings = set() if parse_error else py_changes.strings_contractuales(texto_despues, simbolos)
@@ -107,10 +115,7 @@ def _simbolos_celda_cambiada(texto_celda: str, cambio_celda: str) -> list:
 
 
 def _procesar_notebook(repo_root: Path, since: Optional[str], staged: bool, cambio) -> dict:
-    texto_antes = None if cambio.status == git_source.STATUS_ADDED else git_source.contenido_before(
-        repo_root, since, staged, cambio.path
-    )
-    texto_despues = git_source.contenido_after(repo_root, staged, cambio.path)
+    texto_antes, texto_despues = _leer_antes_despues(repo_root, since, staged, cambio)
 
     parse_error = False
     celdas_antes: list = []
@@ -207,8 +212,9 @@ def _procesar_otro(cambio) -> dict:
 
 
 def _construir_fuente(repo_root: Path, since: Optional[str], staged: bool, cambio) -> dict:
-    """Nunca lanza -- un error de parseo puntual se degrada con gracia
-    (`_procesar_otro` como último resguardo)."""
+    """Un error de parseo puntual se degrada con gracia (`_procesar_otro` como
+    último resguardo), pero `GitSourceError` (contenido ilegible) se propaga:
+    unknown != empty (v0.13 R3)."""
     try:
         if cambio.status in (git_source.STATUS_DELETED, git_source.STATUS_RENAMED):
             return _procesar_eliminado_o_renombrado(cambio)
@@ -217,8 +223,22 @@ def _construir_fuente(repo_root: Path, since: Optional[str], staged: bool, cambi
         if cambio.path.endswith(".ipynb"):
             return _procesar_notebook(repo_root, since, staged, cambio)
         return _procesar_otro(cambio)
-    except Exception:  # noqa: BLE001 - degradación con gracia, nunca aborta el scan
-        return _procesar_otro(cambio)
+    except GitSourceError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - nunca se oculta: queda marcada como no analizada
+        fuente = _procesar_otro(cambio)
+        fuente["changed_entry"]["parse_error"] = True
+        fuente["no_analizado"] = type(exc).__name__
+        return fuente
+
+
+class _NoAnalizado(Exception):
+    """Un consumidor no pudo analizarse; `motivo` es un nombre de clase de
+    excepción (o 'ausente'), nunca un mensaje ni una ruta."""
+
+    def __init__(self, motivo: str):
+        super().__init__(motivo)
+        self.motivo = motivo
 
 
 # --- Búsqueda de consumidores --------------------------------------------------
@@ -234,11 +254,11 @@ def _buscar_en_candidato_py(texto: str, fuente: dict) -> list:
 def _buscar_en_candidato_notebook(repo_root: Path, candidato: str, fuente: dict) -> list:
     ruta_abs = repo_root / candidato
     if not ruta_abs.exists():
-        return []
+        raise _NoAnalizado("ausente")
     texto = ruta_abs.read_text(encoding="utf-8", errors="replace")
     celdas, error = notebooks_source.celdas_codigo(texto, candidato)
     if error:
-        return []
+        raise _NoAnalizado("NotebookInvalido")
     resultados = []
     for indice, texto_celda in celdas:
         matches = _buscar_en_candidato_py(texto_celda, fuente)
@@ -284,9 +304,9 @@ def _mensaje(changed_item: str, evidence_type: str, consumer: str) -> str:
     return f"'{changed_item}' referenciada en {consumer} ({evidence_type.lower()})"
 
 
-def _findings_para_candidato(repo_root: Path, candidato: str, fuente: dict) -> list:
-    """Nunca lanza -- un archivo consumidor con error de parseo/lectura se
-    omite sin abortar el resto del scan."""
+def _findings_para_candidato(repo_root: Path, candidato: str, fuente: dict, omitidos: Optional[dict] = None) -> list:
+    """Nunca lanza -- un consumidor con error de parseo/lectura no aborta el
+    scan, pero se registra en `omitidos` (`{path: motivo}`)."""
     if candidato == fuente["path"]:
         return []
 
@@ -296,8 +316,9 @@ def _findings_para_candidato(repo_root: Path, candidato: str, fuente: dict) -> l
         if ext.endswith(".py"):
             ruta_abs = repo_root / candidato
             if not ruta_abs.exists():
-                return []
+                raise _NoAnalizado("ausente")
             texto = ruta_abs.read_text(encoding="utf-8", errors="replace")
+            ast.parse(texto)  # SyntaxError/ValueError => consumidor no analizado (no «0 consumidores»)
             for m in _buscar_en_candidato_py(texto, fuente):
                 evidence_type = _evidence_type(m["tipo_base"], m["changed_item"], fuente["targets_path"], candidato)
                 findings.append({
@@ -324,8 +345,9 @@ def _findings_para_candidato(repo_root: Path, candidato: str, fuente: dict) -> l
         elif ext.endswith(".json"):
             ruta_abs = repo_root / candidato
             if not ruta_abs.exists():
-                return []
+                raise _NoAnalizado("ausente")
             texto = ruta_abs.read_text(encoding="utf-8", errors="replace")
+            json.loads(texto)  # JSON inválido => consumidor no analizado
             for m in _buscar_en_candidato_json(texto, fuente):
                 evidence_type = _evidence_type("CONFIG_REFERENCE", m["changed_item"], fuente["targets_path"], candidato)
                 findings.append({
@@ -340,7 +362,7 @@ def _findings_para_candidato(repo_root: Path, candidato: str, fuente: dict) -> l
         elif ext.endswith((".yaml", ".yml", ".toml")):
             ruta_abs = repo_root / candidato
             if not ruta_abs.exists():
-                return []
+                raise _NoAnalizado("ausente")
             texto = ruta_abs.read_text(encoding="utf-8", errors="replace")
             for m in _buscar_en_candidato_texto_plano_config(texto, fuente):
                 evidence_type = _evidence_type("CONFIG_REFERENCE", m["changed_item"], fuente["targets_path"], candidato)
@@ -356,7 +378,7 @@ def _findings_para_candidato(repo_root: Path, candidato: str, fuente: dict) -> l
         elif ext.endswith(".md"):
             ruta_abs = repo_root / candidato
             if not ruta_abs.exists():
-                return []
+                raise _NoAnalizado("ausente")
             texto = ruta_abs.read_text(encoding="utf-8", errors="replace")
             for m in _buscar_en_candidato_md(texto, fuente):
                 evidence_type = _evidence_type("STRING_CONTRACT_REFERENCE", m["changed_item"], fuente["targets_path"], candidato)
@@ -369,15 +391,20 @@ def _findings_para_candidato(repo_root: Path, candidato: str, fuente: dict) -> l
                     "evidence": m["fragmento"],
                     "message": _mensaje(m["changed_item"], evidence_type, candidato),
                 })
-    except Exception:  # noqa: BLE001 - un consumidor con error se omite, nunca aborta el scan
-        return []
-    return findings
+    except _NoAnalizado as exc:
+        if omitidos is not None:
+            omitidos.setdefault(candidato, exc.motivo)
+    except Exception as exc:  # noqa: BLE001 - no aborta el scan, pero queda registrado
+        if omitidos is not None:
+            omitidos.setdefault(candidato, type(exc).__name__)
+    return findings  # los findings parciales ya acumulados no se descartan
 
 
 # --- Orquestador público --------------------------------------------------------
 
 def ejecutar_scan(repo_root, since: Optional[str], staged: bool) -> dict:
-    """Lanza `git_source.GitSourceError` si la ref es inválida. Nunca lanza
+    """Lanza `git_source.GitSourceError` si la ref es inválida o si el contenido
+    de un archivo cambiado no pudo leerse. Nunca lanza
     otra excepción no controlada -- un error de parseo puntual de un archivo
     (Python o notebook) se degrada con gracia (se documenta en la entrada
     correspondiente), nunca aborta el scan completo. Nunca escribe nada en
@@ -395,12 +422,18 @@ def ejecutar_scan(repo_root, since: Optional[str], staged: bool) -> dict:
     candidatos = git_source.listar_consumidores_candidatos(repo_root)
 
     findings: list = []
+    omitidos: dict = {}
     for fuente in fuentes:
         tiene_targets = fuente["targets_simbolos"] or fuente["targets_strings"] or fuente["targets_path"]
         if not tiene_targets:
             continue
         for candidato in candidatos:
-            findings.extend(_findings_para_candidato(repo_root, candidato, fuente))
+            findings.extend(_findings_para_candidato(repo_root, candidato, fuente, omitidos))
+    consumidores_no_analizados = [{"path": p, "motivo": omitidos[p]} for p in sorted(omitidos)]
+    cambios_no_analizados = sorted(
+        ({"path": f["path"], "motivo": f["no_analizado"]} for f in fuentes if f.get("no_analizado")),
+        key=lambda e: e["path"],
+    )
 
     # Dedup por (source_changed, changed_item, consumer, location).
     vistos: dict = {}
@@ -426,5 +459,7 @@ def ejecutar_scan(repo_root, since: Optional[str], staged: bool) -> dict:
             "changed_items": changed_items_count,
             "findings": len(findings_dedup),
             "consumers": len(consumers_unicos),
+            "consumidores_no_analizados": consumidores_no_analizados,
+            "cambios_no_analizados": cambios_no_analizados,
         },
     }

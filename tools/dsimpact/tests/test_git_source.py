@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO_ORIGEN = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ORIGEN / "tools"))
@@ -86,19 +87,19 @@ class TestContenido(unittest.TestCase):
     def test_contenido_after_since_lee_filesystem(self):
         repo = _crear_repo()
         (repo / "a.py").write_text("x = 99\n", encoding="utf-8")
-        texto = git_source.contenido_after(repo, False, "a.py")
+        texto = git_source.contenido_after(repo, False, "a.py", status=git_source.STATUS_MODIFIED)
         self.assertEqual(texto, "x = 99\n")
 
     def test_contenido_before_since(self):
         repo = _crear_repo()
         (repo / "a.py").write_text("x = 99\n", encoding="utf-8")
-        texto = git_source.contenido_before(repo, "HEAD", False, "a.py")
+        texto = git_source.contenido_before(repo, "HEAD", False, "a.py", status=git_source.STATUS_MODIFIED)
         self.assertEqual(texto, "x = 1\n")
 
     def test_contenido_before_archivo_nuevo_es_none(self):
         repo = _crear_repo()
         (repo / "nuevo.py").write_text("z = 1\n", encoding="utf-8")
-        texto = git_source.contenido_before(repo, "HEAD", False, "nuevo.py")
+        texto = git_source.contenido_before(repo, "HEAD", False, "nuevo.py", status=git_source.STATUS_ADDED)
         self.assertIsNone(texto)
 
     def test_contenido_after_staged_lee_indice(self):
@@ -106,8 +107,65 @@ class TestContenido(unittest.TestCase):
         (repo / "a.py").write_text("x = 5\n", encoding="utf-8")
         _git(repo, "add", ".")
         (repo / "a.py").write_text("x = 999\n", encoding="utf-8")  # sin stagear
-        texto = git_source.contenido_after(repo, True, "a.py")
+        texto = git_source.contenido_after(repo, True, "a.py", status=git_source.STATUS_MODIFIED)
         self.assertEqual(texto, "x = 5\n")
+
+
+class TestContenidoFailClosed(unittest.TestCase):
+    """v0.13 R1-R4: unknown != empty."""
+
+    def test_after_deleted_es_none_sin_leer(self):
+        repo = _crear_repo()
+        (repo / "a.py").unlink()
+        self.assertIsNone(git_source.contenido_after(repo, False, "a.py", status=git_source.STATUS_DELETED))
+        self.assertIsNone(git_source.contenido_after(repo, True, "a.py", status=git_source.STATUS_DELETED))
+
+    def test_before_modified_con_blob_ausente_lanza(self):
+        repo = _crear_repo()
+        with self.assertRaises(git_source.GitSourceError) as ctx:
+            git_source.contenido_before(repo, "HEAD", False, "no_esta.py", status=git_source.STATUS_MODIFIED)
+        self.assertNotIn(str(repo), str(ctx.exception))
+
+    def test_before_ref_invalida_lanza(self):
+        repo = _crear_repo()
+        with self.assertRaises(git_source.GitSourceError):
+            git_source.contenido_before(repo, "ref-que-no-existe", False, "a.py", status=git_source.STATUS_MODIFIED)
+
+    def test_after_staged_modified_ausente_en_indice_lanza(self):
+        repo = _crear_repo()
+        with self.assertRaises(git_source.GitSourceError):
+            git_source.contenido_after(repo, True, "no_esta.py", status=git_source.STATUS_MODIFIED)
+
+    def test_after_working_tree_ausente_lanza(self):
+        repo = _crear_repo()
+        (repo / "a.py").unlink()
+        with self.assertRaises(git_source.GitSourceError) as ctx:
+            git_source.contenido_after(repo, False, "a.py", status=git_source.STATUS_MODIFIED)
+        self.assertNotIn(str(repo), str(ctx.exception))
+
+    def test_after_working_tree_ilegible_lanza(self):
+        repo = _crear_repo()
+        with mock.patch.object(Path, "read_text", side_effect=PermissionError("denegado")):
+            with self.assertRaises(git_source.GitSourceError):
+                git_source.contenido_after(repo, False, "a.py", status=git_source.STATUS_MODIFIED)
+
+    def test_git_no_disponible_lanza_git_source_error(self):
+        repo = _crear_repo()
+        with mock.patch("dsguard.repo.subprocess.run", side_effect=FileNotFoundError("git")):
+            with self.assertRaises(git_source.GitSourceError):
+                git_source.contenido_before(repo, "HEAD", False, "a.py", status=git_source.STATUS_MODIFIED)
+            with self.assertRaises(git_source.GitSourceError):
+                git_source.contenido_after(repo, True, "a.py", status=git_source.STATUS_MODIFIED)
+
+    def test_renombrado_before_usa_old_path(self):
+        repo = _crear_repo()
+        _git(repo, "mv", "a.py", "c.py")
+        cambio = git_source.listar_cambios(repo, None, True)[0]
+        self.assertEqual(cambio.status, git_source.STATUS_RENAMED)
+        antes = git_source.contenido_before(repo, None, True, cambio.old_path, status=cambio.status)
+        self.assertEqual(antes, "x = 1\n")
+        with self.assertRaises(git_source.GitSourceError):  # el path nuevo no existe en HEAD
+            git_source.contenido_before(repo, None, True, cambio.path, status=cambio.status)
 
 
 class TestListarConsumidoresCandidatos(unittest.TestCase):

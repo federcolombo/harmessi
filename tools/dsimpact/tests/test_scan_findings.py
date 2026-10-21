@@ -184,6 +184,115 @@ class TestRefInvalida(unittest.TestCase):
             scan_mod.ejecutar_scan(repo, "no-existe-esta-ref", False)
 
 
+class TestContenidoIlegibleFailClosed(unittest.TestCase):
+    """v0.13 R3: un contenido ilegible no se convierte en «0 consumidores»."""
+
+    def test_modified_con_working_tree_ilegible_lanza(self):
+        from unittest import mock
+
+        repo = _crear_repo()
+        (repo / "a.py").write_text("def f():\n    return 1\n", encoding="utf-8")
+        _commit_todo(repo, "agrega a.py")
+        (repo / "a.py").write_text("def f():\n    return 2\n", encoding="utf-8")
+        with mock.patch.object(Path, "read_text", side_effect=PermissionError("denegado")):
+            with self.assertRaises(GitSourceError):
+                scan_mod.ejecutar_scan(repo, "HEAD", False)
+
+    def test_git_no_disponible_lanza_en_scan(self):
+        from unittest import mock
+
+        repo = _crear_repo()
+        with mock.patch("dsguard.repo.subprocess.run", side_effect=FileNotFoundError("git")):
+            with self.assertRaises(GitSourceError):
+                scan_mod.ejecutar_scan(repo, None, True)
+
+
+class TestNoAnalizados(unittest.TestCase):
+    """Fix HIGH-1/HIGH-2: nada queda invisible."""
+
+    def _repo_con_modulo(self) -> Path:
+        repo = _crear_repo()
+        (repo / "m.py").write_text("def calcular_puntaje_sintetico():\n    return 1\n", encoding="utf-8")
+        (repo / "ok.py").write_text(
+            "from m import calcular_puntaje_sintetico\ncalcular_puntaje_sintetico()\n", encoding="utf-8"
+        )
+        (repo / "roto.py").write_text("def (:\n", encoding="utf-8")
+        (repo / "roto.json").write_text("{no es json", encoding="utf-8")
+        (repo / "borrado.py").write_text("from m import calcular_puntaje_sintetico\n", encoding="utf-8")
+        _commit_todo(repo, "base")
+        (repo / "borrado.py").unlink()  # tracked borrado del working tree
+        (repo / "m.py").write_text("def calcular_puntaje_sintetico(x):\n    return x\n", encoding="utf-8")
+        return repo
+
+    def test_consumidores_no_analizados_listados_y_findings_parciales(self):
+        resultado = scan_mod.ejecutar_scan(self._repo_con_modulo(), "HEAD", False)
+        lista = resultado["summary"]["consumidores_no_analizados"]
+        motivos = {e["path"]: e["motivo"] for e in lista}
+        self.assertEqual(motivos.get("roto.py"), "SyntaxError")
+        self.assertIn("roto.json", motivos)
+        self.assertEqual([e["path"] for e in lista], sorted(motivos))
+        for e in lista:
+            self.assertEqual(set(e), {"path", "motivo"})
+            self.assertNotIn(":\\", e["path"])
+        self.assertIn("ok.py", {f["consumer"] for f in resultado["findings"]})  # parciales conservados
+
+    def test_cli_texto_no_concluyente_sin_findings(self):
+        from dsimpact import cli as cli_mod
+
+        resultado = {
+            "since": "HEAD", "staged": False, "changed": [], "findings": [],
+            "summary": {"consumers": 0, "findings": 0, "changed_files": 1, "changed_items": 1,
+                        "consumidores_no_analizados": [{"path": "x.py", "motivo": "SyntaxError"}],
+                        "cambios_no_analizados": []},
+        }
+        texto = cli_mod.formatear_texto(resultado)
+        self.assertNotIn("(ningún consumidor potencial detectado)", texto)
+        self.assertIn("resultado no concluyente: 1 consumidor(es) no analizado(s)", texto)
+        self.assertIn("x.py (SyntaxError)", texto)
+
+    def test_cli_texto_sin_no_analizados_conserva_mensaje(self):
+        from dsimpact import cli as cli_mod
+
+        resultado = {"since": "HEAD", "staged": False, "changed": [], "findings": [], "summary": {}}
+        self.assertIn("(ningún consumidor potencial detectado)", cli_mod.formatear_texto(resultado))
+
+    def test_excepcion_inesperada_en_fuente_marca_parse_error(self):
+        from unittest import mock
+
+        repo = _crear_repo()
+        (repo / "m.py").write_text("def f():\n    return 1\n", encoding="utf-8")
+        _commit_todo(repo, "base")
+        (repo / "m.py").write_text("def f(x):\n    return x\n", encoding="utf-8")
+        with mock.patch("dsimpact.py_changes.diff_simbolos", side_effect=ValueError("boom")):
+            resultado = scan_mod.ejecutar_scan(repo, "HEAD", False)
+        self.assertTrue(resultado["changed"][0]["parse_error"])
+        self.assertEqual(resultado["summary"]["cambios_no_analizados"], [{"path": "m.py", "motivo": "ValueError"}])
+
+    def test_since_con_git_ausente_lanza_git_source_error(self):
+        from unittest import mock
+
+        repo = _crear_repo()
+        with mock.patch("dsguard.repo.subprocess.run", side_effect=FileNotFoundError("git")):
+            with self.assertRaises(GitSourceError):
+                scan_mod.ejecutar_scan(repo, "HEAD", False)
+
+    def test_staged_status_u_modified_con_blob_ausente_es_fail_closed(self):
+        from dsimpact import git_source
+
+        repo = _crear_repo()
+        with self.assertRaises(GitSourceError):
+            git_source.contenido_before(repo, None, True, "no_esta.py", status=git_source.STATUS_MODIFIED)
+
+    def test_mensaje_de_git_sin_ruta_absoluta_del_repo(self):
+        from dsimpact import git_source
+
+        repo = _crear_repo()
+        with self.assertRaises(GitSourceError) as ctx:
+            git_source.contenido_before(repo, "HEAD", False, "no_esta.py", status=git_source.STATUS_MODIFIED)
+        self.assertNotIn(str(repo), str(ctx.exception))
+        self.assertNotIn(str(repo).replace("\\", "/"), str(ctx.exception))
+
+
 class TestSinDiff(unittest.TestCase):
     def test_since_head_vacio(self):
         repo = _crear_repo()

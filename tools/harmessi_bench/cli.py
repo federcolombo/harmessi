@@ -346,7 +346,18 @@ def cmd_compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _consola_segura() -> None:
+    """Best-effort (v0.13 R8): con consola no UTF-8 los caracteres no
+    representables se reemplazan en vez de lanzar `UnicodeEncodeError`."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass
+
+
 def main(argv=None) -> int:
+    _consola_segura()
     parser = _construir_parser()
     args = parser.parse_args(argv)
     return args.func(args)

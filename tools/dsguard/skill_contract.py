@@ -359,7 +359,7 @@ def referencias_skills_cargados(texto_tasks: str) -> list:
     """Nombres de skill de los bullets `- <skill> — <tarea> — <motivo>` bajo
     `## Skills cargados` (separador `—` o ` - `). Ignora comentarios HTML, líneas
     no-bullet y marcadores de plantilla `<...>`. Sin duplicados, en orden."""
-    seccion = _sdd()._contenido_de_seccion(texto_tasks, ENCABEZADO_REFERENCIAS)
+    seccion = _texto_primera_seccion_real(texto_tasks)
     nombres: list = []
     for linea in seccion.splitlines():
         linea = linea.strip()
@@ -384,10 +384,61 @@ def referencias_skills_cargados(texto_tasks: str) -> list:
     return nombres
 
 
+def _encabezados_reales(texto_tasks: str) -> list:
+    """Índices de línea (sobre `texto_sin_ruido.splitlines()`) de cada
+    `## Skills cargados` real: se ignoran fences ``` y ~~~ y comentarios HTML.
+    Devuelve `(lineas, indices)`; criterio ÚNICO para contar y para leer."""
+    sin_comentarios = re.sub(r"<!--.*?-->", "", texto_tasks, flags=re.DOTALL)
+    lineas = sin_comentarios.splitlines()
+    indices: list = []
+    marca = None
+    for i, linea in enumerate(lineas):
+        s = linea.lstrip()
+        if s.startswith("```") or s.startswith("~~~"):
+            if marca is None:
+                marca = s[:3]
+            elif s.startswith(marca):
+                marca = None
+            continue
+        if marca is None and linea.rstrip() == ENCABEZADO_REFERENCIAS:
+            indices.append(i)
+    return lineas, indices
+
+
+def contar_secciones_skills_cargados(texto_tasks: str) -> int:
+    """Cuántas veces aparece el encabezado exacto `## Skills cargados` como título
+    real (no dentro de bloques de código ``` / ~~~ ni de comentarios HTML)."""
+    return len(_encabezados_reales(texto_tasks)[1])
+
+
+def _texto_primera_seccion_real(texto_tasks: str) -> str:
+    """Cuerpo de la primera sección REAL (hasta el próximo `## `), o ''."""
+    lineas, indices = _encabezados_reales(texto_tasks)
+    if not indices:
+        return ""
+    cuerpo: list = []
+    for linea in lineas[indices[0] + 1:]:
+        if linea.startswith("## "):
+            break
+        cuerpo.append(linea)
+    return "\n".join(cuerpo)
+
+
 def validar_referencias_skills(texto_tasks: str, existentes: set) -> list:
-    """`SKILL-REFERENCIA-DESCONOCIDA` por cada skill citada que no existe. Sección
+    """`SKILL-REFERENCIA-DESCONOCIDA` por cada skill citada que no existe y
+    `SKILL-TRAZA-SECCION-DUPLICADA` (una vez) si `## Skills cargados` aparece más de
+    una vez; no se fusionan secciones: las referencias se leen de la primera. Sección
     ausente o vacía => []."""
-    return [
+    duplicada: list = []
+    veces = contar_secciones_skills_cargados(texto_tasks)
+    if veces > 1:
+        duplicada.append(Finding(
+            "SKILL-TRAZA-SECCION-DUPLICADA",
+            f"'{ENCABEZADO_REFERENCIAS}' aparece {veces} veces en tasks.md; "
+            "solo se lee la primera: dejar una única sección",
+            "tasks.md",
+        ))
+    return duplicada + [
         Finding(
             "SKILL-REFERENCIA-DESCONOCIDA",
             f"la skill citada {nombre!r} en '## Skills cargados' no existe en {DIR_SKILLS}/",

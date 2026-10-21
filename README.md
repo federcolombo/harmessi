@@ -535,7 +535,8 @@ the same package; nothing is duplicated):
 
 ### Platform compatibility
 
-Harmessi runs on Windows, Linux, and macOS. Everything under `tools/`
+Harmessi is designed to be portable; it is validated by execution on Windows
+only (Linux/macOS: contract/CI config, execution not observed). Everything under `tools/`
 (the installer, `doctor`, `dsguard`, `nbrunner`, and both `PreToolUse` hook
 launchers) is pure Python, invoked as `python -m tools....` or via the
 Python interpreter directly — no step depends on `bash`, PowerShell, or any
@@ -548,6 +549,12 @@ Git worktrees (the shared repo's own `.venv`, not the worktree's checkout,
 is always the one used). Run `python -m tools.harmessi doctor` on an
 installed project to verify this end to end, including whether any
 configured hook still depends on an external shell.
+
+> Validation status (v0.13): execution of the test suite has been observed on
+> Windows only. Linux and macOS are not validated by execution in this
+> release; a minimal workflow (`.github/workflows/portability-smoke.yml`) is
+> present and was verified structurally, but its remote execution was not
+> observed. See `docs/portability.md`.
 
 ## Profile
 

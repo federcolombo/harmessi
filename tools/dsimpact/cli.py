@@ -44,7 +44,12 @@ def cmd_scan(args: argparse.Namespace) -> int:
     except GitSourceError as e:
         print(str(e), file=sys.stderr)
         return 1
+    summary = resultado.get("summary", {})
+    n_c = len(summary.get("consumidores_no_analizados") or [])
+    n_x = len(summary.get("cambios_no_analizados") or [])
     if args.como_json:
+        if n_c or n_x:  # aviso por stderr para no contaminar el JSON de stdout
+            print(f"AVISO: {n_c} consumidor(es) y {n_x} cambio(s) no analizado(s); ver summary", file=sys.stderr)
         print(json.dumps(resultado, indent=2, ensure_ascii=False))
     else:
         print(formatear_texto(resultado))
@@ -79,8 +84,17 @@ def formatear_texto(resultado: dict) -> str:
 
     lineas.append("")
     lineas.append("Potentially affected:")
+    summary = resultado.get("summary", {})
+    no_consumidores = summary.get("consumidores_no_analizados") or []
+    no_cambios = summary.get("cambios_no_analizados") or []
     if not resultado.get("findings"):
-        lineas.append("  (ningún consumidor potencial detectado)")
+        if no_consumidores or no_cambios:
+            lineas.append(
+                f"  resultado no concluyente: {len(no_consumidores)} consumidor(es) no analizado(s)"
+                + (f", {len(no_cambios)} cambio(s) no analizado(s)" if no_cambios else "")
+            )
+        else:
+            lineas.append("  (ningún consumidor potencial detectado)")
     else:
         por_consumer: dict = {}
         for f in resultado["findings"]:
@@ -93,7 +107,16 @@ def formatear_texto(resultado: dict) -> str:
                     f"location={f['location']})"
                 )
 
-    summary = resultado.get("summary", {})
+    if no_consumidores:
+        lineas.append("")
+        lineas.append(f"AVISO: {len(no_consumidores)} consumidor(es) no analizado(s); el resultado puede estar incompleto:")
+        for e in no_consumidores:
+            lineas.append(f"  {e['path']} ({e['motivo']})")
+    if no_cambios:
+        lineas.append("")
+        lineas.append(f"AVISO: {len(no_cambios)} cambio(s) no analizado(s) por completo:")
+        for e in no_cambios:
+            lineas.append(f"  {e['path']} ({e['motivo']})")
     lineas.append("")
     lineas.append(
         f"Summary: {summary.get('consumers', 0)} potentially affected consumers "

@@ -439,6 +439,63 @@ class TestReferencias(unittest.TestCase):
         self.assertEqual(sc.referencias_skills_cargados(texto), [])
 
 
+class TestSeccionSkillsDuplicada(unittest.TestCase):
+    SEC = "## Skills cargados\n- domain-modeling — T1 — x\n\n"
+
+    def _codigos(self, texto):
+        return [f.codigo for f in sc.validar_referencias_skills(texto, {"domain-modeling"})]
+
+    def test_cero_y_una_ocurrencia_sin_hallazgo(self):
+        self.assertEqual(self._codigos("# Tasks\n"), [])
+        self.assertEqual(self._codigos("# Tasks\n\n" + self.SEC), [])
+
+    def test_dos_y_tres_ocurrencias(self):
+        for n in (2, 3):
+            with self.subTest(n=n):
+                hallazgos = sc.validar_referencias_skills(self.SEC * n, {"domain-modeling"})
+                self.assertEqual([f.codigo for f in hallazgos], ["SKILL-TRAZA-SECCION-DUPLICADA"])
+                self.assertIn(str(n), hallazgos[0].mensaje)
+
+    def test_determinista(self):
+        a = sc.validar_referencias_skills(self.SEC * 2, set())
+        b = sc.validar_referencias_skills(self.SEC * 2, set())
+        self.assertEqual([(f.codigo, f.mensaje) for f in a], [(f.codigo, f.mensaje) for f in b])
+
+    def test_referencias_se_leen_de_la_primera(self):
+        texto = self.SEC + "## Skills cargados\n- otra — T2 — y\n"
+        self.assertEqual(sc.referencias_skills_cargados(texto), ["domain-modeling"])
+
+    def test_en_code_fence_no_cuenta(self):
+        texto = self.SEC + "```\n## Skills cargados\n```\n"
+        self.assertEqual(self._codigos(texto), [])
+
+    def test_en_comentario_html_no_cuenta(self):
+        texto = self.SEC + "<!--\n## Skills cargados\n-->\n"
+        self.assertEqual(self._codigos(texto), [])
+
+    def test_lector_usa_la_primera_seccion_real_no_la_literal(self):
+        for ruido in ("```\n## Skills cargados\n- falsa — T0 — x\n```\n",
+                      "~~~\n## Skills cargados\n- falsa — T0 — x\n~~~\n",
+                      "<!--\n## Skills cargados\n- falsa — T0 — x\n-->\n"):
+            with self.subTest(ruido=ruido[:5]):
+                texto = ruido + "\n" + self.SEC
+                self.assertEqual(sc.referencias_skills_cargados(texto), ["domain-modeling"])
+                self.assertEqual(self._codigos(texto), [])
+
+    def test_fence_tilde_no_cuenta(self):
+        self.assertEqual(self._codigos(self.SEC + "~~~\n## Skills cargados\n~~~\n"), [])
+
+    def test_crlf_y_espacios_finales(self):
+        texto = ("## Skills cargados  \r\n- domain-modeling — T1 — x\r\n\r\n"
+                 "## Skills cargados\t\r\n- otra — T2 — y\r\n")
+        self.assertEqual(self._codigos(texto), ["SKILL-TRAZA-SECCION-DUPLICADA"])
+        self.assertEqual(sc.referencias_skills_cargados(texto), ["domain-modeling"])
+
+    def test_otro_nivel_no_cuenta(self):
+        texto = self.SEC + "### Skills cargados\n"
+        self.assertEqual(self._codigos(texto), [])
+
+
 class TestImportLimpio(unittest.TestCase):
     def test_import_sin_tools_en_sys_path(self):
         codigo = (

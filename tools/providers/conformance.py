@@ -520,7 +520,18 @@ def nivel_declarado(provider_id: str) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 
+def _consola_segura() -> None:
+    """Best-effort (v0.13 R8): con consola no UTF-8 los caracteres no
+    representables se reemplazan en vez de lanzar `UnicodeEncodeError`."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass
+
+
 def main(argv: Optional[List[str]] = None) -> int:
+    _consola_segura()
     parser = argparse.ArgumentParser(
         prog="python -m tools.providers.conformance",
         description="Conformance de adapters de proveedor (sin credenciales por defecto).",

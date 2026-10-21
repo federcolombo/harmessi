@@ -36,7 +36,10 @@ class ArchivoCambiado:
 def validar_ref(repo_root: Path, ref: str) -> bool:
     """`git rev-parse --verify <ref>` -- mismo patrón que
     `dsguard.notebooks.obtener_revision`."""
-    r = repo_mod._git(repo_root, "rev-parse", "--verify", ref)
+    try:
+        r = repo_mod._git(repo_root, "rev-parse", "--verify", ref)
+    except RuntimeError as exc:
+        raise GitSourceError("git no disponible al validar la referencia") from exc
     return r.returncode == 0
 
 
@@ -54,6 +57,8 @@ def listar_cambios(repo_root: Path, since: Optional[str], staged: bool) -> list:
         raise GitSourceError(str(exc)) from exc  # mensaje ya trae el stderr de git
     except repo_mod.GitOutputError as exc:
         raise GitSourceError(f"git diff falló: {exc}") from exc
+    except RuntimeError as exc:  # git no disponible (`dsguard.repo._git`)
+        raise GitSourceError("git no disponible al listar cambios") from exc
     resultado = []
     for codigo, nueva, vieja in entradas:
         if codigo.startswith("R"):
@@ -69,24 +74,59 @@ def listar_cambios(repo_root: Path, since: Optional[str], staged: bool) -> list:
     return resultado
 
 
-def contenido_before(repo_root: Path, since: Optional[str], staged: bool, path: str) -> Optional[str]:
-    """`None` si el archivo no existía en ese lado (archivo agregado)."""
-    ref = "HEAD" if staged else since
-    r = repo_mod._git(repo_root, "show", f"{ref}:{path}")
-    return r.stdout if r.returncode == 0 else None
+def _sanear(texto: str, repo_root: Path) -> str:
+    """Reemplaza la ruta absoluta del repo (en ambas formas de separador) por `<repo>`."""
+    saneado = texto
+    raiz = str(repo_root)
+    for variante in {raiz, raiz.replace("\\", "/"), str(Path(repo_root).resolve()),
+                     str(Path(repo_root).resolve()).replace("\\", "/")}:
+        if variante:
+            saneado = saneado.replace(variante, "<repo>")
+    return saneado.strip()
 
 
-def contenido_after(repo_root: Path, staged: bool, path: str) -> Optional[str]:
-    """`--staged`: contenido del índice (`git show :path`, stage 0). `--since`:
-    contenido real del working tree (lectura de filesystem). `None` si el
-    archivo no existe en ese lado (eliminado)."""
-    if staged:
-        r = repo_mod._git(repo_root, "show", f":{path}")
-        return r.stdout if r.returncode == 0 else None
-    ruta_abs = repo_root / path
-    if not ruta_abs.exists():
+def _git_show(repo_root: Path, objeto: str, descripcion: str) -> str:
+    """`git show <objeto>`; fail-closed: git no disponible o `returncode != 0`
+    lanzan `GitSourceError` (mensaje sin rutas absolutas)."""
+    try:
+        r = repo_mod._git(repo_root, "show", objeto)
+    except RuntimeError as exc:
+        raise GitSourceError(f"git no disponible al leer {descripcion}") from exc
+    if r.returncode != 0:
+        raise GitSourceError(
+            f"no se pudo leer {descripcion} (git show devolvió {r.returncode}): {_sanear(r.stderr, repo_root)}"
+        )
+    return r.stdout
+
+
+def contenido_before(
+    repo_root: Path, since: Optional[str], staged: bool, path: str, *, status: str
+) -> Optional[str]:
+    """Contenido «antes» del archivo. `None` SOLO si la ausencia es esperada
+    (`status == added`). Para `renamed` el llamador pasa `old_path` en `path`.
+    Cualquier otro fallo de lectura lanza `GitSourceError` (unknown != empty)."""
+    if status == STATUS_ADDED:
         return None
-    return ruta_abs.read_text(encoding="utf-8", errors="replace")
+    ref = "HEAD" if staged else since
+    return _git_show(repo_root, f"{ref}:{path}", f"el contenido previo de {path!r}")
+
+
+def contenido_after(repo_root: Path, staged: bool, path: str, *, status: str) -> Optional[str]:
+    """`--staged`: contenido del índice (`git show :path`, stage 0). `--since`:
+    contenido real del working tree (lectura de filesystem). `None` SOLO si la
+    ausencia es esperada (`status == deleted`); si no, error de lectura =>
+    `GitSourceError`."""
+    if status == STATUS_DELETED:
+        return None
+    if staged:
+        return _git_show(repo_root, f":{path}", f"el contenido indexado de {path!r}")
+    ruta_abs = repo_root / path
+    try:
+        return ruta_abs.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        raise GitSourceError(
+            f"no se pudo leer {path!r} del working tree ({type(exc).__name__})"
+        ) from exc
 
 
 def listar_consumidores_candidatos(repo_root: Path) -> list:
@@ -96,7 +136,10 @@ def listar_consumidores_candidatos(repo_root: Path) -> list:
     siempre se lee desde el FILESYSTEM (nunca desde `git show`), sin importar
     el modo since/staged -- son "qué existe ahora en el checkout", no parte
     del diff en sí (ver `design.md`)."""
-    r = repo_mod._git(repo_root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
+    try:
+        r = repo_mod._git(repo_root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
+    except RuntimeError as exc:
+        raise GitSourceError("git no disponible al listar archivos") from exc
     if r.returncode != 0:
         raise GitSourceError(f"git ls-files falló: {r.stderr.strip()}")
     extensiones = (".py", ".ipynb", ".json", ".yaml", ".yml", ".toml", ".md")
