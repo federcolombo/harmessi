@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "change_id": "20261021-v013-roadmap-and-portability-audit",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-21T17:05:44Z",
+  "baseline": {
+    "commit": "95f3cde72dd34faa666b54c5ac0dac601ef76ea0",
+    "rama": "v0.13-dev",
+    "capturado_utc": "2026-10-21T17:05:44Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "docs/roadmap/README.md",
+      "docs/roadmap/v0.13.md",
+      "openspec/changes/20261021-v013-roadmap-and-portability-audit/**",
+      "openspec/changes/20261021-v013-roadmap-and-portability-audit/amendments.jsonl",
+      "openspec/changes/20261021-v013-roadmap-and-portability-audit/control.json",
+      "openspec/changes/20261021-v013-roadmap-and-portability-audit/design.md",
+      "openspec/changes/20261021-v013-roadmap-and-portability-audit/proposal.md",
+      "openspec/changes/20261021-v013-roadmap-and-portability-audit/spec.md",
+      "openspec/changes/20261021-v013-roadmap-and-portability-audit/tasks.md",
+      "openspec/changes/20261021-v013-roadmap-and-portability-audit/verification.md"
+    ],
+    "scope_hash": "234b1d4b026c6df26453c6251c2886be79db4fc234380e4427e23f59ecef4407"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "3cd5bf4ef45701272179820aee7db1c9b02cb39d7d669f952334b64c00630028",
+      "registrado_utc": "2026-10-21T17:06:18Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-roadmap-and-portability-audit",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a14652918af953e20c5d83f5548729343e8d9a1cc213d8502cde5e9fe6f58faf",
+      "registrado_utc": "2026-10-21T17:06:19Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-roadmap-and-portability-audit",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "bc5e8024bfc369adc59f39f3437216b36f3e721ca4709e4d5b0b0908ef70dbc6",
+      "registrado_utc": "2026-10-21T17:06:21Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-roadmap-and-portability-audit",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-21T17:06:24Z",
+      "desde": "en_implementacion",
+      "hacia": "en_implementacion",
+      "reconciliado": true
+    },
+    {
+      "utc": "2026-10-21T17:06:44Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-21T17:06:47Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-21T17:06:23Z",
+      "cierre_utc": "2026-10-21T17:06:48Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-21T21:06:23Z",
+      "minutos_consumidos": 0.4166666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}
