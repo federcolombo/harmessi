@@ -46,7 +46,17 @@ ARCHIVOS_SIN_HARMESSI_BENCH = (
 ARCHIVOS_HARMESSI_BENCH_SIN_ROUTING_NI_FALLBACK = (
     "tools/harmessi_bench/core.py",
     "tools/harmessi_bench/runner.py",
+    "tools/harmessi_bench/suite.py",
+    "tools/harmessi_bench/compare.py",
 )
+
+# v0.13 Change 1: suite.py y compare.py son puros (sin providers, subprocess ni
+# red). runner.py queda fuera a propósito: es quien vincula con providers.
+ARCHIVOS_PUROS_V013 = (
+    "tools/harmessi_bench/suite.py",
+    "tools/harmessi_bench/compare.py",
+)
+MODULOS_PROHIBIDOS_V013 = ("subprocess", "socket", "urllib", "http", "requests", "providers")
 
 
 def _imports_nivel_modulo(ruta_absoluta: Path) -> list:
@@ -180,6 +190,24 @@ class TestHarmessiBenchNoImportaRoutingNiFallback(unittest.TestCase):
             "prohibido: 'medir calidad' (harmessi_bench) debe permanecer separado de "
             f"'decidir/reintentar' (routing/fallback), ver design.md de Change 3: {violaciones}",
         )
+
+
+class TestSuiteYCompareSonPuros(unittest.TestCase):
+    def test_suite_y_compare_no_importan_providers_subprocess_ni_red(self):
+        violaciones = []
+        for ruta_relativa in ARCHIVOS_PUROS_V013:
+            ruta_absoluta = REPO_ORIGEN / ruta_relativa
+            for nombre_importado in _imports_nivel_modulo(ruta_absoluta):
+                componentes = nombre_importado.split(".")
+                if any(c in MODULOS_PROHIBIDOS_V013 for c in componentes) or any(
+                    c in MODULOS_ADAPTER_PROVEEDOR for c in componentes
+                ):
+                    violaciones.append(f"{ruta_relativa} importa '{nombre_importado}'")
+        self.assertEqual(violaciones, [], f"suite.py/compare.py deben ser puros: {violaciones}")
+
+    def test_suite_y_compare_no_contienen_el_literal_claude(self):
+        for ruta_relativa in ARCHIVOS_PUROS_V013:
+            self.assertEqual(_literales_claude(REPO_ORIGEN / ruta_relativa), [])
 
 
 class TestCoreNoContieneLiteralClaude(unittest.TestCase):

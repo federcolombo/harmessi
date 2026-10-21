@@ -18,17 +18,38 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
 
+# Versión del contrato del caso de evaluación (v0.13 Change 1). Un archivo de
+# casos sin `case_contract_version` se lee como versión 0 (legado v0.5).
+CASE_CONTRACT_VERSION = 1
+
+# Versión del evaluador determinista (scorers + reglas de decisión). Se
+# persiste en cada `result.json`; dos corridas con evaluator distinto no son
+# comparables (ver `compare.py`). Subirla si cambia la semántica de un scorer.
+EVALUATOR_VERSION = "harmessi-bench-scorers/1"
+
+# Tope del texto obtenido que `scorer_exact` vuelca en `detail` (el detail se
+# persiste en result.json: no debe copiar un output largo completo).
+_MAX_DETAIL_OBTENIDO = 120
+
+
 @dataclass
 class Scenario:
     """Un escenario de eval: un prompt con una expectativa de output
     verificable de forma determinista (`expected`, ver `scenarios.py` para
-    la forma exacta del JSON del que se cargan)."""
+    la forma exacta del JSON del que se cargan).
+
+    `fixtures` es material opcional y declarativo del caso (no se inyecta
+    solo en el prompt). `surface_under_test`, si se declara, es la ruta
+    repo-relativa de la superficie que el caso observa; solo se aceptan
+    superficies Optimizable (ver `scenarios.py`)."""
 
     scenario_id: str
     prompt: str
     category: str
     tags: list = field(default_factory=list)
     expected: dict = field(default_factory=dict)
+    fixtures: dict = field(default_factory=dict)
+    surface_under_test: Optional[str] = None
 
 
 @dataclass
@@ -117,7 +138,10 @@ def scorer_exact(texto: str, params: dict) -> ScoreResult:
     if valor is None:
         return ScoreResult(passed=False, score=0.0, detail="scorer_exact: 'valor' ausente")
     coincide = texto.strip() == valor
-    detail = f"esperado={valor!r} obtenido={texto.strip()!r}"
+    obtenido = texto.strip()
+    if len(obtenido) > _MAX_DETAIL_OBTENIDO:
+        obtenido = obtenido[:_MAX_DETAIL_OBTENIDO] + "…[truncado]"
+    detail = f"esperado={valor!r} obtenido={obtenido!r}"
     return ScoreResult(passed=coincide, score=1.0 if coincide else 0.0, detail=detail)
 
 

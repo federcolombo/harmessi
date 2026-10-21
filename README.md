@@ -430,7 +430,8 @@ that failed, so a fallback never hides the original error.
 ### `harmessi-bench`
 
 ```
-python -m tools.harmessi_bench.cli run --scenarios <path> --provider <p> [--model <m>] [--effort <e>] --run-id <id> [--json]
+python -m tools.harmessi_bench.cli run (--scenarios <path> | --suite <manifest>) --provider <p> [--model <m>] [--effort <e>] --run-id <id> [--json]
+python -m tools.harmessi_bench.cli suite-check --suite <manifest> [--json]
 python -m tools.harmessi_bench.cli compare --baseline <run_id> --candidate <run_id> [--json]
 ```
 
@@ -443,6 +444,28 @@ a deterministic scorer (`contains`/`regex`/`exact` — no LLM-as-judge),
 saving the result to `.harmessi/evals/<run_id>/result.json`; `compare`
 diffs two saved runs and reports regressions/improvements. Scoring is a
 surface-level text proxy, not a measure of semantic quality.
+
+Since v0.13 the framework is a versioned evaluation foundation (it extends
+the same package; nothing is duplicated):
+
+- `--suite <manifest>` runs a versioned suite (`suite_id`, `suite_version`,
+  content `suite_hash` computed by the code) instead of a loose
+  `--scenarios` file; exactly one of the two is required. `suite-check`
+  validates a manifest (exit 0 valid, 1 invalid). A public synthetic suite
+  ships at `tools/harmessi_bench/suites/harmessi-core-synthetic.suite.json`.
+- `result.json` now carries `schema_version`, `evaluator_version` and the
+  `suite` block; older files without them are still read.
+- `compare` prints a verdict: `candidate_better`, `baseline_better`,
+  `equivalent` or `inconclusive`. It uses only the deterministic
+  `score.passed`, and falls back to `inconclusive` when in doubt: different
+  scenario sets, a provider outage (`availability_error`), a different suite
+  or `evaluator_version`, or regressions and improvements at once.
+- Evals are not tests: the unit tests prove deterministic correctness, the
+  evals observe behavior; a verdict is evidence, not a promotion. A case may
+  declare `surface_under_test` only for Optimizable surfaces; Protected and
+  project-owned paths are rejected, and nothing here writes or promotes harness
+  surfaces. It runs from a Harmessi checkout only (not part of the installed
+  manifest). No LLM-as-judge and no leaderboard.
 
 ### Platform compatibility
 

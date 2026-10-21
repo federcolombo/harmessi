@@ -17,9 +17,25 @@ from tools.harmessi_bench import compare as compare_mod
 from tools.harmessi_bench import storage
 from tools.harmessi_bench.core import EvalTarget
 from tools.harmessi_bench.runner import run_scenario_set
-from tools.harmessi_bench.scenarios import load_scenarios
+from tools.harmessi_bench.scenarios import load_scenarios_con_version
+from tools.harmessi_bench.suite import (
+    calcular_cases_hash,
+    load_suite_y_casos,
+    render_resumen,
+    resumir,
+)
 
 _ROOT_EVALS_DEFAULT = Path(".harmessi/evals")
+
+
+def _mensaje_error(exc: Exception) -> str:
+    """Mensaje limpio de un error de carga/lectura: ante `OSError` cita solo
+    el nombre de archivo (no la ruta absoluta completa) y no un traceback."""
+    if isinstance(exc, OSError):
+        nombre = Path(str(exc.filename)).name if exc.filename else ""
+        causa = exc.strerror or type(exc).__name__
+        return f"{causa}: {nombre}" if nombre else causa
+    return str(exc)
 
 
 def _construir_parser() -> argparse.ArgumentParser:
@@ -30,7 +46,9 @@ def _construir_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="comando", required=True)
 
     p_run = subparsers.add_parser("run", help="Corre un set de escenarios contra un target.")
-    p_run.add_argument("--scenarios", required=True)
+    origen = p_run.add_mutually_exclusive_group(required=True)
+    origen.add_argument("--scenarios", default=None)
+    origen.add_argument("--suite", default=None, help="Manifest de suite (.suite.json).")
     p_run.add_argument("--provider", required=True)
     p_run.add_argument("--model", default=None)
     p_run.add_argument("--effort", default=None)
@@ -49,7 +67,45 @@ def _construir_parser() -> argparse.ArgumentParser:
     p_compare.add_argument("--root", default=None, help=argparse.SUPPRESS)
     p_compare.set_defaults(func=cmd_compare)
 
+    p_check = subparsers.add_parser("suite-check", help="Valida el manifest de una suite.")
+    p_check.add_argument("--suite", required=True)
+    p_check.add_argument("--json", action="store_true")
+    p_check.set_defaults(func=cmd_suite_check)
+
     return parser
+
+
+def cmd_suite_check(args: argparse.Namespace) -> int:
+    try:
+        suite, escenarios = load_suite_y_casos(Path(args.suite))
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        mensaje = _mensaje_error(exc)
+        if args.json:
+            print(json.dumps({"valida": False, "error": mensaje}, ensure_ascii=False, indent=2))
+        else:
+            print(f"suite inválida: {mensaje}", file=sys.stderr)
+        return 1
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "valida": True,
+                    "suite_id": suite.suite_id,
+                    "suite_version": suite.suite_version,
+                    "suite_hash": suite.suite_hash,
+                    "case_contract_version": suite.case_contract_version,
+                    "casos": len(escenarios),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+    else:
+        print(
+            f"suite válida: {suite.suite_id} v{suite.suite_version} "
+            f"({len(escenarios)} casos) hash={suite.suite_hash}"
+        )
+    return 0
 
 
 def cmd_run(args: argparse.Namespace) -> int:
@@ -71,19 +127,33 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"provider {args.provider!r} no disponible: {info.detail}", file=sys.stderr)
         return 1
 
+    suite = None
     try:
-        scenarios = load_scenarios(Path(args.scenarios))
-    except (FileNotFoundError, json.JSONDecodeError, ValueError) as exc:
-        print(f"no se pudieron cargar los escenarios: {exc}", file=sys.stderr)
+        if args.suite:
+            suite, scenarios = load_suite_y_casos(Path(args.suite))
+            cases_hash = suite.suite_hash
+        else:
+            version_casos, scenarios = load_scenarios_con_version(Path(args.scenarios))
+            cases_hash = calcular_cases_hash(scenarios, version_casos)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        print(f"no se pudieron cargar los escenarios: {_mensaje_error(exc)}", file=sys.stderr)
         return 1
     target = EvalTarget(provider_id=args.provider, model=args.model, effort=args.effort)
     resultados = run_scenario_set(scenarios, target, adapter, args.run_id)
 
     root = Path(args.root) if args.root else _ROOT_EVALS_DEFAULT
-    ruta = storage.save_run(args.run_id, resultados, target, root=root)
+    try:
+        ruta = storage.save_run(
+            args.run_id, resultados, target, root=root, suite=suite, cases_hash=cases_hash
+        )
+    except OSError as exc:
+        print(f"no se pudo guardar la corrida: {_mensaje_error(exc)}", file=sys.stderr)
+        return 1
 
     total = len(resultados)
     pasaron = sum(1 for resultado in resultados if resultado.score.passed)
+    categorias = {escenario.scenario_id: escenario.category for escenario in scenarios}
+    resumen = resumir(resultados, suite, categorias)
 
     if args.json:
         print(
@@ -93,6 +163,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                     "total": total,
                     "pasaron": pasaron,
                     "ruta": str(ruta),
+                    "resumen": resumen,
                 },
                 ensure_ascii=False,
                 indent=2,
@@ -100,6 +171,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         )
     else:
         print(f"harmessi-bench run {args.run_id}: {pasaron}/{total} escenarios pasaron -- {ruta}")
+        if suite is not None:
+            print(render_resumen(resumen))
 
     return 0
 
@@ -110,8 +183,8 @@ def cmd_compare(args: argparse.Namespace) -> int:
         baseline = storage.load_run(args.baseline, root=root)
         candidate = storage.load_run(args.candidate, root=root)
         reporte = compare_mod.compare_runs(baseline, candidate)
-    except (FileNotFoundError, ValueError) as exc:
-        print(str(exc), file=sys.stderr)
+    except (OSError, ValueError) as exc:
+        print(_mensaje_error(exc), file=sys.stderr)
         return 1
 
     if args.json:
@@ -128,6 +201,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
     for scenario_id in reporte.solo_en_candidate:
         print(f"  [SOLO EN CANDIDATE] {scenario_id}")
     print(f"  {len(reporte.unchanged)} escenarios sin cambio")
+    print(f"  VEREDICTO: {reporte.verdict} -- {reporte.verdict_reason}")
 
     return 0
 

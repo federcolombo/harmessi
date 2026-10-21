@@ -9,6 +9,8 @@ invocar un target; no lo modifica ni lo duplica.
 from __future__ import annotations
 
 from tools.harmessi_bench.core import (
+    CASE_CONTRACT_VERSION,
+    EVALUATOR_VERSION,
     SCORERS,
     EvalResult,
     EvalTarget,
@@ -21,6 +23,8 @@ from tools.harmessi_bench.core import (
 )
 
 __all__ = [
+    "CASE_CONTRACT_VERSION",
+    "EVALUATOR_VERSION",
     "SCORERS",
     "EvalResult",
     "EvalTarget",

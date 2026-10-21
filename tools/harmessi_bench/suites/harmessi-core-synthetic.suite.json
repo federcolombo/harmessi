@@ -1,0 +1,18 @@
+{
+  "suite_contract_version": 1,
+  "suite_id": "harmessi-core-synthetic",
+  "suite_version": 1,
+  "description": "Suite publica sintetica y generica: framing, debugging, domain modeling, codebase design, recovery y contrato de herramientas.",
+  "cases_file": "harmessi-core-synthetic.cases.json",
+  "case_ids": [
+    "framing-aclarar-pedido",
+    "framing-supuesto-explicito",
+    "debugging-primer-paso",
+    "debugging-causa-raiz",
+    "domain-modeling-termino-ambiguo",
+    "codebase-design-reuso",
+    "recovery-idempotencia",
+    "tool-contract-json",
+    "tool-contract-codigo-salida"
+  ]
+}
