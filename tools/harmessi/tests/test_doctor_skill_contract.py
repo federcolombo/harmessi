@@ -132,9 +132,21 @@ class TestDoctorInstalado(unittest.TestCase):
         # La instalación ahora trae la skill domain-modeling (y no crea GLOSSARY.md).
         self.assertTrue((self.repo / DIR_SKILLS / "domain-modeling.md").is_file())
         self.assertFalse((self.repo / "GLOSSARY.md").exists())
+        # Y problem-framing, esperada por Doctor.
+        self.assertTrue((self.repo / DIR_SKILLS / "problem-framing.md").is_file())
+        self.assertIn(
+            ".claude/skills/lead-data-scientist/skills/problem-framing.md",
+            doctor_mod._ARCHIVOS_SKILL_ESPERADOS,
+        )
         resultados = self._doctor()
         contrato = [r for r in resultados if r.codigo == "HARMESSI-SKILL-CONTRATO"]
         self.assertEqual([r.nivel for r in contrato], [doctor_mod.NIVEL_OK])
+
+    def test_problem_framing_borrada_reporta_skill_faltante(self):
+        (self.repo / DIR_SKILLS / "problem-framing.md").unlink()
+        resultados = self._doctor()
+        faltantes = [r for r in resultados if r.codigo == "HARMESSI-SKILL-FALTANTE"]
+        self.assertTrue(any("problem-framing.md" in r.mensaje for r in faltantes), faltantes)
 
     def test_skill_de_proyecto_valida_no_genera_drift(self):
         carpeta = self.repo / DIR_SKILLS

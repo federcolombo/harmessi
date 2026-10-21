@@ -560,6 +560,37 @@ class TestChange5DomainModeling(unittest.TestCase):
             with self.subTest(archivo=ruta.name):
                 self.assertIn("domain-modeling", _leer_norm(ruta))
 
+    def test_problem_framing_frases_normativas(self):
+        ruta = SKILL_DIR / "skills" / "problem-framing.md"
+        contenido = _leer_norm(ruta)
+        for frase in (
+            "Tres niveles", "checkpoint humano", "supuesto explícito y trazable",
+            "domain-modeling", "grill-me", "opt-in", "metodologo",
+            "No es un interrogatorio obligatorio", "NO se carga por defecto",
+        ):
+            with self.subTest(frase=frase):
+                self.assertIn(frase, contenido)
+        # grill-me: opt-in anclado a la sección 6; no existe como skill aparte.
+        seccion = contenido.split("## 6. ")[1].split("## 7. ")[0]
+        for frase in ("opt-in", "Solo si el humano pide"):
+            with self.subTest(seccion6=frase):
+                self.assertIn(frase, seccion)
+        self.assertFalse((SKILL_DIR / "skills" / "grill-me.md").exists())
+        frontmatter = contenido.split("---\n")[1]
+        for clave in ("tools", "permissions", "hooks", "artifacts"):
+            with self.subTest(clave=clave):
+                self.assertNotRegex(frontmatter, rf"(?m)^{clave}\s*:")
+
+    def test_problem_framing_en_skill_md_methodology_y_tmpl(self):
+        for ruta in (SKILL_RENDERIZADO, SKILL_TMPL):
+            with self.subTest(archivo=ruta.name):
+                contenido = _leer_norm(ruta)
+                self.assertIn("problem-framing", contenido)
+                self.assertIn("grill-me", contenido)
+        for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
+            with self.subTest(archivo=ruta.name):
+                self.assertIn("## 37. Problem framing", _leer_norm(ruta))
+
     def test_verificador_md_y_tmpl_mencionan_glossary(self):
         for ruta in (VERIFICADOR_RENDERIZADO, VERIFICADOR_TMPL):
             contenido = _leer_norm(ruta)

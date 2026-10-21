@@ -480,3 +480,11 @@ Una intervención de emergencia es aceptable solo si el canal gobernado quedó i
 - Derivación: `skill_contract.superficie_de_ruta(ruta)` (pura; normaliza `\` y `./`, sin distinguir mayúsculas; una ruta con `..` es protected). Una skill cuyo `artifacts` apunta a una superficie Protected recibe `SKILL-ARTIFACT-SUPERFICIE-PROTEGIDA` (Doctor lo muestra como WARN vía `HARMESSI-SKILL-CONTRATO`).
 - Optimizable ≠ auto-modificable: no existe optimizer, auto-modificación del harness, candidate/probe engine ni marketplace. Cambiar una superficie optimizable sigue siendo un Change normal (SDD, alcance, aprobación, verificación).
 - La clasificación es por archivo, no por contenido: las partes normativas de approval/scope dentro de `methodology.md` se tratan como Protected de facto, y toda modificación sigue siendo un Change normal.
+
+## 37. Problem framing (skill `problem-framing`)
+
+- La skill vive en `skills/problem-framing.md` y se carga cuando el brief es ambiguo o el pedido es analizar o construir algo sin objetivo, decisión o criterio de éxito claros; no por defecto ni en tareas pequeñas con objetivo explícito.
+- Tres niveles: inferible/técnica (el Lead decide y sigue); ambigua no material (supuesto explícito y trazable en proposal/spec del Change o Decision Ledger); material (checkpoint humano). La semántica de negocio se resuelve con `domain-modeling`; no se duplican GLOSSARY ni ledger.
+- Produce criterios de éxito y supuestos en los artefactos existentes del Change; no crea artefactos nuevos.
+- Modo `grill-me`: opt-in, solo si el humano pide desafiar la definición del problema; lo metodológico se deriva al `metodologo`. No hay interrogatorio por defecto.
+- Es guidance, nunca authority: no cambia permisos, scope, aprobaciones ni STOPs.

@@ -439,6 +439,12 @@ MANIFEST: tuple = (
         descripcion="Skill componible de modelado de dominio (guidance, nunca authority)",
     ),
     EntradaManifiesto(
+        fuente=".claude/skills/lead-data-scientist/skills/problem-framing.md",
+        tratamiento=VERBATIM,
+        destino=".claude/skills/lead-data-scientist/skills/problem-framing.md",
+        descripcion="Skill componible de formulación del problema (guidance, nunca authority)",
+    ),
+    EntradaManifiesto(
         fuente="tools/dsguard/glossary.py",
         tratamiento=VERBATIM,
         destino="tools/dsguard/glossary.py",

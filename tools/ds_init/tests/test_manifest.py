@@ -98,11 +98,18 @@ class TestFormaManifiesto(unittest.TestCase):
             self.assertEqual(len(entradas), 1, destino)
             self.assertEqual(entradas[0].tratamiento, VERBATIM, destino)
             self.assertEqual(entradas[0].fuente, destino, destino)
-        # Única skill distribuida: domain-modeling (sin registry).
-        self.assertEqual(
-            [e.destino for e in MANIFEST if "/lead-data-scientist/skills/" in e.destino],
-            [".claude/skills/lead-data-scientist/skills/domain-modeling.md"],
-        )
+        # Skills distribuidas (sin registry): deben incluir al menos estas; otras skills
+        # futuras no rompen el test.
+        skills = {e.destino for e in MANIFEST if "/lead-data-scientist/skills/" in e.destino}
+        for nombre in ("domain-modeling", "problem-framing"):
+            self.assertIn(f".claude/skills/lead-data-scientist/skills/{nombre}.md", skills)
+
+    def test_problem_framing_es_verbatim(self):
+        destino = ".claude/skills/lead-data-scientist/skills/problem-framing.md"
+        entradas = [e for e in MANIFEST if e.destino == destino]
+        self.assertEqual(len(entradas), 1)
+        self.assertEqual(entradas[0].tratamiento, VERBATIM)
+        self.assertEqual(entradas[0].fuente, destino)
 
     def test_domain_modeling_skill_y_glossary_son_verbatim_sin_glossary_md(self):
         for destino in (
