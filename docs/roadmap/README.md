@@ -74,6 +74,7 @@ Si el usuario define otra política de commits para una versión concreta, esa i
 - `v0.9.0`: publicada — Cards & Model Governance (Data/Model Cards, Responsible AI / model risk evidence, correctivos operativos). Ver `v0.9.md`.
 - `v0.10.0`: publicada — Integration & Stabilization + Composable Data Science Skills. Ver `v0.10.md`.
 - `v0.11.0`: publicada — Operational Robustness & Recovery. Ver `v0.11.md` y `docs/releases/v0.11.0.md`.
+- `v0.12.0`: en desarrollo — Data Scientist Experience & Composable Skills. Ver `v0.12.md`.
 - `v1.0`: Stable Public Contracts.
 
 Nota: el contrato de autonomía de arriba gobierna **cómo se desarrolla Harmessi**. La autonomía del

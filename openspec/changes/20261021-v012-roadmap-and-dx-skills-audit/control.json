@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "change_id": "20261021-v012-roadmap-and-dx-skills-audit",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-21T11:59:13Z",
+  "baseline": {
+    "commit": "917339fbe71db2f906eba807e8d8cc928d932f79",
+    "rama": "v0.12-dev",
+    "capturado_utc": "2026-10-21T11:59:13Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "docs/roadmap/README.md",
+      "docs/roadmap/v0.12.md",
+      "openspec/changes/20261021-v012-roadmap-and-dx-skills-audit/**",
+      "openspec/changes/20261021-v012-roadmap-and-dx-skills-audit/amendments.jsonl",
+      "openspec/changes/20261021-v012-roadmap-and-dx-skills-audit/control.json",
+      "openspec/changes/20261021-v012-roadmap-and-dx-skills-audit/design.md",
+      "openspec/changes/20261021-v012-roadmap-and-dx-skills-audit/proposal.md",
+      "openspec/changes/20261021-v012-roadmap-and-dx-skills-audit/spec.md",
+      "openspec/changes/20261021-v012-roadmap-and-dx-skills-audit/tasks.md",
+      "openspec/changes/20261021-v012-roadmap-and-dx-skills-audit/verification.md"
+    ],
+    "scope_hash": "aba7449ac2e9e1b43d07b50a78485c22c15f82b1ef5610bf0d43ba8b080510d7"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "31daa772e694c4f828a53440740f05c3b66a8fa4969eccc403aec822b9749e79",
+      "registrado_utc": "2026-10-21T12:00:47Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Roadmap y auditoría de Harmessi v0.12",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.12.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "7884ce4bfca6a7968d8f944ca0579f247e5c6798ca1683a748b7e43282f087ed",
+      "registrado_utc": "2026-10-21T12:00:48Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Roadmap y auditoría de Harmessi v0.12",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.12.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "992eae5765b5f3e00b795e8fd83b95ccb59e444896b7c0662ac4f038d4d7303e",
+      "registrado_utc": "2026-10-21T12:00:50Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Roadmap y auditoría de Harmessi v0.12",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.12.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-21T12:00:51Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-21T12:01:09Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-21T12:01:10Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-21T12:01:33Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-21T12:01:07Z",
+      "cierre_utc": "2026-10-21T12:01:46Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-21T16:01:07Z",
+      "minutos_consumidos": 0.65,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}
