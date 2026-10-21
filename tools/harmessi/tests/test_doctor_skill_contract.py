@@ -155,6 +155,19 @@ class TestDoctorInstalado(unittest.TestCase):
         faltantes = [r for r in resultados if r.codigo == "HARMESSI-SKILL-FALTANTE"]
         self.assertTrue(any("diagnosing-bugs.md" in r.mensaje for r in faltantes), faltantes)
 
+    def test_codebase_design_instalada_y_esperada_por_doctor(self):
+        self.assertTrue((self.repo / DIR_SKILLS / "codebase-design.md").is_file())
+        self.assertIn(
+            ".claude/skills/lead-data-scientist/skills/codebase-design.md",
+            doctor_mod._ARCHIVOS_SKILL_ESPERADOS,
+        )
+
+    def test_codebase_design_borrada_reporta_skill_faltante(self):
+        (self.repo / DIR_SKILLS / "codebase-design.md").unlink()
+        resultados = self._doctor()
+        faltantes = [r for r in resultados if r.codigo == "HARMESSI-SKILL-FALTANTE"]
+        self.assertTrue(any("codebase-design.md" in r.mensaje for r in faltantes), faltantes)
+
     def test_problem_framing_borrada_reporta_skill_faltante(self):
         (self.repo / DIR_SKILLS / "problem-framing.md").unlink()
         resultados = self._doctor()

@@ -653,6 +653,128 @@ class TestChange5DomainModeling(unittest.TestCase):
             with self.subTest(archivo=ruta.name):
                 self.assertIn("## 38. Diagnóstico de fallos", _leer_norm(ruta))
 
+    def test_codebase_design_frases_normativas(self):
+        ruta = SKILL_DIR / "skills" / "codebase-design.md"
+        contenido = _leer_norm(ruta)
+        norm = lambda s: re.sub(r"\s+", " ", s)  # noqa: E731
+        # Cuándo cargar (sección 2): estructural sí, local no.
+        seccion2 = norm(contenido.split("## 2. ")[1].split("## 3. ")[0])
+        for frase in ("módulo nuevo", "mover responsabilidades", "contrato interno o público",
+                      "dependencia entre módulos", "NO se carga para cambios locales"):
+            with self.subTest(seccion2=frase):
+                self.assertIn(frase, seccion2)
+        # Los 11 temas (sección 3).
+        seccion3 = norm(contenido.split("## 3. ")[1].split("## 4. ")[0])
+        for tema in ("boundaries", "ownership de módulos", "acoplamiento", "cohesión",
+                     "primitivas existentes", "contrato público/interno",
+                     "dirección de dependencias", "impact radius",
+                     "compatibilidad hacia atrás", "migración", "test seams"):
+            with self.subTest(tema=tema):
+                self.assertIn(f"**{tema}**", seccion3)
+        # Escalera de preferencia ordenada (sección 4).
+        seccion4 = norm(contenido.split("## 4. ")[1].split("## 5. ")[0])
+        escalones = ["1. **reuse**", "2. **extend**", "3. **new local primitive**",
+                     "4. **new subsystem/framework**"]
+        posiciones = []
+        for escalon in escalones:
+            with self.subTest(escalon=escalon):
+                self.assertIn(escalon, seccion4)
+            posiciones.append(seccion4.find(escalon))
+        self.assertEqual(posiciones, sorted(posiciones))
+        for frase in ("un consumidor real y concreto", "duplicación", "wrappers innecesarios",
+                      "framework creep", "abstracciones sin consumidor"):
+            with self.subTest(seccion4=frase):
+                self.assertIn(frase, seccion4)
+        # Impact radius: usa el preflight, no lo reimplementa (sección 5).
+        seccion5 = norm(contenido.split("## 5. ")[1].split("## 6. ")[0])
+        for frase in ("ds_guard impact scan", "methodology §25", "no lo reimplementa"):
+            with self.subTest(seccion5=frase):
+                self.assertIn(frase, seccion5)
+        # Compatibilidad y migración (sección 6): decisión humana.
+        seccion6 = norm(contenido.split("## 6. ")[1].split("## 7. ")[0])
+        for frase in ("público", "interno", "plan de migración", "cambio incompatible",
+                      "dependencia nueva relevante", "expansión de scope",
+                      "decisión humana", "STOP vigente", "no los resuelve"):
+            with self.subTest(seccion6=frase.lower()):
+                self.assertIn(frase.lower(), seccion6.lower())
+        # Registro del razonamiento (sección 7).
+        seccion7 = norm(contenido.split("## 7. ")[1].split("## 8. ")[0])
+        for frase in ("design.md", "Decision Ledger", "No crea artefactos nuevos",
+                      "verification.md", "sin tocar los artefactos aprobados",
+                      "ds_guard scope amend", "requiere humano T1", "mensaje al humano",
+                      "Propone el Lead o el `metodologo`", "aprueba el usuario",
+                      "nunca es automático"):
+            with self.subTest(seccion7=frase):
+                self.assertIn(frase, seccion7)
+        # Ausencia de autoridad y reparto de roles (secciones 1, 8 y 9).
+        seccion1 = norm(contenido.split("## 1. ")[1].split("## 2. ")[0])
+        for frase in ("Guidance, nunca authority", "no salta STOPs",
+                      "no autoriza a editar fuera del ownership", "No impone la arquitectura de Harmessi"
+                      ):
+            with self.subTest(seccion1=frase):
+                self.assertIn(frase.lower(), seccion1.lower())
+        seccion8 = norm(contenido.split("## 8. ")[1].split("## 9. ")[0])
+        for frase in ("Asesora al Lead", "dentro de su ownership", "El reviewer lee",
+                      "Nadie decide por esta skill permisos, runtime ni scope"):
+            with self.subTest(seccion8=frase):
+                self.assertIn(frase, seccion8)
+        seccion9 = norm(contenido.split("## 9. ")[1])
+        for frase in ("Impact preflight", "Reviewer", "Decision Ledger"):
+            with self.subTest(seccion9=frase):
+                self.assertIn(frase, seccion9)
+        frontmatter = contenido.split("---\n")[1]
+        for clave in ("tools", "permissions", "hooks", "artifacts"):
+            with self.subTest(clave=clave):
+                self.assertNotRegex(frontmatter, rf"(?m)^{clave}\s*:")
+
+    def test_codebase_design_proporcionalidad_impacto_y_autoridad(self):
+        contenido = re.sub(r"\s+", " ", _leer_norm(SKILL_DIR / "skills" / "codebase-design.md"))
+        def sec(n, sig):
+            return contenido.split(f"## {n}. ")[1].split(f"## {sig}. ")[0]
+        for frase in ("dependencia externa", "solo los temas pertinentes", "2 o 3 líneas"):
+            with self.subTest(seccion2=frase):
+                self.assertIn(frase, sec(2, 3))
+        for frase in ("qué archivos podrían verse afectados", "fuera del control del Change",
+                      "consumidor real que lo necesite", "transformaciones que aprenden",
+                      "`raw/` → `interim/` → `processed/`", "los notebooks importan de `utils/`"):
+            with self.subTest(seccion3=frase):
+                self.assertIn(frase, sec(3, 4))
+        for frase in ("dependencia externa nueva relevante", "aprobación humana",
+                      "CLAUDE.md §3 y §1", "el Lead no lo decide solo"):
+            with self.subTest(seccion4=frase):
+                self.assertIn(frase, sec(4, 5))
+        for frase in ("Lo corre el Lead mismo, no el writer ni el reviewer", "solo estático",
+                      "potencialmente afectado", "Nunca es obligatorio para un cambio trivial",
+                      "`dsimpact` no está disponible", "razona a mano"):
+            with self.subTest(seccion5=frase):
+                self.assertIn(frase, sec(5, 6))
+        for frase in ("de forma atómica", "plan de vuelta atrás", "plan escrito, no una acción",
+                      "prohibido `git reset`, `checkout`, `stash` o `clean`"):
+            with self.subTest(seccion6=frase):
+                self.assertIn(frase, sec(6, 7))
+        for frase in ("revisa que el cambio respete el diseño", "`metodologo` interviene"):
+            with self.subTest(seccion8=frase):
+                self.assertIn(frase, sec(8, 9))
+        # Ausencia de autoridad anclada al cuerpo de la sección 1.
+        for frase in ("no otorga permisos", "No cambia aprobaciones"):
+            with self.subTest(seccion1=frase):
+                self.assertIn(frase, sec(1, 2))
+        self.assertNotIn("por id", contenido)
+
+    def test_codebase_design_en_skill_md_methodology_y_tmpl(self):
+        for ruta in (SKILL_RENDERIZADO, SKILL_TMPL):
+            with self.subTest(archivo=ruta.name):
+                contenido = _leer_norm(ruta)
+                self.assertIn("codebase-design", contenido)
+                self.assertIn("reuse > extend > new local primitive > new subsystem/framework", contenido)
+        for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
+            with self.subTest(archivo=ruta.name):
+                contenido = _leer_norm(ruta)
+                self.assertIn("## 39. Diseño de codebase", contenido)
+                seccion = contenido.split("## 39. ")[1]
+                self.assertIn("reuse > extend > new local primitive > new subsystem/framework", seccion)
+                self.assertIn("ds_guard impact scan", seccion)
+
     def test_verificador_md_y_tmpl_mencionan_glossary(self):
         for ruta in (VERIFICADOR_RENDERIZADO, VERIFICADOR_TMPL):
             contenido = _leer_norm(ruta)

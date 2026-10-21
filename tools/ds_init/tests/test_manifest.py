@@ -101,8 +101,15 @@ class TestFormaManifiesto(unittest.TestCase):
         # Skills distribuidas (sin registry): deben incluir al menos estas; otras skills
         # futuras no rompen el test.
         skills = {e.destino for e in MANIFEST if "/lead-data-scientist/skills/" in e.destino}
-        for nombre in ("domain-modeling", "problem-framing", "diagnosing-bugs"):
+        for nombre in ("domain-modeling", "problem-framing", "diagnosing-bugs", "codebase-design"):
             self.assertIn(f".claude/skills/lead-data-scientist/skills/{nombre}.md", skills)
+
+    def test_codebase_design_es_verbatim(self):
+        destino = ".claude/skills/lead-data-scientist/skills/codebase-design.md"
+        entradas = [e for e in MANIFEST if e.destino == destino]
+        self.assertEqual(len(entradas), 1)
+        self.assertEqual(entradas[0].tratamiento, VERBATIM)
+        self.assertEqual(entradas[0].fuente, destino)
 
     def test_diagnosing_bugs_es_verbatim(self):
         destino = ".claude/skills/lead-data-scientist/skills/diagnosing-bugs.md"
