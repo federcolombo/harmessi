@@ -351,6 +351,13 @@ class TestArtifactsSuperficie(_Base):
         frontmatter = ruta.read_text(encoding="utf-8").replace("\r\n", "\n").split("---\n")[1]
         self.assertNotRegex(frontmatter, r"(?m)^artifacts\s*:")
 
+    def test_diagnosing_bugs_real_es_valida_sin_artifacts(self):
+        ruta = REPO_ORIGEN / sc.DIR_SKILLS / "diagnosing-bugs.md"
+        self.assertTrue(ruta.is_file())
+        self.assertEqual(sc.validar_skill(ruta, ROLES), [])
+        frontmatter = ruta.read_text(encoding="utf-8").replace("\r\n", "\n").split("---\n")[1]
+        self.assertNotRegex(frontmatter, r"(?m)^artifacts\s*:")
+
     def test_skills_reales_del_repo_sin_hallazgos(self):
         self.assertEqual(sc.validar_directorio_skills(REPO_ORIGEN), [])
 

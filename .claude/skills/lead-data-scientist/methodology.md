@@ -488,3 +488,11 @@ Una intervención de emergencia es aceptable solo si el canal gobernado quedó i
 - Produce criterios de éxito y supuestos en los artefactos existentes del Change; no crea artefactos nuevos.
 - Modo `grill-me`: opt-in, solo si el humano pide desafiar la definición del problema; lo metodológico se deriva al `metodologo`. No hay interrogatorio por defecto.
 - Es guidance, nunca authority: no cambia permisos, scope, aprobaciones ni STOPs.
+
+## 38. Diagnóstico de fallos (skill `diagnosing-bugs`)
+
+- La skill vive en `skills/diagnosing-bugs.md` y se carga ante un test o pipeline roto o un resultado inesperado de causa no evidente; no para fallos triviales.
+- Workflow: reproduce → minimize → classify → hypothesis → instrument → test hypothesis → fix root cause → regression test → verify; cada paso con evidencia observable y la hipótesis falsable. Síntoma ≠ causa raíz.
+- Baseline-aware focalizado: solo ante un fallo durante un Change y duda razonable de si lo introdujo (no ante todo fallo); de solo lectura (`git show`/`git diff` del commit baseline; si hay que ejecutar, extracción mínima con `git show <commit>:<ruta>` al «área temporal» —un único directorio temporal en el scope del Change, verificado con `git check-ignore`, nunca `data/` ni `.harmessi/`, limpiado al terminar; si no hay uno ⇒ `inconclusive`— y solo el test concreto, nunca la suite completa). Prohibido `git checkout/stash/reset/clean/switch` sobre el árbol del usuario y mover HEAD; nunca pipelines, notebooks, tests ni scripts que lean datasets completos u holdouts. Clasificación `introduced|pre-existing|environment|inconclusive`: un fallo por datos ausentes (`data/` no versionada) es `environment` o `inconclusive`, nunca `pre-existing`; `inconclusive` se registra, no se atribuye ni se ignora.
+- El Lead diagnostica y ejecuta vía `ds_guard exec`; el writer corrige la causa raíz y agrega el regression test cuando aplique según §29; el reviewer lee. Un fix fallido cuenta como reintento/remediation; una causa raíz metodológica va al Decision Ledger/`metodologo` y no es remediation. No cambia los topes de remediation ni de reintentos.
+- Es guidance, nunca authority: no cambia permisos, scope, aprobaciones ni STOPs.

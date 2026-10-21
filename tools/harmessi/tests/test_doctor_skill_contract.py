@@ -142,6 +142,19 @@ class TestDoctorInstalado(unittest.TestCase):
         contrato = [r for r in resultados if r.codigo == "HARMESSI-SKILL-CONTRATO"]
         self.assertEqual([r.nivel for r in contrato], [doctor_mod.NIVEL_OK])
 
+    def test_diagnosing_bugs_instalada_y_esperada_por_doctor(self):
+        self.assertTrue((self.repo / DIR_SKILLS / "diagnosing-bugs.md").is_file())
+        self.assertIn(
+            ".claude/skills/lead-data-scientist/skills/diagnosing-bugs.md",
+            doctor_mod._ARCHIVOS_SKILL_ESPERADOS,
+        )
+
+    def test_diagnosing_bugs_borrada_reporta_skill_faltante(self):
+        (self.repo / DIR_SKILLS / "diagnosing-bugs.md").unlink()
+        resultados = self._doctor()
+        faltantes = [r for r in resultados if r.codigo == "HARMESSI-SKILL-FALTANTE"]
+        self.assertTrue(any("diagnosing-bugs.md" in r.mensaje for r in faltantes), faltantes)
+
     def test_problem_framing_borrada_reporta_skill_faltante(self):
         (self.repo / DIR_SKILLS / "problem-framing.md").unlink()
         resultados = self._doctor()

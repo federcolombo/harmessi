@@ -10,6 +10,7 @@ verifica los puntos concretos y verificables por texto plano listados en
 """
 from __future__ import annotations
 
+import re
 import shutil
 import sys
 import tempfile
@@ -590,6 +591,67 @@ class TestChange5DomainModeling(unittest.TestCase):
         for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
             with self.subTest(archivo=ruta.name):
                 self.assertIn("## 37. Problem framing", _leer_norm(ruta))
+
+    def test_diagnosing_bugs_frases_normativas(self):
+        ruta = SKILL_DIR / "skills" / "diagnosing-bugs.md"
+        contenido = _leer_norm(ruta)
+        # Workflow: los 9 pasos en orden, anclados a la sección 3.
+        seccion3 = contenido.split("## 3. ")[1].split("## 4. ")[0]
+        pasos = ["reproduce", "minimize", "classify", "hypothesis", "instrument",
+                 "test hypothesis", "fix root cause", "regression test", "verify"]
+        posiciones = []
+        for i, paso in enumerate(pasos, start=1):
+            marca = f"{i}. **{paso}**"
+            with self.subTest(paso=paso):
+                self.assertIn(marca, seccion3)
+            posiciones.append(seccion3.find(marca))
+        self.assertEqual(posiciones, sorted(posiciones))
+        # Clases de fallo (sección 4).
+        seccion4 = contenido.split("## 4. ")[1].split("## 5. ")[0]
+        for clase in ("code bug", "data issue", "environment", "configuration",
+                      "contract mismatch", "expected behavior", "nondeterminism"):
+            with self.subTest(clase=clase):
+                self.assertIn(f"**{clase}**", seccion4)
+        for frase in ("raw/", "Data Contract", "RANDOM_STATE"):
+            with self.subTest(seccion4=frase):
+                self.assertIn(frase, seccion4)
+        # Baseline-aware focalizado (sección 6).
+        seccion6 = contenido.split("## 6. ")[1].split("## 7. ")[0]
+        for clase in ("introduced", "pre-existing", "environment", "inconclusive"):
+            with self.subTest(clasificacion=clase):
+                self.assertIn(f"`{clase}`", seccion6)
+        seccion6_n = re.sub(r"\s+", " ", seccion6)
+        for frase in ("Nunca la suite completa", "ni se atribuye al Change ni se ignora",
+                      "SOLO LECTURA", "git show", "git diff", "Prohibido `git checkout`",
+                      "nunca `pre-existing`", "duda razonable", "git check-ignore",
+                      "área temporal", "tests ni scripts que lean datasets completos u holdouts"):
+            with self.subTest(seccion6=frase):
+                self.assertIn(frase, seccion6_n)
+        # Ausencia de autoridad y reparto de roles (espacios normalizados).
+        contenido_n = re.sub(r"\s+", " ", contenido)
+        for frase in ("Guidance, nunca authority", "ds_guard exec", "NO se carga",
+                      "Síntoma ≠ causa raíz", "No reemplaza tests ni al reviewer",
+                      "cuenta como reintento/remediation", "cuando aplique según methodology §29",
+                      "PROPONE", "datos sintéticos o agregados", "se retira en verify",
+                      "CLAUDE.md §1", "se escala al humano o al `metodologo`",
+                      "tope propio del diagnóstico, no de remediation",
+                      "que decide si se reabre el SDD"):
+            with self.subTest(frase=frase):
+                self.assertIn(frase, contenido_n)
+        frontmatter = contenido.split("---\n")[1]
+        for clave in ("tools", "permissions", "hooks", "artifacts"):
+            with self.subTest(clave=clave):
+                self.assertNotRegex(frontmatter, rf"(?m)^{clave}\s*:")
+
+    def test_diagnosing_bugs_en_skill_md_methodology_y_tmpl(self):
+        for ruta in (SKILL_RENDERIZADO, SKILL_TMPL):
+            with self.subTest(archivo=ruta.name):
+                contenido = _leer_norm(ruta)
+                self.assertIn("diagnosing-bugs", contenido)
+                self.assertIn("baseline", contenido)
+        for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
+            with self.subTest(archivo=ruta.name):
+                self.assertIn("## 38. Diagnóstico de fallos", _leer_norm(ruta))
 
     def test_verificador_md_y_tmpl_mencionan_glossary(self):
         for ruta in (VERIFICADOR_RENDERIZADO, VERIFICADOR_TMPL):
