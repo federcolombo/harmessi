@@ -86,6 +86,15 @@ class TestCheckDirecto(unittest.TestCase):
         self.assertIn("mala-skill.md", resultados[0].ubicacion)
 
 
+    def test_artifact_protegido_es_warn_nunca_fail(self):
+        self._skill("mi-skill", SKILL_VALIDA.replace("---\n\n#", "artifacts: [tools/x.py]\n---\n\n#"))
+        resultados = doctor_mod._ejecutar_check(
+            doctor_mod.SECCION_HARMESSI, "HARMESSI-SKILL-CONTRATO", doctor_mod._check_skill_contrato, self.dir
+        )
+        self.assertEqual([r.nivel for r in resultados], [doctor_mod.NIVEL_WARN])
+        self.assertIn("SKILL-ARTIFACT-SUPERFICIE-PROTEGIDA", resultados[0].mensaje)
+
+
 class TestPlantilla(unittest.TestCase):
     def test_plantilla_en_archivos_esperados(self):
         self.assertIn(

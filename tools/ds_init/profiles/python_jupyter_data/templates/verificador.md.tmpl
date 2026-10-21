@@ -297,9 +297,14 @@ comportamiento observable, mismo nivel que el resto de esta sección.
   gobernada. Recuperar con `transition --a <estado>` idempotente o restaurando `estado:` desde
   git; un writer no puede materializar transiciones.
 - **`SKILL-REFERENCIA-DESCONOCIDA`**: una skill citada en `## Skills cargados` no existe.
+- **`SKILL-ARTIFACT-SUPERFICIE-PROTEGIDA`**: un `artifacts` de skill apunta a superficie Protected
+  (`.claude/**` no optimizable, `tools/**`, `.ds_init/**`, `.harmessi/**`, `control.json`/`amendments.jsonl`
+  de un Change); quitarlo del frontmatter. Doctor lo reporta como WARN (`methodology.md` §36).
 - **`HARMESSI-SKILL-CONTRATO`**: Doctor la reporta agrupando los códigos de contrato de skill
   `SKILL-FRONTMATTER-AUSENTE`, `SKILL-CAMPO-FALTANTE`, `SKILL-CAMPO-NO-PERMITIDO`,
-  `SKILL-NOMBRE-INVALIDO`, `SKILL-ROL-DESCONOCIDO` y `SKILL-ARTIFACT-INVALIDO`.
+  `SKILL-NOMBRE-INVALIDO`, `SKILL-ROL-DESCONOCIDO`, `SKILL-ARTIFACT-INVALIDO` y
+  `SKILL-ARTIFACT-SUPERFICIE-PROTEGIDA`. Un artifact bajo `.harmessi/**` (o `.git/`, guardrails y
+  settings) sale como `SKILL-ARTIFACT-INVALIDO`, no como superficie protegida.
 - **`GLOSSARY-TERMINO-DUPLICADO`**: el mismo término aparece 2+ veces en `GLOSSARY.md`.
 - **`GLOSSARY-ESTADO-INVALIDO`**: el estado de una entrada no es `hypothesis` ni `approved`.
 - **`GLOSSARY-DEFINICION-AUSENTE`**: una entrada no tiene definición.

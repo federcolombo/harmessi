@@ -813,3 +813,14 @@ Change `20261019-v011-upgrade-migration-resilience`. Comandos: `python -m tools.
 - **Lock.** `.ds_init/lock` (`O_EXCL`, pid y timestamp) serializa install/sync/upgrade/recover; un lock existente nunca se ignora ni se roba.
 - **Doctor.** `HARMESSI-VERSION` (WARN con remedio `upgrade`) y `HARMESSI-MIGRACION` (FAIL ante staging/journal parcial, WARN ante lock o journal completo residual).
 - **Límites honestos.** Sin downgrade; sin migración de datos; el lock es cooperativo, no defensa ante un actor hostil, y tras un kill puede quedar `.ds_init/lock` (borrarlo a mano si no hay proceso vivo; sin detección de pid a propósito); Doctor corre desde el checkout; `upgrade` no recrea un managed borrado a mano (se restaura desde Git); un corte entre `os.replace` y la marca `aplicado` se cubre restaurando siempre el backup de los `reemplazar-merge`.
+
+## 9. Harness Surfaces (v0.12)
+
+Change `20261021-v012-harness-surfaces`. Vocabulario de qué puede evolucionar metodológicamente y qué no; la superficie se DERIVA de la ruta, sin metadata nueva.
+
+- **Protected.** Guardrails, permisos, semántica de aprobación, trust model, scope enforcement, límites de seguridad y enforcement determinista: `.claude/**` (salvo lo optimizable), `tools/**`, `.ds_init/**`, `.harmessi/**` y `control.json`/`amendments.jsonl` de cualquier Change.
+- **Optimizable.** Skills metodológicas, guidance de metodología, prompts/instrucciones, tool guidance y patrones de razonamiento reutilizables: `.claude/skills/lead-data-scientist/skills/*.md` (un nivel), `methodology.md`, `eda.md`, `kdd.md` de esa carpeta.
+- **Project-owned.** `GLOSSARY.md`, definiciones de negocio, Data Contracts, configuración y artefactos del proyecto: todo lo demás.
+- **Derivación.** `tools/dsguard/skill_contract.py::superficie_de_ruta(ruta)`, pura (normaliza `\` y `./`, sin distinguir mayúsculas; `..` ⇒ protected, fail-safe). `_validar_artifacts` emite `SKILL-ARTIFACT-SUPERFICIE-PROTEGIDA` si un `artifacts` cae en Protected; Doctor lo expone como WARN vía `HARMESSI-SKILL-CONTRATO`. Sin claves nuevas de frontmatter.
+- **Qué NO existe.** Optimizer, auto-modificación del harness, candidate/probe engine, marketplace ni policy engine. Optimizable ≠ auto-modificable: modificar una superficie optimizable sigue siendo un Change normal (SDD, alcance, aprobación, verificación).
+- **Por archivo, no por contenido.** Las partes normativas de approval/scope dentro de `methodology.md` se tratan como Protected de facto; toda modificación sigue siendo un Change normal.

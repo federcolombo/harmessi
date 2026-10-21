@@ -18,6 +18,8 @@ renombrar `name` (kebab-case, igual al nombre del archivo) y reemplazar este cue
   ejecución.
 - Precedencia ante conflicto: governance/runtime > contrato del rol > contrato del proyecto >
   skill. La skill nunca relaja una regla de nivel superior.
+- `artifacts` no puede apuntar a una superficie protegida (`.claude/**` no optimizable, `tools/**`,
+  `.ds_init/**`, `.harmessi/**`, `control.json`/`amendments.jsonl`): `SKILL-ARTIFACT-SUPERFICIE-PROTEGIDA`.
 - Cargar solo cuando aplica (ver `when_to_load`); no cargar por defecto.
 - Registrar cada skill cargada en la sección `## Skills cargados` de `tasks.md`
   (`- <skill> — <tarea> — <motivo>`).

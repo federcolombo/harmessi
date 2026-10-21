@@ -52,6 +52,15 @@ DIR_SKILLS = ".claude/skills/lead-data-scientist/skills"
 DIR_AGENTES = ".claude/agents"
 ENCABEZADO_REFERENCIAS = "## Skills cargados"
 
+SUPERFICIE_PROTEGIDA = "protected"
+SUPERFICIE_OPTIMIZABLE = "optimizable"
+SUPERFICIE_PROYECTO = "project-owned"
+
+_DIR_SKILL_LEAD = (".claude", "skills", "lead-data-scientist")
+_OPTIMIZABLES_LEAD = frozenset({"methodology.md", "eda.md", "kdd.md"})
+_RAICES_PROTEGIDAS = frozenset({".claude", "tools", ".ds_init", ".harmessi"})
+_ARCHIVOS_CHANGE_PROTEGIDOS = frozenset({"control.json", "amendments.jsonl"})
+
 _RE_NOMBRE = re.compile(r"^[a-z][a-z0-9-]*$")
 _RE_CLAVE_VALOR = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.*)$")
 _MARCADORES_SIN_SKILL = frozenset({"ninguna", "ninguno", "n/a", "na", "-"})
@@ -178,6 +187,43 @@ def skills_existentes(repo_root: Path) -> set:
     return {p.stem for p in directorio.glob("*.md") if p.is_file()}
 
 
+# --- Superficies del harness -----------------------------------------------------
+
+def superficie_de_ruta(ruta: str) -> str:
+    """Superficie (`protected|optimizable|project-owned`) de una ruta repo-relativa.
+    Pura: recorta espacios, normaliza `\\`→`/`, quita `./` y `/` final y compara sin
+    distinguir mayúsculas. Fail-safe => protected: no-str, vacía, absoluta (`/`, `\\`,
+    letra de unidad o `:`), con `..`, con segmento terminado en `.` o espacio, o con
+    comodines `*?[`. La clasificación es por ruta, no por contenido."""
+    if not isinstance(ruta, str):
+        return SUPERFICIE_PROTEGIDA
+    texto = ruta.strip()
+    if not texto or texto[0] in "/\\" or ":" in texto or any(c in texto for c in "*?["):
+        return SUPERFICIE_PROTEGIDA
+    crudas = texto.replace("\\", "/").casefold().split("/")
+    if any(p not in ("", ".") and (p.endswith(".") or p != p.strip()) and p != ".." for p in crudas):
+        return SUPERFICIE_PROTEGIDA
+    partes = [p for p in crudas if p not in ("", ".")]
+    if not partes or ".." in partes:
+        return SUPERFICIE_PROTEGIDA
+    base = _DIR_SKILL_LEAD
+    if tuple(partes[:3]) == base:
+        if len(partes) == 5 and partes[3] == "skills" and partes[4].endswith(".md"):
+            return SUPERFICIE_OPTIMIZABLE
+        if len(partes) == 4 and partes[3] in _OPTIMIZABLES_LEAD:
+            return SUPERFICIE_OPTIMIZABLE
+    if partes[0] in _RAICES_PROTEGIDAS:
+        return SUPERFICIE_PROTEGIDA
+    if (
+        len(partes) >= 3
+        and partes[0] == "openspec"
+        and partes[1] == "changes"
+        and partes[-1] in _ARCHIVOS_CHANGE_PROTEGIDOS
+    ):
+        return SUPERFICIE_PROTEGIDA
+    return SUPERFICIE_PROYECTO
+
+
 # --- Validación de una skill -----------------------------------------------------
 
 def _linea_no_vacia(datos: dict, clave: str, ubic: str, hallazgos: list) -> None:
@@ -216,6 +262,12 @@ def _validar_artifacts(valor, ubic: str, hallazgos: list) -> None:
             hallazgos.append(Finding(
                 "SKILL-ARTIFACT-INVALIDO",
                 f"artifact {crudo!r}: debe ser una ruta literal sin comodines", ubic))
+        elif superficie_de_ruta(ruta) == SUPERFICIE_PROTEGIDA:
+            hallazgos.append(Finding(
+                "SKILL-ARTIFACT-SUPERFICIE-PROTEGIDA",
+                f"artifact {crudo!r} apunta a la superficie protegida del harness: no declarar "
+                "artefactos de enforcement/gobernanza ni de estado de Changes, ni para leer ni "
+                "para escribir; quitalo de 'artifacts' o usá un artefacto del proyecto", ubic))
 
 
 def validar_skill(ruta: Path, roles: set, ubicacion: Optional[str] = None) -> list:

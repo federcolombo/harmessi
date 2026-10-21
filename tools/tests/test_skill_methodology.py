@@ -590,5 +590,32 @@ class TestChange5DomainModeling(unittest.TestCase):
         self.assertIn("GLOSSARY.md", contenido)
 
 
+# --- Change 1 v0.12 (20261021-v012-harness-surfaces) ---
+class TestV012SuperficiesDelHarness(unittest.TestCase):
+    CODIGO = "SKILL-ARTIFACT-SUPERFICIE-PROTEGIDA"
+
+    def test_methodology_md_y_tmpl_documentan_superficies(self):
+        for ruta in (METHODOLOGY_RENDERIZADO, METHODOLOGY_TMPL):
+            contenido = _leer_norm(ruta)
+            for frase in ("## 36. Superficies del harness", "Optimizable ≠ auto-modificable",
+                          "superficie_de_ruta", self.CODIGO):
+                with self.subTest(archivo=ruta.name, frase=frase):
+                    self.assertIn(frase, contenido)
+
+    def test_skill_verificador_y_plantilla_mencionan_codigo(self):
+        for ruta in (SKILL_RENDERIZADO, SKILL_TMPL):
+            with self.subTest(archivo=ruta.name):
+                self.assertIn("Optimizable ≠ auto-modificable", _leer_norm(ruta))
+        for ruta in (VERIFICADOR_RENDERIZADO, VERIFICADOR_TMPL, SKILL_DIR / "templates" / "skill.md"):
+            with self.subTest(archivo=ruta.name):
+                self.assertIn(self.CODIGO, _leer_norm(ruta))
+
+    def test_architecture_documenta_superficies(self):
+        contenido = _leer_norm(REPO_ORIGEN / "ARCHITECTURE.md")
+        for frase in ("## 9. Harness Surfaces (v0.12)", "Optimizable ≠ auto-modificable", "candidate/probe engine"):
+            with self.subTest(frase=frase):
+                self.assertIn(frase, contenido)
+
+
 if __name__ == "__main__":
     unittest.main()

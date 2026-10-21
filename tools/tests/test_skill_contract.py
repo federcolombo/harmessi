@@ -206,7 +206,7 @@ class TestClavesNoPermitidas(_Base):
 
 class TestArtifacts(_Base):
     def test_validos(self):
-        texto = _frontmatter(artifacts="[GLOSSARY.md, docs/a.md, 'tools/x.py']")
+        texto = _frontmatter(artifacts="[GLOSSARY.md, docs/a.md, 'src/x.py']")
         self.assertEqual(self.codigos(texto), [])
 
     def test_vacio_valido(self):
@@ -230,6 +230,122 @@ class TestArtifacts(_Base):
 
     def test_artifacts_no_lista(self):
         self.assertEqual(self.codigos(_frontmatter(artifacts="GLOSSARY.md")), ["SKILL-CAMPO-NO-PERMITIDO"])
+
+
+class TestSuperficieDeRuta(unittest.TestCase):
+    """Change 20261021-v012-harness-surfaces (R4)."""
+
+    P, O, U = sc.SUPERFICIE_PROTEGIDA, sc.SUPERFICIE_OPTIMIZABLE, sc.SUPERFICIE_PROYECTO
+    LEAD = ".claude/skills/lead-data-scientist"
+
+    CASOS = (
+        ("skills/domain-modeling.md", U),  # relativa a la raíz: no es la carpeta del Lead
+        (".claude/skills/lead-data-scientist/skills/domain-modeling.md", O),
+        (".claude/skills/lead-data-scientist/skills/x/y.md", P),
+        (".claude/skills/lead-data-scientist/skills/x.txt", P),
+        (".claude/skills/lead-data-scientist/methodology.md", O),
+        (".claude/skills/lead-data-scientist/eda.md", O),
+        (".claude/skills/lead-data-scientist/kdd.md", O),
+        (".claude/skills/lead-data-scientist/SKILL.md", P),
+        (".claude/skills/lead-data-scientist/verificador.md", P),
+        (".claude/skills/lead-data-scientist/templates/skill.md", P),
+        (".claude/guardrails.json", P),
+        (".claude/agents/metodologo.md", P),
+        ("tools/x.py", P),
+        (".ds_init/lock", P),
+        (".harmessi/x", P),
+        ("openspec/changes/x/control.json", P),
+        ("openspec/changes/x/amendments.jsonl", P),
+        ("openspec/changes/x/proposal.md", U),
+        ("openspec/lifecycle/state.json", U),
+        ("GLOSSARY.md", U),
+        ("docs/a.md", U),
+        ("templates/skill.md", U),
+        ("notebooks/tools/x.py", U),
+        # normalización
+        (".\\tools\\x.py", P),
+        ("./tools/x.py", P),
+        (".\\.claude\\skills\\lead-data-scientist\\skills\\a.md", O),
+        ("TOOLS/X.PY", P),
+        (".CLAUDE/Skills/Lead-Data-Scientist/METHODOLOGY.MD", O),
+        ("glossary.md", U),
+        ("OpenSpec/Changes/X/Control.JSON", P),
+        # fail-safe
+        ("../GLOSSARY.md", P),
+        ("docs/../tools/x.py", P),
+        ("", P),
+        ("   ", P),
+        ("/etc/x.md", P),
+        ("\\x.md", P),
+        ("C:/x.md", P),
+        ("a:b", P),
+        ("docs/*.md", P),
+        ("docs/a?.md", P),
+        ("docs/[a].md", P),
+        ("docs./a.md", P),
+        ("docs /a.md", P),
+        ("  GLOSSARY.md  ", U),
+        ("tools/", P),
+        ("tools", P),
+        (".claude", P),
+        (".claude/", P),
+        (".claude/skills/lead-data-scientist/skills", P),
+        (".claude/skills/lead-data-scientist/skills/", P),
+        ("skills", U),
+        ("docs/", U),
+    )
+
+    def test_tabla_de_casos(self):
+        for ruta, esperado in self.CASOS:
+            with self.subTest(ruta=ruta):
+                self.assertEqual(sc.superficie_de_ruta(ruta), esperado)
+
+    def test_no_str_es_protegida(self):
+        for valor in (None, 5, ["tools/x.py"], b"x"):
+            with self.subTest(valor=valor):
+                self.assertEqual(sc.superficie_de_ruta(valor), self.P)
+
+    def test_constantes(self):
+        self.assertEqual(
+            (sc.SUPERFICIE_PROTEGIDA, sc.SUPERFICIE_OPTIMIZABLE, sc.SUPERFICIE_PROYECTO),
+            ("protected", "optimizable", "project-owned"),
+        )
+
+
+class TestArtifactsSuperficie(_Base):
+    def test_artifact_protegido_reporta_hallazgo(self):
+        for ruta in ("tools/x.py", ".claude/agents/metodologo.md", "openspec/changes/x/control.json",
+                     ".claude/skills/lead-data-scientist/SKILL.md", "./tools/x.py"):
+            with self.subTest(ruta=ruta):
+                hallazgos = sc.validar_skill(self.skill(_frontmatter(artifacts=f"[{ruta}]")), ROLES)
+                self.assertEqual([f.codigo for f in hallazgos], ["SKILL-ARTIFACT-SUPERFICIE-PROTEGIDA"])
+                self.assertIn(ruta, hallazgos[0].mensaje)
+                self.assertTrue(hallazgos[0].ubicacion.endswith("mi-skill.md"))
+
+    def test_ds_init_y_harmessi_via_validar_skill(self):
+        self.assertEqual(self.codigos(_frontmatter(artifacts="[.ds_init/x]")),
+                         ["SKILL-ARTIFACT-SUPERFICIE-PROTEGIDA"])
+        # .harmessi/** ya lo rechaza la normalización de alcance como inválido.
+        self.assertEqual(self.codigos(_frontmatter(artifacts="[.harmessi/x]")),
+                         ["SKILL-ARTIFACT-INVALIDO"])
+
+    def test_sin_falso_positivo(self):
+        for ruta in ("GLOSSARY.md", "docs/a.md", "openspec/changes/x/proposal.md",
+                     ".claude/skills/lead-data-scientist/methodology.md",
+                     ".claude/skills/lead-data-scientist/skills/domain-modeling.md"):
+            with self.subTest(ruta=ruta):
+                self.assertEqual(self.codigos(_frontmatter(artifacts=f"[{ruta}]")), [])
+
+    def test_mezcla_reporta_solo_el_protegido(self):
+        texto = _frontmatter(artifacts="[GLOSSARY.md, tools/x.py]")
+        self.assertEqual(self.codigos(texto), ["SKILL-ARTIFACT-SUPERFICIE-PROTEGIDA"])
+
+    def test_domain_modeling_sigue_valida(self):
+        ruta = self.skill(SKILL_VALIDA, "domain-modeling")
+        self.assertEqual(sc.validar_skill(ruta, ROLES), [])
+
+    def test_skills_reales_del_repo_sin_hallazgos(self):
+        self.assertEqual(sc.validar_directorio_skills(REPO_ORIGEN), [])
 
 
 class TestDirectorio(_Base):
