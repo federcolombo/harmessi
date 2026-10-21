@@ -1,0 +1,21 @@
+{
+  "harness_version": "0.11.0",
+  "perfil": "python-jupyter-data",
+  "fecha_utc": "2020-01-01T00:00:00Z",
+  "configuracion": {
+    "nombre": "proyecto-ejemplo",
+    "notebooks_dir": "notebooks",
+    "venv_dir": ".venv",
+    "destino": "."
+  },
+  "archivos": [
+    {
+      "ruta": "docs/ejemplo-managed.md",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "ruta": "docs/otro-managed.md",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    }
+  ]
+}

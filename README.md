@@ -556,6 +556,16 @@ configured hook still depends on an external shell.
 > present and was verified structurally, but its remote execution was not
 > observed. See `docs/portability.md`.
 
+### Contracts, versioning and deprecation
+
+`docs/contracts/inventory.json` (human view: `docs/contracts/README.md`) is an
+inventory of the CLIs, schemas and other contracts a third party could consume,
+classified as public-candidate / internal / experimental. It is an inventory,
+not a stability promise. See also `docs/versioning.md` (how 0.x vs 1.x is read,
+compatibility window, limited to the artifacts listed there and covered by the
+compatibility tests; fixtures are synthetic and verification against release tags
+is optional) and `docs/deprecation.md` (deprecation convention).
+
 ## Profile
 
 The current (and only) profile is `python-jupyter-data`: agents, the

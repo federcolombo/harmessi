@@ -1,0 +1,422 @@
+{
+  "inventory_version": 1,
+  "harmessi_version_documented": "0.13.x",
+  "contratos": [
+    {
+      "id": "cli-ds-guard",
+      "categoria": "cli",
+      "clase": "public-candidate",
+      "ubicacion": "tools/ds_guard.py",
+      "comando": "python tools/ds_guard.py",
+      "subcomandos": [
+        "init", "status", "validate", "approve", "transition", "session", "notebook-diff", "kdd",
+        "lifecycle", "project", "mlops", "science", "efficiency", "impact", "contract", "exec",
+        "dependency", "output-roots", "source", "quality", "cards", "archive", "remediation",
+        "decision", "scope", "glossary", "ownership", "guardrails"
+      ],
+      "exit_codes": {
+        "0": "correcto",
+        "1": "gate o validación incumplida (incluye SESION-AUSENTE)",
+        "2": "error de uso, de configuración o rechazo (también uso inválido de argparse)",
+        "3": "error de entorno, git o herramienta"
+      },
+      "ancla": "solo nombres de subcomandos (test) + exit codes por lectura de código; flags sin ancla",
+      "notas": "Subcomandos de primer nivel. Los sub-subcomandos y los códigos por subcomando no están inventariados; los códigos siguen el docstring del módulo y son observados, no garantizados."
+    },
+    {
+      "id": "cli-ds-init",
+      "categoria": "cli",
+      "clase": "public-candidate",
+      "ubicacion": "tools/ds_init/cli.py",
+      "comando": "python -m tools.ds_init",
+      "subcomandos": ["install", "sync", "migrate-hashes", "upgrade", "recover"],
+      "exit_codes": {
+        "0": "ok (incluye dry-run)",
+        "1": "abortado o fallo de operación",
+        "2": "error de uso, control.json ilegible o inválido, o recover con problemas"
+      },
+      "ancla": "solo nombres de subcomandos (test) + exit codes por lectura de código; flags sin ancla",
+      "notas": "Las acciones son el argumento posicional 'accion' (default install), no subparsers. Exit codes observados en el código."
+    },
+    {
+      "id": "cli-harmessi",
+      "categoria": "cli",
+      "clase": "public-candidate",
+      "ubicacion": "tools/harmessi/cli.py",
+      "comando": "python -m tools.harmessi",
+      "subcomandos": ["doctor", "providers", "routing", "fallback"],
+      "exit_codes": {
+        "0": "ok",
+        "1": "diagnóstico con fallos o error de operación",
+        "2": "error de uso (argparse)"
+      },
+      "ancla": "solo nombres de subcomandos (test) + exit codes por lectura de código; flags sin ancla",
+      "notas": "Solo-checkout (no se instala en proyectos). providers/routing/fallback tienen sub-subcomandos no inventariados."
+    },
+    {
+      "id": "cli-harmessi-bench",
+      "categoria": "cli",
+      "clase": "experimental",
+      "ubicacion": "tools/harmessi_bench/cli.py",
+      "comando": "python -m tools.harmessi_bench.cli",
+      "subcomandos": ["run", "compare", "suite-check"],
+      "exit_codes": {
+        "0": "ok",
+        "1": "error de entrada, corrida o comparación",
+        "2": "error de uso (argparse)"
+      },
+      "notas": "Framework de evals en evolución durante v0.13. compare devuelve 0 aunque el veredicto sea regresión (baseline_better) o inconcluso: el veredicto no se refleja en el exit code. El flag --root es interno de tests."
+    },
+    {
+      "id": "cli-dsimpact",
+      "categoria": "cli",
+      "clase": "experimental",
+      "ubicacion": "tools/dsimpact/cli.py",
+      "comando": "python -m tools.dsimpact",
+      "subcomandos": ["scan"],
+      "exit_codes": {
+        "0": "ok",
+        "1": "error de git o del repo",
+        "2": "error de uso (argparse)"
+      },
+      "notas": "Impact preflight estático; también accesible vía 'ds_guard impact'."
+    },
+    {
+      "id": "cli-providers-conformance",
+      "categoria": "cli",
+      "clase": "experimental",
+      "ubicacion": "tools/providers/conformance.py",
+      "comando": "python -m tools.providers.conformance",
+      "subcomandos": [],
+      "exit_codes": {
+        "0": "todos los providers alcanzan algún nivel",
+        "1": "algún provider sin nivel alcanzado",
+        "2": "uso inválido (--live sin habilitar o provider desconocido)"
+      },
+      "notas": "CLI plana sin subcomandos (flags --provider, --smoke, --live, --json). Nuevo en v0.13."
+    },
+    {
+      "id": "cli-reporting",
+      "categoria": "cli",
+      "clase": "experimental",
+      "ubicacion": "tools/reporting/cli.py",
+      "comando": "python -m tools.reporting",
+      "subcomandos": ["check-inputs", "check-destination", "validate", "render"],
+      "exit_codes": {
+        "0": "sin FAIL",
+        "1": "al menos un FAIL",
+        "2": "error de uso",
+        "3": "error de entorno"
+      },
+      "notas": "Exit codes documentados en el docstring del módulo."
+    },
+    {
+      "id": "cli-ds-profile",
+      "categoria": "cli",
+      "clase": "internal",
+      "ubicacion": "tools/ds_profile/cli.py",
+      "comando": "python -m tools.ds_profile",
+      "subcomandos": ["run"],
+      "exit_codes": {
+        "0": "corrida OK",
+        "1": "error de uso (archivo inexistente, extensión no soportada)",
+        "2": "denegado por guardrail (holdout)",
+        "3": "dependencia faltante (p. ej. pyarrow al leer parquet)",
+        "4": "lectura fallida o fuente fuera del presupuesto de memoria"
+      },
+      "notas": "Usado por el observer de archivos. Códigos según el docstring del módulo."
+    },
+    {
+      "id": "schema-source-observation",
+      "categoria": "schema",
+      "clase": "public-candidate",
+      "ubicacion": "tools/datasources/core.py",
+      "version": 1,
+      "version_ref": "tools.datasources.core:SCHEMA_VERSION",
+      "notas": "SourceObservation.schema_version; una versión distinta de la soportada se rechaza (fail-closed). Anclado por test_v013_compat_window."
+    },
+    {
+      "id": "schema-source-registry",
+      "categoria": "schema",
+      "clase": "public-candidate",
+      "ubicacion": "tools/datasources/registry.py",
+      "version": 1,
+      "version_ref": "tools.datasources.registry:SCHEMA_VERSION",
+      "notas": ".harmessi/sources.json; validate_registry rechaza una schema_version distinta. Anclado por test_v013_compat_window."
+    },
+    {
+      "id": "schema-eval-result",
+      "categoria": "schema",
+      "clase": "public-candidate",
+      "ubicacion": "tools/harmessi_bench/storage.py",
+      "version": 1,
+      "version_ref": "tools.harmessi_bench.storage:RESULT_SCHEMA_VERSION",
+      "notas": "result.json de evals. schema_version ausente = 0 (legado, se lee); versión mayor se rechaza. Campos aditivos (cases_hash, run_manifest, suite) no suben la versión. Anclado por test_v013_compat_window."
+    },
+    {
+      "id": "schema-run-manifest",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/harmessi_bench/runmanifest.py",
+      "version": 1,
+      "version_ref": "tools.harmessi_bench.runmanifest:MANIFEST_VERSION",
+      "notas": "Bloque run_manifest dentro de result.json; primera versión (v0.13)."
+    },
+    {
+      "id": "schema-eval-case",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/harmessi_bench/core.py",
+      "version": 1,
+      "version_ref": "tools.harmessi_bench.core:CASE_CONTRACT_VERSION",
+      "notas": "case_contract_version de los casos de eval; ausente = 0 (legado v0.5)."
+    },
+    {
+      "id": "schema-eval-suite",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/harmessi_bench/suite.py",
+      "version": 1,
+      "version_ref": "tools.harmessi_bench.suite:SUITE_CONTRACT_VERSION",
+      "notas": "suite_contract_version del manifest .suite.json (v0.13)."
+    },
+    {
+      "id": "schema-ds-init-baseline",
+      "categoria": "schema",
+      "clase": "internal",
+      "ubicacion": "tools/ds_init/control.py",
+      "notas": ".ds_init/control.json (baseline managed). Sin schema_version; se versiona vía harness_version y hash_alg por entrada. Heredado sin versión explícita."
+    },
+    {
+      "id": "schema-change-control",
+      "categoria": "schema",
+      "clase": "internal",
+      "ubicacion": "tools/dsguard/core.py",
+      "version": 1,
+      "version_ref": "tools.dsguard.core:SCHEMA_VERSION_SOPORTADA",
+      "notas": "control.json por Change; leer_control rechaza una schema_version distinta con ControlJsonError. Anclado por test_v013_compat_window."
+    },
+    {
+      "id": "schema-decision-ledger",
+      "categoria": "schema",
+      "clase": "internal",
+      "ubicacion": "tools/dsguard/decision.py",
+      "version": 2,
+      "version_ref": "tools.dsguard.decision:SCHEMA_VERSION_SOPORTADA",
+      "notas": "Decision ledger del proyecto. Heredado; sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-lifecycle-state",
+      "categoria": "schema",
+      "clase": "internal",
+      "ubicacion": "tools/dsguard/lifecycle.py",
+      "version": 1,
+      "version_ref": "tools.dsguard.lifecycle:SCHEMA_VERSION_SOPORTADA",
+      "notas": "openspec/lifecycle/state.json. Heredado; sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-project-maturity",
+      "categoria": "schema",
+      "clase": "internal",
+      "ubicacion": "tools/dsguard/maturity.py",
+      "version": 1,
+      "version_ref": "tools.dsguard.maturity:SCHEMA_VERSION_SOPORTADA",
+      "notas": ".harmessi/project.json. Heredado; sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-scientific-validity",
+      "categoria": "schema",
+      "clase": "internal",
+      "ubicacion": "tools/dsguard/scientific_validity.py",
+      "version": 1,
+      "version_ref": "tools.dsguard.scientific_validity:SCHEMA_VERSION_SOPORTADA",
+      "notas": ".harmessi/scientific-policy.json. Heredado; sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-guardrails-adoption",
+      "categoria": "schema",
+      "clase": "internal",
+      "ubicacion": "tools/dsguard/guardrails_adoption.py",
+      "version": 1,
+      "version_ref": "tools.dsguard.guardrails_adoption:SCHEMA_VERSION",
+      "notas": "Re-adopción gobernada de guardrails. Heredado; sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-scope-amendments",
+      "categoria": "schema",
+      "clase": "internal",
+      "ubicacion": "tools/dsguard/scope_amendments.py",
+      "version": 1,
+      "version_ref": "tools.dsguard.scope_amendments:SCHEMA_VERSION",
+      "notas": "Enmiendas gobernadas de alcance (amendments.jsonl). Heredado; sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-autonomy-policy",
+      "categoria": "schema",
+      "clase": "internal",
+      "ubicacion": "tools/autonomy/policy.py",
+      "version": 2,
+      "version_ref": "tools.autonomy.policy:POLICY_SCHEMA_VERSION",
+      "notas": "Política de autonomía. Heredado; sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-data-contract",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/datacontracts/core.py",
+      "version": 1,
+      "version_ref": "tools.datacontracts.core:SCHEMA_VERSION",
+      "notas": "Contratos de datos. Versionado, sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-card-envelope",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/cards/core.py",
+      "version": 1,
+      "version_ref": "tools.cards.core:SCHEMA_VERSION",
+      "notas": "Envelope común de Cards. Versionado, sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-data-card-kind",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/cards/datacard.py",
+      "version": 1,
+      "version_ref": "tools.cards.datacard:DATA_CARD_KIND_SCHEMA_VERSION",
+      "notas": "Data Card. Versionado, sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-model-card-kind",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/cards/modelcard.py",
+      "version": 1,
+      "version_ref": "tools.cards.modelcard:MODEL_CARD_KIND_SCHEMA_VERSION",
+      "notas": "Model Card. Versionado, sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-governance-kind",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/cards/modelgov.py",
+      "version": 1,
+      "version_ref": "tools.cards.modelgov:GOVERNANCE_KIND_SCHEMA_VERSION",
+      "notas": "Card de governance/assessment. Versionado, sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-governance-policy",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/cards/govpolicy.py",
+      "version": 1,
+      "version_ref": "tools.cards.govpolicy:POLICY_SCHEMA_VERSION",
+      "notas": "Política de governance de Cards. Versionado, sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-model-quality",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/modelquality/core.py",
+      "version": 1,
+      "version_ref": "tools.modelquality.core:SCHEMA_VERSION",
+      "notas": "Política y evidencia de calidad de modelo. Versionado, sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-quality-evidence",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/qualityevidence/core.py",
+      "version": 1,
+      "version_ref": "tools.qualityevidence.core:SCHEMA_VERSION",
+      "notas": "Manifest de evidencia de calidad (.harmessi/quality/). Versionado, sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-ds-profile-report",
+      "categoria": "schema",
+      "clase": "internal",
+      "ubicacion": "tools/ds_profile/report.py",
+      "version": 1,
+      "version_ref": "tools.ds_profile.report:SCHEMA_VERSION",
+      "notas": "profile.json de ds_profile. Heredado; sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-report",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/reporting/core.py",
+      "version": 1,
+      "version_ref": "tools.reporting.core:SCHEMA_VERSION",
+      "notas": "Tipos de reporte gobernado. Versionado, sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-report-style",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/reporting/style.py",
+      "version": 1,
+      "version_ref": "tools.reporting.style:SCHEMA_VERSION",
+      "notas": "Estilo de reportes. Versionado, sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-report-policy",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/reporting/governance.py",
+      "version": 1,
+      "version_ref": "tools.reporting.governance:POLICY_SCHEMA_VERSION",
+      "notas": "Política de governance de reportes. Versionado, sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "schema-report-evidence-manifest",
+      "categoria": "schema",
+      "clase": "experimental",
+      "ubicacion": "tools/reporting/evidence.py",
+      "version": 1,
+      "version_ref": "tools.reporting.evidence:MANIFEST_SCHEMA_VERSION",
+      "notas": "Manifest de directorio de reporte. Versionado, sin test de compatibilidad dedicado en v0.13."
+    },
+    {
+      "id": "skills-frontmatter",
+      "categoria": "skills",
+      "clase": "experimental",
+      "ubicacion": "tools/dsguard/skill_contract.py",
+      "notas": "Frontmatter de lista cerrada (name, purpose, when_to_load, roles, artifacts opcional) y traza '## Skills cargados'. Sin versión explícita."
+    },
+    {
+      "id": "managed-assets",
+      "categoria": "managed-assets",
+      "clase": "internal",
+      "ubicacion": "tools/ds_init/manifest.py",
+      "notas": "Manifest de archivos managed por perfil/stage/capability. Versión del conjunto = HARNESS_VERSION (tools/ds_init/version.py), que cambia en cada release."
+    },
+    {
+      "id": "adapter-source-observer",
+      "categoria": "adapter",
+      "clase": "experimental",
+      "ubicacion": "tools/datasources/conformance.py",
+      "notas": "Contrato duck-typed del observer: capabilities() y observe(request) sobre dicts, verificado por verificar_observer. Implementación de referencia: tools/datasources/file_observer.py (FileObserver); tipos en tools/datasources/core.py. No hay clase base ni Protocol."
+    },
+    {
+      "id": "provider-adapter",
+      "categoria": "provider",
+      "clase": "experimental",
+      "ubicacion": "tools/providers/core.py",
+      "notas": "ProviderAdapter (clase abstracta) y registro PROVIDER_REGISTRY; conformance en tools/providers/conformance.py."
+    },
+    {
+      "id": "surfaces-harness",
+      "categoria": "surfaces",
+      "clase": "internal",
+      "ubicacion": "tools/dsguard/skill_contract.py",
+      "notas": "Superficies protected / optimizable / project-owned según superficie_de_ruta; la clasificación es por ruta."
+    },
+    {
+      "id": "upgrade-ds-init",
+      "categoria": "upgrade",
+      "clase": "experimental",
+      "ubicacion": "tools/ds_init/cli.py",
+      "notas": "Comportamiento de 'ds_init upgrade': dry-run por defecto, --execute aplica; actualiza solo managed pristine; usa stage y capabilities persistidos; aborta con staging huérfano."
+    }
+  ]
+}

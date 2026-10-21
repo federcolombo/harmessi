@@ -893,3 +893,11 @@ Change `20261021-v013-portability-hardening`. Sin cambios a hooks, permisos, rol
 - **Consola.** `_consola_segura()` (best-effort, `reconfigure(errors="replace")`) en `harmessi_bench.cli` y `providers.conformance`.
 - **Auditoría y tests.** `docs/portability.md` es el inventario vivo; `test_v013_portability_audit.py` (AST) impide patrones no portables en los módulos v0.13 y `test_v013_portability_smoke.py` ejercita el host real.
 - **CI.** `.github/workflows/portability-smoke.yml` (ubuntu/windows/macos × Python 3.12, `contents: read`, solo `pytest`, lista acotada de tests). Real: Windows (este host). Contractual: Linux/macOS — workflow presente; ejecución remota no observada.
+
+### 10.4 Contract Inventory, Compatibility & Deprecation (v0.13 Change 5)
+
+Change `20261021-v013-contract-inventory-compat`. Sin cambios a CLIs, exit codes ni schemas existentes; sin dependencias nuevas.
+
+- **Inventario, no promesa de estabilidad.** `docs/contracts/inventory.json` clasifica los contratos consumibles (`public-candidate` / `internal` / `experimental`); ninguna clase implica estabilidad v1.0. El test `test_v013_contract_inventory.py` lo compara con el código (subcomandos exactos de cada CLI, constantes de versión por `version_ref`, rutas, CLIs sin clasificar).
+- **Ventana de compatibilidad.** Lectura soportada de artefactos de la versión actual y las dos menores previas (`docs/versioning.md`); `test_v013_compat_window.py` usa fixtures sintéticos de v0.11/v0.12 y, si existen localmente, los tags reales.
+- **Deprecación.** Convención en `docs/deprecation.md` y primitiva mínima solo-checkout `tools/harmessi/deprecation.py` (registro vacío; sin framework, sin telemetría, sin escritura a disco; no entra al manifest instalado).
