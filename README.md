@@ -430,7 +430,7 @@ that failed, so a fallback never hides the original error.
 ### `harmessi-bench`
 
 ```
-python -m tools.harmessi_bench.cli run (--scenarios <path> | --suite <manifest>) --provider <p> [--model <m>] [--effort <e>] --run-id <id> [--json]
+python -m tools.harmessi_bench.cli run (--scenarios <path> | --suite <manifest>) --provider <p> [--model <m>] [--effort <e>] --run-id <id> [--resume] [--seed <n>] [--json]
 python -m tools.harmessi_bench.cli suite-check --suite <manifest> [--json]
 python -m tools.harmessi_bench.cli compare --baseline <run_id> --candidate <run_id> [--json]
 ```
@@ -466,6 +466,18 @@ the same package; nothing is duplicated):
   project-owned paths are rejected, and nothing here writes or promotes harness
   surfaces. It runs from a Harmessi checkout only (not part of the installed
   manifest). No LLM-as-judge and no leaderboard.
+- Reproducible runs (Change 2): every `run` stores a `run_manifest` in
+  `result.json` (harness version, Git commit or `unknown`, skill/surface
+  hashes, provider/model/effort, evaluator, suite, `identity_hash`; ids and
+  hashes only, no environment, hostname, user or absolute paths).
+  `--resume` completes an existing run by running only the scenarios without
+  an `ok` result, and refuses (exit 1, nothing modified) if the configuration
+  differs materially; an existing `run_id` with a manifest needs `--resume`
+  or a new id. `--seed <n>` is recorded as informational only (the provider
+  may ignore it). Persisted excerpts are redacted best-effort (user paths,
+  emails, common tokens): this reduces accidental leaks, it is not a
+  guarantee. `compare` adds `config_diff`. Configuration reproducibility is
+  not bit-for-bit reproducibility: the model output stays stochastic.
 
 ### Platform compatibility
 

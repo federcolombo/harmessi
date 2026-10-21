@@ -150,6 +150,17 @@ _RUTA_SUITE = str(
 )
 
 
+def test_run_id_invalido_exit_1(monkeypatch, tmp_path, capsys):
+    import tools.providers as providers_mod
+
+    monkeypatch.setitem(providers_mod.PROVIDER_REGISTRY, "fake", FakeAdapterDisponible())
+    for malo in ("..\\x", "../x", str(tmp_path), "a/b", ""):
+        codigo = main(["run", "--scenarios", _RUTA_EXAMPLES, "--provider", "fake", "--run-id", malo,
+                       "--root", str(tmp_path)])
+        assert codigo == 1
+    assert "run_id inválido" in capsys.readouterr().err
+
+
 def test_run_exige_exactamente_uno_de_scenarios_o_suite(capsys):
     with pytest.raises(SystemExit) as sin_ninguno:
         main(["run", "--provider", "fake", "--run-id", "r"])

@@ -13,6 +13,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List
 
+from tools.harmessi_bench import runmanifest
+
 VEREDICTO_CANDIDATE_MEJOR = "candidate_better"
 VEREDICTO_BASELINE_MEJOR = "baseline_better"
 VEREDICTO_EQUIVALENTE = "equivalent"
@@ -26,6 +28,10 @@ VEREDICTOS = (
 
 _CLAVES_SUITE = ("suite_id", "suite_version", "suite_hash")
 
+# Claves del manifest que deben coincidir para que la comparación tenga
+# sentido (mismo contrato de manifest, mismo evaluador, mismos casos).
+_CLAVES_MANIFEST_NO_COMPARABLES = ("manifest_version", "evaluator_version", "suite", "cases_hash")
+
 
 @dataclass
 class ComparisonReport:
@@ -36,6 +42,9 @@ class ComparisonReport:
     solo_en_candidate: List[str] = field(default_factory=list)
     verdict: str = VEREDICTO_INCONCLUSO
     verdict_reason: str = ""
+    # Claves materiales que difieren entre los run_manifest (v0.13 Change 2);
+    # vacía si falta alguno de los dos manifests.
+    config_diff: List[str] = field(default_factory=list)
 
 
 def _indexar_por_scenario_id(corrida: dict) -> dict:
@@ -114,9 +123,38 @@ def _motivos_inconclusos(baseline: dict, candidate: dict, reporte: ComparisonRep
     elif evaluador_b != evaluador_c:
         motivos.append(f"evaluator_version distinto ({evaluador_b!r} vs {evaluador_c!r})")
 
+    _motivos_manifest(baseline, candidate, motivos, notas)
+
     if reporte.regressions and reporte.improvements:
         motivos.append("hay a la vez regresiones y mejoras")
     return motivos, notas
+
+
+def _motivos_manifest(baseline: dict, candidate: dict, motivos: List[str], notas: List[str]) -> None:
+    """Reglas de comparabilidad por `run_manifest` (v0.13 Change 2, R8/R9).
+    Sin manifest en ninguno: no cambia nada (corridas del Change 1/legadas).
+    Skills/superficies/provider/model/guardrails/harmessi_version pueden
+    diferir (es lo que se evalúa): se listan en `config_diff`, no inhiben."""
+    man_b = baseline.get("run_manifest")
+    man_c = candidate.get("run_manifest")
+    if man_b is None and man_c is None:
+        return
+    if man_b is None or man_c is None:
+        motivos.append("solo una de las corridas tiene run_manifest")
+        return
+    incompletos = False
+    for etiqueta, manifest in (("baseline", man_b), ("candidate", man_c)):
+        faltantes = runmanifest.campos_faltantes(manifest)
+        if faltantes:
+            incompletos = True
+            motivos.append(f"run_manifest de {etiqueta} incompleto o inválido (faltan: {', '.join(faltantes)})")
+    if incompletos:
+        return
+    for clave in _CLAVES_MANIFEST_NO_COMPARABLES:
+        if man_b.get(clave) != man_c.get(clave):
+            motivos.append(f"run_manifest: {clave} distinto entre baseline y candidate")
+    if man_b.get("identity_hash") == man_c.get("identity_hash"):
+        notas.append("misma configuración material: repetición")
 
 
 def _decidir_veredicto(baseline: dict, candidate: dict, reporte: ComparisonReport, hay_comunes: bool):
@@ -179,6 +217,11 @@ def compare_runs(baseline: dict, candidate: dict) -> ComparisonReport:
 
     reporte.solo_en_baseline = sorted(set(indice_baseline) - set(indice_candidate))
     reporte.solo_en_candidate = sorted(set(indice_candidate) - set(indice_baseline))
+
+    man_b = baseline.get("run_manifest")
+    man_c = candidate.get("run_manifest")
+    if isinstance(man_b, dict) and isinstance(man_c, dict):
+        reporte.config_diff = runmanifest.diferencias_materiales(man_b, man_c)
 
     reporte.verdict, reporte.verdict_reason = _decidir_veredicto(
         baseline, candidate, reporte, bool(ids_comunes)

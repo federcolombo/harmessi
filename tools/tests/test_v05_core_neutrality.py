@@ -55,6 +55,9 @@ ARCHIVOS_HARMESSI_BENCH_SIN_ROUTING_NI_FALLBACK = (
 ARCHIVOS_PUROS_V013 = (
     "tools/harmessi_bench/suite.py",
     "tools/harmessi_bench/compare.py",
+    # v0.13 Change 2: manifest y redacción también son puros (Git es un import diferido de dsguard.repo).
+    "tools/harmessi_bench/runmanifest.py",
+    "tools/harmessi_bench/redact.py",
 )
 MODULOS_PROHIBIDOS_V013 = ("subprocess", "socket", "urllib", "http", "requests", "providers")
 

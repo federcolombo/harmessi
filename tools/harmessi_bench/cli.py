@@ -11,11 +11,20 @@ import argparse
 import dataclasses
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from tools.harmessi_bench import compare as compare_mod
 from tools.harmessi_bench import storage
 from tools.harmessi_bench.core import EvalTarget
+from tools.harmessi_bench.runmanifest import (
+    advertencias_compatibilidad,
+    agregar_sesion,
+    campos_faltantes,
+    construir_manifest,
+    evaluar_compatibilidad,
+    finalizar_manifest,
+)
 from tools.harmessi_bench.runner import run_scenario_set
 from tools.harmessi_bench.scenarios import load_scenarios_con_version
 from tools.harmessi_bench.suite import (
@@ -38,6 +47,18 @@ def _mensaje_error(exc: Exception) -> str:
     return str(exc)
 
 
+# Raíz del checkout de la que `runmanifest` lee skills/superficies/guardrails/Git.
+# `None` => checkout de este paquete. Inyectable por tests (tmp).
+_REPO_ROOT_MANIFEST = None
+
+
+def _paso(resultado) -> bool:
+    """`score.passed` de un `EvalResult` o de un dict cargado (resume)."""
+    if isinstance(resultado, dict):
+        return bool((resultado.get("score") or {}).get("passed"))
+    return bool(resultado.score.passed)
+
+
 def _construir_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m tools.harmessi_bench.cli",
@@ -54,6 +75,14 @@ def _construir_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--effort", default=None)
     p_run.add_argument("--run-id", required=True, dest="run_id")
     p_run.add_argument("--json", action="store_true")
+    p_run.add_argument(
+        "--resume",
+        action="store_true",
+        help="Completa una corrida existente (con run_manifest) corriendo solo los escenarios sin resultado ok.",
+    )
+    p_run.add_argument(
+        "--seed", type=int, default=None, help="Seed informativo registrado en el manifest (el provider puede ignorarlo)."
+    )
     # --root: flag interno para tests (permite apuntar a un tmp_path en vez de
     # .harmessi/evals), no es una API estable de usuario -- oculto de --help.
     p_run.add_argument("--root", default=None, help=argparse.SUPPRESS)
@@ -114,6 +143,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     # proveedor cuando no hace falta.
     from tools.providers import PROVIDER_REGISTRY
 
+    try:
+        storage.validar_run_id(args.run_id)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
     adapter = PROVIDER_REGISTRY.get(args.provider)
     if adapter is None:
         print(
@@ -139,19 +174,122 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"no se pudieron cargar los escenarios: {_mensaje_error(exc)}", file=sys.stderr)
         return 1
     target = EvalTarget(provider_id=args.provider, model=args.model, effort=args.effort)
-    resultados = run_scenario_set(scenarios, target, adapter, args.run_id)
-
     root = Path(args.root) if args.root else _ROOT_EVALS_DEFAULT
+
+    # v0.13 Change 2: protección de `run_id` existente y resume seguro. Todo
+    # se decide ANTES de invocar al provider y sin tocar el result existente.
+    existente = None
+    if (root / args.run_id / "result.json").exists():
+        try:
+            existente = storage.load_run(args.run_id, root=root)
+        except (OSError, ValueError) as exc:
+            print(
+                f"no se pudo leer la corrida existente {args.run_id!r}: {_mensaje_error(exc)}",
+                file=sys.stderr,
+            )
+            return 1
+    manifest_existente = existente.get("run_manifest") if existente is not None else None
+    if existente is not None and "run_manifest" in existente and not isinstance(manifest_existente, dict):
+        # Fail-closed (L2): un run_manifest presente pero inválido no se trata como legado.
+        print(
+            f"la corrida existente {args.run_id!r} tiene un run_manifest inválido (no es un objeto); "
+            "no se sobrescribe ni se reanuda",
+            file=sys.stderr,
+        )
+        return 1
+
+    if not args.resume and manifest_existente is not None:
+        print(
+            f"el run_id {args.run_id!r} ya existe con run_manifest: usá --resume o un run_id nuevo",
+            file=sys.stderr,
+        )
+        return 1
+    if args.resume and manifest_existente is None:
+        print(
+            f"--resume requiere una corrida existente con run_manifest (run_id={args.run_id!r})",
+            file=sys.stderr,
+        )
+        return 1
+
+    # H2: el manifest se calcula UNA vez, antes de correr (identidad vigente al
+    # obtener la evidencia). M1: identidad no confiable => no se corre ni persiste.
+    inicio_utc = datetime.now(timezone.utc).isoformat()
+    manifest_previo = construir_manifest(
+        args.run_id, target, suite=suite, cases_hash=cases_hash, seed=args.seed, repo_root=_REPO_ROOT_MANIFEST,
+        started_utc=inicio_utc,
+    )
+    invalidos = campos_faltantes(manifest_previo)
+    if invalidos:
+        print(
+            f"manifest incompleto, no se corre ni se persiste evidencia con identidad inválida: "
+            f"{', '.join(invalidos)} ({', '.join(manifest_previo.get('problemas') or [])})",
+            file=sys.stderr,
+        )
+        return 1
+
+    previos_ok = {}
+    if args.resume:
+        incompatibilidades = evaluar_compatibilidad(manifest_existente, manifest_previo)
+        if incompatibilidades:
+            print(
+                f"resume incompatible para run_id={args.run_id!r}: difieren {', '.join(incompatibilidades)}; "
+                "no se mezcla evidencia (usá un run_id nuevo)",
+                file=sys.stderr,
+            )
+            return 1
+        for aviso in advertencias_compatibilidad(manifest_existente, manifest_previo):
+            print(f"advertencia: {aviso}", file=sys.stderr)
+        previos_ok = {
+            r.get("scenario_id"): r
+            for r in existente.get("resultados", [])
+            if isinstance(r, dict) and r.get("ok") is True
+        }
+    pendientes = [escenario for escenario in scenarios if escenario.scenario_id not in previos_ok]
+
+    if args.resume and not pendientes:
+        print(f"harmessi-bench run {args.run_id}: nada pendiente, la corrida ya está completa (sin cambios)")
+        return 0
+
+    nuevos = run_scenario_set(pendientes, target, adapter, args.run_id)
+    if args.resume:
+        por_id = {resultado.scenario_id: resultado for resultado in nuevos}
+        resultados = [
+            previos_ok[e.scenario_id] if e.scenario_id in previos_ok else por_id[e.scenario_id]
+            for e in scenarios
+        ]
+    else:
+        resultados = nuevos
+
+    # H2: si skills/superficies/guardrails cambiaron durante la corrida, la
+    # evidencia no corresponde a la identidad registrada: no se escribe nada.
+    manifest_final = construir_manifest(
+        args.run_id, target, suite=suite, cases_hash=cases_hash, seed=args.seed, repo_root=_REPO_ROOT_MANIFEST,
+        started_utc=inicio_utc,
+    )
+    if manifest_final.get("identity_hash") != manifest_previo.get("identity_hash"):
+        print(
+            "la configuración del harness (skills/superficies/guardrails) cambió durante la corrida: "
+            "no se escribe ni se mezcla evidencia; repetí la corrida",
+            file=sys.stderr,
+        )
+        return 1
+    # Se persiste el manifest del inicio con solo `finished_utc` actualizado; en un
+    # resume, los campos materiales provienen del manifest previo (ya validado
+    # compatible) y se agrega una sesión.
+    manifest = finalizar_manifest(manifest_previo)
+    if args.resume:
+        manifest = agregar_sesion(manifest_existente, manifest)
     try:
         ruta = storage.save_run(
-            args.run_id, resultados, target, root=root, suite=suite, cases_hash=cases_hash
+            args.run_id, resultados, target, root=root, suite=suite, cases_hash=cases_hash,
+            run_manifest=manifest,
         )
-    except OSError as exc:
+    except (OSError, ValueError) as exc:
         print(f"no se pudo guardar la corrida: {_mensaje_error(exc)}", file=sys.stderr)
         return 1
 
     total = len(resultados)
-    pasaron = sum(1 for resultado in resultados if resultado.score.passed)
+    pasaron = sum(1 for resultado in resultados if _paso(resultado))
     categorias = {escenario.scenario_id: escenario.category for escenario in scenarios}
     resumen = resumir(resultados, suite, categorias)
 
@@ -201,6 +339,8 @@ def cmd_compare(args: argparse.Namespace) -> int:
     for scenario_id in reporte.solo_en_candidate:
         print(f"  [SOLO EN CANDIDATE] {scenario_id}")
     print(f"  {len(reporte.unchanged)} escenarios sin cambio")
+    if reporte.config_diff:
+        print(f"  CONFIG_DIFF: {', '.join(reporte.config_diff)}")
     print(f"  VEREDICTO: {reporte.verdict} -- {reporte.verdict_reason}")
 
     return 0
