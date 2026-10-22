@@ -3,7 +3,7 @@ message: "If you use Harmessi, please cite it as below."
 title: "Harmessi"
 type: software
 version: 0.13.0
-date-released: "2026-10-21"
+date-released: "2026-10-22"
 url: "https://github.com/federcolombo/harmessi"
 repository-code: "https://github.com/federcolombo/harmessi"
 license: Apache-2.0

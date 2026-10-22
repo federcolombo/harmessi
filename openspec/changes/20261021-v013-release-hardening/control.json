@@ -78,13 +78,24 @@
       "utc": "2026-10-21T19:05:48Z",
       "desde": "aprobada_implementacion",
       "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-22T20:04:37Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-22T20:04:43Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
     }
   ],
   "sesiones": [
     {
       "id": "s1",
       "inicio_utc": "2026-10-21T19:05:47Z",
-      "cierre_utc": null,
+      "cierre_utc": "2026-10-22T13:34:00Z",
       "modo": "estandar",
       "presupuesto": {
         "minutos": 240,
@@ -95,8 +106,8 @@
         "max_continuaciones_por_subagente": 1
       },
       "deadline_utc": "2026-10-21T23:05:47Z",
-      "minutos_consumidos": 0.0,
-      "resultado": null,
+      "minutos_consumidos": 1108.2166666666667,
+      "resultado": "excedida",
       "subagentes": {
         "conteo": 0,
         "python-data-engineer": {
@@ -108,7 +119,131 @@
       "roles": [],
       "reintentos": 0,
       "rondas_revision": 0,
-      "estado_final": "activa"
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-22T13:34:07Z",
+      "cierre_utc": "2026-10-22T16:02:50Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-22T15:04:07Z",
+      "minutos_consumidos": 148.71666666666667,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T19:06:04Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s1"
+    },
+    {
+      "id": "s3",
+      "inicio_utc": "2026-10-22T16:02:59Z",
+      "cierre_utc": "2026-10-22T17:18:50Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-22T17:32:59Z",
+      "minutos_consumidos": 75.85,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T19:06:04Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s2"
+    },
+    {
+      "id": "s4",
+      "inicio_utc": "2026-10-22T17:18:56Z",
+      "cierre_utc": "2026-10-22T19:47:57Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-22T18:48:56Z",
+      "minutos_consumidos": 149.01666666666668,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T19:06:04Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s3"
+    },
+    {
+      "id": "s5",
+      "inicio_utc": "2026-10-22T19:48:05Z",
+      "cierre_utc": "2026-10-22T20:04:46Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-22T21:18:05Z",
+      "minutos_consumidos": 16.683333333333334,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T19:06:04Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-22T19:57:53Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada",
+      "retomada_de": "s4"
     }
   ]
 }

@@ -93,7 +93,10 @@ def _subcomandos_reales(ubicacion: str) -> set:
     if ubicacion not in fabricas:
         pytest.fail(f"CLI sin extractor de subcomandos: {ubicacion}; agregarlo a mano en este test")
     modulo, nombre = fabricas[ubicacion]
-    parser = getattr(importlib.import_module(modulo), nombre)()
+    # dsimpact importa `dsguard` como top-level: requiere tools/ en sys.path (convención de los tests de tools/)
+    if str(RAIZ / "tools") not in sys.path:
+        sys.path.insert(0, str(RAIZ / "tools"))
+    parser =getattr(importlib.import_module(modulo), nombre)()
     return _subcomandos_de_parser(parser)
 
 

@@ -142,7 +142,7 @@ science project.
   `docs/deprecation.md`, `docs/portability.md`). v0.13 enables evidence-based
   comparison but does NOT automatically improve or promote harness changes.
   Limits: evals are deterministic text proxies, only Windows was validated by
-  execution, remote CI execution was not observed, and providers reach at most
+  execution, remote CI execution not observed during release, and providers reach at most
   `contract-tested`. See `docs/releases/v0.13.0.md`.
 
 ## Requirements

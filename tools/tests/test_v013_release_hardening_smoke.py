@@ -191,7 +191,9 @@ class TestNotasRelease013(unittest.TestCase):
         m = re.search(r"^## Known limitations\n(.*?)(?=^## |\Z)", txt, re.MULTILINE | re.DOTALL)
         self.assertIsNotNone(m, "falta la sección «Known limitations»")
         seccion = m.group(1)
-        for clave in ("Windows", "proxy", "contract-tested", "not observed", "opt-in", "UNCONFIRMED"):
+        for clave in ("Windows", "proxy", "contract-tested", "remote CI execution not observed during release",
+                      "not validated by execution", "pandas not installed", "GitHub Release UI pending",
+                      "opt-in", "UNCONFIRMED"):
             self.assertIn(clave, seccion, f"«{clave}» debe figurar en Known limitations")
 
     def test_no_incluye_numeros_de_tests(self):
@@ -382,7 +384,7 @@ class TestPrivacidad013(unittest.TestCase):
 
 
 class TestManagedHashing013(unittest.TestCase):
-    # Fallará hasta que el Lead regenere el baseline de `.ds_init/control.json` (esperado).
+    # El baseline de `.ds_init/control.json` ya fue regenerado (131 entradas): no debe haber pendientes.
     def test_migrate_hashes_dry_run_sin_pendientes(self):
         try:
             res = subprocess.run(
@@ -395,6 +397,7 @@ class TestManagedHashing013(unittest.TestCase):
         salida = (res.stdout or "") + (res.stderr or "")
         self.assertIn("Migrables: 0", salida, f"salida:\n{salida}")
         self.assertIn("No verificables (drift persiste, no se tocan): 0", salida, f"salida:\n{salida}")
+        self.assertIn("Desconocidas (algoritmo desconocido, fail-closed): 0", salida, f"salida:\n{salida}")
 
 
 if __name__ == "__main__":
