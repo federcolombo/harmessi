@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "change_id": "20260917-provider-routing",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-17T15:45:08Z",
+  "baseline": {
+    "commit": "229c1af36c682a3463c7a0b0ee96a8f1fd2eb243",
+    "rama": "v0.5-dev",
+    "capturado_utc": "2026-09-17T15:45:08Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260917-provider-routing/proposal.md",
+      "openspec/changes/20260917-provider-routing/tasks.md",
+      "openspec/changes/20260917-provider-routing/spec.md",
+      "openspec/changes/20260917-provider-routing/design.md",
+      "openspec/changes/20260917-provider-routing/control.json",
+      "ARCHITECTURE.md",
+      "tools/harmessi/cli.py",
+      "tools/harmessi/tests/test_routing_cli.py",
+      "tools/routing/__init__.py",
+      "tools/routing/core.py",
+      "tools/routing/policy.py",
+      "tools/routing/examples/policy.example.json",
+      "tools/routing/tests/__init__.py",
+      "tools/routing/tests/test_core.py",
+      "tools/routing/tests/test_policy.py",
+      "openspec/changes/20260917-provider-routing/verification.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "36574b12060f122a1ed93de10ccd9327e39d3dfd28a57a8d9b79b85fc3285b70",
+      "registrado_utc": "2026-09-17T16:03:13Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Change 2 - provider-routing (docs/roadmap/v0.5.md)",
+      "cita": "Ejecuta autonomamente toda Harmessi v0.5 siguiendo docs/roadmap/v0.5.md ... Change 2 - provider-routing ... No pidas confirmacion humana entre pasos normales (instruccion explicita del usuario, 2026-09-17, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "fefcb55aef3266da621b5ab2c6bcdc98907eb5f7212b6b800901de8e1f1d9bea",
+      "registrado_utc": "2026-09-17T16:03:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Change 2 - provider-routing (docs/roadmap/v0.5.md)",
+      "cita": "Ejecuta autonomamente toda Harmessi v0.5 siguiendo docs/roadmap/v0.5.md ... Change 2 - provider-routing ... No pidas confirmacion humana entre pasos normales (instruccion explicita del usuario, 2026-09-17, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "5544965ee8f5add4a6259e29e0b88dad76953a5d765fe0f5d87db06ddde75ed7",
+      "registrado_utc": "2026-09-17T16:03:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Change 2 - provider-routing (docs/roadmap/v0.5.md)",
+      "cita": "Ejecuta autonomamente toda Harmessi v0.5 siguiendo docs/roadmap/v0.5.md ... Change 2 - provider-routing ... No pidas confirmacion humana entre pasos normales (instruccion explicita del usuario, 2026-09-17, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "d140036665ee463cf4279cc0b732f4b235e45cf6613cdad07cff6d44fa66e85e",
+      "registrado_utc": "2026-09-17T16:03:15Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Change 2 - provider-routing (docs/roadmap/v0.5.md)",
+      "cita": "Ejecuta autonomamente toda Harmessi v0.5 siguiendo docs/roadmap/v0.5.md ... Change 2 - provider-routing ... No pidas confirmacion humana entre pasos normales (instruccion explicita del usuario, 2026-09-17, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-17T16:03:17Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-17T16:03:18Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-17T16:03:19Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-17T16:06:46Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-17T16:03:16Z",
+      "cierre_utc": "2026-09-17T16:06:47Z",
+      "modo": "alto_riesgo_tecnico",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-17T17:33:16Z",
+      "minutos_consumidos": 3.5166666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-17T16:05:39Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

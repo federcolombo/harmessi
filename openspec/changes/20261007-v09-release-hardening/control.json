@@ -1,0 +1,336 @@
+{
+  "schema_version": 1,
+  "change_id": "20261007-v09-release-hardening",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-07T14:27:46Z",
+  "baseline": {
+    "commit": "30248d101ac953773393e20ec25f939ad28ab5f3",
+    "rama": "v0.9-dev",
+    "capturado_utc": "2026-10-07T14:27:46Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".ds_init/control.json",
+      ".gitignore",
+      "ARCHITECTURE.md",
+      "CITATION.cff",
+      "README.md",
+      "docs/releases/**",
+      "docs/roadmap/README.md",
+      "docs/roadmap/v0.10.md",
+      "docs/roadmap/v0.9.md",
+      "openspec/changes/20260917-multi-provider-adapters/proposal.md",
+      "openspec/changes/20261005-operational-autonomy-hardening/proposal.md",
+      "openspec/changes/20261006-sdd-parsers-and-guardrail-ownership/proposal.md",
+      "openspec/changes/20261007-ds-profile-bounded-memory/proposal.md",
+      "openspec/changes/20261007-v09-release-hardening/**",
+      "openspec/changes/20261007-v09-release-hardening/control.json",
+      "openspec/changes/20261007-v09-release-hardening/design.md",
+      "openspec/changes/20261007-v09-release-hardening/proposal.md",
+      "openspec/changes/20261007-v09-release-hardening/spec.md",
+      "openspec/changes/20261007-v09-release-hardening/tasks.md",
+      "openspec/changes/20261007-v09-release-hardening/verification.md",
+      "tools/datasources/tests/**",
+      "tools/ds_init/tests/**",
+      "tools/ds_init/version.py",
+      "tools/tests/**"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "2a4f19d866656011c8bdf09f5fb115ae0876be0ff83322a036d881e1a3cb5729",
+      "registrado_utc": "2026-10-07T14:28:44Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5 (v0.9 Release Hardening: congelar, validar, versión 0.9.0, docs, privacidad, una regresión global; sin push/tag/merge/release)"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "86e6507db522dcfe56421c5bcdc68586223a1d1870b86f9716e367240befb290",
+      "registrado_utc": "2026-10-07T14:28:45Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5 (v0.9 Release Hardening: congelar, validar, versión 0.9.0, docs, privacidad, una regresión global; sin push/tag/merge/release)"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "c5c857b3dd57106b6d34b053931b62e63f4f7fc109dcbd0b2ea423fa56bf0cc3",
+      "registrado_utc": "2026-10-07T14:28:47Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5 (v0.9 Release Hardening: congelar, validar, versión 0.9.0, docs, privacidad, una regresión global; sin push/tag/merge/release)"
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "7e65c1b4197f3be0dd9caed2ead1a480d96b9901186bd8aabf0bb7abf0df3751",
+      "registrado_utc": "2026-10-07T14:28:48Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5 (v0.9 Release Hardening: congelar, validar, versión 0.9.0, docs, privacidad, una regresión global; sin push/tag/merge/release)"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_v09_release_hardening_smoke.py|tools/tests/test_v07_release_hardening_smoke.py|tools/ds_init/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ee338ecb9e87ad26b8d24e18590a45b135aabde2eacb8ce107322dc607856833",
+      "registrado_utc": "2026-10-07T14:34:09Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening: directed: smoke de release + ds_init",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9d3133ebda6cfefcdc4f520fdc62e03e12db45fae06545d134b5395b6afcd197",
+      "registrado_utc": "2026-10-07T14:50:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening: regresion global B1 tools/tests",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5"
+    },
+    {
+      "artefacto": "pytest:tools/ds_init/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ab419ffa99ee71dee9615e76f477f7cc6f5986283512db25aba46578c1143591",
+      "registrado_utc": "2026-10-07T14:50:20Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening: regresion global B2 ds_init",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5"
+    },
+    {
+      "artefacto": "pytest:tools/modelquality/tests|tools/qualityevidence/tests|tools/datasources/tests|tools/datacontracts/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ea72af6491fa1f5566b372f1791040cf52d270ff59ee64bf964401da218d29c1",
+      "registrado_utc": "2026-10-07T15:04:44Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening: regresion global B3 modelquality qualityevidence datasources datacontracts",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5"
+    },
+    {
+      "artefacto": "pytest:tools/autonomy/tests|tools/leadrun/tests|tools/tests/test_v09_release_hardening_smoke.py::TestVersion::test_version_es_09",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "482023b121589cd56b97267becacecb37a7055b9e69983b220cf8972a4c9e23b",
+      "registrado_utc": "2026-10-07T15:04:54Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening: regresion global B4 autonomy leadrun",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests|tools/tests/test_v09_release_hardening_smoke.py::TestVersion::test_version_es_09",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "729a1d13139e6924d28fee5b91691fbe51709395d91d270b10abe53e15fc331e",
+      "registrado_utc": "2026-10-07T15:04:58Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening: regresion global B5 cards",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5"
+    },
+    {
+      "artefacto": "pytest:tools/harmessi/tests|tools/reporting/tests|tools/tests/test_v09_release_hardening_smoke.py::TestVersion::test_version_es_09",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ab0a7ddd8fb207f45b7ee8b35f9f6977a7927a161f3c82733396507d3818eac6",
+      "registrado_utc": "2026-10-07T15:05:03Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening: regresion global B6 harmessi reporting",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5"
+    },
+    {
+      "artefacto": "pytest:tools/ds_profile/tests|tools/dsimpact/tests|tools/fallback/tests|tools/harmessi_bench/tests|tools/providers/tests|tools/routing/tests|tools/tests/test_v09_release_hardening_smoke.py::TestVersion::test_version_es_09",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "b77133d7de0fcab8d8d10a977cd3a3c816c443686c487f1a026c1e58d4d42e5e",
+      "registrado_utc": "2026-10-07T15:05:08Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening: regresion global B7 ds_profile dsimpact fallback bench providers routing",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9d3133ebda6cfefcdc4f520fdc62e03e12db45fae06545d134b5395b6afcd197",
+      "registrado_utc": "2026-10-07T15:06:19Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening: regresion global B1 tools/tests",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5"
+    },
+    {
+      "artefacto": "pytest:tools/autonomy/tests|tools/leadrun/tests|tools/tests/test_v09_release_hardening_smoke.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "5c85b3d9763ac49a5c7135498bbc4710e1ddd6c82253d1d8201e370a022839d2",
+      "registrado_utc": "2026-10-07T15:28:56Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening: regresion global B4 autonomy leadrun",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests|tools/tests/test_v09_release_hardening_smoke.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "dc7e4e031d11bbd9bffde4c52ca60332e64861244536803a466356264ef71533",
+      "registrado_utc": "2026-10-07T15:29:05Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening: regresion global B5 cards",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5"
+    },
+    {
+      "artefacto": "pytest:tools/harmessi/tests|tools/reporting/tests|tools/tests/test_v09_release_hardening_smoke.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "684538dedf8682214057b8abd93ac52c438746caf11fa7175c2d15223d8cdadf",
+      "registrado_utc": "2026-10-07T15:30:49Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening: regresion global B6 harmessi reporting",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5"
+    },
+    {
+      "artefacto": "pytest:tools/ds_profile/tests|tools/dsimpact/tests|tools/fallback/tests|tools/harmessi_bench/tests|tools/providers/tests|tools/routing/tests|tools/tests/test_v09_release_hardening_smoke.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "e336eed21ae0896ef33e3780be3c389dc878cad1b646ca84609f1289f1b7b7ad",
+      "registrado_utc": "2026-10-07T15:44:29Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 5 v09-release-hardening: regresion global B7 ds_profile dsimpact fallback bench providers routing",
+      "cita": "Aprobación humana explícita del scope y el contrato de Change 5"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-07T14:28:49Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-07T14:28:50Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-07T14:28:52Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-07T15:46:56Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-07T15:47:05Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-07T14:28:51Z",
+      "cierre_utc": "2026-10-07T15:47:07Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 600,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-08T00:28:51Z",
+      "minutos_consumidos": 78.26666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "metricas_eficiencia": {
+    "ejecuciones": [
+      {
+        "execution_id": "pytest__3bb138ef59dd",
+        "duration_seconds": 904.0310000000009,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__09e34da4513d",
+        "duration_seconds": 5.20299999999952,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__62a58541bd85",
+        "duration_seconds": 859.9680000000008,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__3cb4ced77b93",
+        "duration_seconds": 6.20299999999952,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__56cc261540bd",
+        "duration_seconds": 1.4220000000004802,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__00156823c8ad",
+        "duration_seconds": 1.389999999999418,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__db20d158e3b5",
+        "duration_seconds": 1.5159999999996217,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__94944cc97642",
+        "duration_seconds": 1.4529999999995198,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__4471405953b5",
+        "duration_seconds": 1354.1399999999994,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__74f91086dc50",
+        "duration_seconds": 5.70299999999952,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__3585d406b296",
+        "duration_seconds": 100.98499999999876,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__5cff70e25b54",
+        "duration_seconds": 816.7029999999995,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__873b3b903222",
+        "duration_seconds": 108.21899999999914,
+        "command_form": "pytest"
+      }
+    ]
+  }
+}

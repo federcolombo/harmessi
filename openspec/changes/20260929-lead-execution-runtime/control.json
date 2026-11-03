@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "change_id": "20260929-lead-execution-runtime",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-29T17:44:17Z",
+  "baseline": {
+    "commit": "9f4847b699dcf818ae8a7775530cdc3768804bdb",
+    "rama": "v0.8-dev",
+    "capturado_utc": "2026-09-29T17:44:17Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.8.md",
+      "openspec/changes/20260929-lead-execution-runtime/control.json",
+      "openspec/changes/20260929-lead-execution-runtime/design.md",
+      "openspec/changes/20260929-lead-execution-runtime/proposal.md",
+      "openspec/changes/20260929-lead-execution-runtime/spec.md",
+      "openspec/changes/20260929-lead-execution-runtime/tasks.md",
+      "openspec/changes/20260929-lead-execution-runtime/verification.md",
+      "tools/ds_guard.py",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/tests/test_manifest_v08_leadrun_stage.py",
+      "tools/leadrun/__init__.py",
+      "tools/leadrun/allowlist.py",
+      "tools/leadrun/core.py",
+      "tools/leadrun/notebooks.py",
+      "tools/leadrun/runtime.py",
+      "tools/leadrun/scripts.py",
+      "tools/leadrun/tests/__init__.py",
+      "tools/leadrun/tests/fixtures/__init__.py",
+      "tools/leadrun/tests/fixtures/script_exit_0.py",
+      "tools/leadrun/tests/fixtures/script_exit_1.py",
+      "tools/leadrun/tests/fixtures/script_loop_infinito.py",
+      "tools/leadrun/tests/fixtures/test_pytest_trivial.py",
+      "tools/leadrun/tests/test_allowlist.py",
+      "tools/leadrun/tests/test_core.py",
+      "tools/leadrun/tests/test_notebooks.py",
+      "tools/leadrun/tests/test_runtime.py",
+      "tools/leadrun/tests/test_scripts.py",
+      "tools/notebook_runner.py",
+      "tools/tests/test_ds_guard_exec.py",
+      "tools/tests/test_notebook_runner.py",
+      "tools/tests/test_v08_leadrun_neutrality.py",
+      "tools/tests/test_v08_leadrun_writer_frontmatter.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "54e2efc1e2182789bee8bf5120bdeb49b32248531ddb6a8eea0e9f847390e3f8",
+      "registrado_utc": "2026-09-29T17:58:51Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-29",
+      "alcance_aprobado": "Change 2 - lead-execution-runtime (docs/roadmap/v0.8.md)",
+      "cita": "Mensaje del autor (2026-09-29): 'si', en respuesta directa al paquete de revision presentado ('SDD ALINEADO CON ROADMAP') para proposal.md/spec.md/design.md del Change 2. Incluye el hallazgo del audit (tools/notebook_runner.py inexistente) y su cierre dentro de este Change."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "c189346fa1ffd7d078ac4bd3c545aee3b238344e7ced766248bbc266b964b634",
+      "registrado_utc": "2026-09-29T17:58:51Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-29",
+      "alcance_aprobado": "Change 2 - lead-execution-runtime (docs/roadmap/v0.8.md)",
+      "cita": "Mensaje del autor (2026-09-29): 'si', en respuesta directa al paquete de revision presentado ('SDD ALINEADO CON ROADMAP') para proposal.md/spec.md/design.md del Change 2. Incluye el hallazgo del audit (tools/notebook_runner.py inexistente) y su cierre dentro de este Change."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "26743054c7cc6a1d19d6db839b38b71ab609da6d6fdbda10f2ccc02da4fcc0e4",
+      "registrado_utc": "2026-09-29T17:58:51Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-29",
+      "alcance_aprobado": "Change 2 - lead-execution-runtime (docs/roadmap/v0.8.md)",
+      "cita": "Mensaje del autor (2026-09-29): 'si', en respuesta directa al paquete de revision presentado ('SDD ALINEADO CON ROADMAP') para proposal.md/spec.md/design.md del Change 2. Incluye el hallazgo del audit (tools/notebook_runner.py inexistente) y su cierre dentro de este Change."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-29T17:58:57Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-29T17:58:59Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-30T14:01:47Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-30T14:02:54Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-29T17:44:18Z",
+      "cierre_utc": "2026-09-30T12:35:28Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 10,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-30T01:44:18Z",
+      "minutos_consumidos": 1131.1666666666667,
+      "resultado": "excedida",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-29T18:52:28Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-09-30T14:01:38Z",
+      "cierre_utc": "2026-09-30T14:03:10Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 60,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-30T15:01:38Z",
+      "minutos_consumidos": 1.5333333333333334,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {},
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "change_id": "20260915-readiness-and-promotion",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-15T13:27:01Z",
+  "baseline": {
+    "commit": "afecf3e6102aa87f7d9ed902c1fe960e0aebfa2d",
+    "rama": "main",
+    "capturado_utc": "2026-09-15T13:27:01Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260915-readiness-and-promotion/proposal.md",
+      "openspec/changes/20260915-readiness-and-promotion/tasks.md",
+      "openspec/changes/20260915-readiness-and-promotion/spec.md",
+      "openspec/changes/20260915-readiness-and-promotion/design.md",
+      "openspec/changes/20260915-readiness-and-promotion/control.json",
+      "openspec/changes/20260915-readiness-and-promotion/verification.md",
+      "tools/dsguard/mlops_evidence.py",
+      "tools/dsguard/readiness.py",
+      "tools/ds_guard.py",
+      "tools/ds_init/manifest.py",
+      "tools/tests/test_mlops_evidence.py",
+      "tools/tests/test_readiness.py",
+      "tools/tests/test_manifest_dsguard_parity.py",
+      "tools/ds_init/tests/test_integracion_instalacion.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ccaadc5306a913798a9cc3654b5268a7f72b20c81c12c6375106032746473683",
+      "registrado_utc": "2026-09-15T13:30:55Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "readiness-and-promotion: project readiness/promote, mlops evidence add, matriz completa segun brief del usuario",
+      "cita": "BOUNDED AUTONOMY ... La matriz de readiness de este prompt es una decision de producto ya aprobada. Claude NO debe inventar gates nuevos ni relajar gates definidos aca."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "b6bb2f64594f7b46d1283e23fcea56ea329f90869d59a6f15e423f8268bcdfa2",
+      "registrado_utc": "2026-09-15T13:30:55Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "readiness-and-promotion: project readiness/promote, mlops evidence add, matriz completa segun brief del usuario",
+      "cita": "BOUNDED AUTONOMY ... La matriz de readiness de este prompt es una decision de producto ya aprobada. Claude NO debe inventar gates nuevos ni relajar gates definidos aca."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a9d50b44944741589821ef2c87f57a558bfc66a68565436f3181b4d60169fa6a",
+      "registrado_utc": "2026-09-15T13:30:55Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "readiness-and-promotion: project readiness/promote, mlops evidence add, matriz completa segun brief del usuario",
+      "cita": "BOUNDED AUTONOMY ... La matriz de readiness de este prompt es una decision de producto ya aprobada. Claude NO debe inventar gates nuevos ni relajar gates definidos aca."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "8f8e2ee202dd22428a6d9510202b88219b0a61b9f2f5dd2233f4ca064f482dc2",
+      "registrado_utc": "2026-09-15T13:30:55Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "readiness-and-promotion: project readiness/promote, mlops evidence add, matriz completa segun brief del usuario",
+      "cita": "BOUNDED AUTONOMY ... La matriz de readiness de este prompt es una decision de producto ya aprobada. Claude NO debe inventar gates nuevos ni relajar gates definidos aca."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-15T13:31:03Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-09-15T13:31:04Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-15T13:31:12Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-15T14:12:55Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-15T14:14:42Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-15T13:31:05Z",
+      "cierre_utc": "2026-09-15T14:14:51Z",
+      "modo": "bounded_autonomy",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 40,
+        "max_roles": 4,
+        "max_reintentos": 3,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-15T17:31:05Z",
+      "minutos_consumidos": 43.766666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-15T13:31:39Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-15T14:00:16Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

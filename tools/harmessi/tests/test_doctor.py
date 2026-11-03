@@ -1,0 +1,1168 @@
+"""Tests de `tools.harmessi.doctor` (Bloque 2, reliability v0.2.0). Usa
+repositorios Git temporales propios (nunca este repositorio, mismo criterio
+R14/AC15 que los tests de `tools.ds_init`); varios tests instalan el harness
+de verdad con `tools.ds_init.writer.instalar` para diagnosticar una
+instalación real, no un fixture artificial."""
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import subprocess
+import tempfile
+import unittest
+from datetime import datetime, timezone
+from pathlib import Path
+from unittest.mock import patch
+
+from tools import launcher_common
+from tools.ds_init import legacy as legacy_mod
+from tools.ds_init import writer as ds_init_writer
+from tools.ds_init.manifest import ORDEN_STAGES
+from tools.ds_init.planner import construir_plan
+from tools.ds_init.version import HARNESS_VERSION
+from tools.dsguard import checks
+from tools.dsguard import maturity
+from tools.harmessi import doctor as doctor_mod
+
+PERFIL = "python-jupyter-data"
+
+# Referencia real, capturada antes de parchear `tools.harmessi.doctor.
+# subprocess.run` -- doctor usa ese mismo `subprocess.run` tanto para sus
+# checks de `git` (que deben correr de verdad contra el repo temporal) como
+# para el check RUNTIME-INTERPRETE (el único que se simula en los tests de
+# "instalación completa exitosa"). Mismo patrón que
+# `tools/tests/test_launcher_common.py`.
+_SUBPROCESS_RUN_REAL = subprocess.run
+
+
+def _mock_solo_interprete(returncode: int = 0, stderr: str = ""):
+    def _side_effect(cmd, **kwargs):
+        if cmd[0] == "git":
+            return _SUBPROCESS_RUN_REAL(cmd, **kwargs)
+        return subprocess.CompletedProcess(args=cmd, returncode=returncode, stdout="", stderr=stderr)
+
+    return _side_effect
+
+
+def _crear_repo_git_temporal(prefix: str = "harmessi_doctor_test_") -> Path:
+    ruta = Path(tempfile.mkdtemp(prefix=prefix))
+    subprocess.run(["git", "init", str(ruta)], capture_output=True, text=True, check=True)
+    subprocess.run(["git", "-C", str(ruta), "config", "user.email", "test@example.com"], check=True)
+    subprocess.run(["git", "-C", str(ruta), "config", "user.name", "Test"], check=True)
+    (ruta / "README.md").write_text("repo de prueba\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(ruta), "add", "."], check=True)
+    subprocess.run(
+        ["git", "-C", str(ruta), "commit", "-m", "inicial"], capture_output=True, text=True, check=True
+    )
+    return ruta
+
+
+def _config_base(destino: Path, nombre: str = "proyecto-de-prueba") -> dict:
+    return {
+        "perfil": PERFIL,
+        "nombre": nombre,
+        "notebooks_dir": "notebooks",
+        "venv_dir": ".venv",
+        "destino": str(destino),
+        "integrar_claude": False,
+        "placeholders": {
+            "NOMBRE_PROYECTO": nombre,
+            "NOTEBOOKS_DIR": "notebooks",
+            "VENV_DIR": ".venv",
+            "FECHA_INSTALACION": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "HARNESS_VERSION": HARNESS_VERSION,
+            "RUTAS_PROHIBIDAS_JSON": "[]",
+        },
+    }
+
+
+def _instalar_harness_real(destino: Path):
+    config = _config_base(destino)
+    plan = construir_plan(PERFIL, destino, config)
+    return ds_init_writer.instalar(plan, destino, config)
+
+
+def _instalar_harness_real_con_stage(destino: Path, stage: str):
+    """Como `_instalar_harness_real`, pero pasando `stage` explícito (Change
+    7 v0.3) -- usado para ejercitar el camino stage-aware de Doctor. Nota:
+    escribir directamente con `writer.instalar(..., stage=...)` (en vez de
+    pasar por `cli.py sync`) es una simplificación deliberada de fixture:
+    la restricción de `--stage production_candidate/production` rechazado en
+    una instalación NUEVA vive en `cli.py` (capa de UX), no en
+    `writer.instalar`/`construir_plan` -- a ese nivel cualquier stage de
+    `ORDEN_STAGES` es válido (`design.md` no distingue "install" de "sync" a
+    nivel de escritura, solo a nivel de CLI)."""
+    config = _config_base(destino)
+    config["stage"] = stage
+    plan = construir_plan(PERFIL, destino, config, stage=stage)
+    return ds_init_writer.instalar(plan, destino, config)
+
+
+def _crear_interprete_falso(destino: Path) -> Path:
+    interprete = launcher_common.ruta_interprete_venv(destino, ".venv")
+    interprete.parent.mkdir(parents=True, exist_ok=True)
+    interprete.write_text("", encoding="utf-8")
+    return interprete
+
+
+def _niveles(resultados, codigo=None):
+    if codigo is None:
+        return {r.nivel for r in resultados}
+    return {r.nivel for r in resultados if r.codigo == codigo}
+
+
+def _statuses(resultados, code=None):
+    """Como `_niveles`, pero para resultados de funciones `_check_*` llamadas
+    DIRECTAMENTE (sin pasar por `doctor_mod.ejecutar`) -- esas devuelven
+    `list[checks.CheckResult]` (vocabulario neutral `.status`/`.code`), no
+    `list[doctor_mod.ResultadoCheck]` (`.nivel`/`.codigo`)."""
+    if code is None:
+        return {r.status for r in resultados}
+    return {r.status for r in resultados if r.code == code}
+
+
+class TestChecksCore(unittest.TestCase):
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_version_python_ok(self):
+        resultados = doctor_mod._check_version_python()
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_git_disponible_ok(self):
+        resultados = doctor_mod._check_git_disponible()
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_repo_git_valido_ok(self):
+        resultados = doctor_mod._check_repo_git_valido(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_repo_git_invalido_error(self):
+        no_git = Path(tempfile.mkdtemp(prefix="harmessi_doctor_test_no_git_"))
+        try:
+            resultados = doctor_mod._check_repo_git_valido(no_git)
+            self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
+        finally:
+            shutil.rmtree(no_git, ignore_errors=True)
+
+    def test_working_tree_limpio_ok(self):
+        resultados = doctor_mod._check_working_tree(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_working_tree_sucio_warn(self):
+        (self.repo / "archivo_sucio.txt").write_text("x", encoding="utf-8")
+        resultados = doctor_mod._check_working_tree(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
+
+    def test_venv_faltante_warn(self):
+        resultados = doctor_mod._check_venv(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
+
+    def test_venv_presente_ok(self):
+        _crear_interprete_falso(self.repo)
+        resultados = doctor_mod._check_venv(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_permisos_ok(self):
+        resultados = doctor_mod._check_permisos(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_permisos_error_si_falla_escritura(self):
+        with patch("tools.harmessi.doctor._probar_escritura", side_effect=OSError("sin permiso")):
+            resultados = doctor_mod._check_permisos(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
+
+
+class TestChecksHarmessiInstalacionReal(unittest.TestCase):
+    """Comparten fixture: instalación real completa vía `writer.instalar`,
+    para diagnosticar exactamente lo que `ds_init` produce hoy."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+        self.resultado_instalacion = _instalar_harness_real(self.repo)
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_control_json_ok(self):
+        control_data, resultados = doctor_mod._leer_control_json(self.repo)
+        self.assertIsNotNone(control_data)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_archivos_administrados_ok(self):
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+
+    def test_archivos_administrados_error_si_falta_critico(self):
+        (self.repo / ".claude" / "settings.json").unlink()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
+
+    def test_archivos_administrados_warn_si_falta_no_critico(self):
+        (self.repo / ".claude" / "skills" / "lead-data-scientist" / "templates" / "tasks.md").unlink()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertIn(checks.STATUS_WARN, _statuses(resultados))
+        self.assertNotIn(checks.STATUS_FAIL, _statuses(resultados))
+
+    def test_archivos_administrados_warn_sin_control_json(self):
+        resultados = doctor_mod._check_archivos_administrados(self.repo, None)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
+
+    def test_drift_ok_sin_cambios(self):
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_hashes_drift(self.repo, control_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+
+    def test_drift_warn_si_archivo_modificado(self):
+        ruta = self.repo / "tools" / "ds_guard.py"
+        ruta.write_text(ruta.read_text(encoding="utf-8") + "\n# modificado a mano\n", encoding="utf-8")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_hashes_drift(self.repo, control_data)
+        self.assertIn(checks.STATUS_WARN, _statuses(resultados))
+
+    def test_drift_error_si_archivo_administrado_falta(self):
+        (self.repo / "tools" / "ds_guard.py").unlink()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_hashes_drift(self.repo, control_data)
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
+
+    def test_agents_ok(self):
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_agents(self.repo, control_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+
+    def test_agents_error_si_falta(self):
+        (self.repo / ".claude" / "agents" / "notebook-runner.md").unlink()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_agents(self.repo, control_data)
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
+
+    def test_skill_ok(self):
+        resultados = doctor_mod._check_skill_lead_data_scientist(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_skill_warn_si_falta_archivo(self):
+        (self.repo / ".claude" / "skills" / "lead-data-scientist" / "verificador.md").unlink()
+        resultados = doctor_mod._check_skill_lead_data_scientist(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
+
+    def test_settings_ok(self):
+        _, resultados = doctor_mod._check_settings(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_settings_error_si_falta(self):
+        (self.repo / ".claude" / "settings.json").unlink()
+        _, resultados = doctor_mod._check_settings(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
+
+    def test_settings_error_si_json_invalido(self):
+        (self.repo / ".claude" / "settings.json").write_text("{ no es json", encoding="utf-8")
+        _, resultados = doctor_mod._check_settings(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
+
+    def test_hooks_ok(self):
+        settings_data, _ = doctor_mod._check_settings(self.repo)
+        resultados = doctor_mod._check_hooks(self.repo, settings_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+
+    def test_hooks_error_si_falta_matcher(self):
+        ruta_settings = self.repo / ".claude" / "settings.json"
+        datos = json.loads(ruta_settings.read_text(encoding="utf-8"))
+        datos["hooks"]["PreToolUse"] = [
+            h for h in datos["hooks"]["PreToolUse"] if h.get("matcher") != "Bash"
+        ]
+        ruta_settings.write_text(json.dumps(datos), encoding="utf-8")
+        settings_data, _ = doctor_mod._check_settings(self.repo)
+        resultados = doctor_mod._check_hooks(self.repo, settings_data)
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
+
+    def test_hooks_error_si_falta_matcher_de_rutas(self):
+        """Bloque 3: el hook PreToolUse de protección de rutas (matcher con
+        'NotebookEdit') debe estar presente igual que los otros dos."""
+        ruta_settings = self.repo / ".claude" / "settings.json"
+        datos = json.loads(ruta_settings.read_text(encoding="utf-8"))
+        datos["hooks"]["PreToolUse"] = [
+            h for h in datos["hooks"]["PreToolUse"] if "NotebookEdit" not in (h.get("matcher") or "")
+        ]
+        ruta_settings.write_text(json.dumps(datos), encoding="utf-8")
+        settings_data, _ = doctor_mod._check_settings(self.repo)
+        resultados = doctor_mod._check_hooks(self.repo, settings_data)
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
+
+    def test_hooks_subagentes_warn_si_no_registrados(self):
+        """v0.15 C4: sin SubagentStart/Stop en settings.json es WARN (nunca ERROR) con snippet."""
+        settings_data, _ = doctor_mod._check_settings(self.repo)
+        resultados = doctor_mod._check_hooks_subagentes(self.repo, settings_data)
+        self.assertNotIn(checks.STATUS_FAIL, _statuses(resultados))
+        if "hook_launcher_subagentes" not in json.dumps(settings_data):
+            self.assertEqual(_statuses(resultados), {checks.STATUS_WARN})
+            self.assertIn("SubagentStart", resultados[0].message)
+
+    def test_hooks_subagentes_pass_si_registrados_y_launcher_presente(self):
+        launcher = self.repo / "tools" / "dsguard" / "hook_launcher_subagentes.py"
+        launcher.parent.mkdir(parents=True, exist_ok=True)
+        launcher.write_text("# stub\n", encoding="utf-8")
+        entrada = [{"hooks": [{"type": "command", "command": "python hook_launcher_subagentes.py"}]}]
+        settings_data = {"hooks": {"SubagentStart": entrada, "SubagentStop": entrada}}
+        resultados = doctor_mod._check_hooks_subagentes(self.repo, settings_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+
+    def test_hooks_subagentes_warn_si_falta_launcher(self):
+        launcher = self.repo / "tools" / "dsguard" / "hook_launcher_subagentes.py"
+        if launcher.exists():
+            launcher.unlink()
+        entrada = [{"hooks": [{"type": "command", "command": "python hook_launcher_subagentes.py"}]}]
+        settings_data = {"hooks": {"SubagentStart": entrada, "SubagentStop": entrada}}
+        resultados = doctor_mod._check_hooks_subagentes(self.repo, settings_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_WARN})
+
+    def test_coherencia_version_ok(self):
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_coherencia_version(control_data)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_coherencia_version_warn_si_distinta(self):
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        control_data["harness_version"] = "0.0.1-otra"
+        resultados = doctor_mod._check_coherencia_version(control_data)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
+
+    def test_guardrails_json_ok(self):
+        resultados = doctor_mod._check_guardrails_json(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_guardrails_json_warn_si_falta(self):
+        (self.repo / ".claude" / "guardrails.json").unlink()
+        resultados = doctor_mod._check_guardrails_json(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
+
+    def test_guardrails_json_error_si_corrupto(self):
+        (self.repo / ".claude" / "guardrails.json").write_text("{ esto no es json valido", encoding="utf-8")
+        resultados = doctor_mod._check_guardrails_json(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
+        self.assertIn("fail-closed", resultados[0].message.lower())
+
+
+class TestChecksRuntimeInstalacionReal(unittest.TestCase):
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+        _instalar_harness_real(self.repo)
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_launchers_existen_ok(self):
+        resultados = doctor_mod._check_launchers_existen(self.repo)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+
+    def test_launchers_faltantes_error(self):
+        (self.repo / "tools" / "nbrunner" / "hook_launcher.py").unlink()
+        resultados = doctor_mod._check_launchers_existen(self.repo)
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
+
+    def test_interprete_ejecuta_hooks_sin_interprete_error(self):
+        resultados = doctor_mod._check_interprete_ejecuta_hooks(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
+
+    def test_interprete_ejecuta_hooks_ok_mockeado(self):
+        _crear_interprete_falso(self.repo)
+        with patch("tools.harmessi.doctor.subprocess.run") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stderr="")
+            resultados = doctor_mod._check_interprete_ejecuta_hooks(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_interprete_ejecuta_hooks_error_si_falla_import(self):
+        _crear_interprete_falso(self.repo)
+        with patch("tools.harmessi.doctor.subprocess.run") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=1, stderr="ModuleNotFoundError"
+            )
+            resultados = doctor_mod._check_interprete_ejecuta_hooks(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
+
+    def test_hooks_configurados_existen_ok(self):
+        settings_data, _ = doctor_mod._check_settings(self.repo)
+        resultados = doctor_mod._check_hooks_configurados_existen(self.repo, settings_data)
+        self.assertTrue(resultados)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+
+    def test_hooks_configurados_existen_error_si_falta_script(self):
+        (self.repo / "tools" / "nbrunner" / "hook_launcher.py").unlink()
+        settings_data, _ = doctor_mod._check_settings(self.repo)
+        resultados = doctor_mod._check_hooks_configurados_existen(self.repo, settings_data)
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
+
+    def test_dependencia_shell_ok_sin_bash(self):
+        """El settings.json que instala esta versión de Harmessi ya no usa
+        `bash "..."`: el objetivo cross-platform del Bloque 2."""
+        settings_data, _ = doctor_mod._check_settings(self.repo)
+        resultados = doctor_mod._check_dependencia_shell(settings_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+
+    def test_dependencia_shell_error_si_bash_no_disponible(self):
+        ruta_settings = self.repo / ".claude" / "settings.json"
+        datos = json.loads(ruta_settings.read_text(encoding="utf-8"))
+        datos["hooks"]["PreToolUse"][0]["hooks"][0]["command"] = 'bash "${CLAUDE_PROJECT_DIR}/hook.sh"'
+        with patch("tools.harmessi.doctor.shutil.which", return_value=None):
+            resultados = doctor_mod._check_dependencia_shell(datos)
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
+
+    def test_dependencia_shell_warn_si_bash_disponible(self):
+        ruta_settings = self.repo / ".claude" / "settings.json"
+        datos = json.loads(ruta_settings.read_text(encoding="utf-8"))
+        datos["hooks"]["PreToolUse"][0]["hooks"][0]["command"] = 'bash "${CLAUDE_PROJECT_DIR}/hook.sh"'
+        with patch("tools.harmessi.doctor.shutil.which", return_value="/usr/bin/bash"):
+            resultados = doctor_mod._check_dependencia_shell(datos)
+        statuses_bash = {
+            r.status for r in resultados if "bash" in r.message.lower() and r.status != checks.STATUS_PASS
+        }
+        self.assertIn(checks.STATUS_WARN, statuses_bash)
+
+
+class TestEjecutarIntegracion(unittest.TestCase):
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_instalacion_sin_venv_tiene_solo_el_gap_de_interprete(self):
+        """`ds_init` no crea el `.venv` -- eso queda para el usuario. Sin él,
+        el único `ERROR` esperable es RUNTIME-INTERPRETE (nada puede
+        ejecutarse sin intérprete); todo lo demás debe seguir en OK."""
+        _instalar_harness_real(self.repo)
+        resultados, codigo = doctor_mod.ejecutar(self.repo)
+        codigos_error = {r.codigo for r in resultados if r.nivel == doctor_mod.NIVEL_ERROR}
+        self.assertEqual(codigos_error, {"RUNTIME-INTERPRETE"})
+        self.assertEqual(codigo, 1)
+
+    def test_instalacion_completa_con_venv_da_exit_0(self):
+        _instalar_harness_real(self.repo)
+        _crear_interprete_falso(self.repo)
+        with patch("tools.harmessi.doctor.subprocess.run", side_effect=_mock_solo_interprete(0, "")):
+            resultados, codigo = doctor_mod.ejecutar(self.repo)
+        self.assertEqual(codigo, 0)
+        self.assertNotIn(doctor_mod.NIVEL_ERROR, _niveles(resultados))
+
+    def test_falta_settings_json_da_exit_1(self):
+        _instalar_harness_real(self.repo)
+        (self.repo / ".claude" / "settings.json").unlink()
+        resultados, codigo = doctor_mod.ejecutar(self.repo)
+        self.assertEqual(codigo, 1)
+        self.assertIn(doctor_mod.NIVEL_ERROR, _niveles(resultados))
+
+    def test_repo_no_instalado_no_crashea(self):
+        """Ni siquiera corrió `ds_init`: `doctor` debe seguir devolviendo un
+        reporte completo (con varios ERROR/WARN esperables), nunca una
+        excepción cruda."""
+        resultados, codigo = doctor_mod.ejecutar(self.repo)
+        self.assertIsInstance(resultados, list)
+        self.assertGreater(len(resultados), 0)
+        self.assertEqual(codigo, 1)
+
+    def test_control_json_corrupto_no_crashea(self):
+        _instalar_harness_real(self.repo)
+        (self.repo / ".ds_init" / "control.json").write_text("{ esto rompe el json", encoding="utf-8")
+        resultados, codigo = doctor_mod.ejecutar(self.repo)
+        self.assertIsInstance(resultados, list)
+        self.assertEqual(codigo, 1)
+
+    def test_settings_json_corrupto_no_crashea(self):
+        _instalar_harness_real(self.repo)
+        (self.repo / ".claude" / "settings.json").write_text("{ esto tambien rompe", encoding="utf-8")
+        resultados, codigo = doctor_mod.ejecutar(self.repo)
+        self.assertIsInstance(resultados, list)
+        self.assertEqual(codigo, 1)
+
+    def test_destino_inexistente_no_crashea(self):
+        no_existe = self.repo / "no-existe-de-verdad"
+        resultados, codigo = doctor_mod.ejecutar(no_existe)
+        self.assertIsInstance(resultados, list)
+        self.assertEqual(codigo, 1)
+
+    def test_check_individual_que_explota_no_tumba_todo_el_reporte(self):
+        _instalar_harness_real(self.repo)
+        with patch(
+            "tools.harmessi.doctor._check_agents", side_effect=RuntimeError("boom inesperado")
+        ):
+            resultados, codigo = doctor_mod.ejecutar(self.repo)
+        self.assertEqual(codigo, 1)
+        self.assertTrue(any("EXCEPCION" in r.codigo for r in resultados))
+        # El resto del reporte igual se completó (otras secciones presentes).
+        self.assertIn(doctor_mod.SECCION_RUNTIME, {r.seccion for r in resultados})
+
+    def test_formatear_incluye_secciones_y_resumen(self):
+        _instalar_harness_real(self.repo)
+        resultados, _ = doctor_mod.ejecutar(self.repo)
+        texto = doctor_mod.formatear(resultados)
+        self.assertIn("=== CORE ===", texto)
+        self.assertIn("=== HARMESSI ===", texto)
+        self.assertIn("=== RUNTIME ===", texto)
+        self.assertIn("Resumen:", texto)
+        self.assertIn("[OK]", texto)
+
+
+class TestRetrofitChecksEngine(unittest.TestCase):
+    """Tests nuevos de `20260915-checks-engine-foundation`: NO modifican
+    ninguna aserción existente arriba -- solo agregan cobertura del
+    vocabulario neutral interno (`checks.CheckResult`) y de la traducción a
+    `ResultadoCheck` (público de Doctor, sin cambios de UX)."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_check_individual_devuelve_list_checkresult_con_vocabulario_nuevo(self):
+        resultados = doctor_mod._check_version_python()
+        self.assertEqual(len(resultados), 1)
+        self.assertIsInstance(resultados[0], checks.CheckResult)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_check_repo_git_invalido_devuelve_checkresult_fail(self):
+        no_git = Path(tempfile.mkdtemp(prefix="harmessi_doctor_test_no_git_"))
+        try:
+            resultados = doctor_mod._check_repo_git_valido(no_git)
+            self.assertIsInstance(resultados[0], checks.CheckResult)
+            self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
+        finally:
+            shutil.rmtree(no_git, ignore_errors=True)
+
+    def test_traducir_mapea_pass_a_ok(self):
+        r = checks.CheckResult(checks.STATUS_PASS, "COD", "mensaje", subject="ubi")
+        traducido = doctor_mod._traducir(doctor_mod.SECCION_CORE, r)
+        self.assertEqual(traducido.nivel, doctor_mod.NIVEL_OK)
+        self.assertEqual(traducido.seccion, doctor_mod.SECCION_CORE)
+        self.assertEqual(traducido.codigo, "COD")
+        self.assertEqual(traducido.mensaje, "mensaje")
+        self.assertEqual(traducido.ubicacion, "ubi")
+
+    def test_traducir_mapea_warn_a_warn(self):
+        r = checks.CheckResult(checks.STATUS_WARN, "COD", "mensaje")
+        traducido = doctor_mod._traducir(doctor_mod.SECCION_HARMESSI, r)
+        self.assertEqual(traducido.nivel, doctor_mod.NIVEL_WARN)
+
+    def test_traducir_mapea_fail_a_error(self):
+        r = checks.CheckResult(checks.STATUS_FAIL, "COD", "mensaje")
+        traducido = doctor_mod._traducir(doctor_mod.SECCION_RUNTIME, r)
+        self.assertEqual(traducido.nivel, doctor_mod.NIVEL_ERROR)
+
+    def test_ejecutar_check_traduce_excepcion_a_resultadocheck_error(self):
+        def _explota():
+            raise RuntimeError("boom")
+
+        resultados = doctor_mod._ejecutar_check(doctor_mod.SECCION_CORE, "COD-BASE", _explota)
+        self.assertEqual(len(resultados), 1)
+        self.assertIsInstance(resultados[0], doctor_mod.ResultadoCheck)
+        self.assertEqual(resultados[0].nivel, doctor_mod.NIVEL_ERROR)
+        self.assertEqual(resultados[0].codigo, "COD-BASE-EXCEPCION")
+
+    def test_formatear_agrega_segmento_na_si_conteo_mayor_a_cero(self):
+        resultados = [
+            doctor_mod.ResultadoCheck(doctor_mod.NIVEL_OK, doctor_mod.SECCION_CORE, "X-OK", "ok"),
+            doctor_mod.ResultadoCheck("N/A", doctor_mod.SECCION_CORE, "X-NA", "no aplica"),
+        ]
+        texto = doctor_mod.formatear(resultados)
+        self.assertIn("[N/A]", texto)
+        self.assertIn("1 [N/A]", texto.splitlines()[-1])
+
+    def test_formatear_sin_resultados_na_no_agrega_segmento(self):
+        _instalar_harness_real(self.repo)
+        # Change 7 v0.3 agregó `HARMESSI-INSTALLATION-STAGE`, que da N/A si
+        # falta `.harmessi/project.json` -- para seguir ejercitando el caso
+        # "cero N/A" que este test verifica, hace falta que ese check
+        # resuelva a PASS (project_stage <= installation_stage instalado),
+        # no que falte el archivo de madurez.
+        maturity.project_init(self.repo, stage="experiment")
+        resultados, _ = doctor_mod.ejecutar(self.repo)
+        # Change 20261005 (R55): `HARMESSI-GOV-CAPABILITY` es N/A por diseño con
+        # las capabilities opt-in deshabilitadas (default); se excluye `HARMESSI-GOV-*` (la fixture instala el manifiesto completo SIN filtrar por
+        # capabilities, por lo que además aparece `HARMESSI-GOV-INSTALLED-DISABLED`, N/A por diseño).
+        resultados = [r for r in resultados if not r.codigo.startswith("HARMESSI-GOV-")]
+        self.assertEqual(_niveles(resultados) & {"N/A"}, set())
+        texto = doctor_mod.formatear(resultados)
+        self.assertNotIn("[N/A]", texto)
+        ultima_linea = texto.splitlines()[-1]
+        self.assertTrue(ultima_linea.startswith("Resumen: "))
+        self.assertEqual(ultima_linea.count("["), 3)  # solo [OK], [WARN], [ERROR]
+
+
+class TestArchivosAdministradosStageAware(unittest.TestCase):
+    """Tests de Change 7 v0.3 (R10 de `spec.md`): `_check_archivos_administrados`
+    usa `manifest_para_perfil_y_stage` cuando `control_data` tiene
+    `installation_stage`; sin esa clave (legacy), preserva el comportamiento
+    actual EXACTO -- ya cubierto por `TestChecksHarmessiInstalacionReal`
+    (que instala vía `_instalar_harness_real`, sin `stage` en `config`, y por
+    lo tanto sin `installation_stage` en `control.json` -- el mismo camino
+    legacy que hoy)."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_stage_discovery_no_reclama_agentes_ni_docs_production(self):
+        _instalar_harness_real_con_stage(self.repo, "discovery")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertEqual(control_data.get("installation_stage"), "discovery")
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+
+    def test_stage_experiment_no_reclama_production_candidate_ni_production(self):
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertEqual(control_data.get("installation_stage"), "experiment")
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+
+        # Confirmación directa: los docs de production_candidate/production
+        # ni siquiera existen en el destino (nunca se instalaron en
+        # 'experiment'), y sin embargo el check da PASS -- nunca se reclaman.
+        self.assertFalse(
+            (self.repo / ".claude" / "skills" / "lead-data-scientist" / "production-readiness.md").exists()
+        )
+        self.assertFalse(
+            (self.repo / ".claude" / "skills" / "lead-data-scientist" / "operations.md").exists()
+        )
+
+    def test_stage_experiment_si_falta_agente_de_su_propio_bundle_sigue_reportando(self):
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        (self.repo / ".claude" / "agents" / "notebook-runner.md").unlink()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertIn(checks.STATUS_FAIL, _statuses(resultados))
+
+    def test_stage_production_candidate_exige_set_acumulado_completo(self):
+        _instalar_harness_real_con_stage(self.repo, "production_candidate")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertEqual(control_data.get("installation_stage"), "production_candidate")
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+        self.assertTrue(
+            (self.repo / ".claude" / "skills" / "lead-data-scientist" / "production-readiness.md").exists()
+        )
+        self.assertFalse(
+            (self.repo / ".claude" / "skills" / "lead-data-scientist" / "operations.md").exists()
+        )
+
+        (self.repo / ".claude" / "skills" / "lead-data-scientist" / "production-readiness.md").unlink()
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertIn(checks.STATUS_WARN, _statuses(resultados))
+
+    def test_stage_production_exige_operations_tambien(self):
+        _instalar_harness_real_con_stage(self.repo, "production")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertEqual(control_data.get("installation_stage"), "production")
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+        self.assertTrue(
+            (self.repo / ".claude" / "skills" / "lead-data-scientist" / "operations.md").exists()
+        )
+
+    def test_legacy_sin_installation_stage_se_comporta_exactamente_igual_que_hoy(self):
+        """0 diff respecto del comportamiento anterior a este change: sin
+        `installation_stage`, usa `manifest_para_perfil(perfil)` completo --
+        un archivo de 'production_candidate'/'production' (que ni siquiera
+        existe en una instalación legacy) se reporta como WARN faltante,
+        exactamente como cualquier otro archivo administrado faltante."""
+        _instalar_harness_real(self.repo)
+        # `_instalar_harness_real` usa `construir_plan(..., stage=None)`, que
+        # devuelve el manifiesto COMPLETO (R3: `manifest_para_perfil` no se
+        # filtra nunca) -- eso incluye los 2 documentos nuevos de este mismo
+        # change, algo que una instalación legacy REAL (anterior a que esas
+        # entradas existieran en el manifiesto) nunca pudo tener. Se borran
+        # acá para simular fielmente ese escenario legacy real.
+        (self.repo / ".claude" / "skills" / "lead-data-scientist" / "production-readiness.md").unlink()
+        (self.repo / ".claude" / "skills" / "lead-data-scientist" / "operations.md").unlink()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertNotIn("installation_stage", control_data)
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        codigos_faltantes = {r.subject for r in resultados if r.status == checks.STATUS_WARN}
+        self.assertIn(".claude/skills/lead-data-scientist/production-readiness.md", codigos_faltantes)
+        self.assertIn(".claude/skills/lead-data-scientist/operations.md", codigos_faltantes)
+        self.assertNotIn(checks.STATUS_FAIL, _statuses(resultados))
+
+
+class TestAgentsStageAware(unittest.TestCase):
+    """Tests de 20260925-doctor-stage-awareness (R1-R6 de `spec.md`):
+    `_check_agents` es consciente de `installation_stage` -- ningún agente
+    aplica al stage `discovery` (`stage_minimo="experiment"` en
+    `tools/ds_init/manifest.py` para los 4), por lo que un scratch install en
+    `discovery` no debe reportar ningún `HARMESSI-AGENTE-FALTANTE`, mientras
+    que un agente ausente en un stage donde sí aplica (p. ej. `experiment`)
+    debe seguir dando `FAIL`."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_stage_discovery_no_reporta_ningun_resultado_de_agentes(self):
+        """R2: en 'discovery' ningún agente aplica -- `_check_agents` no debe
+        devolver ningún `CheckResult` cuyo `subject` sea la ruta de alguno de
+        los 4 agentes (ni PASS, ni FAIL, ni WARN)."""
+        _instalar_harness_real_con_stage(self.repo, "discovery")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertEqual(control_data.get("installation_stage"), "discovery")
+
+        resultados = doctor_mod._check_agents(self.repo, control_data)
+        self.assertEqual(resultados, [])
+
+    def test_stage_experiment_agente_borrado_sigue_dando_fail(self):
+        """R3: en 'experiment' los 4 agentes sí aplican -- si falta uno en
+        disco, sigue reportándose `FAIL HARMESSI-AGENTE-FALTANTE`."""
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        (self.repo / ".claude" / "agents" / "notebook-runner.md").unlink()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertEqual(control_data.get("installation_stage"), "experiment")
+
+        resultados = doctor_mod._check_agents(self.repo, control_data)
+        faltantes = [r for r in resultados if r.code == "HARMESSI-AGENTE-FALTANTE"]
+        self.assertEqual(len(faltantes), 1)
+        self.assertEqual(faltantes[0].status, checks.STATUS_FAIL)
+        self.assertEqual(faltantes[0].subject, ".claude/agents/notebook-runner.md")
+
+    def test_legacy_control_data_none_reproduce_comportamiento_actual(self):
+        """R5(a): sin `control.json` legible (`control_data is None`), se
+        siguen considerando esperados los 4 agentes -- comportamiento legacy
+        idéntico al anterior a este Change."""
+        _instalar_harness_real(self.repo)
+        resultados = doctor_mod._check_agents(self.repo, None)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+        self.assertEqual(len(resultados), len(doctor_mod._AGENTES_ESPERADOS))
+
+    def test_legacy_sin_installation_stage_reproduce_comportamiento_actual(self):
+        """R5(b): `control_data` sin clave `installation_stage` (legacy) --
+        se siguen considerando esperados los 4 agentes, sin cambio de
+        comportamiento."""
+        _instalar_harness_real(self.repo)
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertNotIn("installation_stage", control_data)
+
+        resultados = doctor_mod._check_agents(self.repo, control_data)
+        self.assertEqual(_statuses(resultados), {checks.STATUS_PASS})
+        self.assertEqual(len(resultados), len(doctor_mod._AGENTES_ESPERADOS))
+
+    def test_smoke_ejecutar_sobre_scratch_discovery_da_cero_error(self):
+        """R2, a nivel integración: `doctor_mod.ejecutar` sobre un scratch
+        install real en 'discovery' da 0 `[ERROR]` -- reproduce el escenario
+        exacto que originó este Change (hallazgo del hardening de v0.7). El
+        scratch install no crea `.venv` (eso queda para el usuario, ver
+        `test_instalacion_sin_venv_tiene_solo_el_gap_de_interprete`) -- se
+        replica el mismo mecanismo que ya usa
+        `test_instalacion_completa_con_venv_da_exit_0` para llegar a 0 ERROR
+        real: un intérprete falso (`_crear_interprete_falso`) más un mock de
+        `subprocess.run` que simula RUNTIME-INTERPRETE en OK, dejando pasar
+        las llamadas a `git` sin tocar."""
+        _instalar_harness_real_con_stage(self.repo, "discovery")
+        _crear_interprete_falso(self.repo)
+        with patch("tools.harmessi.doctor.subprocess.run", side_effect=_mock_solo_interprete(0, "")):
+            resultados, _codigo = doctor_mod.ejecutar(self.repo)
+        codigos_error = [r.codigo for r in resultados if r.nivel == doctor_mod.NIVEL_ERROR]
+        self.assertEqual(codigos_error, [])
+
+
+class TestCheckInstallationStage(unittest.TestCase):
+    """Tests de Change 7 v0.3 (R11 de `spec.md`): `HARMESSI-INSTALLATION-STAGE`,
+    solo lectura, nunca `ERROR`/`FAIL`."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_na_sin_project_json(self):
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+        self.assertEqual(resultados[0].status, checks.STATUS_NA)
+
+    def test_na_sin_control_data(self):
+        maturity.project_init(self.repo, stage="experiment")
+
+        resultados = doctor_mod._check_installation_stage(self.repo, None)
+        self.assertEqual(resultados[0].status, checks.STATUS_NA)
+
+    def test_na_con_project_json_corrupto(self):
+        maturity.project_init(self.repo, stage="experiment")
+        maturity.state_path(self.repo).write_text("{ esto rompe el json", encoding="utf-8")
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+        self.assertEqual(resultados[0].status, checks.STATUS_NA)
+
+    def test_pass_si_stages_iguales(self):
+        maturity.project_init(self.repo, stage="experiment")
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_warn_si_project_stage_mas_avanzado(self):
+        estado, _ = maturity.project_init(self.repo, stage="experiment")
+        maturity.calibrar(self.repo, "production_candidate", "avance de prueba")
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+        self.assertEqual(resultados[0].status, checks.STATUS_WARN)
+        self.assertIn("sync", resultados[0].message.lower())
+        self.assertIn("production_candidate", resultados[0].message)
+
+    def test_pass_si_installation_stage_mas_avanzado_nunca_error(self):
+        maturity.project_init(self.repo, stage="discovery")
+        _instalar_harness_real_con_stage(self.repo, "production")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+    def test_usa_inferencia_legacy_solo_para_mostrar_sin_persistir(self):
+        maturity.project_init(self.repo, stage="experiment")
+        _instalar_harness_real(self.repo)  # legacy: sin 'stage' en config.
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        self.assertNotIn("installation_stage", control_data)
+
+        ruta_control = self.repo / ".ds_init" / "control.json"
+        bytes_control_antes = ruta_control.read_bytes()
+
+        resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+        # Legacy con los 5 archivos de 'experiment' presentes -> se infiere
+        # 'production' (R6) -- 'production' >= 'experiment' -> PASS.
+        self.assertEqual(resultados[0].status, checks.STATUS_PASS)
+
+        # Nunca persiste la inferencia ni muta control.json/project.json.
+        self.assertEqual(ruta_control.read_bytes(), bytes_control_antes)
+        control_releido = json.loads(ruta_control.read_text(encoding="utf-8"))
+        self.assertNotIn("installation_stage", control_releido)
+
+    def test_nunca_error_ante_excepcion_inesperada_no_de_dominio(self):
+        """Hallazgo de revisión, Change 7 v0.3: `maturity.leer_estado` puede
+        levantar algo distinto de `MaturityEstadoError` (p. ej. una carrera
+        TOCTOU real, o cualquier fallo de bajo nivel) -- este check tiene
+        prohibido, bajo cualquier escenario, dejar escapar eso como
+        `ERROR`/`FAIL` (R11 de spec.md). Se simula con un `OSError` genérico,
+        no capturado por el `except maturity.MaturityEstadoError` interno."""
+        maturity.project_init(self.repo, stage="experiment")
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+
+        with patch.object(maturity, "leer_estado", side_effect=OSError("disco no disponible")):
+            resultados = doctor_mod._check_installation_stage(self.repo, control_data)
+
+        self.assertEqual(resultados[0].status, checks.STATUS_NA)
+        self.assertNotEqual(resultados[0].status, checks.STATUS_FAIL)
+
+    def test_doctor_ejecutar_nunca_muta_project_json_ni_control_json(self):
+        maturity.project_init(self.repo, stage="experiment")
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+
+        ruta_project = maturity.state_path(self.repo)
+        ruta_control = self.repo / ".ds_init" / "control.json"
+        bytes_project_antes = ruta_project.read_bytes()
+        bytes_control_antes = ruta_control.read_bytes()
+
+        doctor_mod.ejecutar(self.repo)
+
+        self.assertEqual(ruta_project.read_bytes(), bytes_project_antes)
+        self.assertEqual(ruta_control.read_bytes(), bytes_control_antes)
+
+    def test_wireado_en_ejecutar_bajo_seccion_harmessi(self):
+        maturity.project_init(self.repo, stage="experiment")
+        _instalar_harness_real_con_stage(self.repo, "experiment")
+
+        resultados, _ = doctor_mod.ejecutar(self.repo)
+        encontrado = [r for r in resultados if r.codigo == "HARMESSI-INSTALLATION-STAGE"]
+        self.assertEqual(len(encontrado), 1)
+        self.assertEqual(encontrado[0].seccion, doctor_mod.SECCION_HARMESSI)
+        self.assertEqual(encontrado[0].nivel, doctor_mod.NIVEL_OK)
+
+
+class TestDoctorRegresionEsteRepositorio(unittest.TestCase):
+    """R14/AC de `spec.md`: `harmessi doctor` corrido sobre ESTE repositorio
+    (instalación legacy real, sin `installation_stage`) produce
+    `HARMESSI-ARCHIVOS-ESPERADOS` con el mismo criterio completo que antes de
+    este change -- el único drift esperado son los 2 archivos nuevos del
+    propio manifiesto de Change 7 (`production-readiness.md`/`operations.md`,
+    reportados como WARN por faltantes, nunca ERROR, ya que no son
+    `_RUTAS_CRITICAS`)."""
+
+    def test_este_repo_tiene_installation_stage_valido_en_su_control_json(self):
+        """Desde Change 7 v0.3 (progressive capability installation), 'installation_stage' es
+        un campo legítimo y esperado de control.json -- este test reemplaza al anterior
+        (`test_este_repo_no_tiene_installation_stage_en_su_control_json`), que asumía la
+        ausencia del campo porque predataba ese Change. Diagnosticado como test desactualizado,
+        no como bug real, durante Change 5 v0.4 (release hardening)."""
+        raiz = Path(__file__).resolve().parents[3]
+        control_data, resultados = doctor_mod._leer_control_json(raiz)
+        self.assertIsNotNone(control_data)
+        self.assertIn("installation_stage", control_data)
+        self.assertIn(control_data["installation_stage"], ORDEN_STAGES)
+
+    def test_este_repo_archivos_administrados_sin_fail_inesperado(self):
+        raiz = Path(__file__).resolve().parents[3]
+        control_data, _ = doctor_mod._leer_control_json(raiz)
+        resultados = doctor_mod._check_archivos_administrados(raiz, control_data)
+        # Ningún FAIL: todos los archivos _RUTAS_CRITICAS de este propio repo
+        # (ya instalados) siguen presentes: el único drift posible son WARN
+        # de los 2 docs nuevos de Change 7, que todavía no están instalados
+        # físicamente en este propio checkout (no son críticos).
+        self.assertNotIn(checks.STATUS_FAIL, _statuses(resultados))
+
+
+class TestCheckFuentesExternasPermisosOs(unittest.TestCase):
+    """R17 de `spec.md`: `M12-FUENTE-EXTERNA-PERMISOS` es puramente
+    informativo (nunca FAIL/ERROR) y nunca muta la ruta externa (nunca
+    `chmod`/`icacls`)."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal()
+        self.externo_dir = Path(tempfile.mkdtemp(prefix="harmessi_doctor_test_externo_m12_"))
+        self.archivo_externo = self.externo_dir / "fuente.csv"
+        self.archivo_externo.write_text("col_a\n1\n", encoding="utf-8")
+
+    def tearDown(self):
+        # Revertir cualquier atributo/permiso de solo lectura ANTES de
+        # borrar (Windows/POSIX rechazan unlink sobre una ruta read-only).
+        try:
+            if os.name == "nt":
+                subprocess.run(
+                    ["attrib", "-r", str(self.archivo_externo)], capture_output=True, text=True
+                )
+            else:
+                os.chmod(self.archivo_externo, 0o644)
+        except OSError:
+            pass
+        shutil.rmtree(self.repo, ignore_errors=True)
+        shutil.rmtree(self.externo_dir, ignore_errors=True)
+
+    def _declarar_fuente_externa(self, source_id: str, ruta: Path):
+        dir_harmessi = self.repo / ".harmessi"
+        dir_harmessi.mkdir(parents=True, exist_ok=True)
+        (dir_harmessi / "local-overrides.json").write_text(
+            json.dumps({"fuentes_externas": {source_id: {"path": str(ruta)}}}, indent=2),
+            encoding="utf-8",
+        )
+
+    def test_sin_fuentes_declaradas_devuelve_vacio(self):
+        resultados = doctor_mod._check_fuentes_externas_permisos_os(self.repo)
+        self.assertEqual(resultados, [])
+
+    def test_sin_fuentes_declaradas_no_aparece_en_ejecutar(self):
+        # Regresión/backward-compat (R17): sin M9 configurado, cero cambio
+        # de comportamiento -- el check no produce ningún resultado.
+        resultados, _ = doctor_mod.ejecutar(self.repo)
+        encontrados = [r for r in resultados if r.codigo == "M12-FUENTE-EXTERNA-PERMISOS"]
+        self.assertEqual(encontrados, [])
+
+    def test_ruta_marcada_read_only_por_el_os(self):
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        if os.name == "nt":
+            resultado_attrib = subprocess.run(
+                ["attrib", "+r", str(self.archivo_externo)], capture_output=True, text=True
+            )
+            self.assertEqual(resultado_attrib.returncode, 0)
+        else:
+            os.chmod(self.archivo_externo, 0o444)
+
+        resultados = doctor_mod._check_fuentes_externas_permisos_os(self.repo)
+        encontrados = [r for r in resultados if r.code == "M12-FUENTE-EXTERNA-PERMISOS"]
+        self.assertEqual(len(encontrados), 1)
+        self.assertEqual(encontrados[0].status, checks.STATUS_PASS)
+
+    def test_ruta_sin_marcar_read_only_reporta_warn(self):
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        resultados = doctor_mod._check_fuentes_externas_permisos_os(self.repo)
+        encontrados = [r for r in resultados if r.code == "M12-FUENTE-EXTERNA-PERMISOS"]
+        self.assertEqual(len(encontrados), 1)
+        self.assertEqual(encontrados[0].status, checks.STATUS_WARN)
+
+    def test_ruta_declarada_pero_inexistente_reporta_unknown_partial_warn(self):
+        ruta_inexistente = self.externo_dir / "no-existe.csv"
+        self._declarar_fuente_externa("clientes", ruta_inexistente)
+        resultados = doctor_mod._check_fuentes_externas_permisos_os(self.repo)
+        encontrados = [r for r in resultados if r.code == "M12-FUENTE-EXTERNA-PERMISOS"]
+        self.assertEqual(len(encontrados), 1)
+        self.assertEqual(encontrados[0].status, checks.STATUS_WARN)
+        self.assertIn("unknown/partial", encontrados[0].message)
+
+    def test_nunca_error_en_ningun_caso(self):
+        # Recorre los 3 escenarios (marcado, sin marcar, inexistente) y
+        # confirma que el nivel traducido por `ejecutar()` nunca es ERROR.
+        ruta_inexistente = self.externo_dir / "no-existe.csv"
+        self._declarar_fuente_externa("fuente_a", self.archivo_externo)
+        self._declarar_fuente_externa("fuente_b", ruta_inexistente)
+
+        resultados, _ = doctor_mod.ejecutar(self.repo)
+        encontrados = [r for r in resultados if r.codigo == "M12-FUENTE-EXTERNA-PERMISOS"]
+        self.assertGreaterEqual(len(encontrados), 1)
+        for r in encontrados:
+            self.assertNotEqual(r.nivel, doctor_mod.NIVEL_ERROR)
+
+
+class TestCheckOwnership5Vias(unittest.TestCase):
+    """Tests de `_check_ownership_5_vias` (R21 de B5 + R12 de M10, T6 de
+    `20260930-project-extension-and-installer-integration`): categorías (1)
+    archivo preexistente del usuario y (3)/(4) project config/local override
+    soportados -- NO duplica (2)/(5), ya cubiertas por
+    `_check_archivos_administrados`/`_check_hashes_drift`."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal(prefix="ownership_5_vias_")
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_instalacion_limpia_sin_adopcion_ni_m10_devuelve_vacio(self):
+        _instalar_harness_real(self.repo)
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_ownership_5_vias(self.repo, control_data)
+        self.assertEqual(resultados, [])
+
+    def test_archivo_preexistente_del_usuario_reporta_ownership_usuario(self):
+        # Adopción: un destino real del manifiesto (VERBATIM, no-MERGE) ya
+        # existe en el repo ANTES de instalar -- writer.instalar lo omite
+        # por colisión (R19), nunca entra al registro de hashes.
+        destino_colisionado = self.repo / "tools" / "ds_guard.py"
+        destino_colisionado.parent.mkdir(parents=True, exist_ok=True)
+        destino_colisionado.write_text("# archivo de usuario preexistente\n", encoding="utf-8")
+
+        _instalar_harness_real(self.repo)
+
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        rutas_administradas = {a.get("ruta") for a in control_data.get("archivos", [])}
+        self.assertNotIn("tools/ds_guard.py", rutas_administradas)
+
+        resultados = doctor_mod._check_ownership_5_vias(self.repo, control_data)
+        encontrados = [r for r in resultados if r.code == "HARMESSI-OWNERSHIP-USUARIO"]
+        self.assertEqual(len(encontrados), 1)
+        self.assertEqual(encontrados[0].status, checks.STATUS_PASS)
+        self.assertEqual(encontrados[0].subject, "tools/ds_guard.py")
+        # El contenido del usuario sigue intacto (nunca sobrescrito).
+        self.assertEqual(
+            destino_colisionado.read_text(encoding="utf-8"), "# archivo de usuario preexistente\n"
+        )
+
+    def test_managed_file_normal_no_duplica_ownership_usuario(self):
+        _instalar_harness_real(self.repo)
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_ownership_5_vias(self.repo, control_data)
+        encontrados = [r for r in resultados if r.code == "HARMESSI-OWNERSHIP-USUARIO"]
+        self.assertEqual(encontrados, [])
+
+    def test_project_config_presente_reporta_ownership_project_config(self):
+        _instalar_harness_real(self.repo)
+        harmessi_dir = self.repo / ".harmessi"
+        harmessi_dir.mkdir(parents=True, exist_ok=True)
+        (harmessi_dir / "project-config.json").write_text("{}", encoding="utf-8")
+
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_ownership_5_vias(self.repo, control_data)
+        encontrados = [r for r in resultados if r.code == "HARMESSI-OWNERSHIP-PROJECT-CONFIG"]
+        self.assertEqual(len(encontrados), 1)
+        self.assertEqual(encontrados[0].status, checks.STATUS_PASS)
+
+    def test_local_override_presente_reporta_ownership_local_override(self):
+        _instalar_harness_real(self.repo)
+        harmessi_dir = self.repo / ".harmessi"
+        harmessi_dir.mkdir(parents=True, exist_ok=True)
+        (harmessi_dir / "local-overrides.json").write_text("{}", encoding="utf-8")
+
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_ownership_5_vias(self.repo, control_data)
+        encontrados = [r for r in resultados if r.code == "HARMESSI-OWNERSHIP-LOCAL-OVERRIDE"]
+        self.assertEqual(len(encontrados), 1)
+        self.assertEqual(encontrados[0].status, checks.STATUS_PASS)
+
+
+class TestCheckArchivosAdministradosCapabilityAware(unittest.TestCase):
+    """M8 (hallazgo de hardening, Change 5): `_check_archivos_administrados`
+    no tenía ninguna noción de capabilities -- un asset deliberadamente no
+    provisionado por `predictive_modeling=false` se reportaba como
+    `HARMESSI-ARCHIVO-FALTANTE` (`WARN`), nunca como `N/A` (contradice R3/R6
+    de Change 4, que afirmaba esto ya estaba "Cumplido" basándose solo en el
+    test unitario de la función de filtro, sin confirmar que estuviera
+    wireada a Doctor)."""
+
+    def setUp(self):
+        self.repo = _crear_repo_git_temporal(prefix="doctor_capability_")
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _instalar_con_capability_deshabilitada(self):
+        config = _config_base(self.repo)
+        config["capabilities_habilitadas"] = []
+        plan = construir_plan(
+            PERFIL, self.repo, config, stage="experiment", capabilities_habilitadas=frozenset()
+        )
+        return ds_init_writer.instalar(plan, self.repo, config)
+
+    def test_modelquality_faltante_por_capability_reporta_na_no_warn(self):
+        self._instalar_con_capability_deshabilitada()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+
+        codigos_por_destino = {
+            r.subject: r.code for r in resultados if r.subject and "modelquality" in r.subject
+        }
+        self.assertEqual(len(codigos_por_destino), 3)
+        for codigo in codigos_por_destino.values():
+            self.assertEqual(codigo, "HARMESSI-CAPABILITY-DISABLED")
+        self.assertTrue(all(r.status == checks.STATUS_NA for r in resultados if "modelquality" in (r.subject or "")))
+        # Nunca FAIL/WARN para estos destinos.
+        self.assertFalse(
+            any(
+                "modelquality" in (r.subject or "") and r.status in (checks.STATUS_FAIL, checks.STATUS_WARN)
+                for r in resultados
+            )
+        )
+
+    def test_instalacion_normal_sigue_reportando_ok_para_modelquality(self):
+        # Regresión/backward compat: sin deshabilitar nada, los 3 archivos
+        # están presentes -> ni siquiera aparecen en los resultados (la
+        # función solo reporta lo que falta).
+        _instalar_harness_real(self.repo)
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        self.assertFalse(any("modelquality" in (r.subject or "") for r in resultados))
+
+    def test_control_json_legacy_sin_capabilities_habilitadas_sigue_reportando_warn(self):
+        # Backward compat explícita (R5): un `control.json` de ANTES de este
+        # fix (sin la clave `capabilities_habilitadas`) no puede distinguir
+        # "deshabilitado a propósito" de "falta de verdad" -- debe seguir
+        # comportándose EXACTAMENTE como antes (WARN, nunca N/A por
+        # inferencia), aunque el archivo realmente no esté.
+        self._instalar_con_capability_deshabilitada()
+        control_data, _ = doctor_mod._leer_control_json(self.repo)
+        del control_data["capabilities_habilitadas"]
+
+        resultados = doctor_mod._check_archivos_administrados(self.repo, control_data)
+        codigos = {r.subject: r.code for r in resultados if r.subject and "modelquality" in r.subject}
+        self.assertEqual(len(codigos), 3)
+        for codigo in codigos.values():
+            self.assertEqual(codigo, "HARMESSI-ARCHIVO-FALTANTE")
+
+
+if __name__ == "__main__":
+    unittest.main()

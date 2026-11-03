@@ -1,0 +1,6 @@
+{
+  "perfil": "python-jupyter-data",
+  "descripcion": "Harness de agentes/tooling para proyectos de ciencia de datos en Python + Jupyter (ETL, notebooks, SDD ligero).",
+  "incluye_todo": true,
+  "destinos": []
+}

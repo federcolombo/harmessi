@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "creado_utc": "2026-09-14T14:27:58Z",
+  "migrado_desde": null,
+  "crispdm": {
+    "fases": {
+      "business_understanding": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "data_understanding": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "data_preparation": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "modeling": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "evaluation": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "production_readiness": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "deployment": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "monitoring": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      }
+    }
+  },
+  "kdd": {
+    "pasos": {
+      "selection": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "preprocessing": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "transformation": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "data_mining": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "interpretation_evaluation": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      }
+    }
+  },
+  "mlops": {
+    "foundations": {
+      "reproducibilidad": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "versionado": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "lineage": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "artifacts": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      }
+    },
+    "production_readiness": {
+      "packaging": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "environment_reproducible": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "inference_contract": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "inference_tests": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "trazabilidad_fuerte": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      }
+    },
+    "operations": {
+      "deployment": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "cicd": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "monitoring": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "rollback": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "drift": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "alerts": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      },
+      "retraining": {
+        "estado": "no_iniciada",
+        "changes": [],
+        "evidencia": [],
+        "actualizado_utc": "2026-09-14T14:27:58Z"
+      }
+    }
+  },
+  "historial_transiciones": []
+}

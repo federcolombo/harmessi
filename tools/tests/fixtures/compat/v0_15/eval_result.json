@@ -1,0 +1,109 @@
+{
+  "cases_hash": "93c97807e6e805049e5c356a20dee11525c743b7bf99a654c1005731c885b293",
+  "evaluator_version": "harmessi-bench-scorers/1",
+  "harmessi_version": "0.15.0",
+  "resultados": [
+    {
+      "availability_error": null,
+      "duration_s": 0.5,
+      "exit_code": 0,
+      "harmessi_version": "0.15.0",
+      "ok": true,
+      "run_id": "fixture-v015",
+      "scenario_id": "s1",
+      "score": {
+        "detail": "coincide",
+        "passed": true,
+        "score": 1.0
+      },
+      "stdout_excerpt": "OK",
+      "target": {
+        "effort": "low",
+        "model": "m1",
+        "provider_id": "fake"
+      },
+      "timestamp_utc": "2026-10-30T12:00:00+00:00"
+    },
+    {
+      "availability_error": null,
+      "duration_s": 0.5,
+      "exit_code": 0,
+      "harmessi_version": "0.15.0",
+      "ok": true,
+      "run_id": "fixture-v015",
+      "scenario_id": "s2",
+      "score": {
+        "detail": "coincide",
+        "passed": true,
+        "score": 1.0
+      },
+      "stdout_excerpt": "LISTO",
+      "target": {
+        "effort": "low",
+        "model": "m1",
+        "provider_id": "fake"
+      },
+      "timestamp_utc": "2026-10-30T12:00:00+00:00"
+    }
+  ],
+  "run_id": "fixture-v015",
+  "run_manifest": {
+    "cases_hash": "93c97807e6e805049e5c356a20dee11525c743b7bf99a654c1005731c885b293",
+    "evaluator_version": "harmessi-bench-scorers/1",
+    "finished_utc": "2026-10-30T12:00:00+00:00",
+    "git": {
+      "clean": null,
+      "commit": "unknown"
+    },
+    "guardrails_hash": "7b1e6a694fa8283afae7ca31aa0f2b2302dd6850590e69f078c154445b42c7c7",
+    "harmessi_version": "0.15.0",
+    "identity_hash": "f81292e39df5f3500c9b71db824642f94d8d1dd4fbb415897496feef299f2923",
+    "manifest_version": 1,
+    "platform": {
+      "implementation": "fixture",
+      "python": "0.0.0",
+      "system": "fixture"
+    },
+    "problemas": [],
+    "run_id": "fixture-v015",
+    "seed": 0,
+    "sesiones": [
+      {
+        "finished_utc": "2026-10-30T12:00:00+00:00",
+        "git_commit": "unknown",
+        "seed": 0,
+        "started_utc": "2026-10-30T12:00:00+00:00"
+      }
+    ],
+    "skills": {
+      "codebase-design": "aec7ae21d92e354d472936957252068379cfdf59aa706c2af9896e96daef3ad0",
+      "diagnosing-bugs": "60af4bd9b4107cf475bc9b8f7e8ae3ca4c1f2cd64588838505aacadd5a9ce329",
+      "domain-modeling": "27b3c95d4087fe7994960f4dd8a468ec9c43fe1b6848afe406e3cccb364167b5",
+      "problem-framing": "82916074bbaaa1b8467709b1ed1cff45a1328f204f698be3bdcf750e5af8fb62"
+    },
+    "started_utc": "2026-10-30T12:00:00+00:00",
+    "suite": {
+      "suite_hash": "93c97807e6e805049e5c356a20dee11525c743b7bf99a654c1005731c885b293",
+      "suite_id": "suite-fake",
+      "suite_version": 1
+    },
+    "surfaces_hash": "b577b05be86db3c57c83e0075ff8c685eaa9360acdc56eedd9411d8f21720bb2",
+    "target": {
+      "effort": "low",
+      "model": "m1",
+      "provider_id": "fake"
+    }
+  },
+  "schema_version": 1,
+  "suite": {
+    "suite_hash": "93c97807e6e805049e5c356a20dee11525c743b7bf99a654c1005731c885b293",
+    "suite_id": "suite-fake",
+    "suite_version": 1
+  },
+  "target": {
+    "effort": "low",
+    "model": "m1",
+    "provider_id": "fake"
+  },
+  "timestamp_utc": "2026-10-30T12:00:00+00:00"
+}

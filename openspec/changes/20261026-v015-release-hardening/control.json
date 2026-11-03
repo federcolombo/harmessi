@@ -1,0 +1,474 @@
+{
+  "schema_version": 1,
+  "change_id": "20261026-v015-release-hardening",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-26T18:31:04Z",
+  "baseline": {
+    "commit": "c6336b0e33625587791793a08fa61e5d0a80bd48",
+    "rama": "v0.15-dev",
+    "capturado_utc": "2026-10-26T18:31:04Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".ds_init/control.json",
+      "CITATION.cff",
+      "README.md",
+      "docs/release-process.md",
+      "docs/releases/v0.15.0.md",
+      "docs/roadmap/v0.15-debt-matrix.md",
+      "docs/roadmap/v0.15.md",
+      "openspec/changes/20261026-v015-release-hardening/amendments.jsonl",
+      "openspec/changes/20261026-v015-release-hardening/control.json",
+      "openspec/changes/20261026-v015-release-hardening/design.md",
+      "openspec/changes/20261026-v015-release-hardening/proposal.md",
+      "openspec/changes/20261026-v015-release-hardening/spec.md",
+      "openspec/changes/20261026-v015-release-hardening/tasks.md",
+      "openspec/changes/20261026-v015-release-hardening/verification.md",
+      "openspec/changes/20261027-v015-scope-closure-corrective/control.json",
+      "tools/ds_init/version.py",
+      "tools/tests/test_public_docs.py",
+      "tools/tests/test_v012_release_hardening_smoke.py",
+      "tools/tests/test_v013_release_hardening_smoke.py",
+      "tools/tests/test_v014_release_hardening_smoke.py",
+      "tools/tests/test_v015_compat_window.py",
+      "tools/tests/test_v015_release_hardening_smoke.py"
+    ],
+    "scope_hash": "a0d62429df18b496af76dd24b81d80fd252972d1b55409ff4b782f376f7e0fd8"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "b8411458121bc4ccf2519fdf2b201a9c2be7eddf67ef541f234d03dc1fb1a740",
+      "registrado_utc": "2026-10-26T18:31:40Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "1546829d77df3571f5f88f30fbb3814f5e60e73f4091f2d595ca649fc58ea07f",
+      "registrado_utc": "2026-10-26T18:31:41Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "617dd1be45391e92ee4079dfff81a16968922193ef8e284e658e2be221e9dfd6",
+      "registrado_utc": "2026-10-26T18:31:42Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-release-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-26T18:31:43Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-26T18:31:46Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-30T13:05:39Z",
+      "desde": "en_implementacion",
+      "hacia": "pausada_bloqueada"
+    },
+    {
+      "utc": "2026-10-30T13:15:58Z",
+      "desde": "pausada_bloqueada",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-30T13:47:53Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-30T13:50:32Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-26T18:31:44Z",
+      "cierre_utc": "2026-10-27T12:56:20Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-26T20:01:44Z",
+      "minutos_consumidos": 1104.6,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-26T18:32:00Z"
+        },
+        "ac76f70206d7689af": {
+          "rol": "python-data-engineer",
+          "continuaciones": 1,
+          "arranques": 2,
+          "paradas": 2,
+          "duracion_s": 86.0,
+          "inicio_utc": "2026-10-26T18:32:02Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-26T18:33:51Z",
+          "fin_utc": "2026-10-26T18:33:51Z"
+        },
+        "a7489f650a78b6a2d": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-26T18:38:18Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-26T18:38:18Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-27T12:56:32Z",
+      "cierre_utc": "2026-10-27T16:38:15Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-27T14:26:32Z",
+      "minutos_consumidos": 221.71666666666667,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0
+        },
+        "ac76f70206d7689af": {
+          "continuaciones": 1,
+          "rol": "python-data-engineer"
+        },
+        "a7489f650a78b6a2d": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "aacc66f7daacb1a64": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-27T13:00:27Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T13:00:27Z"
+        },
+        "aed987355510fab27": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-27T13:27:36Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T13:27:36Z"
+        },
+        "a7c174355724e3d38": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-27T14:20:33Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T14:20:33Z"
+        },
+        "a0c9078133bf6c003": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-27T14:50:52Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T14:50:52Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s1"
+    },
+    {
+      "id": "s3",
+      "inicio_utc": "2026-10-27T16:38:30Z",
+      "cierre_utc": "2026-10-27T19:38:50Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-28T00:38:30Z",
+      "minutos_consumidos": 180.33333333333334,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-27T19:27:05Z"
+        },
+        "ac76f70206d7689af": {
+          "continuaciones": 1,
+          "rol": "python-data-engineer"
+        },
+        "a7489f650a78b6a2d": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "aacc66f7daacb1a64": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "aed987355510fab27": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "a7c174355724e3d38": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "a0c9078133bf6c003": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "aba4c628064984bc6": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-27T16:45:23Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T16:45:23Z"
+        },
+        "a529dd946583ba9d2": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-27T17:28:41Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T17:28:41Z"
+        },
+        "aeb02b70679681b64": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-27T18:02:58Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T18:02:58Z"
+        },
+        "aafd671cd4f0c24ec": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-27T18:16:37Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T18:16:37Z"
+        },
+        "a1bb3dddd84d4ff23": {
+          "rol": "python-data-engineer",
+          "continuaciones": 0,
+          "arranques": 1,
+          "paradas": 1,
+          "duracion_s": 95.0,
+          "inicio_utc": "2026-10-27T18:37:13Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T18:38:48Z",
+          "fin_utc": "2026-10-27T18:38:48Z"
+        },
+        "adb4da290eae1d223": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-27T18:42:47Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T18:42:47Z"
+        },
+        "ab304193234d79b42": {
+          "rol": "python-data-engineer",
+          "continuaciones": 1,
+          "arranques": 2,
+          "paradas": 1,
+          "duracion_s": 73.0,
+          "inicio_utc": "2026-10-27T19:00:12Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T19:03:36Z",
+          "fin_utc": "2026-10-27T19:03:36Z"
+        },
+        "a61157083c395e25c": {
+          "rol": "python-data-engineer",
+          "continuaciones": 0,
+          "arranques": 1,
+          "paradas": 1,
+          "duracion_s": 24.0,
+          "inicio_utc": "2026-10-27T19:10:14Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T19:10:38Z",
+          "fin_utc": "2026-10-27T19:10:38Z"
+        },
+        "ae074d2774cef6bd5": {
+          "rol": "python-data-engineer",
+          "continuaciones": 0,
+          "arranques": 1,
+          "paradas": 1,
+          "duracion_s": 103.0,
+          "inicio_utc": "2026-10-27T19:12:16Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T19:13:59Z",
+          "fin_utc": "2026-10-27T19:13:59Z"
+        },
+        "ad3a13eea4058e797": {
+          "rol": "python-data-engineer",
+          "continuaciones": 0,
+          "arranques": 1,
+          "paradas": 1,
+          "duracion_s": 138.0,
+          "inicio_utc": "2026-10-27T19:14:34Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T19:16:52Z",
+          "fin_utc": "2026-10-27T19:16:52Z"
+        },
+        "a44bcea46620649ef": {
+          "rol": "python-data-engineer",
+          "continuaciones": 0,
+          "arranques": 1,
+          "paradas": 1,
+          "duracion_s": 113.0,
+          "inicio_utc": "2026-10-27T19:17:50Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T19:19:43Z",
+          "fin_utc": "2026-10-27T19:19:43Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-27T19:21:56Z"
+        },
+        "a91cbec1f3683e280": {
+          "rol": "data-science-reviewer",
+          "continuaciones": 1,
+          "arranques": 2,
+          "paradas": 1,
+          "duracion_s": 36.0,
+          "inicio_utc": "2026-10-27T19:21:57Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T19:26:37Z",
+          "fin_utc": "2026-10-27T19:26:37Z"
+        },
+        "a0db445a2c1830a9d": {
+          "rol": "python-data-engineer",
+          "continuaciones": 0,
+          "arranques": 1,
+          "paradas": 1,
+          "duracion_s": 133.0,
+          "inicio_utc": "2026-10-27T19:27:07Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-27T19:29:20Z",
+          "fin_utc": "2026-10-27T19:29:20Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s2"
+    },
+    {
+      "id": "s4",
+      "inicio_utc": "2026-10-30T13:14:30Z",
+      "cierre_utc": "2026-10-30T13:50:39Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-30T17:14:30Z",
+      "minutos_consumidos": 36.15,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "a0834a9150b8717d2": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-30T13:17:48Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-30T13:17:48Z"
+        },
+        "ab912372729ec46b2": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-30T13:20:51Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-30T13:20:51Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "attestations": [],
+  "body": {
+    "description": "Producto de datos de prueba",
+    "source_refs": [
+      {
+        "observation_evidence_id": "ev-src-ventas",
+        "source_id": "ventas",
+        "source_ref_id": "src-ventas"
+      }
+    ]
+  },
+  "card_id": "producto-a",
+  "card_kind": "data_card",
+  "claims": [
+    {
+      "claim_id": "c-src-ventas",
+      "requirement_id": "source_src-ventas",
+      "statement": "La fuente fue observada",
+      "supports": [
+        "ev-src-ventas"
+      ]
+    }
+  ],
+  "created_at": "2026-10-01T10:00:00Z",
+  "evidence": [
+    {
+      "content_sha256": "e1048a9cf1d0e3a43cef2e8795dc3e361eefe1cebd8fa3c65ba44f1623def7ac",
+      "evidence_id": "ev-src-ventas",
+      "kind": "source_observation",
+      "pinned_at": "2026-10-01T10:00:00Z",
+      "ref_id": "ventas__e1048a9cf1d0"
+    }
+  ],
+  "extensions": {},
+  "generated_at": "2026-10-01T10:00:00Z",
+  "kind_schema_version": 1,
+  "revision_id": "producto-a__5f67d576ea91",
+  "schema_version": 1,
+  "subject": "producto-a",
+  "title": "Data Card de prueba"
+}

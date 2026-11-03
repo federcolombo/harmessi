@@ -1,0 +1,268 @@
+{
+  "schema_version": 1,
+  "change_id": "20261027-v015-scope-closure-corrective",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-27T18:35:43Z",
+  "baseline": {
+    "commit": "33d3358b3e3c55bd24650111c95b7d0a46dcd6ae",
+    "rama": "v0.15-dev",
+    "capturado_utc": "2026-10-27T18:35:43Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".ds_init/control.json",
+      "ARCHITECTURE.md",
+      "docs/cli-reference.md",
+      "docs/contracts/inventory.json",
+      "docs/roadmap/v0.15-debt-matrix.md",
+      "docs/roadmap/v0.15.md",
+      "docs/security-and-trust.md",
+      "openspec/changes/20261026-v015-evidence-privacy-hardening/control.json",
+      "openspec/changes/20261026-v015-evidence-privacy-hardening/tasks.md",
+      "openspec/changes/20261026-v015-public-docs-evals/amendments.jsonl",
+      "openspec/changes/20261026-v015-public-docs-evals/control.json",
+      "openspec/changes/20261026-v015-public-docs-evals/tasks.md",
+      "openspec/changes/20261026-v015-release-hardening/control.json",
+      "openspec/changes/20261026-v015-release-hardening/tasks.md",
+      "openspec/changes/20261026-v015-runtime-observability/control.json",
+      "openspec/changes/20261026-v015-runtime-observability/protected-attestations.jsonl",
+      "openspec/changes/20261026-v015-runtime-observability/tasks.md",
+      "openspec/changes/20261027-v015-scope-closure-corrective/**",
+      "openspec/changes/20261027-v015-scope-closure-corrective/amendments.jsonl",
+      "openspec/changes/20261027-v015-scope-closure-corrective/control.json",
+      "openspec/changes/20261027-v015-scope-closure-corrective/design.md",
+      "openspec/changes/20261027-v015-scope-closure-corrective/proposal.md",
+      "openspec/changes/20261027-v015-scope-closure-corrective/spec.md",
+      "openspec/changes/20261027-v015-scope-closure-corrective/tasks.md",
+      "openspec/changes/20261027-v015-scope-closure-corrective/verification.md",
+      "tools/ds_guard.py",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/tests/test_manifest.py",
+      "tools/dsguard/pathguard.py",
+      "tools/dsguard/protected_attestation.py",
+      "tools/dsguard/repo.py",
+      "tools/dsguard/scope.py",
+      "tools/dsguard/skill_contract.py",
+      "tools/tests/test_pathguard.py",
+      "tools/tests/test_protected_attestation.py",
+      "tools/tests/test_scope.py",
+      "tools/tests/test_scope_amend_compact_t1.py",
+      "tools/tests/test_scope_amendments.py",
+      "tools/tests/test_scope_closure_window.py",
+      "tools/tests/test_skill_contract.py",
+      "tools/tests/test_v013_contract_inventory.py"
+    ],
+    "scope_hash": "db48d971ad7e0a5932ea6c18f586fb3dda77359a1af48351ab4273f5e4b4f6ce"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "71331bbdebdcc86d31eb062a308f2084e7e2732dcf1032315aada96644b89bde",
+      "registrado_utc": "2026-10-27T18:58:36Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-27",
+      "alcance_aprobado": "Harmessi v0.15 20261027-v015-scope-closure-corrective",
+      "cita": "Aprobación humana del corrective de scope/cierre (ventana por ascendencia git, atestación Protected con T1, acción T1 compacta), según decisión del 2026-10-27",
+      "approval_channel": "console_confirmed",
+      "confirmed_at": "2026-10-27T18:58:36Z",
+      "channel_version": "console/v1"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a2edfe5074f836405814c739320a5f238fc737444fa8dd0816bb5073e0828ee3",
+      "registrado_utc": "2026-10-27T18:58:37Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-27",
+      "alcance_aprobado": "Harmessi v0.15 20261027-v015-scope-closure-corrective",
+      "cita": "Aprobación humana del corrective de scope/cierre (ventana por ascendencia git, atestación Protected con T1, acción T1 compacta), según decisión del 2026-10-27"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "4eab4eff138b29118075ef371eb13d48fc4ca3bc150af6281fbf952b10636817",
+      "registrado_utc": "2026-10-27T18:58:38Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-27",
+      "alcance_aprobado": "Harmessi v0.15 20261027-v015-scope-closure-corrective",
+      "cita": "Aprobación humana del corrective de scope/cierre (ventana por ascendencia git, atestación Protected con T1, acción T1 compacta), según decisión del 2026-10-27"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-27T18:59:08Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-27T18:59:14Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-28T15:03:07Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion",
+      "reconciliado": true
+    },
+    {
+      "utc": "2026-10-30T13:14:16Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-27T18:59:06Z",
+      "cierre_utc": "2026-10-27T18:59:31Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-28T02:59:06Z",
+      "minutos_consumidos": 0.4166666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-27T18:59:32Z",
+      "cierre_utc": "2026-10-27T19:38:46Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 8,
+        "max_roles": 3,
+        "max_reintentos": 5,
+        "max_rondas_revision": 3,
+        "max_continuaciones_por_subagente": 2
+      },
+      "deadline_utc": "2026-10-28T02:59:32Z",
+      "minutos_consumidos": 39.233333333333334,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s1"
+    },
+    {
+      "id": "s3",
+      "inicio_utc": "2026-10-28T14:52:00Z",
+      "cierre_utc": "2026-10-28T17:03:04Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 8,
+        "max_roles": 3,
+        "max_reintentos": 5,
+        "max_rondas_revision": 3,
+        "max_continuaciones_por_subagente": 2
+      },
+      "deadline_utc": "2026-10-28T16:22:00Z",
+      "minutos_consumidos": 131.06666666666666,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s2"
+    },
+    {
+      "id": "s4",
+      "inicio_utc": "2026-10-28T17:03:08Z",
+      "cierre_utc": "2026-10-28T17:34:47Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 8,
+        "max_roles": 3,
+        "max_reintentos": 5,
+        "max_rondas_revision": 3,
+        "max_continuaciones_por_subagente": 2
+      },
+      "deadline_utc": "2026-10-28T18:33:08Z",
+      "minutos_consumidos": 31.65,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s3"
+    },
+    {
+      "id": "s5",
+      "inicio_utc": "2026-10-30T12:41:52Z",
+      "cierre_utc": "2026-10-30T13:15:57Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 8,
+        "max_roles": 3,
+        "max_reintentos": 5,
+        "max_rondas_revision": 3,
+        "max_continuaciones_por_subagente": 2
+      },
+      "deadline_utc": "2026-10-30T16:41:52Z",
+      "minutos_consumidos": 34.083333333333336,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "a1a06197c253f9739": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-30T12:52:54Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-30T12:52:54Z"
+        },
+        "af8f490428a9dc7ff": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-30T13:10:28Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-30T13:10:28Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada",
+      "retomada_de": "s4"
+    }
+  ]
+}

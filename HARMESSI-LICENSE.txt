@@ -1,0 +1,33 @@
+HARMESSI - AVISO DE LICENCIA DE LOS COMPONENTES INSTALADOS
+HARMESSI - LICENSE NOTICE FOR INSTALLED COMPONENTS
+
+Required Notice: Copyright 2026 Federico Colombo (https://github.com/federcolombo/harmessi)
+
+[ES]
+Los componentes de Harmessi que `ds_init` instala en este proyecto
+(herramientas, agentes, skills y guardas) se rigen por la
+PolyForm Shield License 1.0.0:
+
+    https://polyformproject.org/licenses/shield/1.0.0
+
+Harmessi es "source available". Para cualquier uso que la PolyForm Shield
+License 1.0.0 no permita, consulte COMMERCIAL-LICENSE.md en el proyecto
+Harmessi (https://github.com/federcolombo/harmessi).
+
+Este archivo NO relicencia ni afecta la licencia de TU proyecto, ni tu codigo,
+ni tus datos. Esos siguen bajo los terminos que vos elijas. Esta licencia
+alcanza unicamente a los componentes de Harmessi instalados.
+
+[EN]
+The Harmessi components that `ds_init` installs in this project (tools,
+agents, skills and guards) are governed by the PolyForm Shield License 1.0.0:
+
+    https://polyformproject.org/licenses/shield/1.0.0
+
+Harmessi is "source available". For any use that the PolyForm Shield License
+1.0.0 does not permit, see COMMERCIAL-LICENSE.md in the Harmessi project
+(https://github.com/federcolombo/harmessi).
+
+This file does NOT relicense or affect the license of YOUR project, your code
+or your data. Those remain under the terms you choose. This license covers
+only the installed Harmessi components.

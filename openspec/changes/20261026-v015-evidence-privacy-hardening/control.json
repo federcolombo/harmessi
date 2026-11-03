@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "change_id": "20261026-v015-evidence-privacy-hardening",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-26T17:47:28Z",
+  "baseline": {
+    "commit": "dc8bb1976aa4f3ae8a96dc44373347586ca20821",
+    "rama": "v0.15-dev",
+    "capturado_utc": "2026-10-26T17:47:28Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "README.md",
+      "docs/contracts/**",
+      "docs/roadmap/v0.15-debt-matrix.md",
+      "docs/roadmap/v0.15.md",
+      "docs/versioning.md",
+      "openspec/changes/20261026-v015-evidence-privacy-hardening/amendments.jsonl",
+      "openspec/changes/20261026-v015-evidence-privacy-hardening/control.json",
+      "openspec/changes/20261026-v015-evidence-privacy-hardening/design.md",
+      "openspec/changes/20261026-v015-evidence-privacy-hardening/proposal.md",
+      "openspec/changes/20261026-v015-evidence-privacy-hardening/spec.md",
+      "openspec/changes/20261026-v015-evidence-privacy-hardening/tasks.md",
+      "openspec/changes/20261026-v015-evidence-privacy-hardening/verification.md",
+      "tools/cards/tests/**",
+      "tools/harmessi_bench/**",
+      "tools/harmessi_improve/**",
+      "tools/tests/**"
+    ],
+    "scope_hash": "64e680d04fe453086b970a2a0df75581b3cdc48808f33d74bfb28ba89cb21a3d"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "b4f57be5ad5afbc74815d8f95188869177075b4d29dee0bec3c6fc11d99d43d9",
+      "registrado_utc": "2026-10-26T17:52:16Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-evidence-privacy-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "b7ff3d5991614b3b9e82468b879a81e78a0cd530e8eb443a6f77d49269826f19",
+      "registrado_utc": "2026-10-26T17:52:17Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-evidence-privacy-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "8d09ef4f919bf74b76c57cf9124fd8780fd584a799435c052495da0222a52ccf",
+      "registrado_utc": "2026-10-26T17:52:19Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-evidence-privacy-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-26T17:52:20Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-26T18:27:34Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-26T18:27:36Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-28T15:12:06Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-26T18:27:33Z",
+      "cierre_utc": "2026-10-26T18:27:39Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-26T19:57:33Z",
+      "minutos_consumidos": 0.1,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-26T18:29:26Z",
+      "cierre_utc": "2026-10-26T18:29:32Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-26T19:59:26Z",
+      "minutos_consumidos": 0.1,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada",
+      "retomada_de": "s1"
+    },
+    {
+      "id": "s3",
+      "inicio_utc": "2026-10-28T15:10:48Z",
+      "cierre_utc": "2026-10-28T17:02:32Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-28T16:40:48Z",
+      "minutos_consumidos": 111.73333333333333,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "afec734dea1a2f5cf": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-28T15:53:02Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-28T15:53:02Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s2"
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "change_id": "20261026-v015-provider-reality",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-26T15:51:01Z",
+  "baseline": {
+    "commit": "651d6d836f8bf41207cb4a8e423af34df93e768e",
+    "rama": "v0.15-dev",
+    "capturado_utc": "2026-10-26T15:51:01Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "README.md",
+      "docs/contracts/inventory.json",
+      "docs/providers.md",
+      "docs/roadmap/v0.15-debt-matrix.md",
+      "docs/roadmap/v0.15.md",
+      "openspec/changes/20261026-v015-provider-reality/amendments.jsonl",
+      "openspec/changes/20261026-v015-provider-reality/control.json",
+      "openspec/changes/20261026-v015-provider-reality/design.md",
+      "openspec/changes/20261026-v015-provider-reality/proposal.md",
+      "openspec/changes/20261026-v015-provider-reality/spec.md",
+      "openspec/changes/20261026-v015-provider-reality/tasks.md",
+      "openspec/changes/20261026-v015-provider-reality/verification.md",
+      "tools/fallback/tests/test_core.py",
+      "tools/fallback/tests/test_cross_provider_parity.py",
+      "tools/providers/claude_code.py",
+      "tools/providers/conformance.py",
+      "tools/providers/core.py",
+      "tools/providers/tests/test_conformance.py",
+      "tools/providers/tests/test_core.py",
+      "tools/routing/tests/test_core.py",
+      "tools/tests/test_v013_release_hardening_smoke.py",
+      "tools/tests/test_v014_release_hardening_smoke.py",
+      "tools/tests/test_v015_provider_matrix.py"
+    ],
+    "scope_hash": "a80206d3ce026718780364744c53270fe85f49fad19ccc2396a9a8577ec430d2"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "b15e90116527b24510f758f45d6b4ae4fecc98834cd187d8b1064323741fab82",
+      "registrado_utc": "2026-10-26T15:52:57Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-provider-reality",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "4eb5302cd4029d00898fa6bf990197236173dfa38a6e226fda863c8082ca4971",
+      "registrado_utc": "2026-10-26T15:52:58Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-provider-reality",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ed27b7efd4d89a3fb20c3f244299b53f2dd61f87b2916f9674fdc0df65edc7e9",
+      "registrado_utc": "2026-10-26T15:53:00Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-provider-reality",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-26T15:53:01Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-26T15:53:02Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-26T16:00:24Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-26T16:00:27Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-26T15:51:03Z",
+      "cierre_utc": "2026-10-26T16:00:28Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-26T17:21:03Z",
+      "minutos_consumidos": 9.416666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-26T15:53:11Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-26T15:57:36Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

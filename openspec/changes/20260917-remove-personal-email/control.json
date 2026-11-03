@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "change_id": "20260917-remove-personal-email",
+  "modo": "abreviado",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-17T18:28:17Z",
+  "baseline": {
+    "commit": "d15316d156b5621c228a01ec69e59813ead26fcc",
+    "rama": "v0.5-dev",
+    "capturado_utc": "2026-09-17T18:28:17Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260917-remove-personal-email/proposal.md",
+      "openspec/changes/20260917-remove-personal-email/tasks.md",
+      "openspec/changes/20260917-remove-personal-email/control.json",
+      "openspec/changes/20260917-multi-provider-adapters/control.json",
+      "openspec/changes/20260917-multi-provider-adapters/proposal.md",
+      "openspec/changes/20260917-harmessi-bench/control.json",
+      "openspec/changes/20260917-harmessi-bench/proposal.md",
+      "openspec/changes/20260917-provider-routing/control.json",
+      "openspec/changes/20260917-fallback-and-handoffs/control.json",
+      "openspec/changes/20260917-cross-provider-hardening/control.json",
+      "openspec/changes/20260917-v0-4-release-hardening/verification.md",
+      "openspec/changes/20260917-v0-5-release-hardening/verification.md",
+      "tools/dsguard/core.py",
+      "tools/ds_guard.py",
+      "tools/tests/test_validar_usuario_sin_email.py",
+      "tools/tests/test_ds_guard_usuario_guard.py",
+      ".claude/skills/lead-data-scientist/sdd.md",
+      ".claude/skills/lead-data-scientist/decision-ledger.md",
+      "openspec/changes/20260917-remove-personal-email/verification.md",
+      "tools/ds_init/profiles/python_jupyter_data/templates/decision-ledger.md.tmpl"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "1e89cd1cd76470f1f8da865ea3b0d74f6cb5fc6ce1d023f99bf0e47406bceb6d",
+      "registrado_utc": "2026-09-17T19:29:49Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Eliminar email personal de artefactos versionados + guarda tecnica",
+      "cita": "Quiero que el repositorio publico no contenga mi email personal dentro de archivos del proyecto... Corregi la fuente/template/logica que lo genera... No push. No merge. No tag. No release."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "98e03bc64c1da5f0ff765a7b08c9b67c3518a835fecbec188505b178b62c749b",
+      "registrado_utc": "2026-09-17T19:29:51Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Eliminar email personal de artefactos versionados + guarda tecnica",
+      "cita": "Quiero que el repositorio publico no contenga mi email personal dentro de archivos del proyecto... Corregi la fuente/template/logica que lo genera... No push. No merge. No tag. No release."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-17T19:29:53Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-17T19:29:54Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-17T19:29:55Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-17T19:32:13Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-17T19:29:52Z",
+      "cierre_utc": "2026-09-17T19:32:14Z",
+      "modo": "mediana",
+      "presupuesto": {
+        "minutos": 60,
+        "max_tareas": 2,
+        "max_roles": 1,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-17T20:29:52Z",
+      "minutos_consumidos": 2.3666666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-17T19:31:27Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

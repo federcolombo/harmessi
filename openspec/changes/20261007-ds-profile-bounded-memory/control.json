@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "change_id": "20261007-ds-profile-bounded-memory",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-07T13:09:01Z",
+  "baseline": {
+    "commit": "53253cef6880edf7bc9668f7a45424e3c2814fee",
+    "rama": "v0.9-dev",
+    "capturado_utc": "2026-10-07T13:09:01Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.10.md",
+      "docs/roadmap/v0.9.md",
+      "openspec/changes/20261007-ds-profile-bounded-memory/**",
+      "openspec/changes/20261007-ds-profile-bounded-memory/control.json",
+      "openspec/changes/20261007-ds-profile-bounded-memory/design.md",
+      "openspec/changes/20261007-ds-profile-bounded-memory/proposal.md",
+      "openspec/changes/20261007-ds-profile-bounded-memory/spec.md",
+      "openspec/changes/20261007-ds-profile-bounded-memory/tasks.md",
+      "openspec/changes/20261007-ds-profile-bounded-memory/verification.md",
+      "tools/datacontracts/tests/**",
+      "tools/datasources/tests/**",
+      "tools/ds_profile/**"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e9a13fc6eac4afb7d45af6f2140cc1e46605385e25bed87ebb2c035a31ab4ef1",
+      "registrado_utc": "2026-10-07T13:11:18Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective C ds-profile-bounded-memory",
+      "cita": "Aprobación humana explícita del scope y el contrato de Corrective C (memoria acotada de ds_profile, exacto a sampled explícito, determinismo, sin dependencias nuevas)"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "7981d07f31b6c860cc8e26dd6a0615dfe29f4d3b2d0535a7de6f5a4e80c10326",
+      "registrado_utc": "2026-10-07T13:11:20Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective C ds-profile-bounded-memory",
+      "cita": "Aprobación humana explícita del scope y el contrato de Corrective C (memoria acotada de ds_profile, exacto a sampled explícito, determinismo, sin dependencias nuevas)"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "3842a065f4d79c5aa62cd95cbcc7c56f1ac39a5cf364dac5acf6d8a6ec8f3214",
+      "registrado_utc": "2026-10-07T13:11:21Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective C ds-profile-bounded-memory",
+      "cita": "Aprobación humana explícita del scope y el contrato de Corrective C (memoria acotada de ds_profile, exacto a sampled explícito, determinismo, sin dependencias nuevas)"
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "fbd7d133a4586d7d82328b0fccb0036f64918c5a94f37809928f60556a97554b",
+      "registrado_utc": "2026-10-07T13:11:22Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective C ds-profile-bounded-memory",
+      "cita": "Aprobación humana explícita del scope y el contrato de Corrective C (memoria acotada de ds_profile, exacto a sampled explícito, determinismo, sin dependencias nuevas)"
+    },
+    {
+      "artefacto": "pytest:tools/ds_profile",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "50b2d117576f89d674e78f2c32561e03beb2cdb83f2a3b460e41cf6bade28268",
+      "registrado_utc": "2026-10-07T13:35:30Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective C ds-profile-bounded-memory: dirigida ds_profile",
+      "cita": "Aprobación humana explícita del scope y el contrato de Corrective C"
+    },
+    {
+      "artefacto": "pytest:tools/ds_profile",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ddaeb3db6baa582682d3ca9192d813a50d0a75fa1427e0c6e361b442529e9980",
+      "registrado_utc": "2026-10-07T13:35:43Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective C ds-profile-bounded-memory: dirigida ds_profile (venv harmessi)",
+      "cita": "Aprobación humana explícita del scope y el contrato de Corrective C"
+    },
+    {
+      "artefacto": "pytest:tools/ds_profile",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9204eb86729dd0ee9f5a1adc4a286d7ad59e9f944af16b9ac9aebaad9aaf7907",
+      "registrado_utc": "2026-10-07T13:36:11Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective C ds-profile-bounded-memory: dirigida ds_profile con pyarrow",
+      "cita": "Aprobación humana explícita del scope y el contrato de Corrective C"
+    },
+    {
+      "artefacto": "pytest:tools/datasources/tests|tools/datacontracts/tests|tools/leadrun/tests/test_allowlist.py|tools/reporting/tests/test_evidence.py|tools/reporting/tests/test_validation.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "de8d8b7e35a4f4ebe729f798112b6873dd3101b0d546610347ec16bc8e99926c",
+      "registrado_utc": "2026-10-07T13:37:19Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective C ds-profile-bounded-memory: regresion R1 consumidores",
+      "cita": "Aprobación humana explícita del scope y el contrato de Corrective C"
+    },
+    {
+      "artefacto": "pytest:tools/ds_profile/tests/test_fingerprint.py|tools/tests/test_architecture_boundaries.py|tools/tests/test_scientific_validity.py|tools/tests/test_v06_core_neutrality.py|tools/tests/test_v07_core_neutrality.py|tools/tests/test_v07_evolution_neutrality.py|tools/tests/test_v07_modelquality_neutrality.py|tools/tests/test_v07_qualityevidence_neutrality.py|tools/tests/test_v07_release_hardening_smoke.py|tools/tests/test_v07_validation_neutrality.py|tools/tests/test_v08_autonomy_neutrality.py|tools/tests/test_v08_datasources_neutrality.py|tools/tests/test_v08_leadrun_neutrality.py|tools/ds_init/tests/test_manifest.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "b6a74403e1cead1aa6990fa5f8449f3dcae42f5c07e4cfb0638870df3606f596",
+      "registrado_utc": "2026-10-07T13:38:01Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-07",
+      "alcance_aprobado": "Implementación, validación y cierre de Corrective C ds-profile-bounded-memory: regresion R2 arquitectura/inercia/manifest",
+      "cita": "Aprobación humana explícita del scope y el contrato de Corrective C"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-07T13:11:33Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-07T13:11:34Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-07T13:11:44Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-07T13:50:08Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-07T13:50:17Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-07T13:11:43Z",
+      "cierre_utc": "2026-10-07T13:50:29Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 600,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-07T23:11:43Z",
+      "minutos_consumidos": 38.766666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-07T13:37:04Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "metricas_eficiencia": {
+    "ejecuciones": [
+      {
+        "execution_id": "pytest__796675e4c8fc",
+        "duration_seconds": 0.0,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__b5f024cb4d57",
+        "duration_seconds": 19.60900000000038,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__31e0e3136518",
+        "duration_seconds": 42.125,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__cb0c66ae05e8",
+        "duration_seconds": 27.89100000000053,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__67d46dd06480",
+        "duration_seconds": 21.01600000000053,
+        "command_form": "pytest"
+      }
+    ]
+  }
+}

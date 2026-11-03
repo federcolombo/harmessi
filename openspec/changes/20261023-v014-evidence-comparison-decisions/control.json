@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "change_id": "20261023-v014-evidence-comparison-decisions",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-23T13:45:50Z",
+  "baseline": {
+    "commit": "b767411438a1369e5e518d3d966f3329538eb2cb",
+    "rama": "v0.14-dev",
+    "capturado_utc": "2026-10-23T13:45:50Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20261023-v014-evidence-comparison-decisions/proposal.md",
+      "openspec/changes/20261023-v014-evidence-comparison-decisions/tasks.md",
+      "openspec/changes/20261023-v014-evidence-comparison-decisions/spec.md",
+      "openspec/changes/20261023-v014-evidence-comparison-decisions/design.md",
+      "openspec/changes/20261023-v014-evidence-comparison-decisions/control.json",
+      "openspec/changes/20261023-v014-evidence-comparison-decisions/verification.md",
+      "openspec/changes/20261023-v014-evidence-comparison-decisions/amendments.jsonl",
+      "tools/harmessi_improve/**",
+      "tools/harmessi_bench/**",
+      "tools/tests/test_v014_*.py",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.14.md",
+      "docs/contracts/**"
+    ],
+    "scope_hash": "5b60bf1d34d30ed3da9e43fd2be6814ba0e817eb82864d82973b52c3d555d555"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ab07818602dce19717589874b4ca76703de4f6b44b759c025c24bfc5b60573ed",
+      "registrado_utc": "2026-10-23T13:45:55Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-23",
+      "alcance_aprobado": "Harmessi v0.14 20261023-v014-evidence-comparison-decisions",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.14.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "82628a65b2e2b96ea94c21dbe8bc96002b8cb0e7c4ec623ff9ac05c921147412",
+      "registrado_utc": "2026-10-23T13:45:56Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-23",
+      "alcance_aprobado": "Harmessi v0.14 20261023-v014-evidence-comparison-decisions",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.14.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "d09b1d2d0740a222a2d15b417abd50774d7291962d1982b6c3685900c829a4d9",
+      "registrado_utc": "2026-10-23T13:45:57Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-23",
+      "alcance_aprobado": "Harmessi v0.14 20261023-v014-evidence-comparison-decisions",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.14.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-23T13:45:58Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-23T13:46:01Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-23T14:07:24Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-23T14:07:27Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-23T13:46:00Z",
+      "cierre_utc": "2026-10-23T14:07:28Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-23T17:46:00Z",
+      "minutos_consumidos": 21.466666666666665,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-23T13:46:17Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-23T13:52:04Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

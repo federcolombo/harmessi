@@ -1,0 +1,399 @@
+{
+  "schema_version": 1,
+  "change_id": "20261026-v015-runtime-observability",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-26T16:35:07Z",
+  "baseline": {
+    "commit": "173b54cf0b255bbb0bea40ff6dcf32f078174a09",
+    "rama": "v0.15-dev",
+    "capturado_utc": "2026-10-26T16:35:07Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/methodology.md",
+      "ARCHITECTURE.md",
+      "README.md",
+      "docs/contracts/inventory.json",
+      "docs/roadmap/v0.15-debt-matrix.md",
+      "docs/roadmap/v0.15.md",
+      "openspec/changes/20261026-v015-runtime-observability/amendments.jsonl",
+      "openspec/changes/20261026-v015-runtime-observability/control.json",
+      "openspec/changes/20261026-v015-runtime-observability/design.md",
+      "openspec/changes/20261026-v015-runtime-observability/proposal.md",
+      "openspec/changes/20261026-v015-runtime-observability/spec.md",
+      "openspec/changes/20261026-v015-runtime-observability/tasks.md",
+      "openspec/changes/20261026-v015-runtime-observability/verification.md",
+      "tools/ds_guard.py",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/profiles/python_jupyter_data/templates/methodology.md.tmpl",
+      "tools/ds_init/tests/test_manifest.py",
+      "tools/dsguard/efficiency.py",
+      "tools/dsguard/hook_launcher_subagentes.py",
+      "tools/dsguard/hook_subagentes.py",
+      "tools/dsguard/sdd.py",
+      "tools/harmessi/doctor.py",
+      "tools/harmessi/tests/test_doctor.py",
+      "tools/tests/fixtures/hooks/**",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/tests/test_ds_guard_budgets_cli.py",
+      "tools/tests/test_efficiency.py",
+      "tools/tests/test_hook_subagentes.py",
+      "tools/tests/test_session_recovery.py",
+      "tools/tests/test_skill_methodology.py"
+    ],
+    "scope_hash": "7997a3dbe18deb15c45b40fbc6e7c7d045878cc8ce99e3590d0360da68e4a5ec"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f5cc61bd9ab8ac7d860cf51d3ebe9f4ef92ee31bbd438b756577b52b9d7eaa7f",
+      "registrado_utc": "2026-10-26T16:37:43Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-runtime-observability",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "9db5e03f9fe70d68b5abfafe1b9c5d3f503074bd9b7591fa96931a7d92788cee",
+      "registrado_utc": "2026-10-26T16:37:44Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-runtime-observability",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f5cc61bd9ab8ac7d860cf51d3ebe9f4ef92ee31bbd438b756577b52b9d7eaa7f",
+      "registrado_utc": "2026-10-26T16:37:57Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-runtime-observability",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "9db5e03f9fe70d68b5abfafe1b9c5d3f503074bd9b7591fa96931a7d92788cee",
+      "registrado_utc": "2026-10-26T16:37:58Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-runtime-observability",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "48d6fbb7f01e5254b31af1e04941b6674a269e3baf9ac7f3f7d7d345fdeb8024",
+      "registrado_utc": "2026-10-26T16:40:08Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-runtime-observability",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "576a393cfbf1d735e09c6fe1f214242e36c13ce09f87f00f9c9704b4dd050a8c",
+      "registrado_utc": "2026-10-26T16:40:09Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-runtime-observability",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "9bb9658fc019a236524bcee0d274da38291fd58b6c833b019e8961cfdbbf0ec9",
+      "registrado_utc": "2026-10-26T16:40:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-runtime-observability",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-26T16:40:11Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-26T16:40:13Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-26T18:27:28Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-28T15:10:38Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-26T16:35:08Z",
+      "cierre_utc": "2026-10-26T17:43:19Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-26T18:05:08Z",
+      "minutos_consumidos": 68.18333333333334,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-26T16:35:44Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-26T17:29:18Z"
+        },
+        "Explore": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-26T17:28:11Z"
+        },
+        "a52f9e8fbf47fae58": {
+          "rol": "Explore",
+          "continuaciones": 0,
+          "arranques": 1,
+          "paradas": 1,
+          "duracion_s": 6.0,
+          "inicio_utc": "2026-10-26T17:28:13Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-26T17:28:19Z",
+          "fin_utc": "2026-10-26T17:28:19Z"
+        },
+        "af0f2a83e268d7b4f": {
+          "rol": "Explore",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-26T17:28:17Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-26T17:28:17Z"
+        },
+        "a0e94d4c59a9ab008": {
+          "rol": "data-science-reviewer",
+          "continuaciones": 1,
+          "arranques": 2,
+          "paradas": 2,
+          "duracion_s": 13.0,
+          "inicio_utc": "2026-10-26T17:29:19Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-26T17:29:37Z",
+          "fin_utc": "2026-10-26T17:29:37Z"
+        },
+        "a5a98fc59fdef182d": {
+          "rol": "data-science-reviewer",
+          "continuaciones": 0,
+          "arranques": 1,
+          "paradas": 1,
+          "duracion_s": 9.0,
+          "inicio_utc": "2026-10-26T17:29:19Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-26T17:29:28Z",
+          "fin_utc": "2026-10-26T17:29:28Z"
+        },
+        "af0fc32fe960683fb": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-10-26T17:36:03Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-26T17:36:03Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-26T18:27:14Z",
+      "cierre_utc": "2026-10-26T18:27:32Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-26T19:57:14Z",
+      "minutos_consumidos": 0.3,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0
+        },
+        "Explore": {
+          "continuaciones": 0
+        },
+        "a52f9e8fbf47fae58": {
+          "continuaciones": 0,
+          "rol": "Explore"
+        },
+        "af0f2a83e268d7b4f": {
+          "continuaciones": 0,
+          "rol": "Explore"
+        },
+        "a0e94d4c59a9ab008": {
+          "continuaciones": 1,
+          "rol": "data-science-reviewer"
+        },
+        "a5a98fc59fdef182d": {
+          "continuaciones": 0,
+          "rol": "data-science-reviewer"
+        },
+        "af0fc32fe960683fb": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada",
+      "retomada_de": "s1"
+    },
+    {
+      "id": "s3",
+      "inicio_utc": "2026-10-26T18:29:18Z",
+      "cierre_utc": "2026-10-26T18:29:25Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-26T19:59:18Z",
+      "minutos_consumidos": 0.11666666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0
+        },
+        "Explore": {
+          "continuaciones": 0
+        },
+        "a52f9e8fbf47fae58": {
+          "continuaciones": 0,
+          "rol": "Explore"
+        },
+        "af0f2a83e268d7b4f": {
+          "continuaciones": 0,
+          "rol": "Explore"
+        },
+        "a0e94d4c59a9ab008": {
+          "continuaciones": 1,
+          "rol": "data-science-reviewer"
+        },
+        "a5a98fc59fdef182d": {
+          "continuaciones": 0,
+          "rol": "data-science-reviewer"
+        },
+        "af0fc32fe960683fb": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada",
+      "retomada_de": "s2"
+    },
+    {
+      "id": "s4",
+      "inicio_utc": "2026-10-28T15:09:21Z",
+      "cierre_utc": "2026-10-28T17:02:47Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-28T16:39:21Z",
+      "minutos_consumidos": 113.43333333333334,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0
+        },
+        "Explore": {
+          "continuaciones": 0
+        },
+        "a52f9e8fbf47fae58": {
+          "continuaciones": 0,
+          "rol": "Explore"
+        },
+        "af0f2a83e268d7b4f": {
+          "continuaciones": 0,
+          "rol": "Explore"
+        },
+        "a0e94d4c59a9ab008": {
+          "continuaciones": 1,
+          "rol": "data-science-reviewer"
+        },
+        "a5a98fc59fdef182d": {
+          "continuaciones": 0,
+          "rol": "data-science-reviewer"
+        },
+        "af0fc32fe960683fb": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s3"
+    }
+  ]
+}

@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "change_id": "20260928-source-neutral-data-access",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-28T18:15:35Z",
+  "baseline": {
+    "commit": "246590f2159a4c1586099bb1ad1458b54c21b7fb",
+    "rama": "v0.8-dev",
+    "capturado_utc": "2026-09-28T18:15:35Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.8.md",
+      "openspec/changes/20260928-source-neutral-data-access/control.json",
+      "openspec/changes/20260928-source-neutral-data-access/design.md",
+      "openspec/changes/20260928-source-neutral-data-access/proposal.md",
+      "openspec/changes/20260928-source-neutral-data-access/spec.md",
+      "openspec/changes/20260928-source-neutral-data-access/tasks.md",
+      "openspec/changes/20260928-source-neutral-data-access/verification.md",
+      "tools/datacontracts/legacy_wording.py",
+      "tools/datacontracts/tests/parity/__init__.py",
+      "tools/datacontracts/tests/parity/build_golden_v07.py",
+      "tools/datacontracts/tests/parity/golden_v07_validation.json",
+      "tools/datacontracts/tests/test_divergencias_declaradas.py",
+      "tools/datacontracts/tests/test_dual_import_identity.py",
+      "tools/datacontracts/tests/test_observation_native.py",
+      "tools/datacontracts/tests/test_parity_golden.py",
+      "tools/datacontracts/validation.py",
+      "tools/datasources/__init__.py",
+      "tools/datasources/core.py",
+      "tools/datasources/file_observer.py",
+      "tools/datasources/profile_bridge.py",
+      "tools/datasources/registry.py",
+      "tools/datasources/runtime.py",
+      "tools/datasources/scan.py",
+      "tools/datasources/tests/__init__.py",
+      "tools/datasources/tests/test_core.py",
+      "tools/datasources/tests/test_file_observer.py",
+      "tools/datasources/tests/test_profile_bridge.py",
+      "tools/datasources/tests/test_registry.py",
+      "tools/datasources/tests/test_runtime.py",
+      "tools/datasources/tests/test_scan.py",
+      "tools/ds_guard.py",
+      "tools/ds_init/manifest.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/tests/test_ds_guard_source_cli.py",
+      "tools/tests/test_v07_validation_neutrality.py",
+      "tools/tests/test_v08_datasources_neutrality.py",
+      "tools/tests/test_v08_source_id_parity.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "3ec441bc2f9cb46e62977041fa18d5d2a25451c72c9d95b07df6fc8caf469626",
+      "registrado_utc": "2026-09-29T14:36:03Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-29",
+      "alcance_aprobado": "Change 1 - source-neutral-data-access (docs/roadmap/v0.8.md)",
+      "cita": "Mensaje del autor (2026-09-29): 'si', en respuesta directa al paquete de revision presentado ('SDD ALINEADO CON ROADMAP') para proposal.md/spec.md/design.md del Change 1. Fuente_id canonico confirmado el 2026-09-28. Sin decisiones materiales pendientes senaladas por el autor."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "4ad97795a68ae4fd972fe1f652be9a6e95d2061bac6a4f665d043e114390bebc",
+      "registrado_utc": "2026-09-29T14:36:03Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-29",
+      "alcance_aprobado": "Change 1 - source-neutral-data-access (docs/roadmap/v0.8.md)",
+      "cita": "Mensaje del autor (2026-09-29): 'si', en respuesta directa al paquete de revision presentado ('SDD ALINEADO CON ROADMAP') para proposal.md/spec.md/design.md del Change 1. Fuente_id canonico confirmado el 2026-09-28. Sin decisiones materiales pendientes senaladas por el autor."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "90fc6b725d119c2bb6a177076e28f99ac14f2298b6ac01022458344c978c0b2e",
+      "registrado_utc": "2026-09-29T14:36:03Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-29",
+      "alcance_aprobado": "Change 1 - source-neutral-data-access (docs/roadmap/v0.8.md)",
+      "cita": "Mensaje del autor (2026-09-29): 'si', en respuesta directa al paquete de revision presentado ('SDD ALINEADO CON ROADMAP') para proposal.md/spec.md/design.md del Change 1. Fuente_id canonico confirmado el 2026-09-28. Sin decisiones materiales pendientes senaladas por el autor."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-29T14:36:09Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-29T14:36:17Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-29T17:40:06Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion",
+      "reconciliado": true
+    },
+    {
+      "utc": "2026-09-29T17:40:07Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-28T18:15:36Z",
+      "cierre_utc": "2026-09-29T14:35:15Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 8,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-29T02:15:36Z",
+      "minutos_consumidos": 1219.65,
+      "resultado": "excedida",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-28T18:16:44Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-09-29T14:36:16Z",
+      "cierre_utc": "2026-09-29T17:40:08Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 10,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-29T22:36:16Z",
+      "minutos_consumidos": 183.86666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-29T17:36:00Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-29T15:52:53Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

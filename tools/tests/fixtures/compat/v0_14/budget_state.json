@@ -1,0 +1,10 @@
+{
+  "budget_version": 1,
+  "candidates": 1,
+  "probe_cycles": 1,
+  "retries_by_candidate": {},
+  "runs_by_candidate": {
+    "cand-65cb2b47345e": 4
+  },
+  "started_utc": "2026-10-26T15:35:06Z"
+}

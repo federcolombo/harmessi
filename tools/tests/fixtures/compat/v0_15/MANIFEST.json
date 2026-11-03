@@ -1,0 +1,20 @@
+{
+  "commit_origen": "7e7c681acae2772f9dcff336b9bbc004ec5a1802",
+  "fixtures": {
+    "cli_surface.json": {
+      "sha256": "d4fd0dbd13f5d73e4aec163fcc25218cd7e8d2f4f1642d6086313e915c4c3c87"
+    },
+    "eval_result.json": {
+      "sha256": "3ec71d9db778a6443ece90deb9209229512457cc8c2b5826e58cdca75fb1d05c"
+    },
+    "source_observation.json": {
+      "sha256": "841750858b4e31cb07e7f1bdf31a2e99bdc7374e6cb03ac41fe73dfff03ca266"
+    },
+    "sources_registry.json": {
+      "sha256": "c9e6ae3564e3c2bc2eac40ca35c879f94b7aa3248809a8476d4fb99914e75f67"
+    }
+  },
+  "generador": "tools/tests/fixtures/compat/generate_v015.py",
+  "harmessi_version": "0.15.0",
+  "tag_origen": "v0.15.0"
+}

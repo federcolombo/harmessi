@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "change_id": "20260915-project-maturity-state-and-calibration",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-14T16:57:36Z",
+  "baseline": {
+    "commit": "799e6169016070ab5d578f6333d9e5527a41a018",
+    "rama": "main",
+    "capturado_utc": "2026-09-14T16:57:36Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260915-project-maturity-state-and-calibration/proposal.md",
+      "openspec/changes/20260915-project-maturity-state-and-calibration/tasks.md",
+      "openspec/changes/20260915-project-maturity-state-and-calibration/spec.md",
+      "openspec/changes/20260915-project-maturity-state-and-calibration/design.md",
+      "openspec/changes/20260915-project-maturity-state-and-calibration/control.json",
+      "tools/dsguard/maturity.py",
+      "tools/ds_guard.py",
+      "tools/ds_init/manifest.py",
+      "tools/tests/test_manifest_dsguard_parity.py",
+      "tools/tests/test_maturity.py",
+      "tools/ds_init/tests/test_integracion_instalacion.py",
+      "openspec/changes/20260915-project-maturity-state-and-calibration/verification.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "8d7d42bbc83045f4d9a7865fbcdd45c01b92b12099a0e7edbd48773365c274d7",
+      "registrado_utc": "2026-09-14T17:13:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Estado de madurez del proyecto (.harmessi/project.json): project_stage/risk_level, project init (nuevo vs --adopt), calibrate, set-risk, status, en tools/dsguard/maturity.py, segun proposal/spec/design.md con ajuste L2 (init nuevo vs --adopt separados)",
+      "cita": "Apruebo el diseno con un ajuste en L2. ... Incorpora este ajuste a proposal/spec/design/tasks. Despues aproba e implementa unicamente Change 3 segun el flujo SDD. Reviewer obligatorio."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "fa26f9d4fb78457882258961dd153baf180500b1e18c70820c5878a3438c671f",
+      "registrado_utc": "2026-09-14T17:13:16Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Estado de madurez del proyecto (.harmessi/project.json): project_stage/risk_level, project init (nuevo vs --adopt), calibrate, set-risk, status, en tools/dsguard/maturity.py, segun proposal/spec/design.md con ajuste L2 (init nuevo vs --adopt separados)",
+      "cita": "Apruebo el diseno con un ajuste en L2. ... Incorpora este ajuste a proposal/spec/design/tasks. Despues aproba e implementa unicamente Change 3 segun el flujo SDD. Reviewer obligatorio."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e7e85a182b802235f6300ff395db16f6c710c8051997038bb270e6055428a9ec",
+      "registrado_utc": "2026-09-14T17:13:16Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Estado de madurez del proyecto (.harmessi/project.json): project_stage/risk_level, project init (nuevo vs --adopt), calibrate, set-risk, status, en tools/dsguard/maturity.py, segun proposal/spec/design.md con ajuste L2 (init nuevo vs --adopt separados)",
+      "cita": "Apruebo el diseno con un ajuste en L2. ... Incorpora este ajuste a proposal/spec/design/tasks. Despues aproba e implementa unicamente Change 3 segun el flujo SDD. Reviewer obligatorio."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f1a2a7dfd022abe62952ba66bf75d39d7a3c9b6243961791714d20af56ab4639",
+      "registrado_utc": "2026-09-14T17:13:17Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Estado de madurez del proyecto (.harmessi/project.json): project_stage/risk_level, project init (nuevo vs --adopt), calibrate, set-risk, status, en tools/dsguard/maturity.py, segun proposal/spec/design.md con ajuste L2 (init nuevo vs --adopt separados)",
+      "cita": "Apruebo el diseno con un ajuste en L2. ... Incorpora este ajuste a proposal/spec/design/tasks. Despues aproba e implementa unicamente Change 3 segun el flujo SDD. Reviewer obligatorio."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-14T17:13:18Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-14T17:13:35Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-14T17:25:09Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-14T17:26:33Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-14T17:13:34Z",
+      "cierre_utc": "2026-09-14T17:26:34Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 120,
+        "max_tareas": 30,
+        "max_roles": 3,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-14T19:13:34Z",
+      "minutos_consumidos": 13.0,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-14T17:25:28Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-14T17:23:23Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

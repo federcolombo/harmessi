@@ -1,0 +1,23 @@
+# Fin de linea LF fijo, acotado (sin regla global `* text=auto`).
+#
+# Por que: Harmessi registra hashes sha256 byte-exact de los archivos que copia
+# a los proyectos destino (tools/ds_init/manifest.py) y de los fixtures y
+# golden files de compatibilidad. Con `core.autocrlf=true` (tipico en Windows)
+# Git reescribiria los finales de linea al hacer checkout y el contenido en
+# disco dejaria de coincidir con el hash esperado. Solo se fuerzan las rutas
+# donde la igualdad byte a byte importa.
+
+# Fixtures reales de compatibilidad (artefactos de tags, hasheados).
+tools/tests/fixtures/compat/** text eol=lf
+
+# Golden files de paridad de Data Contracts.
+tools/datacontracts/tests/parity/golden_*.json text eol=lf
+
+# Templates del perfil: fuente de los archivos managed que ds_init copia y hashea.
+tools/ds_init/profiles/**/templates/** text eol=lf
+
+# Aviso de licencia de los componentes instalados: asset VERBATIM hasheado.
+HARMESSI-LICENSE.txt text eol=lf
+
+# Templates SDD del skill, copiados tal cual como archivos managed.
+.claude/skills/lead-data-scientist/templates/*.md text eol=lf

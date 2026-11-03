@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "change_id": "20261021-v013-contract-inventory-compat",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-21T18:43:26Z",
+  "baseline": {
+    "commit": "eb213a1435a344e39488997fe14fe62238c5add3",
+    "rama": "v0.13-dev",
+    "capturado_utc": "2026-10-21T18:43:26Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "README.md",
+      "docs/contracts/README.md",
+      "docs/contracts/inventory.json",
+      "docs/deprecation.md",
+      "docs/roadmap/v0.13.md",
+      "docs/versioning.md",
+      "openspec/changes/20261021-v013-contract-inventory-compat/**",
+      "openspec/changes/20261021-v013-contract-inventory-compat/amendments.jsonl",
+      "openspec/changes/20261021-v013-contract-inventory-compat/control.json",
+      "openspec/changes/20261021-v013-contract-inventory-compat/design.md",
+      "openspec/changes/20261021-v013-contract-inventory-compat/proposal.md",
+      "openspec/changes/20261021-v013-contract-inventory-compat/spec.md",
+      "openspec/changes/20261021-v013-contract-inventory-compat/tasks.md",
+      "openspec/changes/20261021-v013-contract-inventory-compat/verification.md",
+      "tools/harmessi/deprecation.py",
+      "tools/harmessi/tests/test_deprecation.py",
+      "tools/tests/fixtures/compat/**",
+      "tools/tests/test_v013_compat_window.py",
+      "tools/tests/test_v013_contract_inventory.py"
+    ],
+    "scope_hash": "49b140c3dbda704035508bbbbb9186e352a3fcab05f1c8988c6fd799a768287e"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "c280fd1de95eb61a43916e3812772df3f50b0bcba8f88edcaadde7df45224496",
+      "registrado_utc": "2026-10-21T18:44:21Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-contract-inventory-compat",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "b70e7c17db6989671b134613406c97abed64daeda397be6f7a847f924ea551ac",
+      "registrado_utc": "2026-10-21T18:44:23Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-contract-inventory-compat",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "4833e03eaffeec64bae9901938f4ec42a34249ef5d246eaf764a770db5cdda7a",
+      "registrado_utc": "2026-10-21T18:44:24Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-contract-inventory-compat",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-21T18:44:25Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-21T18:44:27Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-21T19:04:14Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-21T19:04:16Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-21T18:44:26Z",
+      "cierre_utc": "2026-10-21T19:04:17Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-21T22:44:26Z",
+      "minutos_consumidos": 19.85,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T18:44:39Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T19:01:28Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "_procedencia": "Reconstruido a partir de la llamada REAL SendMessage de la smoke del 2026-10-26 (tool_input exacto: to/message/summary). El payload crudo PreToolUse no es capturable desde la sesión; la evidencia de que `to` == agent_id es el efecto observado: control.json subagentes[<agent_id>].continuaciones pasó 0 -> 1 y el otro agente del mismo rol quedó en 0.",
+  "session_id": "00000000-0000-4000-8000-000000000001",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "SendMessage",
+  "tool_input": {
+    "to": "a0e94d4c59a9ab008",
+    "summary": "Smoke continuación hook",
+    "message": "Smoke de continuación: respondé solo \"OK-A2\"."
+  },
+  "tool_use_id": "toolu_FIXTURE0002"
+}

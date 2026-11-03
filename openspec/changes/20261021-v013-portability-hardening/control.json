@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "change_id": "20261021-v013-portability-hardening",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-21T18:12:39Z",
+  "baseline": {
+    "commit": "e106ba62928890b87467040123d0bd7b064a5300",
+    "rama": "v0.13-dev",
+    "capturado_utc": "2026-10-21T18:12:39Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/methodology.md",
+      ".claude/skills/lead-data-scientist/sdd.md",
+      ".github/workflows/portability-smoke.yml",
+      "ARCHITECTURE.md",
+      "README.md",
+      "docs/portability.md",
+      "docs/roadmap/v0.13.md",
+      "openspec/changes/20261021-v013-portability-hardening/**",
+      "openspec/changes/20261021-v013-portability-hardening/amendments.jsonl",
+      "openspec/changes/20261021-v013-portability-hardening/control.json",
+      "openspec/changes/20261021-v013-portability-hardening/design.md",
+      "openspec/changes/20261021-v013-portability-hardening/proposal.md",
+      "openspec/changes/20261021-v013-portability-hardening/spec.md",
+      "openspec/changes/20261021-v013-portability-hardening/tasks.md",
+      "openspec/changes/20261021-v013-portability-hardening/verification.md",
+      "tools/ds_guard.py",
+      "tools/ds_init/profiles/python_jupyter_data/templates/methodology.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/sdd.md.tmpl",
+      "tools/dsguard/skill_contract.py",
+      "tools/dsimpact/cli.py",
+      "tools/dsimpact/git_source.py",
+      "tools/dsimpact/scan.py",
+      "tools/dsimpact/tests/*.py",
+      "tools/harmessi_bench/cli.py",
+      "tools/harmessi_bench/tests/*.py",
+      "tools/providers/conformance.py",
+      "tools/tests/test_skill_contract.py",
+      "tools/tests/test_skill_methodology.py",
+      "tools/tests/test_v013_ci_workflow.py",
+      "tools/tests/test_v013_portability_audit.py",
+      "tools/tests/test_v013_portability_smoke.py"
+    ],
+    "scope_hash": "4b5a686805814313402ba1cdc296a687305b48b0bf1410f90272c8a295a0ba3c"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f83e5f53108dae9ea9c728035cea723372b1fe7fb5a1e564a36ae9454d64faaa",
+      "registrado_utc": "2026-10-21T18:13:46Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-portability-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "c7ae360c7330df079ce5836f9102886fa64d35b28addfd8e1225400eb267ff52",
+      "registrado_utc": "2026-10-21T18:13:47Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-portability-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a0f0cadc161946f930c693745b02d0161f2598215eaa7c011317784a94e7c091",
+      "registrado_utc": "2026-10-21T18:13:49Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-portability-hardening",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-21T18:13:50Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-21T18:13:52Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-21T18:42:55Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-21T18:42:57Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-21T18:13:51Z",
+      "cierre_utc": "2026-10-21T18:42:58Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-21T22:13:51Z",
+      "minutos_consumidos": 29.116666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T18:14:04Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T18:39:05Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

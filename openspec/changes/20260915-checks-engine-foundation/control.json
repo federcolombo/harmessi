@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "change_id": "20260915-checks-engine-foundation",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-14T18:04:12Z",
+  "baseline": {
+    "commit": "7a0896b89dd91042bac961c857a2fc9f151fa026",
+    "rama": "main",
+    "capturado_utc": "2026-09-14T18:04:12Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260915-checks-engine-foundation/proposal.md",
+      "openspec/changes/20260915-checks-engine-foundation/tasks.md",
+      "openspec/changes/20260915-checks-engine-foundation/spec.md",
+      "openspec/changes/20260915-checks-engine-foundation/design.md",
+      "openspec/changes/20260915-checks-engine-foundation/control.json",
+      "tools/dsguard/checks.py",
+      "tools/harmessi/doctor.py",
+      "tools/ds_init/manifest.py",
+      "tools/tests/test_manifest_dsguard_parity.py",
+      "tools/tests/test_checks.py",
+      "tools/harmessi/tests/test_doctor.py",
+      "tools/ds_init/tests/test_integracion_instalacion.py",
+      "openspec/changes/20260915-checks-engine-foundation/verification.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e29fb3eaa09b04d1887302e195f9555e5caaf2446e1d00b02e2da3695a5fd52e",
+      "registrado_utc": "2026-09-14T18:15:28Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Motor neutral de checks (tools/dsguard/checks.py): CheckResult con status PASS/WARN/FAIL/N-A y kind check/technical_error, retrofit de harmessi doctor preservando UX/contrato publico de ResultadoCheck",
+      "cita": "El diseno queda aprobado con un unico ajuste antes de implementar. Agregar a CheckResult un campo minimo y estable: kind. ... Ejecuta autonomamente el Change 4 completo... Modo de ejecucion desde ahora: BOUNDED AUTONOMY."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "bc7d284ad5bda1882bb44759d4b79de307dbc66436d273bcb80b1b487d1ac0e4",
+      "registrado_utc": "2026-09-14T18:15:30Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Motor neutral de checks (tools/dsguard/checks.py): CheckResult con status PASS/WARN/FAIL/N-A y kind check/technical_error, retrofit de harmessi doctor preservando UX/contrato publico de ResultadoCheck",
+      "cita": "El diseno queda aprobado con un unico ajuste antes de implementar. Agregar a CheckResult un campo minimo y estable: kind. ... Ejecuta autonomamente el Change 4 completo... Modo de ejecucion desde ahora: BOUNDED AUTONOMY."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e5c3e8d4245e2e2d9d712f6a2a231aaaa3f71df6bbee6e2876c119fd1a4da8d4",
+      "registrado_utc": "2026-09-14T18:15:31Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Motor neutral de checks (tools/dsguard/checks.py): CheckResult con status PASS/WARN/FAIL/N-A y kind check/technical_error, retrofit de harmessi doctor preservando UX/contrato publico de ResultadoCheck",
+      "cita": "El diseno queda aprobado con un unico ajuste antes de implementar. Agregar a CheckResult un campo minimo y estable: kind. ... Ejecuta autonomamente el Change 4 completo... Modo de ejecucion desde ahora: BOUNDED AUTONOMY."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "9a1600acccc272ec0677964af49ba51f9fd955af44e703b01d5917c20270c9fd",
+      "registrado_utc": "2026-09-14T18:15:32Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Motor neutral de checks (tools/dsguard/checks.py): CheckResult con status PASS/WARN/FAIL/N-A y kind check/technical_error, retrofit de harmessi doctor preservando UX/contrato publico de ResultadoCheck",
+      "cita": "El diseno queda aprobado con un unico ajuste antes de implementar. Agregar a CheckResult un campo minimo y estable: kind. ... Ejecuta autonomamente el Change 4 completo... Modo de ejecucion desde ahora: BOUNDED AUTONOMY."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-14T18:15:33Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-14T18:15:35Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-14T18:38:18Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-14T18:39:45Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-14T18:15:34Z",
+      "cierre_utc": "2026-09-14T18:39:46Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 150,
+        "max_tareas": 30,
+        "max_roles": 3,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-14T20:45:34Z",
+      "minutos_consumidos": 24.2,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-14T18:38:42Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-14T18:36:25Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

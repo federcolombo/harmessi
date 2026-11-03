@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "change_id": "20261009-approval-trust-human-presence",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-13T13:51:06Z",
+  "baseline": {
+    "commit": "6c653c66f0c2b477aac787934388ee704a584054",
+    "rama": "v0.10-dev",
+    "capturado_utc": "2026-10-13T13:51:06Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/sdd.md",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.10.md",
+      "openspec/changes/20261009-approval-trust-human-presence/control.json",
+      "openspec/changes/20261009-approval-trust-human-presence/design.md",
+      "openspec/changes/20261009-approval-trust-human-presence/proposal.md",
+      "openspec/changes/20261009-approval-trust-human-presence/spec.md",
+      "openspec/changes/20261009-approval-trust-human-presence/tasks.md",
+      "openspec/changes/20261009-approval-trust-human-presence/verification.md",
+      "tools/cards/approvals.py",
+      "tools/cards/tests/**",
+      "tools/ds_guard.py",
+      "tools/dsguard/human_presence.py",
+      "tools/tests/test_approval_channel_cli.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/tests/test_ds_guard_exec_approve.py",
+      "tools/tests/test_human_presence.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "d19cc3b2edfc1c715bda739de0f1a2d64edc74dcfdc0418d3a89011eb741adc6",
+      "registrado_utc": "2026-10-13T14:06:59Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-13",
+      "alcance_aprobado": "Implementación y validación de Change 2 Approval Trust / T1 Human-Presence",
+      "cita": "Aprobación humana explícita del SDD de Change 2; T1 se denomina console_confirmed y representa una señal interactiva de presencia, no identidad"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "1347471f0dd44250f38b4cde5340eba7befedc4fb2667507770b3f37f7eb52f2",
+      "registrado_utc": "2026-10-13T14:07:00Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-13",
+      "alcance_aprobado": "Implementación y validación de Change 2 Approval Trust / T1 Human-Presence",
+      "cita": "Aprobación humana explícita del SDD de Change 2; T1 se denomina console_confirmed y representa una señal interactiva de presencia, no identidad"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "d46d0ce1d52570ab11564ef5d1a84031395fc7c683946d7581f38c787b5cc473",
+      "registrado_utc": "2026-10-13T14:07:01Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-13",
+      "alcance_aprobado": "Implementación y validación de Change 2 Approval Trust / T1 Human-Presence",
+      "cita": "Aprobación humana explícita del SDD de Change 2; T1 se denomina console_confirmed y representa una señal interactiva de presencia, no identidad"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-13T14:07:03Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-13T14:07:04Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-13T14:07:07Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-13T16:20:43Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-13T16:20:48Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-13T14:07:05Z",
+      "cierre_utc": "2026-10-13T14:32:59Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-13T22:07:05Z",
+      "minutos_consumidos": 25.9,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-13T14:14:20Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-13T14:24:55Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-13T16:20:42Z",
+      "cierre_utc": "2026-10-13T16:20:49Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 120,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-13T18:20:42Z",
+      "minutos_consumidos": 0.11666666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

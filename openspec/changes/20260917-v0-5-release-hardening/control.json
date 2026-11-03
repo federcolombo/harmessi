@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "change_id": "20260917-v0-5-release-hardening",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-17T17:09:13Z",
+  "baseline": {
+    "commit": "a042ee683e8638cd637c63ae2c68cc50540df479",
+    "rama": "v0.5-dev",
+    "capturado_utc": "2026-09-17T17:09:13Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260917-v0-5-release-hardening/proposal.md",
+      "openspec/changes/20260917-v0-5-release-hardening/tasks.md",
+      "openspec/changes/20260917-v0-5-release-hardening/spec.md",
+      "openspec/changes/20260917-v0-5-release-hardening/design.md",
+      "openspec/changes/20260917-v0-5-release-hardening/control.json",
+      "tools/ds_init/version.py",
+      "CITATION.cff",
+      "README.md",
+      "docs/roadmap/v0.5.md",
+      "openspec/changes/20260917-v0-5-release-hardening/verification.md",
+      ".ds_init/control.json",
+      "ARCHITECTURE.md",
+      "tools/harmessi/cli.py",
+      "tools/tests/test_v05_core_neutrality.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ea28b11b6bb9215e82f159727fbd1c04a644d84a9a0f8c92bd5ac6dbed4df3ce",
+      "registrado_utc": "2026-09-17T18:04:00Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Change 5 - v0.5-release-hardening (docs/roadmap/v0.5.md)",
+      "cita": "Ejecuta autonomamente toda Harmessi v0.5 siguiendo docs/roadmap/v0.5.md ... Change 5 - v0.5-release-hardening ... No pidas confirmacion humana entre pasos normales (instruccion explicita del usuario, 2026-09-17, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "4d8b4ca3c3eeea70ab6f4ef2ce47d2d68e241a6183bb01e7874910729bf089c5",
+      "registrado_utc": "2026-09-17T18:04:01Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Change 5 - v0.5-release-hardening (docs/roadmap/v0.5.md)",
+      "cita": "Ejecuta autonomamente toda Harmessi v0.5 siguiendo docs/roadmap/v0.5.md ... Change 5 - v0.5-release-hardening ... No pidas confirmacion humana entre pasos normales (instruccion explicita del usuario, 2026-09-17, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "eea489a97fc4251cc662089546fb446e28e5555732304010cf18f133f0e65abc",
+      "registrado_utc": "2026-09-17T18:04:02Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Change 5 - v0.5-release-hardening (docs/roadmap/v0.5.md)",
+      "cita": "Ejecuta autonomamente toda Harmessi v0.5 siguiendo docs/roadmap/v0.5.md ... Change 5 - v0.5-release-hardening ... No pidas confirmacion humana entre pasos normales (instruccion explicita del usuario, 2026-09-17, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "5a3471998cfca68ed2cbd35a488c4bff42a4fb63d1ebae4051e81a00b59d03a0",
+      "registrado_utc": "2026-09-17T18:04:03Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-17",
+      "alcance_aprobado": "Change 5 - v0.5-release-hardening (docs/roadmap/v0.5.md)",
+      "cita": "Ejecuta autonomamente toda Harmessi v0.5 siguiendo docs/roadmap/v0.5.md ... Change 5 - v0.5-release-hardening ... No pidas confirmacion humana entre pasos normales (instruccion explicita del usuario, 2026-09-17, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-17T18:04:05Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-17T18:04:06Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-17T18:04:07Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-17T18:08:24Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-17T18:04:04Z",
+      "cierre_utc": "2026-09-17T18:08:24Z",
+      "modo": "alto_riesgo_tecnico",
+      "presupuesto": {
+        "minutos": 120,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-17T20:04:04Z",
+      "minutos_consumidos": 4.333333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-17T18:07:23Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

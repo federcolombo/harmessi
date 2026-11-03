@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "change_id": "20261021-v013-reproducible-harness-runs",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-21T17:26:50Z",
+  "baseline": {
+    "commit": "1ce2075d097c78bdd94b02fc39a6631d8820c486",
+    "rama": "v0.13-dev",
+    "capturado_utc": "2026-10-21T17:26:50Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "README.md",
+      "docs/roadmap/v0.13.md",
+      "openspec/changes/20261021-v013-reproducible-harness-runs/**",
+      "openspec/changes/20261021-v013-reproducible-harness-runs/amendments.jsonl",
+      "openspec/changes/20261021-v013-reproducible-harness-runs/control.json",
+      "openspec/changes/20261021-v013-reproducible-harness-runs/design.md",
+      "openspec/changes/20261021-v013-reproducible-harness-runs/proposal.md",
+      "openspec/changes/20261021-v013-reproducible-harness-runs/spec.md",
+      "openspec/changes/20261021-v013-reproducible-harness-runs/tasks.md",
+      "openspec/changes/20261021-v013-reproducible-harness-runs/verification.md",
+      "tools/harmessi_bench/__init__.py",
+      "tools/harmessi_bench/cli.py",
+      "tools/harmessi_bench/compare.py",
+      "tools/harmessi_bench/core.py",
+      "tools/harmessi_bench/redact.py",
+      "tools/harmessi_bench/runmanifest.py",
+      "tools/harmessi_bench/runner.py",
+      "tools/harmessi_bench/storage.py",
+      "tools/harmessi_bench/suite.py",
+      "tools/harmessi_bench/tests/*.py",
+      "tools/tests/test_v013_run_manifest_smoke.py",
+      "tools/tests/test_v05_core_neutrality.py"
+    ],
+    "scope_hash": "5f9518a60aa93a2e88efbcbd8783bfb5509f446c2c89b704aaa6cd380b1b1e23"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "7d6a44a3e49097c4b0fbd68c3c137c76e36b48b04a900bf78a8f0ba626ac6208",
+      "registrado_utc": "2026-10-21T17:27:39Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-reproducible-harness-runs",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "14b0d16059d8cc54225c2c6efa490c1917eac6aa34092d0574ae218fc2148ca1",
+      "registrado_utc": "2026-10-21T17:27:41Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-reproducible-harness-runs",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "734a88db4945d158a725140a9a493cce0502986dce3a91de68d221e5cfc0f4d2",
+      "registrado_utc": "2026-10-21T17:27:42Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-reproducible-harness-runs",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-21T17:27:43Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-21T17:27:45Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-21T17:48:30Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-21T17:48:32Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-21T17:27:44Z",
+      "cierre_utc": "2026-10-21T17:48:33Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-21T21:27:44Z",
+      "minutos_consumidos": 20.816666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T17:27:58Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T17:45:54Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

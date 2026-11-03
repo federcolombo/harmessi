@@ -1,0 +1,10 @@
+{
+  "fixtures": {
+    "data_card.json": {
+      "sha256": "89574f3e8c2af4a48bcd8db7d801d749f5c1954d9e361ec971fc63281dfd3ddd"
+    }
+  },
+  "generador": "tools/tests/fixtures/compat/generate_datacard_v014.py",
+  "harmessi_version": "0.14.0",
+  "tag_origen": "v0.14.0"
+}

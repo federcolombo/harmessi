@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "change_id": "20261023-v014-governed-promotion",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-23T14:08:32Z",
+  "baseline": {
+    "commit": "69593cb357025f1bf3919d080c28eb1969608c20",
+    "rama": "v0.14-dev",
+    "capturado_utc": "2026-10-23T14:08:32Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20261023-v014-governed-promotion/proposal.md",
+      "openspec/changes/20261023-v014-governed-promotion/tasks.md",
+      "openspec/changes/20261023-v014-governed-promotion/spec.md",
+      "openspec/changes/20261023-v014-governed-promotion/design.md",
+      "openspec/changes/20261023-v014-governed-promotion/control.json",
+      "openspec/changes/20261023-v014-governed-promotion/verification.md",
+      "openspec/changes/20261023-v014-governed-promotion/amendments.jsonl",
+      "tools/harmessi_improve/**",
+      "tools/tests/test_v014_*.py",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.14.md",
+      "docs/contracts/**"
+    ],
+    "scope_hash": "ea03f6cabb9f132331079022bcdb82d0a11bf7528aa03ba7a477bdbef8b69ab1"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "60e49db5613bb5180fa329d4328c754d38835310e3334dfa002be2c1b254556a",
+      "registrado_utc": "2026-10-23T14:08:36Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-23",
+      "alcance_aprobado": "Harmessi v0.14 20261023-v014-governed-promotion",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.14.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "eca73a728056910d81686a4d654c39e51ca281d4d7fd0a3e680b9c3b3d98d8f5",
+      "registrado_utc": "2026-10-23T14:08:37Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-23",
+      "alcance_aprobado": "Harmessi v0.14 20261023-v014-governed-promotion",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.14.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ada55fa1f685d7a9f6994e060f82cee446624decf198da901b411f67a132ed65",
+      "registrado_utc": "2026-10-23T14:08:38Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-23",
+      "alcance_aprobado": "Harmessi v0.14 20261023-v014-governed-promotion",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.14.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-23T14:08:39Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-23T14:08:42Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-23T14:27:00Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-23T14:27:02Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-23T14:08:41Z",
+      "cierre_utc": "2026-10-23T14:27:04Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-23T18:08:41Z",
+      "minutos_consumidos": 18.383333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-23T14:08:58Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-23T14:17:06Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

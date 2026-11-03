@@ -1,0 +1,706 @@
+# Harmessi
+
+An agentic operating system for Data Science projects in Python and
+Jupyter — specialized agents, governed workflows, reproducible validation,
+and safe notebook execution.
+
+Harmessi installs a small, opinionated harness into an existing Git
+repository: purpose-built subagents, a lightweight spec-driven-development
+(SDD) workflow, a deterministic approval/guard mechanism, and a manifest-based
+notebook runner that only ever touches the inputs/outputs a run explicitly
+declares. It is generic by design — no organization names, datasets, or local
+paths are baked in — so it can be dropped into any Python + Jupyter data
+science project.
+
+Source available under the [PolyForm Shield License 1.0.0](LICENSE) — free for
+internal use; see [License](#license).
+
+## Documentation
+
+- [Installation](docs/installation.md)
+- [Concepts](docs/concepts.md)
+- [CLI reference](docs/cli-reference.md)
+- [Evaluation](docs/evaluation.md)
+- [Security and trust](docs/security-and-trust.md)
+- [Release process](docs/release-process.md)
+- [Providers](docs/providers.md)
+- [Portability](docs/portability.md)
+- [Versioning](docs/versioning.md)
+- [Deprecation](docs/deprecation.md)
+- [Production lifecycle](docs/production-lifecycle.md)
+- [Roadmap v0.15](docs/roadmap/v0.15.md)
+
+## Capabilities
+
+- **Specialized agents** — a `python-data-engineer` implementation agent (the
+  only one with write access), plus read-only `data-science-reviewer` and
+  `metodologo` agents, and a `notebook-runner` agent for controlled execution.
+- **A governed workflow** — a `lead-data-scientist` orchestrator skill that
+  drives a lightweight SDD loop (proposal → spec → design → tasks →
+  verification) instead of ad hoc prompting.
+- **A governed project lifecycle (CRISP-DM + KDD + MLOps)** — a single,
+  persisted state (`openspec/lifecycle/state.json`) with CRISP-DM as the
+  project's methodological backbone (8 phases, Business Understanding →
+  Monitoring), KDD as the subordinate technical process within the relevant
+  phases (5 canonical steps: selection, preprocessing, transformation,
+  data_mining, interpretation_evaluation), and MLOps as three tiers of
+  progressive capabilities (foundations, production_readiness, operations).
+  A change can declare which phase(s)/step(s) it belongs to; closing it
+  appends evidence without ever auto-advancing anything — advancing a phase
+  stays an explicit, approved action. Kept distinct from SDD's per-change
+  state. A pre-lifecycle 10-stage KDD state (legacy) is still readable and
+  migrated via an explicit `ds_guard lifecycle migrate`, never silently.
+- **Project maturity, readiness, and progressive installation** —
+  `project_stage` (`discovery`/`experiment`/`production_candidate`/
+  `production`, in `.harmessi/project.json`) and `risk_level` track *achieved
+  maturity*, kept strictly orthogonal to `installation_stage` (which
+  `.ds_init/control.json` and `ds_init sync --stage <stage>` track instead —
+  *installed capabilities*, never a proxy for maturity). `ds_guard project
+  readiness --target <stage>` evaluates the full deterministic gate matrix
+  for the next stage (PASS/WARN/FAIL/N-A, with technical errors always
+  surfaced, never hidden); `ds_guard project promote <stage> --reason
+  <text>` only ever advances one sequential stage at a time, gated by that
+  same evaluation, atomically. `ds_guard status` (no `--change-id`)
+  consolidates all of the above — maturity, lifecycle, MLOps, readiness,
+  installation alignment, and a harness-integrity summary — into one
+  read-only view.
+- **Reproducible validation (`dsguard`)** — deterministic, reproducible
+  SHA-256 hashing of approved artifacts (`sha256/lf/v1`, LF-normalized) and an
+  append-only `control.json` approval ledger, so an approval can never
+  silently drift from the artifact it was granted for.
+- **Technical path protection (`dsguard.pathguard`)** — a `PreToolUse` hook
+  that enforces, for every agent and the Lead alike, not just prompt-level
+  instructions: secrets (`.env`, private keys, SSH files, cloud credentials —
+  read and write, always) and holdouts/sealed datasets (write always denied,
+  read denied unless an explicit, auditable exception is recorded in
+  `.claude/guardrails.json`) are blocked outright; `data/raw` stays
+  write-protected but readable; `.claude/guardrails.json` itself can't be
+  edited by any agent or the Lead through `Write`/`Edit`/`NotebookEdit`. The
+  guarantee is exact for `Write`/`Edit`/`NotebookEdit`/`Read`/`Grep`
+  (structured, resolved paths — symlinks and `..` included); for
+  `Bash`/`PowerShell` it's a best-effort text scan, explicitly not
+  equivalent, since no shell parser is involved.
+- **Safe notebook execution (`nbrunner`)** — a JSON run manifest schema that
+  declares the interpreter (must resolve inside the project's own `.venv`),
+  the notebook's approved hash, and explicit allow-lists for input/output
+  paths, plus a hard, project-configurable deny-list (e.g. `data/raw/**` is
+  always output-forbidden) enforced independently of what any manifest
+  declares.
+- **A safe installer (`ds_init`)** — `--dry-run` by default, atomic
+  `--execute` (staged, journaled, with rollback on any handled failure —
+  including `control.json` generation), never overwrites files that already
+  exist in the destination, and merges `.claude/settings.json` instead of
+  clobbering it.
+- **A health check (`harmessi doctor`)** — read-only diagnostic over an
+  installed project: Python/Git/venv sanity, whether the managed files
+  (`control.json`, agents, the `lead-data-scientist` skill, settings, hooks)
+  are present and match their recorded hash, and whether the configured
+  `PreToolUse` hooks and their launchers actually work — including flagging
+  any hook that still depends on an external shell instead of invoking
+  Python directly.
+- **Cross-platform hook launchers** — the `PreToolUse` hook launchers
+  (`tools/nbrunner/hook_launcher.py`, `tools/dsguard/hook_launcher_presupuesto.py`)
+  are pure Python, with no dependency on `bash` or any other shell: they
+  resolve the shared Git repo (Git worktrees included), respect a
+  custom `venv_dir` from `control.json`, and use the correct interpreter
+  layout for the host OS (`Scripts/python.exe` on Windows, `bin/python` on
+  Linux/macOS) — failing closed if the authorized interpreter can't be
+  resolved.
+- **Deterministic dataset profiling (`ds_profile`) and Project EDA** — a
+  standalone CLI that computes reproducible facts and quality flags for a
+  CSV or Parquet dataset (no business interpretation), written to
+  `.harmessi/profiles/<profile_id>/profile.json`, with holdouts protected in
+  depth via `dsguard.pathguard` even from a direct CLI call; Project EDA is
+  the Lead-driven process that interprets those facts for modeling decisions
+  while respecting cutoff and holdout boundaries.
+- **Data Cards, Model Cards and Model Governance (v0.9, opt-in)** — structured,
+  evidence-backed views of a dataset (Data Card) and a model (Model Card), plus
+  a progressive model-governance assessment by `risk_level` (low / medium /
+  high) over six Responsible AI dimensions (fairness, explainability, privacy,
+  security, accountability, human oversight). They are enabled per project via
+  the `data_cards` and `model_governance` capabilities (`model_governance`
+  requires `predictive_modeling`); a Data Card (kind schema v2) declares
+  `temporality` `current` or `as_of`, so a historical card pinned to an older
+  observation is not reported stale just because a newer one appeared (real
+  changes to the pinned observation still are). `as_of` is declarative: it is
+  not verified against the date of the pinned observation. Governed reporting runs with
+  `python -m tools.reporting` (`check-inputs`, `check-destination`, `validate`,
+  `render`). Harmessi covers the lifecycle up to readiness evidence;
+  deployment and monitoring are an integration boundary
+  (`docs/production-lifecycle.md`). Without them a project behaves exactly as
+  in v0.8. Harmessi governs *evidence*: a Card references evidence that
+  already exists and validates that it is present, current and coherent. It
+  does **not** claim a model or dataset is ethical, fair, safe, private,
+  secure or compliant, and it is not a compliance engine. Use
+  `ds_guard cards validate` / `ds_guard cards report`, and `harmessi doctor`
+  for the `HARMESSI-GOV-*` checks.
+- **Integration & Stabilization and Composable Skills (v0.10)** — managed-file
+  hashing that no longer depends on line endings (`ds_init migrate-hashes`,
+  dry-run by default), Unicode-safe Git path handling, a `console_confirmed`
+  approval channel, governed scope amendments and guardrails re-adoption
+  (`ds_guard scope`, `ds_guard guardrails readopt`), a closed skill contract
+  with explicit writer semantics, and the `domain-modeling` skill with a
+  project-owned `GLOSSARY.md` (`ds_guard glossary check|hash`).
+  `console_confirmed` is an interactive-presence signal, not proof of identity
+  or authorship. See `docs/releases/v0.10.0.md`.
+- **Operational Robustness & Recovery (v0.11)** — Git/scope failures now fail
+  closed (`ALCANCE-GIT-ILEGIBLE`), the decision ledger gains append-only
+  corrections and an integrity check (`ds_guard decision correct|verify`,
+  tamper-evidence, not authenticity), `session start --retomar` and an
+  early-expiry warning, attribution of paths to other open Changes, and
+  transactional `ds_init upgrade` / `ds_init recover` (dry-run by default).
+  H1 (hook payload) remains UNCONFIRMED. See `docs/releases/v0.11.0.md`.
+- **Data Scientist Experience & Composable Skills (v0.12)** — an explicit
+  Harness Surfaces model (Protected / Optimizable / Project-owned, derived from
+  the path), three new methodological skills (`problem-framing` with an opt-in
+  `grill-me` mode, `diagnosing-bugs`, `codebase-design`), and rules for
+  selecting, composing and tracing skills. Skills are guidance only: no new
+  roles, permissions or hooks. Limits: skills are guidance with no quality
+  enforcement, the skill trace is cooperative, only Windows was validated, and
+  H1 (hook payload) remains UNCONFIRMED. See `docs/releases/v0.12.0.md`.
+- **Portability, Evaluation & Contract Hardening (v0.13)** — a versioned
+  evaluation and benchmark foundation (versioned cases, suites and results,
+  a deterministic four-state baseline-vs-candidate verdict), reproducible run
+  manifests with resume safety, provider and source-adapter conformance with
+  honest support levels, fail-closed `dsimpact` evidence, a portability smoke
+  workflow, and a classified contract inventory with a compatibility window and
+  a minimal deprecation convention (`docs/contracts/`, `docs/versioning.md`,
+  `docs/deprecation.md`, `docs/portability.md`). v0.13 enables evidence-based
+  comparison but does NOT automatically improve or promote harness changes.
+  Limits: evals are deterministic text proxies, only Windows was validated by
+  execution, remote CI execution not observed during release, and (in v0.13)
+  providers reach at most `contract-tested`. See `docs/releases/v0.13.0.md`.
+- **Evidence-Driven Harness Improvement (v0.14)** — a governed flow
+  `Propose → Probe → Compare → Governed Promotion` for Optimizable harness
+  surfaces: isolated, versioned candidates; baseline-versus-candidate probes
+  with a frozen policy on top of the v0.13 evaluation foundation; decisions
+  recomputed from real results; promotion proposals applied only through a
+  normal Change with T1 approvals; evidence-backed lessons; hard-capped
+  improvement budgets with a bounded cycle; and a checkout-only CLI
+  (`python -m tools.harmessi_improve`). It does NOT silently modify the
+  harness, auto-promote, touch Protected surfaces, bypass governance, improve
+  its own engine, or send telemetry. Limits: evals are deterministic text
+  proxies, provenance is not cryptographic, the privacy scan is heuristic,
+  only Windows was validated by execution, remote CI execution not observed
+  during release, and H1 (hook payload) remains UNCONFIRMED. See
+  `docs/releases/v0.14.0.md`.
+
+**v0.15.0 — Pre-v1.0 Consolidation.** Stabilizes public contracts, states
+provider reality honestly, hardens the data-science core, runtime
+observability, evidence/privacy and the public docs. See
+`docs/releases/v0.15.0.md`.
+
+**v1.0.0 — First stable release.** Promotes six contracts to `stable` (the
+`ds_guard`, `ds_init` and `harmessi` CLIs and the SourceObservation, source
+registry and eval result schemas), anchors the PolyForm Shield 1.0.0 license
+and ships `HARMESSI-LICENSE.txt` as a managed asset of `ds_init` installs.
+See `docs/releases/v1.0.0.md`.
+
+## Requirements
+
+- Python 3.12 is the verified version: CI on ubuntu, windows and macos, over a
+  bounded list of tests (not the full suite), observed passing on the v0.15.0
+  commit; the 1.0.0 commit is pending observation.
+- Python 3.9 is the declared minimum; it is not executed (not executed in CI or
+  in the verification of this release).
+- Git
+- A destination repository that is itself a Git repo with a clean working
+  tree
+
+## Quickstart
+
+```bash
+git clone https://github.com/federcolombo/harmessi.git
+cd harmessi
+python -m venv .venv
+.venv/Scripts/activate        # Windows (PowerShell: .venv\Scripts\Activate.ps1)
+# source .venv/bin/activate    # macOS/Linux
+
+# See the plan without touching anything (default behavior):
+python -m tools.ds_init --destino /path/to/your/project --nombre my-project
+
+# Apply it for real:
+python -m tools.ds_init --destino /path/to/your/project --nombre my-project --execute
+```
+
+## Commands
+
+Harmessi ships four CLIs: the installer, the deterministic SDD/maturity/
+lifecycle/MLOps verifier, a read-only health check, and a deterministic
+dataset profiler.
+
+### `ds_guard`
+
+```
+python -m tools.ds_guard <group> <command> [options]
+```
+
+The main day-to-day CLI once a project is installed: SDD (`init`, `status
+--change-id`, `validate`, `approve`, `transition`, `session ...`,
+`notebook-diff`, `archive`), lifecycle (`lifecycle migrate`), project
+maturity (`project init|calibrate|set-risk|status|readiness|promote`),
+MLOps (`mlops status|record|evidence add`), the decision ledger (`decision
+add|supersede|revoke|list|show`), bounded remediation (`remediation
+resolve|extend`), and the unified project view (`status`, with no
+`--change-id`, `--json`/`--verbose` optional). All state it manages lives in
+plain JSON (`.harmessi/project.json`, `openspec/lifecycle/state.json`,
+`openspec/changes/*/control.json`, `openspec/decisions/ledger.jsonl`) — no
+hidden state, no separate database. Full command-by-command reference lives
+in the installed `.claude/skills/lead-data-scientist/verificador.md`/
+`methodology.md` (read by the Lead orchestrator, not duplicated here).
+
+`ds_guard` also groups two deterministic checks added in v0.4: `science
+status`/`science status --json` (`tools/dsguard/scientific_validity.py`) runs
+scientific validity checks (temporal cutoff, holdout, direct leakage,
+baseline) declared via an optional `.harmessi/scientific-policy.json` — never
+inferred by heuristic; `efficiency report --change-id <id> [--json]`
+(`tools/dsguard/efficiency.py`) re-evaluates a change's already-recorded
+sessions/remediations against its own declared budget, adding signal without
+gating anything. Separately, `ALCANCE-RUTA` (the scope check in
+`validate`/`gate_cierre`) now covers the full diff since
+`control["baseline"]["commit"]`, not just the current working tree, so an
+out-of-scope file that was already committed is still caught even if the
+working tree is clean again.
+
+### `ds_guard impact scan`
+
+```
+python -m tools.ds_guard impact scan --since <ref>|--staged [--json]
+```
+
+A static impact preflight (`tools/dsimpact/`, a separate package installed
+from the `experiment` stage onward): it detects which files/symbols/contracts
+a diff might affect, always reporting them as "potentially affected", never
+as "broken". On a `discovery` installation, where `tools/dsimpact/` isn't
+present, it degrades gracefully — exit code `3` and a clear message instead
+of a traceback.
+
+### `harmessi doctor`
+
+```
+python -m tools.harmessi doctor [--destino DESTINO]
+```
+
+Diagnoses an already-installed project (default `--destino`: the current
+directory) and prints one `[OK]` / `[WARN]` / `[ERROR]` line per check,
+grouped under `CORE`, `HARMESSI`, and `RUNTIME`, plus a summary count. Exits
+`0` if there is no `[ERROR]`, `1` otherwise. It never writes to the
+destination (aside from a temporary file it creates and deletes as part of
+the permissions check) and never repairs anything — v0.2 is diagnosis only.
+Run it from a Harmessi source checkout, the same way as `ds_init`.
+
+### `ds_profile`
+
+```
+python -m tools.ds_profile run --input INPUT --output OUTPUT [--markdown]
+```
+
+A deterministic dataset profiling CLI: it reports facts and quality flags
+about a CSV or Parquet file — row count, schema, null counts, cardinality,
+quantiles, a reproducible fingerprint, and deterministic quality flags — and
+never interprets business meaning. CSV is read with pure stdlib (no pandas
+dependency); Parquet support is optional and imported lazily via `pyarrow` —
+if it isn't installed, `ds_profile` exits with code `3` and a clear message
+instead of failing obscurely. Output is written to
+`.harmessi/profiles/<profile_id>/profile.json` (the JSON is the source of
+truth; pass `--markdown` to also derive a human-readable `profile.md`). Like
+`nbrunner`, it defends holdouts in depth: it reuses `dsguard.pathguard` to
+refuse profiling a declared holdout even when invoked directly from the CLI,
+not only through an agent.
+
+Memory is bounded by design: before reading rows, `ds_profile` decides between
+exact and sampled mode from file metadata and an explicit memory budget
+(`--max-mb-exactos`, an estimate rather than a hard sandbox limit). Cheap
+metrics (counts, nulls, min/max, mean/std, dtype) stay exact in both modes;
+metrics that need many values (distinct counts, top values, quantiles,
+duplicate rows) fall back to a deterministic sample when the source exceeds the
+budget, and the profile says so (`sampling.motivo`, `exactitud`). Since v0.15
+the estimate is per dtype when the reader provides a schema (Parquet;
+`sampling.estimacion`), and exact-mode Parquet profiles are computed column by
+column (`sampling.modo_lectura`) with a result identical to the row-by-row path.
+The defaults (2 000 000 rows / 500 MB) are heuristics that have not been
+validated against a real production dataset; tune `--max-filas-exactas` and
+`--max-mb-exactos` for your data.
+
+Project EDA — documented for the Lead in the installed
+`.claude/skills/lead-data-scientist/eda.md` — is the process that interprets
+these deterministic facts for modeling decisions while respecting cutoff and
+holdout boundaries; it consumes `ds_profile`'s output rather than duplicating
+its computation.
+
+### `ds_init` (the installer)
+
+```
+usage: python -m tools.ds_init [-h] --destino DESTINO [--nombre NOMBRE]
+                               [--notebooks-dir NOTEBOOKS_DIR]
+                               [--venv-dir VENV_DIR] [--integrar-claude]
+                               [--stage {discovery,experiment,production_candidate,production}]
+                               [--dry-run | --execute]
+                               [{install,sync,migrate-hashes,upgrade,recover}]
+
+Inicializador/sincronizador del harness de agentes/tooling para proyectos de
+ciencia de datos (perfil python-jupyter-data).
+
+positional arguments:
+  {install,sync,migrate-hashes,upgrade,recover}
+                        'install' (default, instala un destino nuevo),
+                        'sync' (amplia un destino ya instalado hasta un
+                        --stage objetivo mayor), 'upgrade' (actualiza a la
+                        version actual), 'recover' (revierte una operacion
+                        interrumpida) o 'migrate-hashes'.
+
+options:
+  -h, --help            show this help message and exit
+  --destino DESTINO     Repo local destino (debe existir, ser Git, working
+                        tree limpio).
+  --nombre NOMBRE       Nombre del proyecto (obligatorio para 'install';
+                        ignorado para 'sync', que lo reconstruye desde
+                        control.json).
+  --notebooks-dir NOTEBOOKS_DIR
+                        Directorio de notebooks del proyecto destino (default:
+                        notebooks, solo 'install').
+  --venv-dir VENV_DIR   Directorio del entorno virtual del proyecto destino
+                        (default: .venv, solo 'install').
+  --integrar-claude     Integra un bloque delimitado en un CLAUDE.md ya
+                        existente (R9, solo 'install').
+  --stage {discovery,experiment,production_candidate,production}
+                        Bundle de instalacion progresiva objetivo. Para
+                        'install': solo discovery|experiment (default
+                        experiment). Para 'sync': cualquiera de los 4
+                        (obligatorio).
+  --dry-run             Informa el plan, no escribe nada (comportamiento por
+                        defecto).
+  --execute             Ejecuta la escritura real, tras preflight exitoso.
+```
+
+`install` (the default action) sets up a new destination — `discovery` is a
+deliberately light bundle (viability/exploration tooling only); `experiment`
+(the default) adds the full DS agent stack. `sync` extends an
+*already-installed* destination up to a higher `--stage`, adding only the
+files missing for that stage — idempotent, never overwrites an existing
+file, never deletes anything, and rejects a `--stage` lower than what's
+already installed as a no-op rather than silently doing nothing.
+
+`--dry-run` is the default for both actions: it always runs preflight checks
+and prints the full plan without writing anything. Only `--execute` writes
+to disk, and it does so atomically — a staged tree is validated in full
+(JSON parses, no unresolved template placeholders, no forbidden strings)
+before anything is moved into place. Any exception raised while applying the
+staged tree or generating `.ds_init/control.json` rolls back everything
+already applied, restoring the destination to its pre-`--execute` state; a
+rollback failure on one individual entry doesn't stop the rest from being
+reverted, and any entry that still couldn't be restored is named in the
+error message.
+
+The in-process rollback does not cover the process itself being killed or the
+machine losing power mid-installation. In that case the destination can be
+left with a stray `.ds_init_staging_<timestamp>/` directory and a persistent
+journal under `.ds_init/journal/<timestamp>/` (journal phase plus backups).
+`ds_init install|sync|upgrade` detect that on the next run and refuse to
+proceed, pointing to `recover` (see below).
+
+#### Upgrading an installed project (`upgrade`)
+
+```
+python -m tools.ds_init upgrade --destino <path>             # dry-run (default)
+python -m tools.ds_init upgrade --destino <path> --execute   # apply
+```
+
+`upgrade` brings an already-installed project to the current harness version.
+It shows installed vs. current version and a summary (to update / to create /
+drift / preserved / blocking). It only updates managed files that are still
+pristine (match their recorded baseline), creates managed files that are new
+in the manifest (for the persisted stage and capabilities), and merges
+`settings.json` as before. It never touches project-owned files (notebooks,
+data, Cards, Data Contracts, decision ledger, amendments, `GLOSSARY.md`,
+approvals in `openspec/changes/**/control.json`), never overwrites an existing
+`guardrails.json`, and reports drifted files without touching or adopting
+them. `--execute` re-computes the plan, takes `.ds_init/lock`, and applies
+everything (files plus the regenerated `control.json`, written atomically) in
+one journaled transaction with backups. It is idempotent: a second run
+changes nothing. With nothing pending it prints "Nada que hacer" and exits 0.
+
+#### Recovering from an interrupted run (`recover`)
+
+```
+python -m tools.ds_init recover --destino <path>             # dry-run (default)
+python -m tools.ds_init recover --destino <path> --execute   # revert
+```
+
+`recover` reverts an interrupted transaction to the previous consistent state
+from its journal and backups, then removes the staging and journal. It is
+rollback only, never roll-forward; after it, `upgrade`/`install` converge. If
+the journal is unreadable or a needed backup is missing it exits with code 2,
+touches nothing, and prints the exact manual steps; the same happens if a
+journal path is invalid (absolute, `..`, `:` in a component, inside `.git/`,
+resolving outside the destination, or not in the MANIFEST nor under
+`.ds_init/`). If a file to be reverted was edited after the interruption
+(its hash is neither the one the transaction wrote nor the backup's),
+`recover --execute` aborts with exit 2 and lists it; `--forzar` reverts it
+anyway and keeps your copy as `<path>.recover-bak`. A journal in phase
+`completo` is treated as clean (housekeeping: it is just deleted), and a
+journal directory without `journal.json` is a cleanable leftover.
+`migrate-hashes --execute` also takes the lock and refuses to run with an
+orphan staging/journal; the `control.json.bak-<timestamp>` backups it creates
+are kept (they are not cleaned up by `recover`).
+`harmessi doctor` reports `HARMESSI-VERSION` (WARN with the `upgrade` remedy)
+and `HARMESSI-MIGRACION` (FAIL on partial staging/journal, WARN on a leftover
+lock or completed journal).
+
+Honest limits: no downgrade; no data migration; `.ds_init/lock` is a
+cooperative lock, not a defense against a hostile actor; after a kill the
+lock can remain (`.ds_init/lock`): delete it by hand if no `ds_init` process
+is alive (there is no pid detection, on purpose); Doctor runs from the Harmessi checkout;
+`upgrade` does not re-create a managed file you deleted by hand (restore it
+from Git).
+
+### `harmessi providers`
+
+```
+python -m tools.harmessi providers list [--json]
+```
+
+Clean detection of the 4 provider adapters (Claude Code, Codex CLI, Gemini
+CLI, Grok CLI) via `tools/providers/`. Only Claude Code CLI has been verified
+against a real binary during Harmessi's own development — the other 3
+degrade to "not available" without attempting to install anything or
+fabricate a signal. `--json` reports, per provider, `available`,
+`authenticated` (always `null` today — no cheap way to check it without a
+real session), `version`, and declared capabilities. Run it from a Harmessi
+source checkout, the same way as `harmessi doctor`.
+
+#### Provider conformance (checkout only)
+
+```
+python -m tools.providers.conformance [--provider ID] [--smoke] [--live] [--json]
+```
+
+Checks each adapter against test doubles (no credentials, no network) and
+reports a support level: `contract-tested`, `locally-smoke-tested`
+(`--smoke`: real `detect()` on this host) or `live-validated` (`--live` AND
+`HARMESSI_LIVE_PROVIDER=1`; may cost money, never runs by default). Exit 0 if
+every evaluated provider reaches at least `contract-tested`, 1 otherwise, 2
+if `--live` is used without the environment variable (nothing is invoked).
+The declared table is `SOPORTE_DECLARADO` in `tools/providers/conformance.py`:
+`claude_code` is declared `live-validated` (one real run on 2026-10-26, a
+single Windows 11 host, CLI `2.1.310`; not reproducible in CI and not covering
+other versions or OSes), while `codex`, `gemini` and `grok` stay
+`contract-tested` (their CLIs were not available to verify against). No
+provider is declared above its recorded evidence: see the support matrix and
+the evidence record in [docs/providers.md](docs/providers.md). The
+report also lists `advertencias` (e.g. `codex: ignora model`) when an adapter
+does not forward `model`/`effort`; they never fail the check. The doubles
+cover `subprocess.run/Popen/check_output/check_call/call` and `shutil.which`
+(also from-imports in the adapter's module), and no synthetic API key set in
+the environment may reach the command, `env=` or `input=`.
+
+The test that runs the real `detect()` of `claude` is opt-in: set
+`HARMESSI_SMOKE_LOCAL=1` (and have `claude` in PATH), otherwise it is skipped.
+
+#### Source observer conformance (installed in projects)
+
+```python
+from tools.datasources import conformance
+
+reporte = conformance.verificar_observer(
+    mi_factory,                       # factory(source_id, options)
+    source_id="mi-fuente",
+    options={"path": "data/archivo.csv"},
+    request={"source_id": "mi-fuente"},
+    evidencia="real",                 # "fixture" or "real": declared by you
+    options_error={"path": "data/no_existe.csv"},  # optional: must make the observer fail
+)
+print(reporte.to_json())              # reporte.ok is the global verdict
+```
+
+It validates shape, capabilities, `SourceObservation` parsing, no invented
+facets, rejection of invalid `source_id` and errors as bounded exceptions
+(`SourceError`, `RuntimeError`, `ValueError`, `FileNotFoundError`,
+`OSError`; a `KeyError`/`TypeError`/... fails and names the type), no secrets
+or absolute paths, reproducible `content_sha256`, and no installers or process
+launchers (static AST check over the factory's file: `subprocess`/`pip`/`uv`/
+`poetry`/`setuptools`/`runpy`/`ctypes` imports at any level except under
+`TYPE_CHECKING`, `__import__`/`import_module` of them, `os.system/popen/
+spawn*/exec*`; not exhaustive, sibling modules are not followed). If
+`options_error` is not given, the `error_acotado` check is not evaluated and
+the report is `ok=False`, `completo=False` unless you pass
+`permitir_no_evaluados=True`. Heuristic, not a security guarantee.
+
+### `harmessi routing`
+
+```
+python -m tools.harmessi routing show|resolve --role <r> [--task-type <t>] [--policy <path>] [--check-availability] [--json]
+```
+
+Declarative, deterministic resolution of provider/model/effort by role +
+task type from an optional policy file (default `.harmessi/routing.json`;
+its absence means no policy declared, never an inferred one). `show` prints
+the loaded policy (or says explicitly that none is declared); `resolve`
+returns a `RoutingDecision` for a given `--role`/`--task-type`, optionally
+checking real availability via `tools.providers.list_providers()` with
+`--check-availability`. Routing never infers or optimizes automatically —
+`provider_available` is informational only, it never changes the resolved
+`provider_id`.
+
+### `harmessi fallback`
+
+```
+python -m tools.harmessi fallback resolve-chain|invoke --role <r> [--task-type <t>] [--policy <path>] [--prompt <p>] [--model <m>] [--effort <e>] [--json]
+```
+
+A technical fallback engine: `resolve-chain` reports the candidate provider
+chain (`provider_id` + `fallback_chain`) for a role/task and each member's
+real availability, without invoking anything; `invoke` actually runs it,
+trying the next provider in the chain only when the previous one is
+genuinely unavailable (quota, not installed, unreachable) — it never retries
+on a semantic error, a code error, or a disagreement of any kind. Each
+attempt is recorded as a `HandoffRecord` in the result, including the ones
+that failed, so a fallback never hides the original error. Automatic
+fallback is enabled only by an `availability_error` of `quota`,
+`unavailable` or `unauthenticated`; `ok=False` with no `availability_error`
+never triggers it. Routing is declarative, and `provider_available` is
+informational only. Provider-neutrality means the 4 adapters implement the same
+`ProviderAdapter` contract and pass conformance with doubles; only Claude Code
+is validated live. Details and the POST-v1 decision on T2 are in
+[docs/providers.md](docs/providers.md).
+
+### `reporting`
+
+```
+python -m tools.reporting check-inputs --flow-scope <scope> --input <path> [--input <path> ...] [--repo-root <dir>] [--json]
+python -m tools.reporting check-destination --report-id <id> --scope <scope> --report-kind <kind> --out-dir <dir> [--sensitive-artifact <id> ...] [--repo-root <dir>] [--json]
+python -m tools.reporting validate --dir <report_dir> [--repo-root <dir>] [--json]
+python -m tools.reporting render --dir <report_dir> [--style <json>] [--include-sensitive] [--check] [--repo-root <dir>] [--json]
+```
+
+Governed reporting CLI. Only `render` writes, and only `report.html`
+(atomically); the other subcommands are read-only. `check-inputs` checks that
+a flow does not take its inputs from an exploratory output;
+`check-destination` checks that a report destination is safe for its scope (an
+exit 0 does not replace the full gate of the Python `publish` API, which has
+no CLI subcommand); `validate` runs the full gate over a persisted report
+directory; `render` produces a self-contained `report.html` from a validated
+directory and refuses (exit 1, nothing written) on any FAIL. With `--check` it
+writes nothing and compares the existing file against a fresh render, which
+may report a difference if the plotly.js bundle available now differs from
+the one used at publish time. Relative paths resolve against `--repo-root`
+(default: the current directory). Exit codes: `0` no FAIL, `1` at least one
+FAIL, `2` invalid usage, `3` environment error.
+
+### `harmessi-bench`
+
+```
+python -m tools.harmessi_bench.cli run (--scenarios <path> | --suite <manifest>) --provider <p> [--model <m>] [--effort <e>] --run-id <id> [--resume] [--seed <n>] [--json]
+python -m tools.harmessi_bench.cli suite-check --suite <manifest> [--json]
+python -m tools.harmessi_bench.cli compare --baseline <run_id> --candidate <run_id> [--json]
+```
+
+A separate CLI, not a subcommand of `harmessi` — invoked as
+`python -m tools.harmessi_bench.cli`, with no `__main__.py` of its own yet.
+An evals framework, deliberately kept apart from the deterministic unit test
+suites: `run` executes a set of reproducible scenarios against a real
+provider (via the same `tools/providers` adapters) and scores each one with
+a deterministic scorer (`contains`/`regex`/`exact` — no LLM-as-judge),
+saving the result to `.harmessi/evals/<run_id>/result.json`; `compare`
+diffs two saved runs and reports regressions/improvements. Scoring is a
+surface-level text proxy, not a measure of semantic quality.
+
+Since v0.13 the framework is a versioned evaluation foundation (it extends
+the same package; nothing is duplicated):
+
+- `--suite <manifest>` runs a versioned suite (`suite_id`, `suite_version`,
+  content `suite_hash` computed by the code) instead of a loose
+  `--scenarios` file; exactly one of the two is required. `suite-check`
+  validates a manifest (exit 0 valid, 1 invalid). A public synthetic suite
+  ships at `tools/harmessi_bench/suites/harmessi-core-synthetic.suite.json`.
+- `result.json` now carries `schema_version`, `evaluator_version` and the
+  `suite` block; older files without them are still read.
+- `compare` prints a verdict: `candidate_better`, `baseline_better`,
+  `equivalent` or `inconclusive`. It uses only the deterministic
+  `score.passed`, and falls back to `inconclusive` when in doubt: different
+  scenario sets, a provider outage (`availability_error`), a different suite
+  or `evaluator_version`, or regressions and improvements at once.
+- Evals are not tests: the unit tests prove deterministic correctness, the
+  evals observe behavior; a verdict is evidence, not a promotion. A case may
+  declare `surface_under_test` only for Optimizable surfaces; Protected and
+  project-owned paths are rejected, and nothing here writes or promotes harness
+  surfaces. It runs from a Harmessi checkout only (not part of the installed
+  manifest). No LLM-as-judge and no leaderboard.
+- Reproducible runs (Change 2): every `run` stores a `run_manifest` in
+  `result.json` (harness version, Git commit or `unknown`, skill/surface
+  hashes, provider/model/effort, evaluator, suite, `identity_hash`; ids and
+  hashes only, no environment, hostname, user or absolute paths).
+  `--resume` completes an existing run by running only the scenarios without
+  an `ok` result, and refuses (exit 1, nothing modified) if the configuration
+  differs materially; an existing `run_id` with a manifest needs `--resume`
+  or a new id. `--seed <n>` is recorded as informational only (the provider
+  may ignore it). Persisted excerpts are redacted best-effort (user paths,
+  emails, common tokens): this reduces accidental leaks, it is not a
+  guarantee. `compare` adds `config_diff`. Configuration reproducibility is
+  not bit-for-bit reproducibility: the model output stays stochastic.
+
+### Platform compatibility
+
+Harmessi is designed to be portable; it is validated by execution on Windows
+only (Linux/macOS: contract/CI config, execution not observed). Everything under `tools/`
+(the installer, `doctor`, `dsguard`, `nbrunner`, and both `PreToolUse` hook
+launchers) is pure Python, invoked as `python -m tools....` or via the
+Python interpreter directly — no step depends on `bash`, PowerShell, or any
+other shell. `subprocess` is always called with an argument list (never
+`shell=True`), and the two hook launchers resolve the project's `.venv`
+interpreter using the correct layout for the host OS (`Scripts/python.exe`
+on Windows, `bin/python` on Linux/macOS), honoring a custom `venv_dir` from
+`control.json` when one was used at install time, and correctly supporting
+Git worktrees (the shared repo's own `.venv`, not the worktree's checkout,
+is always the one used). Run `python -m tools.harmessi doctor` on an
+installed project to verify this end to end, including whether any
+configured hook still depends on an external shell.
+
+> Validation status (v0.14): execution of the test suite has been observed on
+> Windows only. Linux and macOS are not validated by execution in this
+> release; a minimal workflow (`.github/workflows/portability-smoke.yml`) is
+> present and was verified structurally, but its remote execution was not
+> observed (remote CI execution not observed during release). See
+> `docs/portability.md`.
+
+### Contracts, versioning and deprecation
+
+`docs/contracts/inventory.json` (human view: `docs/contracts/README.md`) is an
+inventory of the CLIs, schemas and other contracts a third party could consume,
+classified as stable / public-candidate / internal / experimental. Six contracts
+are `stable` from 1.0.0 (the `ds_guard`, `ds_init` and `harmessi` CLIs and the
+SourceObservation, source registry and eval result schemas); the stability
+promise covers only those. Everything else is experimental or internal, falls
+outside the promise and may change in a minor release. See also `docs/versioning.md` (how 0.x vs 1.x is read,
+compatibility window, limited to the artifacts listed there and covered by the
+compatibility tests; the fixtures of the six stable contracts are real, generated
+from the `v0.15.0` tag, and only the older v0_11/v0_12 fixtures and part of v0_13
+are synthetic) and `docs/deprecation.md` (deprecation convention).
+
+## Profile
+
+The current (and only) profile is `python-jupyter-data`: agents, the
+`lead-data-scientist` skill, `dsguard`, `nbrunner`, and SDD templates for a
+Python/Jupyter data science project.
+
+## Development
+
+```bash
+python -m unittest discover -s tools/ds_init/tests -p "test_*.py"
+python -m unittest discover -s tools/harmessi/tests -p "test_*.py"
+python -m unittest discover -s tools/tests -p "test_*.py"
+python -m unittest discover -s tools/ds_profile/tests -p "test_*.py"
+python -m tools.ds_init.check_manifest_parity   # dev-only, read-only drift check
+```
+
+## License
+
+Harmessi v1.0+ is **source available** (not open source), licensed under the
+[PolyForm Shield License 1.0.0](LICENSE). In short: you can use it internally —
+including inside a company — and for research and education, and you can read,
+modify and redistribute it under the license terms. Selling Harmessi, or offering
+a product or service that competes with it, requires a separate commercial
+license — see [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) and [NOTICE](NOTICE).
+Installations made by `ds_init` include `HARMESSI-LICENSE.txt`, which carries the
+license terms and notice of the Harmessi components; it does not relicense your
+project. Historical note: versions v0.x were published under Apache License 2.0.

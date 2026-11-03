@@ -1,0 +1,293 @@
+{
+  "schema_version": 1,
+  "change_id": "20261102-v1-release-hardening",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-11-02T17:16:13Z",
+  "baseline": {
+    "commit": "38f4c50bcf13086e77223777fb6ad90f239da580",
+    "rama": "v1-dev",
+    "capturado_utc": "2026-11-02T17:16:13Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".ds_init/control.json",
+      ".gitattributes",
+      "ARCHITECTURE.md",
+      "CITATION.cff",
+      "HARMESSI-LICENSE.txt",
+      "README.md",
+      "docs/contracts/README.md",
+      "docs/installation.md",
+      "docs/release-process.md",
+      "docs/releases/v1.0.0.md",
+      "docs/roadmap/v1-readiness.md",
+      "docs/versioning.md",
+      "openspec/changes/20261030-v1-contract-stabilization/control.json",
+      "openspec/changes/20261102-v1-release-hardening/amendments.jsonl",
+      "openspec/changes/20261102-v1-release-hardening/control.json",
+      "openspec/changes/20261102-v1-release-hardening/design.md",
+      "openspec/changes/20261102-v1-release-hardening/proposal.md",
+      "openspec/changes/20261102-v1-release-hardening/spec.md",
+      "openspec/changes/20261102-v1-release-hardening/tasks.md",
+      "openspec/changes/20261102-v1-release-hardening/verification.md",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/tests/test_v1_license_asset.py",
+      "tools/ds_init/version.py",
+      "tools/tests/fixtures/license/**",
+      "tools/tests/test_license_anchor.py",
+      "tools/tests/test_parallel_change_isolation.py",
+      "tools/tests/test_v015_compat_window.py",
+      "tools/tests/test_v1_release_hardening_smoke.py"
+    ],
+    "scope_hash": "0917023bdb58a9118f886a2be16fd8deefdacd6bf1b422b930dcd343e4fedd3b"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "dc760e445db3e5f57dc3701251103f48fbbee49f9bb6f442c42dfb89b793652a",
+      "registrado_utc": "2026-11-02T17:29:37Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-11-02",
+      "alcance_aprobado": "Harmessi v1 20261102-v1-release-hardening",
+      "cita": "Aprobado. Autorizo explícitamente el Change `20261102-v1-release-hardening` y sus tres artefactos actuales: proposal.md, spec.md, design.md (mensaje del usuario, 2026-11-02)"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "4a312d81daf2e06a4bc3b3329753e0f062938e5e0e4ade5b1c5160384c8a6c07",
+      "registrado_utc": "2026-11-02T17:29:38Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-11-02",
+      "alcance_aprobado": "Harmessi v1 20261102-v1-release-hardening",
+      "cita": "Aprobado. Autorizo explícitamente el Change `20261102-v1-release-hardening` y sus tres artefactos actuales: proposal.md, spec.md, design.md (mensaje del usuario, 2026-11-02)"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "56966b3be255fdf78b68cbf660e98a22c1cc9c6afe7f51000776c5f9af0c6467",
+      "registrado_utc": "2026-11-02T17:29:39Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-11-02",
+      "alcance_aprobado": "Harmessi v1 20261102-v1-release-hardening",
+      "cita": "Aprobado. Autorizo explícitamente el Change `20261102-v1-release-hardening` y sus tres artefactos actuales: proposal.md, spec.md, design.md (mensaje del usuario, 2026-11-02)"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-11-02T17:29:46Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-11-02T17:30:29Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-11-03T16:06:43Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-11-03T16:54:52Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-11-02T17:29:48Z",
+      "cierre_utc": "2026-11-02T18:34:39Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-11-02T18:59:48Z",
+      "minutos_consumidos": 64.85,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-11-03T13:11:04Z",
+      "cierre_utc": "2026-11-03T14:46:26Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-11-03T14:41:04Z",
+      "minutos_consumidos": 95.36666666666666,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "a22188403ae988c94": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-11-03T13:11:20Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-11-03T13:11:20Z"
+        },
+        "a4fbe440db834aa7f": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-11-03T13:14:22Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-11-03T13:14:22Z"
+        },
+        "a6a522408fcd51db3": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-11-03T13:18:14Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-11-03T13:18:14Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s1"
+    },
+    {
+      "id": "s3",
+      "inicio_utc": "2026-11-03T14:46:32Z",
+      "cierre_utc": "2026-11-03T16:29:12Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-11-03T16:16:32Z",
+      "minutos_consumidos": 102.66666666666667,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "a22188403ae988c94": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "a4fbe440db834aa7f": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "a6a522408fcd51db3": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "a4f817619ba635b08": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-11-03T16:15:00Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-11-03T16:15:00Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s2"
+    },
+    {
+      "id": "s4",
+      "inicio_utc": "2026-11-03T16:29:18Z",
+      "cierre_utc": null,
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-11-03T17:59:18Z",
+      "minutos_consumidos": 0.0,
+      "resultado": null,
+      "subagentes": {
+        "conteo": 0,
+        "a22188403ae988c94": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "a4fbe440db834aa7f": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "a6a522408fcd51db3": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "a4f817619ba635b08": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "a98a8444dc0dc30a5": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-11-03T16:33:04Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-11-03T16:33:04Z"
+        },
+        "a0f52afa37ae99c79": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-11-03T16:48:09Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-11-03T16:48:09Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "activa",
+      "retomada_de": "s3"
+    }
+  ]
+}

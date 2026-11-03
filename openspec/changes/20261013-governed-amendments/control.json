@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "change_id": "20261013-governed-amendments",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-13T16:25:56Z",
+  "baseline": {
+    "commit": "0fe93d8a80b2482f9dee09bde072c83702d73daf",
+    "rama": "v0.10-dev",
+    "capturado_utc": "2026-10-13T16:25:56Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/sdd.md",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.10.md",
+      "openspec/changes/20261013-governed-amendments/control.json",
+      "openspec/changes/20261013-governed-amendments/design.md",
+      "openspec/changes/20261013-governed-amendments/proposal.md",
+      "openspec/changes/20261013-governed-amendments/spec.md",
+      "openspec/changes/20261013-governed-amendments/tasks.md",
+      "openspec/changes/20261013-governed-amendments/verification.md",
+      "tools/ds_guard.py",
+      "tools/dsguard/guardrails_adoption.py",
+      "tools/dsguard/pathguard.py",
+      "tools/dsguard/scope.py",
+      "tools/dsguard/scope_amendments.py",
+      "tools/harmessi/doctor.py",
+      "tools/harmessi/tests/test_doctor_guardrails.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/tests/test_guardrails_readopt.py",
+      "tools/tests/test_pathguard.py",
+      "tools/tests/test_scope.py",
+      "tools/tests/test_scope_amendments.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "0b7f3d97f6a38a39aa2629aff143d9b0ea52a4e96e60e6e9e74568a6a916652f",
+      "registrado_utc": "2026-10-13T16:46:48Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-13",
+      "alcance_aprobado": "Implementación y validación de Change 3 Governed Amendments",
+      "cita": "Aprobación humana explícita del SDD de Change 3 y decisiones M1-M4"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "cba9c8534d10b44bf22b8f91b5c26a899961575c261cd52acc3653235342901b",
+      "registrado_utc": "2026-10-13T16:46:49Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-13",
+      "alcance_aprobado": "Implementación y validación de Change 3 Governed Amendments",
+      "cita": "Aprobación humana explícita del SDD de Change 3 y decisiones M1-M4"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "afd4a98f882b6d20a4b9536c28e1369c53ae13e8a304db7d85c0adb43235826a",
+      "registrado_utc": "2026-10-13T16:46:50Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-13",
+      "alcance_aprobado": "Implementación y validación de Change 3 Governed Amendments",
+      "cita": "Aprobación humana explícita del SDD de Change 3 y decisiones M1-M4"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-13T16:46:51Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-13T16:46:52Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-13T16:46:54Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-14T23:10:32Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-14T23:10:43Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-13T16:46:53Z",
+      "cierre_utc": "2026-10-14T22:18:31Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 600,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-14T02:46:53Z",
+      "minutos_consumidos": 1771.6333333333334,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-13T17:04:43Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-13T17:41:04Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-14T22:18:40Z",
+      "cierre_utc": "2026-10-14T23:10:55Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-15T06:18:40Z",
+      "minutos_consumidos": 52.25,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

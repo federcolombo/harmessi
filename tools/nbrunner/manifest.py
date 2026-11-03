@@ -1,0 +1,293 @@
+"""Schema y validaciones *previas a ejecución* del manifest de corridas del
+futuro `notebook-runner` (`openspec/changes/<id>/runs/<run-id>.json`).
+
+Nada en este módulo ejecuta un subprocess, un notebook ni toca `data/` real —
+eso es de sesiones futuras (`execute.py`, `fsdiff.py`, CLI `notebook_runner.py`,
+`spec.md` requisito 5(e) para el hash binario de integridad de entradas).
+
+## Schema del manifest (JSON)
+
+Campos mínimos exigidos (`spec.md` requisito 4), nombres en español
+`snake_case`::
+
+    {
+      "notebook": {
+        "ruta": "notebooks/03_features.ipynb",
+        "hash_aprobado": "<sha256 hex>",
+        "algoritmo": "sha256/lf/v1"
+      },
+      "interprete": "<ruta absoluta al python del .venv del proyecto>",
+      "entradas_permitidas": ["data/interim/algo.parquet", "data/raw/**"],
+      "salidas_permitidas": ["data/processed/algo.parquet"],
+      "rutas_prohibidas": ["data/processed/otra_cosa.parquet"],
+      "timeout_segundos": 600,
+      "fase": "Fase 6",
+      "motivo": "Recalcular features del panel de modelado",
+      "criterio_exito": "El notebook termina con exit 0 y produce el parquet declarado"
+    }
+
+- `notebook.ruta`: ruta relativa a la raíz del repo del notebook a ejecutar.
+- `notebook.hash_aprobado` / `notebook.algoritmo`: hash aprobado del notebook y
+  el algoritmo usado para calcularlo — se reusa `sha256/lf/v1`
+  (`tools/dsguard/core.py:hash_lf_v1`), el mismo ya usado por `ds_guard approve`.
+- `interprete`: ruta al ejecutable de Python/kernel esperado. Debe resolver
+  dentro del `.venv` del proyecto (validación (a)).
+- `entradas_permitidas` / `salidas_permitidas`: listas de rutas o patrones
+  (estilo `fnmatch`, mismo lenguaje que `rutas_autorizadas` de `control.json`)
+  relativas a la raíz del repo.
+- `rutas_prohibidas`: lista declarada *en el manifest* (a discreción de quien
+  lo escribe) — distinta de la lista dura embebida en este módulo
+  (`RUTAS_PROHIBIDAS_SIEMPRE` / `RUTAS_PROHIBIDAS_SOLO_SALIDA`), que no depende
+  de lo que declare el manifest.
+- `timeout_segundos`: entero, límite duro de la corrida (aplicado en una
+  sesión futura).
+- `fase` / `motivo`: contexto textual libre — a qué fase del proyecto
+  corresponde la corrida y por qué se necesita.
+- `criterio_exito`: descripción textual de qué hace a la corrida exitosa,
+  además del `exit_code` del notebook (evaluado en una sesión futura).
+
+Si falta cualquiera de los campos mínimos, `cargar_manifest` rechaza de forma
+clara (`ManifestInvalidoError`, listando todos los faltantes de una sola vez)
+sin intentar ninguna otra validación después (`spec.md`, criterio de
+aceptación 4).
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Optional
+
+from dsguard.repo import path_matches_any
+
+from .core import Finding, hash_lf_v1
+
+# --- Schema --------------------------------------------------------------------
+
+ALGORITMO_HASH_NOTEBOOK = "sha256/lf/v1"
+
+CAMPOS_REQUERIDOS_NOTEBOOK = ("ruta", "hash_aprobado", "algoritmo")
+
+CAMPOS_REQUERIDOS_MANIFEST = (
+    "notebook",
+    "interprete",
+    "entradas_permitidas",
+    "salidas_permitidas",
+    "rutas_prohibidas",
+    "timeout_segundos",
+    "fase",
+    "motivo",
+    "criterio_exito",
+)
+
+
+class ManifestInvalidoError(Exception):
+    """Falta algún campo mínimo del schema. No se corre ninguna otra
+    validación después de este error (`spec.md`, criterio de aceptación 4)."""
+
+    def __init__(self, faltantes: list):
+        self.faltantes = list(faltantes)
+        mensaje = "Manifest inválido, faltan campos: " + ", ".join(self.faltantes)
+        super().__init__(mensaje)
+
+
+def cargar_manifest(path: Path) -> dict:
+    """Carga y parsea el manifest JSON, validando únicamente la presencia del
+    schema mínimo (no ejecuta las validaciones (a)-(d), esas son funciones
+    separadas más abajo).
+
+    Lanza `ManifestInvalidoError` si falta cualquier campo de
+    `CAMPOS_REQUERIDOS_MANIFEST` o, dentro de `notebook`, cualquiera de
+    `CAMPOS_REQUERIDOS_NOTEBOOK`. Junta todos los faltantes en un solo error
+    (no se detiene en el primero), pero no corre ninguna otra validación.
+    """
+    with open(path, "r", encoding="utf-8") as f:
+        datos = json.load(f)
+
+    faltantes = [c for c in CAMPOS_REQUERIDOS_MANIFEST if c not in datos]
+    if "notebook" not in faltantes:
+        notebook = datos.get("notebook")
+        if not isinstance(notebook, dict):
+            faltantes.append("notebook")
+        else:
+            for c in CAMPOS_REQUERIDOS_NOTEBOOK:
+                if c not in notebook:
+                    faltantes.append(f"notebook.{c}")
+
+    if faltantes:
+        raise ManifestInvalidoError(faltantes)
+
+    return datos
+
+
+# --- (a) intérprete dentro del .venv --------------------------------------------
+
+def validar_interprete(interprete: str, venv_path: Path) -> list:
+    """El intérprete declarado en el manifest debe resolver dentro de
+    `venv_path` (recibido como parámetro, nunca hardcodeado — los tests usan
+    un `.venv` de juguete)."""
+    interprete_resuelto = Path(interprete).resolve()
+    venv_resuelto = Path(venv_path).resolve()
+    try:
+        interprete_resuelto.relative_to(venv_resuelto)
+    except ValueError:
+        return [
+            Finding(
+                "NBRUNNER-INTERPRETE-FUERA-VENV",
+                f"El intérprete declarado no resuelve dentro de {venv_resuelto}",
+                str(interprete),
+            )
+        ]
+    return []
+
+
+# --- (b) hash del notebook -------------------------------------------------------
+
+def validar_hash_notebook(notebook_ruta: Path, hash_aprobado: str) -> list:
+    """El hash actual del notebook en el working tree (`hash_lf_v1`) debe
+    coincidir con el hash aprobado declarado en el manifest."""
+    hash_actual = hash_lf_v1(Path(notebook_ruta))
+    if hash_actual != hash_aprobado:
+        return [
+            Finding(
+                "NBRUNNER-HASH-DESINCRONIZADO",
+                "El hash actual del notebook no coincide con el hash aprobado del manifest",
+                str(notebook_ruta),
+            )
+        ]
+    return []
+
+
+# --- (c) aprobación vigente en control.json --------------------------------------
+
+def _aprobacion_mas_reciente(control: dict, artefacto: str) -> Optional[dict]:
+    """Mismo mecanismo de búsqueda que `dsguard.sdd._aprobacion_mas_reciente`:
+    filtra por `artefacto` y toma la más reciente por `registrado_utc`
+    (append-only, pero se ordena igual para ser robustos ante reordenamientos
+    manuales)."""
+    candidatas = [a for a in control.get("aprobaciones", []) if a.get("artefacto") == artefacto]
+    if not candidatas:
+        return None
+    return sorted(candidatas, key=lambda a: a.get("registrado_utc", ""))[-1]
+
+
+def validar_aprobacion(control: dict, artefacto: str, hash_manifest: str, modo: str) -> tuple:
+    """Valida que exista una aprobación vigente para este manifest exacto en
+    `control.json`, reusando el mismo mecanismo de comparación de
+    `gate_implementacion`/`APROB-HASH-DESINCRONIZADO`
+    (`tools/dsguard/sdd.py`).
+
+    `modo` es `"dry_run"` o `"execute"` (todavía no existe el flag del CLI —
+    sesión futura — así que se recibe explícito).
+
+    - En `"execute"`: la aprobación es obligatoria y bloqueante. Si no hay
+      aprobación vigente para `artefacto` con `hash == hash_manifest`, se
+      devuelve un `Finding` (`APROB-AUSENTE` o `APROB-HASH-DESINCRONIZADO`).
+    - En `"dry_run"`: nunca bloquea. Si no hay aprobación vigente, no se
+      genera ningún `Finding`; el segundo elemento de la tupla devuelta
+      informa `"no_verificada"` en vez de bloquear.
+
+    Devuelve `(findings, estado_aprobacion)` donde `estado_aprobacion` es uno
+    de `"vigente"`, `"ausente"`, `"desincronizada"` (solo posibles como
+    bloqueantes en `"execute"`) o `"no_verificada"` (solo en `"dry_run"`,
+    cuando no hay aprobación vigente)."""
+    if modo not in ("dry_run", "execute"):
+        raise ValueError(f"modo inválido: {modo!r} (se esperaba 'dry_run' o 'execute')")
+
+    aprobacion = _aprobacion_mas_reciente(control, artefacto)
+    if aprobacion is None:
+        estado_real = "ausente"
+    elif aprobacion.get("hash") != hash_manifest:
+        estado_real = "desincronizada"
+    else:
+        estado_real = "vigente"
+
+    if estado_real == "vigente":
+        return [], "vigente"
+
+    if modo == "dry_run":
+        return [], "no_verificada"
+
+    # modo == "execute": bloqueante.
+    if estado_real == "ausente":
+        finding = Finding(
+            "APROB-AUSENTE",
+            f"No hay aprobación registrada para {artefacto}",
+            artefacto,
+        )
+    else:
+        finding = Finding(
+            "APROB-HASH-DESINCRONIZADO",
+            f"El hash actual de {artefacto} no coincide con la aprobación registrada",
+            artefacto,
+        )
+    return [finding], estado_real
+
+
+# --- (d) lista dura de rutas siempre-prohibidas -----------------------------------
+
+# Prohibidas tanto como entrada como salida, sin excepción (spec.md req. 5(d)).
+# Vacía por defecto: cada proyecto declara aquí sus propios datasets
+# sensibles/sellados (ver la plantilla parametrizada en
+# `tools/ds_init/profiles/*/templates/nbrunner_manifest.py.tmpl`).
+RUTAS_PROHIBIDAS_SIEMPRE: list = []
+
+# Permitidas como entrada, prohibidas siempre como salida (CLAUDE.md §1:
+# "data/raw/ es solo lectura").
+RUTAS_PROHIBIDAS_SOLO_SALIDA = [
+    "data/raw/**",
+]
+
+
+def _colisiona(ruta_o_patron_a: str, ruta_o_patron_b: str) -> bool:
+    """Colisión bidireccional entre dos rutas/patrones, mismo estilo que
+    `tools/dsguard/repo.py:path_matches_any` (fnmatch en ambos sentidos).
+
+    `path_matches_any` usa `fnmatch.fnmatchcase`, que es case-sensitive y no
+    normaliza mayúsculas/minúsculas. En NTFS (case-insensitive) una ruta
+    declarada con otro casing (p. ej. `Data/Processed/Panel_...parquet`) no
+    debe poder esquivar `RUTAS_PROHIBIDAS_SIEMPRE` (spec.md req. 5(d): "sin
+    excepción"). Se normaliza con `casefold()` (más robusto que `lower()`
+    para comparación case-insensitive) antes de delegar en `path_matches_any`.
+    """
+    a = ruta_o_patron_a.casefold()
+    b = ruta_o_patron_b.casefold()
+    return path_matches_any(a, [b]) or path_matches_any(b, [a])
+
+
+def validar_rutas_prohibidas(entradas_permitidas: list, salidas_permitidas: list) -> list:
+    """Ninguna entrada/salida declarada en el manifest matchea (bidireccional,
+    vía `path_matches_any`) la lista dura de rutas siempre-prohibidas embebida
+    en este módulo.
+
+    - `RUTAS_PROHIBIDAS_SIEMPRE` se chequea contra `entradas_permitidas` Y
+      `salidas_permitidas` (prohibidas sin excepción, en cualquier dirección).
+    - `RUTAS_PROHIBIDAS_SOLO_SALIDA` (`data/raw/**`) se chequea solo contra
+      `salidas_permitidas` — declararla como entrada es legítimo.
+    """
+    findings = []
+
+    for patron_declarado in entradas_permitidas:
+        for ruta_prohibida in RUTAS_PROHIBIDAS_SIEMPRE:
+            if _colisiona(ruta_prohibida, patron_declarado):
+                findings.append(
+                    Finding(
+                        "NBRUNNER-RUTA-PROHIBIDA",
+                        f"'{patron_declarado}' en entradas_permitidas colisiona con la ruta "
+                        f"siempre-prohibida '{ruta_prohibida}'",
+                        patron_declarado,
+                    )
+                )
+
+    for patron_declarado in salidas_permitidas:
+        for ruta_prohibida in RUTAS_PROHIBIDAS_SIEMPRE + RUTAS_PROHIBIDAS_SOLO_SALIDA:
+            if _colisiona(ruta_prohibida, patron_declarado):
+                findings.append(
+                    Finding(
+                        "NBRUNNER-RUTA-PROHIBIDA",
+                        f"'{patron_declarado}' en salidas_permitidas colisiona con la ruta "
+                        f"siempre-prohibida '{ruta_prohibida}'",
+                        patron_declarado,
+                    )
+                )
+
+    return findings

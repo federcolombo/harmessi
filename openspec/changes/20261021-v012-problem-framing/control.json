@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "change_id": "20261021-v012-problem-framing",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-21T12:12:50Z",
+  "baseline": {
+    "commit": "7240979504eca349a9aafd0b785237a8a78e9294",
+    "rama": "v0.12-dev",
+    "capturado_utc": "2026-10-21T12:12:50Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/SKILL.md",
+      ".claude/skills/lead-data-scientist/methodology.md",
+      ".claude/skills/lead-data-scientist/skills/problem-framing.md",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.12.md",
+      "openspec/changes/20261021-v012-problem-framing/**",
+      "openspec/changes/20261021-v012-problem-framing/amendments.jsonl",
+      "openspec/changes/20261021-v012-problem-framing/control.json",
+      "openspec/changes/20261021-v012-problem-framing/design.md",
+      "openspec/changes/20261021-v012-problem-framing/proposal.md",
+      "openspec/changes/20261021-v012-problem-framing/spec.md",
+      "openspec/changes/20261021-v012-problem-framing/tasks.md",
+      "openspec/changes/20261021-v012-problem-framing/verification.md",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/profiles/python_jupyter_data/templates/SKILL_lead_data_scientist.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/methodology.md.tmpl",
+      "tools/ds_init/tests/test_glossary_install.py",
+      "tools/ds_init/tests/test_manifest.py",
+      "tools/harmessi/doctor.py",
+      "tools/harmessi/tests/test_doctor_skill_contract.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/tests/test_skill_contract.py",
+      "tools/tests/test_skill_methodology.py",
+      "tools/tests/test_v010_release_hardening_smoke.py",
+      "tools/tests/test_v011_release_hardening_smoke.py"
+    ],
+    "scope_hash": "9b00ada487ab3f7db340d9ce9138628c48d9fdac11ccb2aff34e2fff0d5d0c70"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e3836c3048ec132c06938022be674a0bf7eafa6ca0a89fad3b37c6db3d3d4707",
+      "registrado_utc": "2026-10-21T12:12:54Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.12 20261021-v012-problem-framing",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.12.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "96be601b6c14ebe81b53b89e59371160981df482701695509c469423a8dba0f8",
+      "registrado_utc": "2026-10-21T12:12:55Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.12 20261021-v012-problem-framing",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.12.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "edc799bacbdeedf090c517c0ef9a7acdd052ee5c17412b49df6435ee8986a4ae",
+      "registrado_utc": "2026-10-21T12:12:56Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.12 20261021-v012-problem-framing",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.12.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-21T12:12:57Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-21T12:13:00Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-21T12:20:56Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-21T12:20:58Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-21T12:12:58Z",
+      "cierre_utc": "2026-10-21T12:20:59Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-21T16:12:58Z",
+      "minutos_consumidos": 8.016666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T12:13:13Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T12:16:30Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

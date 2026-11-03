@@ -1,0 +1,313 @@
+{
+  "schema_version": 1,
+  "change_id": "20261002-data-cards",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-02T15:53:16Z",
+  "baseline": {
+    "commit": "f5c3638421aa1c7b4710f07a684c7495ebcd5988",
+    "rama": "v0.9-dev",
+    "capturado_utc": "2026-10-02T15:53:16Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".harmessi/executions/*",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.10.md",
+      "docs/roadmap/v0.9.md",
+      "openspec/changes/20261002-data-cards/control.json",
+      "openspec/changes/20261002-data-cards/design.md",
+      "openspec/changes/20261002-data-cards/proposal.md",
+      "openspec/changes/20261002-data-cards/spec.md",
+      "openspec/changes/20261002-data-cards/tasks.md",
+      "openspec/changes/20261002-data-cards/verification.md",
+      "tools/autonomy/tests",
+      "tools/cards/assess.py",
+      "tools/cards/datacard.py",
+      "tools/cards/resolvers.py",
+      "tools/cards/tests/test_assess.py",
+      "tools/cards/tests/test_attestation.py",
+      "tools/cards/tests/test_core.py",
+      "tools/cards/tests/test_datacard.py",
+      "tools/cards/tests/test_datacard_location.py",
+      "tools/cards/tests/test_evidence.py",
+      "tools/cards/tests/test_resolvers.py",
+      "tools/cards/tests/test_serialization.py",
+      "tools/datacontracts/tests",
+      "tools/datasources/tests",
+      "tools/ds_init/tests",
+      "tools/leadrun/tests",
+      "tools/qualityevidence/tests",
+      "tools/tests",
+      "tools/tests/test_v09_cards_inert.py",
+      "tools/tests/test_v09_cards_neutrality.py",
+      "tools/tests/test_v09_cards_parity.py",
+      "tools/tests/test_v09_datacards_inert.py",
+      "tools/tests/test_v09_datacards_parity.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "755f1760d8c71e74705102eba40577455eb70d22e44a13a0e6063747cb77cf8b",
+      "registrado_utc": "2026-10-02T17:09:05Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "SDD Change 1 data-cards completo y ejecuciones previstas (tests dirigidos, E2E, regresión relevante, reviewer, re-tests)",
+      "cita": "Apruebo explícitamente el SDD de 20261002-data-cards; el SDD está alineado con el roadmap de v0.9 y no quedan decisiones materiales pendientes"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "2d5d4704f175340383239fe87bb671000fd02d8ec234acefee9ff30a02680444",
+      "registrado_utc": "2026-10-02T17:09:06Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "SDD Change 1 data-cards completo y ejecuciones previstas (tests dirigidos, E2E, regresión relevante, reviewer, re-tests)",
+      "cita": "Apruebo explícitamente el SDD de 20261002-data-cards; el SDD está alineado con el roadmap de v0.9 y no quedan decisiones materiales pendientes"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f3400b1e2884ba1e90e98c6192b84182a74f46f70baaf77262608ba4a6e0e06f",
+      "registrado_utc": "2026-10-02T17:09:08Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "SDD Change 1 data-cards completo y ejecuciones previstas (tests dirigidos, E2E, regresión relevante, reviewer, re-tests)",
+      "cita": "Apruebo explícitamente el SDD de 20261002-data-cards; el SDD está alineado con el roadmap de v0.9 y no quedan decisiones materiales pendientes"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "937a3f5b37eb07e2a2312a1f6e00481611b0e62192650d07657de385103dcac0",
+      "registrado_utc": "2026-10-02T17:19:38Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 data-cards: corrida dirigida",
+      "cita": "Aprobación humana explícita del SDD de Change 1 20261002-data-cards"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "937a3f5b37eb07e2a2312a1f6e00481611b0e62192650d07657de385103dcac0",
+      "registrado_utc": "2026-10-02T17:20:57Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 data-cards: re-test dirigida tras ajuste de neutralidad",
+      "cita": "Aprobación humana explícita del SDD de Change 1 20261002-data-cards"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "937a3f5b37eb07e2a2312a1f6e00481611b0e62192650d07657de385103dcac0",
+      "registrado_utc": "2026-10-02T17:27:59Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 data-cards: dirigida ciclo 1 de fixes",
+      "cita": "Aprobación humana explícita del SDD de Change 1 20261002-data-cards"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "937a3f5b37eb07e2a2312a1f6e00481611b0e62192650d07657de385103dcac0",
+      "registrado_utc": "2026-10-02T17:32:36Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 data-cards: dirigida tras ciclo 1 de fixes",
+      "cita": "Aprobación humana explícita del SDD de Change 1 20261002-data-cards"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "937a3f5b37eb07e2a2312a1f6e00481611b0e62192650d07657de385103dcac0",
+      "registrado_utc": "2026-10-02T17:34:24Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 data-cards: dirigida re-test 2 tras ciclo de fixtures",
+      "cita": "Aprobación humana explícita del SDD de Change 1 20261002-data-cards"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "937a3f5b37eb07e2a2312a1f6e00481611b0e62192650d07657de385103dcac0",
+      "registrado_utc": "2026-10-02T17:35:25Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 data-cards: dirigida re-test 3",
+      "cita": "Aprobación humana explícita del SDD de Change 1 20261002-data-cards"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_datacards_inert.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "937a3f5b37eb07e2a2312a1f6e00481611b0e62192650d07657de385103dcac0",
+      "registrado_utc": "2026-10-02T17:39:50Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 data-cards: dirigida final tras pulido",
+      "cita": "Aprobación humana explícita del SDD de Change 1 20261002-data-cards"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "e52cb084631de881cefa90be3731f3a86e5891c228dcf71558bcd2ad195bd09d",
+      "registrado_utc": "2026-10-02T17:40:25Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 data-cards: regresión lote 1 tools/tests",
+      "cita": "Aprobación humana explícita del SDD de Change 1 20261002-data-cards"
+    },
+    {
+      "artefacto": "pytest:tools/datasources/tests|tools/datacontracts/tests|tools/qualityevidence/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "6cf5e8d40c62c52bde6912d1d70c11f66eaf1a7651126c2019767967536ee4cf",
+      "registrado_utc": "2026-10-02T18:00:03Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 data-cards: regresión lote 2 datasources datacontracts qualityevidence",
+      "cita": "Aprobación humana explícita del SDD de Change 1 20261002-data-cards"
+    },
+    {
+      "artefacto": "pytest:tools/autonomy/tests|tools/leadrun/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "90182725bc12ae504caafe2c9c252304f4bc86cc11ab97c46aa1086496205cfb",
+      "registrado_utc": "2026-10-02T18:00:11Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 data-cards: regresión lote 3 autonomy leadrun",
+      "cita": "Aprobación humana explícita del SDD de Change 1 20261002-data-cards"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_datacard.py|tools/cards/tests/test_datacard_location.py|tools/cards/tests/test_resolvers.py|tools/cards/tests/test_serialization.py|tools/cards/tests/test_core.py|tools/cards/tests/test_evidence.py|tools/cards/tests/test_attestation.py|tools/cards/tests/test_assess.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "134e989363274d9f167b706804d528c7b0c6fdd9fb7cf6e3c61d478298ec4d65",
+      "registrado_utc": "2026-10-02T18:00:37Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-02",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 1 data-cards: regresión lote 4 tools/cards/tests (8 archivos)",
+      "cita": "Aprobación humana explícita del SDD de Change 1 20261002-data-cards"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-02T17:09:09Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-02T17:09:10Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-02T17:09:12Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-02T18:01:31Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-02T18:01:35Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-02T17:09:11Z",
+      "cierre_utc": "2026-10-02T18:01:36Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 12,
+        "max_roles": 3,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-03T01:09:11Z",
+      "minutos_consumidos": 52.416666666666664,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-02T17:38:31Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-02T17:35:57Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "metricas_eficiencia": {
+    "ejecuciones": [
+      {
+        "execution_id": "pytest__918e38e7e79a",
+        "duration_seconds": 17.59400000000096,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__d89913fcfd20",
+        "duration_seconds": 17.389999999999418,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__b682f4cce772",
+        "duration_seconds": 17.28099999999904,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__b86322c2d09c",
+        "duration_seconds": 19.75,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__4275a902aae6",
+        "duration_seconds": 21.71900000000096,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__3a50f1978112",
+        "duration_seconds": 19.98400000000038,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__643d3762b5e9",
+        "duration_seconds": 21.5,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__e8c848f1671a",
+        "duration_seconds": 1160.561999999998,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__d98c9a5bcfcf",
+        "duration_seconds": 4.5790000000015425,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__8147b72a845a",
+        "duration_seconds": 5.40599999999904,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__541312af6dce",
+        "duration_seconds": 17.187000000001717,
+        "command_form": "pytest"
+      }
+    ]
+  }
+}

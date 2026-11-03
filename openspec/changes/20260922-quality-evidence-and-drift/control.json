@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "change_id": "20260922-quality-evidence-and-drift",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-22T15:41:26Z",
+  "baseline": {
+    "commit": "07ea73d6d4db840248fdd329377f1f6c80c2be38",
+    "rama": "v0.7-dev",
+    "capturado_utc": "2026-09-22T15:41:26Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260922-quality-evidence-and-drift/proposal.md",
+      "openspec/changes/20260922-quality-evidence-and-drift/tasks.md",
+      "openspec/changes/20260922-quality-evidence-and-drift/spec.md",
+      "openspec/changes/20260922-quality-evidence-and-drift/design.md",
+      "openspec/changes/20260922-quality-evidence-and-drift/control.json",
+      "openspec/changes/20260922-quality-evidence-and-drift/verification.md",
+      "tools/qualityevidence/__init__.py",
+      "tools/qualityevidence/core.py",
+      "tools/qualityevidence/evidence.py",
+      "tools/qualityevidence/tests/__init__.py",
+      "tools/qualityevidence/tests/test_core.py",
+      "tools/qualityevidence/tests/test_evidence.py",
+      "tools/qualityevidence/tests/test_installability.py",
+      "tools/tests/test_v07_qualityevidence_neutrality.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/ds_init/manifest.py",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.7.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "311d9759b9170813750aaca09825a66210c4f719e0bfb71a5603a2cb3a7149b0",
+      "registrado_utc": "2026-09-22T15:52:01Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 3 - quality-evidence-and-drift (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 3 -- quality-evidence-and-drift ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md). Decision 2 confirmada: sin dependencia de import con tools.reporting.evidence en ninguna direccion, reimplementacion local minima de hash/manifest, mismo criterio que tools/dsguard/mlops_evidence.py."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "88dcbec200da5589669c59d9c540ddfce9e9aa65ebac74768126fdbe05ebe269",
+      "registrado_utc": "2026-09-22T15:52:02Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 3 - quality-evidence-and-drift (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 3 -- quality-evidence-and-drift ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md). Decision 2 confirmada: sin dependencia de import con tools.reporting.evidence en ninguna direccion, reimplementacion local minima de hash/manifest, mismo criterio que tools/dsguard/mlops_evidence.py."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "19efb619dd9aabe6c0d0f527da4b9c5d9a10c85ed61e4b560ddf36be262a4733",
+      "registrado_utc": "2026-09-22T15:52:03Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 3 - quality-evidence-and-drift (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 3 -- quality-evidence-and-drift ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md). Decision 2 confirmada: sin dependencia de import con tools.reporting.evidence en ninguna direccion, reimplementacion local minima de hash/manifest, mismo criterio que tools/dsguard/mlops_evidence.py."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "0fcff33295793ddef433edbbb7fa1066bbbfdab071a7a666c40a460063a86654",
+      "registrado_utc": "2026-09-22T15:52:04Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 3 - quality-evidence-and-drift (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 3 -- quality-evidence-and-drift ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md). Decision 2 confirmada: sin dependencia de import con tools.reporting.evidence en ninguna direccion, reimplementacion local minima de hash/manifest, mismo criterio que tools/dsguard/mlops_evidence.py."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-22T15:52:05Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-22T15:52:07Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-22T17:27:31Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion",
+      "reconciliado": true
+    },
+    {
+      "utc": "2026-09-22T17:27:41Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-22T15:52:06Z",
+      "cierre_utc": "2026-09-22T17:27:42Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 8,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-22T23:52:06Z",
+      "minutos_consumidos": 95.6,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-22T17:26:11Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-22T16:53:55Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

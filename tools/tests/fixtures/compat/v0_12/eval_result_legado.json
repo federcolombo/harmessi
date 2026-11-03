@@ -1,0 +1,9 @@
+{
+  "run_id": "run-legado",
+  "target": {"provider_id": "proveedor-ejemplo", "model": null, "effort": null},
+  "timestamp_utc": "2020-01-01T00:00:00+00:00",
+  "resultados": [
+    {"scenario_id": "caso-a", "ok": true, "score": {"passed": true, "detail": "ok"}},
+    {"scenario_id": "caso-b", "ok": true, "score": {"passed": false, "detail": "no cumple"}}
+  ]
+}

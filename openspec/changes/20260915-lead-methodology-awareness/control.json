@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "change_id": "20260915-lead-methodology-awareness",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-15T17:29:03Z",
+  "baseline": {
+    "commit": "3e141ba95277c91401f69e4c1601493c973f1b38",
+    "rama": "main",
+    "capturado_utc": "2026-09-15T17:29:03Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260915-lead-methodology-awareness/proposal.md",
+      "openspec/changes/20260915-lead-methodology-awareness/tasks.md",
+      "openspec/changes/20260915-lead-methodology-awareness/spec.md",
+      "openspec/changes/20260915-lead-methodology-awareness/design.md",
+      "openspec/changes/20260915-lead-methodology-awareness/control.json",
+      "openspec/changes/20260915-lead-methodology-awareness/verification.md",
+      ".claude/skills/lead-data-scientist/methodology.md",
+      ".claude/skills/lead-data-scientist/SKILL.md",
+      ".claude/skills/lead-data-scientist/kdd.md",
+      ".claude/skills/lead-data-scientist/decision-ledger.md",
+      ".claude/skills/lead-data-scientist/verificador.md",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/profiles/python_jupyter_data/templates/methodology.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/SKILL_lead_data_scientist.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/kdd.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/decision-ledger.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/verificador.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/production-readiness.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/operations.md.tmpl",
+      "tools/tests/test_skill_methodology.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "39f9af37cdfb81c4b4288eb0bae714c4cbd953c70f76d3fdd958aa6717d07e3a",
+      "registrado_utc": "2026-09-15T17:41:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "lead-methodology-awareness: methodology.md nuevo, correcciones puntuales de skill docs, fix de sintaxis de promote",
+      "cita": "LLM decide lo semantico; el binario calcula y hace cumplir lo deterministico."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "33ec2780ad8772e0996e805fae2e85d4b11374ac442aab5db634bcfbfc0f4ca7",
+      "registrado_utc": "2026-09-15T17:41:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "lead-methodology-awareness: methodology.md nuevo, correcciones puntuales de skill docs, fix de sintaxis de promote",
+      "cita": "LLM decide lo semantico; el binario calcula y hace cumplir lo deterministico."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "668df9203221a53443942d78076e740fb3454828afa2d4d814b4f5308f988868",
+      "registrado_utc": "2026-09-15T17:41:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "lead-methodology-awareness: methodology.md nuevo, correcciones puntuales de skill docs, fix de sintaxis de promote",
+      "cita": "LLM decide lo semantico; el binario calcula y hace cumplir lo deterministico."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "9dee7c776b4b741517086a8b33d824d141ee847679403993a3c6fd13657ede4d",
+      "registrado_utc": "2026-09-15T17:41:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "lead-methodology-awareness: methodology.md nuevo, correcciones puntuales de skill docs, fix de sintaxis de promote",
+      "cita": "LLM decide lo semantico; el binario calcula y hace cumplir lo deterministico."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-15T17:41:15Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-09-15T17:41:16Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-15T17:41:18Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-15T18:32:32Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-15T18:35:30Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-15T17:41:17Z",
+      "cierre_utc": "2026-09-15T18:35:31Z",
+      "modo": "bounded_autonomy",
+      "presupuesto": {
+        "minutos": 180,
+        "max_tareas": 30,
+        "max_roles": 4,
+        "max_reintentos": 3,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-15T20:41:17Z",
+      "minutos_consumidos": 54.233333333333334,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-15T17:43:23Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-15T18:11:45Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

@@ -1,0 +1,354 @@
+{
+  "schema_version": 1,
+  "change_id": "20261030-v1-contract-stabilization",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-30T16:21:55Z",
+  "baseline": {
+    "commit": "1f81687d884d8ef8fa1646045b4dc0f0498dd70f",
+    "rama": "v1-dev",
+    "capturado_utc": "2026-10-30T16:21:55Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "README.md",
+      "docs/contracts/README.md",
+      "docs/contracts/inventory.json",
+      "docs/deprecation.md",
+      "docs/roadmap/v1-readiness.md",
+      "docs/versioning.md",
+      "openspec/changes/20261030-v1-contract-stabilization/amendments.jsonl",
+      "openspec/changes/20261030-v1-contract-stabilization/control.json",
+      "openspec/changes/20261030-v1-contract-stabilization/design.md",
+      "openspec/changes/20261030-v1-contract-stabilization/proposal.md",
+      "openspec/changes/20261030-v1-contract-stabilization/spec.md",
+      "openspec/changes/20261030-v1-contract-stabilization/tasks.md",
+      "openspec/changes/20261030-v1-contract-stabilization/verification.md",
+      "tools/datasources/tests/**",
+      "tools/harmessi_bench/tests/**",
+      "tools/tests/cli_surface.py",
+      "tools/tests/fixtures/compat/generate_v015.py",
+      "tools/tests/fixtures/compat/v0_15/**",
+      "tools/tests/test_v013_contract_inventory.py",
+      "tools/tests/test_v015_compat_window.py",
+      "tools/tests/test_v1_stable_contracts.py"
+    ],
+    "scope_hash": "3311bf5de44cba83665cdc0062694d464966dc183b63644477f91d2f60037532"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "d90cbdb37b7f6d17dcdd3876a96adf34f7cfdd50d0a5afe12c7ffcf25d86d7b5",
+      "registrado_utc": "2026-10-30T16:23:11Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-30",
+      "alcance_aprobado": "Harmessi v1 20261030-v1-contract-stabilization",
+      "cita": "Continuá Fase D en loop autónomo. Seguir autónomamente: SDD → implementación → tests → reviewer → fixes → verification → cierre (mensaje del usuario, 2026-10-30)"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "d5c14657c6fce7860d5724a4b840aed726c49c1c6f441f0cb11b244b5ad5d08e",
+      "registrado_utc": "2026-10-30T16:23:12Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-30",
+      "alcance_aprobado": "Harmessi v1 20261030-v1-contract-stabilization",
+      "cita": "Continuá Fase D en loop autónomo. Seguir autónomamente: SDD → implementación → tests → reviewer → fixes → verification → cierre (mensaje del usuario, 2026-10-30)"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "1674a7a0f3af9f9eb845a407bcfd2734443842ac16cea65c3bb2f051213d5db2",
+      "registrado_utc": "2026-10-30T16:23:13Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-30",
+      "alcance_aprobado": "Harmessi v1 20261030-v1-contract-stabilization",
+      "cita": "Continuá Fase D en loop autónomo. Seguir autónomamente: SDD → implementación → tests → reviewer → fixes → verification → cierre (mensaje del usuario, 2026-10-30)"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-30T16:23:15Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-30T16:23:16Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-11-02T17:12:06Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-11-02T17:14:46Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-30T16:21:57Z",
+      "cierre_utc": "2026-10-30T16:36:56Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-30T17:51:57Z",
+      "minutos_consumidos": 14.983333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-30T16:29:56Z"
+        },
+        "a1c4a8ddac9a3c15a": {
+          "rol": "python-data-engineer",
+          "continuaciones": 0,
+          "arranques": 1,
+          "paradas": 1,
+          "duracion_s": 121.0,
+          "inicio_utc": "2026-10-30T16:23:33Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-30T16:25:34Z",
+          "fin_utc": "2026-10-30T16:25:34Z"
+        },
+        "aba8e01f656826e26": {
+          "rol": "python-data-engineer",
+          "continuaciones": 0,
+          "arranques": 1,
+          "paradas": 1,
+          "duracion_s": 105.0,
+          "inicio_utc": "2026-10-30T16:26:52Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-30T16:28:37Z",
+          "fin_utc": "2026-10-30T16:28:37Z"
+        },
+        "a5221ff6346269d2c": {
+          "rol": "python-data-engineer",
+          "continuaciones": 1,
+          "arranques": 2,
+          "paradas": 2,
+          "duracion_s": 123.0,
+          "inicio_utc": "2026-10-30T16:29:58Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-10-30T16:32:56Z",
+          "fin_utc": "2026-10-30T16:32:56Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-30T16:33:45Z"
+        },
+        "a8212b5da90abc011": {
+          "rol": "data-science-reviewer",
+          "continuaciones": 1,
+          "arranques": 2,
+          "paradas": 0,
+          "duracion_s": 0.0,
+          "inicio_utc": "2026-10-30T16:33:46Z",
+          "arranque_actual_utc": "2026-10-30T16:36:12Z",
+          "ultimo_evento_utc": "2026-10-30T16:36:12Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-30T19:43:13Z",
+      "cierre_utc": "2026-11-02T12:37:34Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-30T21:13:13Z",
+      "minutos_consumidos": 3894.35,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0
+        },
+        "a1c4a8ddac9a3c15a": {
+          "continuaciones": 0,
+          "rol": "python-data-engineer"
+        },
+        "aba8e01f656826e26": {
+          "continuaciones": 0,
+          "rol": "python-data-engineer"
+        },
+        "a5221ff6346269d2c": {
+          "continuaciones": 1,
+          "rol": "python-data-engineer"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0
+        },
+        "a8212b5da90abc011": {
+          "continuaciones": 1,
+          "rol": "data-science-reviewer"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s1"
+    },
+    {
+      "id": "s3",
+      "inicio_utc": "2026-11-02T12:37:42Z",
+      "cierre_utc": "2026-11-02T16:58:10Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-11-02T14:07:42Z",
+      "minutos_consumidos": 260.46666666666664,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0
+        },
+        "a1c4a8ddac9a3c15a": {
+          "continuaciones": 0,
+          "rol": "python-data-engineer"
+        },
+        "aba8e01f656826e26": {
+          "continuaciones": 0,
+          "rol": "python-data-engineer"
+        },
+        "a5221ff6346269d2c": {
+          "continuaciones": 1,
+          "rol": "python-data-engineer"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0
+        },
+        "a8212b5da90abc011": {
+          "continuaciones": 1,
+          "rol": "data-science-reviewer"
+        },
+        "a3139c10c1dc9b115": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-11-02T12:42:50Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-11-02T12:42:50Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s2"
+    },
+    {
+      "id": "s4",
+      "inicio_utc": "2026-11-02T16:58:22Z",
+      "cierre_utc": "2026-11-03T16:10:12Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-11-02T18:28:22Z",
+      "minutos_consumidos": 1391.8333333333333,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-11-02T16:58:55Z"
+        },
+        "a1c4a8ddac9a3c15a": {
+          "continuaciones": 0,
+          "rol": "python-data-engineer"
+        },
+        "aba8e01f656826e26": {
+          "continuaciones": 0,
+          "rol": "python-data-engineer"
+        },
+        "a5221ff6346269d2c": {
+          "continuaciones": 1,
+          "rol": "python-data-engineer"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-11-02T17:06:04Z"
+        },
+        "a8212b5da90abc011": {
+          "continuaciones": 1,
+          "rol": "data-science-reviewer"
+        },
+        "a3139c10c1dc9b115": {
+          "continuaciones": 0,
+          "rol": "desconocido"
+        },
+        "ab2eeefdaa2d50874": {
+          "rol": "python-data-engineer",
+          "continuaciones": 1,
+          "arranques": 2,
+          "paradas": 1,
+          "duracion_s": 90.0,
+          "inicio_utc": "2026-11-02T16:58:58Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-11-02T17:04:23Z",
+          "fin_utc": "2026-11-02T17:04:23Z"
+        },
+        "ae040eb01bf0dea5a": {
+          "rol": "data-science-reviewer",
+          "continuaciones": 1,
+          "arranques": 2,
+          "paradas": 1,
+          "duracion_s": 23.0,
+          "inicio_utc": "2026-11-02T17:06:06Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-11-02T17:08:55Z",
+          "fin_utc": "2026-11-02T17:08:55Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada",
+      "retomada_de": "s3"
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "dataset": {
+    "fingerprint": {
+      "algorithm": "sha256",
+      "value": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "row_count": {
+      "exactness": "exact",
+      "value": 1000
+    },
+    "sampling": {
+      "active": false,
+      "method": null,
+      "sample_size": null,
+      "seed": null
+    },
+    "snapshot": {
+      "as_of": "2026-09-30",
+      "cutoff": null
+    }
+  },
+  "fields": [
+    {
+      "facets": {
+        "null_count": {
+          "exactness": "exact",
+          "value": 0
+        },
+        "value_range": {
+          "exactness": "exact",
+          "value": {
+            "max": 1000,
+            "min": 1
+          }
+        }
+      },
+      "name": "order_id",
+      "native_type": "int64",
+      "type_family": "integer"
+    },
+    {
+      "facets": {
+        "value_distribution": {
+          "complete": true,
+          "exactness": "exact",
+          "value": [
+            {
+              "frequency": 600,
+              "value": "abierto"
+            },
+            {
+              "frequency": 400,
+              "value": "cerrado"
+            }
+          ]
+        }
+      },
+      "name": "estado",
+      "native_type": "object",
+      "type_family": "string"
+    },
+    {
+      "facets": {
+        "time_range": {
+          "exactness": "exact",
+          "value": {
+            "max": "2026-09-30",
+            "min": "2026-01-01"
+          }
+        }
+      },
+      "name": "fecha_pedido",
+      "native_type": null,
+      "type_family": "date"
+    }
+  ],
+  "omitted_facets": [
+    {
+      "facet": "distinct_count",
+      "field": "estado",
+      "reason": "no soportada por el observer"
+    }
+  ],
+  "provenance": {
+    "access_mode": "read",
+    "generated_at": "2026-10-30T12:00:00+00:00",
+    "observer_code_sha256": null,
+    "observer_id": "observers.demo:crear_observer",
+    "requested_facets": [
+      "schema",
+      "row_count",
+      "null_count",
+      "value_range"
+    ],
+    "source_id": "demo-orders",
+    "source_kind": "file",
+    "tool_versions": {
+      "harmessi": "0.15.0"
+    },
+    "unsupported_facets": []
+  },
+  "schema_version": 1,
+  "source_id": "demo-orders"
+}

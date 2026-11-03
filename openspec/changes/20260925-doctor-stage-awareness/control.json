@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "change_id": "20260925-doctor-stage-awareness",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-25T16:30:38Z",
+  "baseline": {
+    "commit": "eb7819433e7ac2f6b16cfbc2125f4c9563c0be5d",
+    "rama": "v0.7-dev",
+    "capturado_utc": "2026-09-25T16:30:38Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260925-doctor-stage-awareness/proposal.md",
+      "openspec/changes/20260925-doctor-stage-awareness/tasks.md",
+      "openspec/changes/20260925-doctor-stage-awareness/spec.md",
+      "openspec/changes/20260925-doctor-stage-awareness/design.md",
+      "openspec/changes/20260925-doctor-stage-awareness/control.json",
+      "openspec/changes/20260925-doctor-stage-awareness/verification.md",
+      "tools/harmessi/doctor.py",
+      "tools/harmessi/tests/test_doctor.py",
+      "docs/roadmap/v0.7.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "93deb370ebb829545aa7ddb2bd819360146ab613897794925229483598c61897",
+      "registrado_utc": "2026-09-25T16:38:24Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-25",
+      "alcance_aprobado": "Change correctivo doctor-stage-awareness (release-blocking v0.7.0)",
+      "cita": "Change correctivo doctor-stage-awareness, release-blocking para v0.7.0, autorizado explicitamente por el usuario tras determinar que R16/R21 del hardening de v0.7 (openspec/changes/20260925-v07-release-hardening/spec.md) exigen 0 ERROR en el scratch discovery sin excepcion. Cita: 'v0.7.0 permanece NOT READY hasta corregir esto' y autorizo 'este Change correctivo minimo y release-blocking, ANTES de publicar v0.7.0' (2026-09-25)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a6ec5d925ee9eecdcd51597039cb19e62f185f6e8a64fb72d9c41814a376cf6a",
+      "registrado_utc": "2026-09-25T16:38:25Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-25",
+      "alcance_aprobado": "Change correctivo doctor-stage-awareness (release-blocking v0.7.0)",
+      "cita": "Change correctivo doctor-stage-awareness, release-blocking para v0.7.0, autorizado explicitamente por el usuario tras determinar que R16/R21 del hardening de v0.7 (openspec/changes/20260925-v07-release-hardening/spec.md) exigen 0 ERROR en el scratch discovery sin excepcion. Cita: 'v0.7.0 permanece NOT READY hasta corregir esto' y autorizo 'este Change correctivo minimo y release-blocking, ANTES de publicar v0.7.0' (2026-09-25)."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "7f90d92839af37253c571f65f24db000fc81b577a4762e33c09b34d1210ea77f",
+      "registrado_utc": "2026-09-25T16:38:26Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-25",
+      "alcance_aprobado": "Change correctivo doctor-stage-awareness (release-blocking v0.7.0)",
+      "cita": "Change correctivo doctor-stage-awareness, release-blocking para v0.7.0, autorizado explicitamente por el usuario tras determinar que R16/R21 del hardening de v0.7 (openspec/changes/20260925-v07-release-hardening/spec.md) exigen 0 ERROR en el scratch discovery sin excepcion. Cita: 'v0.7.0 permanece NOT READY hasta corregir esto' y autorizo 'este Change correctivo minimo y release-blocking, ANTES de publicar v0.7.0' (2026-09-25)."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "c28b177613688edf0af7ca5f2acad2bd9020a3c85c810e5a3bb0995dedde9c47",
+      "registrado_utc": "2026-09-25T16:38:27Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-25",
+      "alcance_aprobado": "Change correctivo doctor-stage-awareness (release-blocking v0.7.0)",
+      "cita": "Change correctivo doctor-stage-awareness, release-blocking para v0.7.0, autorizado explicitamente por el usuario tras determinar que R16/R21 del hardening de v0.7 (openspec/changes/20260925-v07-release-hardening/spec.md) exigen 0 ERROR en el scratch discovery sin excepcion. Cita: 'v0.7.0 permanece NOT READY hasta corregir esto' y autorizo 'este Change correctivo minimo y release-blocking, ANTES de publicar v0.7.0' (2026-09-25)."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-25T16:38:28Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-25T16:38:30Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-25T17:08:13Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion",
+      "reconciliado": true
+    },
+    {
+      "utc": "2026-09-25T17:08:29Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-25T16:38:29Z",
+      "cierre_utc": "2026-09-25T17:08:30Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 8,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-26T00:38:29Z",
+      "minutos_consumidos": 30.016666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-25T17:06:18Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-25T17:02:11Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

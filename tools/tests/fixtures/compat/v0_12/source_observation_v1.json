@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "source_id": "fuente-ejemplo",
+  "provenance": {
+    "source_id": "fuente-ejemplo",
+    "observer_id": "observer-ejemplo",
+    "observer_code_sha256": null,
+    "access_mode": "read",
+    "source_kind": "file",
+    "generated_at": "2020-01-01T00:00:00Z",
+    "tool_versions": {},
+    "requested_facets": ["row_count"],
+    "unsupported_facets": []
+  },
+  "dataset": {"row_count": {"value": 3, "exactness": "exact"}},
+  "fields": [
+    {
+      "name": "columna_a",
+      "type_family": "integer",
+      "native_type": null,
+      "facets": {"null_count": {"value": 0, "exactness": "exact"}}
+    }
+  ],
+  "omitted_facets": []
+}

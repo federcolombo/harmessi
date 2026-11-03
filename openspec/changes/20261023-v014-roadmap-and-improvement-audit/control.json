@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "change_id": "20261023-v014-roadmap-and-improvement-audit",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-23T13:03:04Z",
+  "baseline": {
+    "commit": "8d139604bf2ab4770d4402d2b98e41255d8ddb50",
+    "rama": "v0.14-dev",
+    "capturado_utc": "2026-10-23T13:03:04Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20261023-v014-roadmap-and-improvement-audit/proposal.md",
+      "openspec/changes/20261023-v014-roadmap-and-improvement-audit/tasks.md",
+      "openspec/changes/20261023-v014-roadmap-and-improvement-audit/spec.md",
+      "openspec/changes/20261023-v014-roadmap-and-improvement-audit/design.md",
+      "openspec/changes/20261023-v014-roadmap-and-improvement-audit/control.json",
+      "openspec/changes/20261023-v014-roadmap-and-improvement-audit/verification.md",
+      "openspec/changes/20261023-v014-roadmap-and-improvement-audit/amendments.jsonl",
+      "docs/roadmap/v0.14.md",
+      "docs/roadmap/README.md"
+    ],
+    "scope_hash": "e6bf895f6f6a34a58af02d3db9dce0a86d085ea1c5f6d86155f05fd713c9afd2"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a41f454276956590c3d3f0eefb918f0a9ef8789a701783016e06d0a8f41dddf7",
+      "registrado_utc": "2026-10-23T13:03:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-23",
+      "alcance_aprobado": "Harmessi v0.14 20261023-v014-roadmap-and-improvement-audit",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.14.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "dafaf48b5c9b52cd41d61cb5f431afa6498b1b80617c75729924ac64557a1ff3",
+      "registrado_utc": "2026-10-23T13:03:11Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-23",
+      "alcance_aprobado": "Harmessi v0.14 20261023-v014-roadmap-and-improvement-audit",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.14.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "32b473c5f23a9c79fd12588d2e9c0b4f5728eda6ba755cfe5a92cc33ff8c8692",
+      "registrado_utc": "2026-10-23T13:03:12Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-23",
+      "alcance_aprobado": "Harmessi v0.14 20261023-v014-roadmap-and-improvement-audit",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.14.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-23T13:03:13Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-23T13:03:16Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-23T13:03:29Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-23T13:04:13Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-23T13:03:14Z",
+      "cierre_utc": "2026-10-23T13:03:32Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-23T17:03:14Z",
+      "minutos_consumidos": 0.3,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-23T13:04:11Z",
+      "cierre_utc": "2026-10-23T13:04:14Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 60,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-23T14:04:11Z",
+      "minutos_consumidos": 0.05,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada",
+      "retomada_de": "s1"
+    }
+  ]
+}

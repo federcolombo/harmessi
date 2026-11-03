@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "change_id": "20260914-lifecycle-core-schema",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-14T14:04:43Z",
+  "baseline": {
+    "commit": "098c20f5b2c9dca2ea7bac226baece3bca19ae85",
+    "rama": "main",
+    "capturado_utc": "2026-09-14T14:04:43Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260914-lifecycle-core-schema/proposal.md",
+      "openspec/changes/20260914-lifecycle-core-schema/tasks.md",
+      "openspec/changes/20260914-lifecycle-core-schema/spec.md",
+      "openspec/changes/20260914-lifecycle-core-schema/design.md",
+      "openspec/changes/20260914-lifecycle-core-schema/control.json",
+      "tools/dsguard/lifecycle.py",
+      "tools/tests/test_lifecycle.py",
+      "openspec/lifecycle/state.json",
+      "openspec/changes/20260914-lifecycle-core-schema/verification.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "8961b30f911701a4cb7ed419a3267b8625b7636e7a2fcd53433ef8896293eada",
+      "registrado_utc": "2026-09-14T14:23:23Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Schema v1 de openspec/lifecycle/state.json + tools/dsguard/lifecycle.py, segun proposal.md/spec.md/design.md con los 2 ajustes incorporados (retiro de futura + no persistir fase_actual/paso_actual)",
+      "cita": "Aprobado con dos ajustes menores antes de implementar. ... El resto del diseno queda aprobado ... Incorpora estos dos ajustes a los artefactos SDD, aproba el diseno segun el flujo vigente e implementa unicamente Change 1."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "15eb04129f59a88cd4cbebb8f4b7daf67b8710992700f62177e7ec73598d2df6",
+      "registrado_utc": "2026-09-14T14:23:24Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Schema v1 de openspec/lifecycle/state.json + tools/dsguard/lifecycle.py, segun proposal.md/spec.md/design.md con los 2 ajustes incorporados (retiro de futura + no persistir fase_actual/paso_actual)",
+      "cita": "Aprobado con dos ajustes menores antes de implementar. ... El resto del diseno queda aprobado ... Incorpora estos dos ajustes a los artefactos SDD, aproba el diseno segun el flujo vigente e implementa unicamente Change 1."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "6df0a5b5df51bcda365a6fca3b4ece445df947afa42e914a4f40f06c2a9f151b",
+      "registrado_utc": "2026-09-14T14:23:25Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Schema v1 de openspec/lifecycle/state.json + tools/dsguard/lifecycle.py, segun proposal.md/spec.md/design.md con los 2 ajustes incorporados (retiro de futura + no persistir fase_actual/paso_actual)",
+      "cita": "Aprobado con dos ajustes menores antes de implementar. ... El resto del diseno queda aprobado ... Incorpora estos dos ajustes a los artefactos SDD, aproba el diseno segun el flujo vigente e implementa unicamente Change 1."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "7c5fe988bf6811bc4dd22be6c91650dda16afa009ab960b30568c96af8942375",
+      "registrado_utc": "2026-09-14T14:23:25Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Schema v1 de openspec/lifecycle/state.json + tools/dsguard/lifecycle.py, segun proposal.md/spec.md/design.md con los 2 ajustes incorporados (retiro de futura + no persistir fase_actual/paso_actual)",
+      "cita": "Aprobado con dos ajustes menores antes de implementar. ... El resto del diseno queda aprobado ... Incorpora estos dos ajustes a los artefactos SDD, aproba el diseno segun el flujo vigente e implementa unicamente Change 1."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-14T14:23:33Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-14T14:24:37Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-14T14:33:24Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-14T14:35:00Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-14T14:24:29Z",
+      "cierre_utc": "2026-09-14T14:35:08Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 20,
+        "max_roles": 3,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-14T15:54:29Z",
+      "minutos_consumidos": 10.65,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-14T14:34:14Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-14T14:29:30Z"
+        },
+        "fork": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-14T14:34:22Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

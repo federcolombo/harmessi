@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "change_id": "20261023-v014-lessons-and-improvement-cycle",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-23T14:27:53Z",
+  "baseline": {
+    "commit": "621a75d22366a2ead6f631fbcedc08d9931dc850",
+    "rama": "v0.14-dev",
+    "capturado_utc": "2026-10-23T14:27:53Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20261023-v014-lessons-and-improvement-cycle/proposal.md",
+      "openspec/changes/20261023-v014-lessons-and-improvement-cycle/tasks.md",
+      "openspec/changes/20261023-v014-lessons-and-improvement-cycle/spec.md",
+      "openspec/changes/20261023-v014-lessons-and-improvement-cycle/design.md",
+      "openspec/changes/20261023-v014-lessons-and-improvement-cycle/control.json",
+      "openspec/changes/20261023-v014-lessons-and-improvement-cycle/verification.md",
+      "openspec/changes/20261023-v014-lessons-and-improvement-cycle/amendments.jsonl",
+      "tools/harmessi_improve/**",
+      "tools/tests/test_v014_*.py",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.14.md",
+      "docs/contracts/**",
+      "docs/portability.md",
+      ".github/workflows/portability-smoke.yml",
+      "tools/harmessi_bench/**"
+    ],
+    "scope_hash": "e1b150a01ccece2d6acc66e8c2f7adfcd9871c38cea5bd7d54d4fc6c71788479"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "bfa1efcbd835aa64ae6b68fa445354eee1dce3f41f8e574acf9f20000a132bc4",
+      "registrado_utc": "2026-10-23T14:27:58Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-23",
+      "alcance_aprobado": "Harmessi v0.14 20261023-v014-lessons-and-improvement-cycle",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.14.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ec74ba9c9bb394e3f3a19e9049b6d3cc302110a68e0ecf257b281291dec27439",
+      "registrado_utc": "2026-10-23T14:27:59Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-23",
+      "alcance_aprobado": "Harmessi v0.14 20261023-v014-lessons-and-improvement-cycle",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.14.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e36b037acf068640e4e6e29c3b8e11e018ce826d22f858c8fcc8fbfc6e2dea3d",
+      "registrado_utc": "2026-10-23T14:28:00Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-23",
+      "alcance_aprobado": "Harmessi v0.14 20261023-v014-lessons-and-improvement-cycle",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.14.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-23T14:28:02Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-23T14:28:05Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-23T14:51:54Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-23T14:51:57Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-23T14:28:03Z",
+      "cierre_utc": "2026-10-23T14:51:58Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-23T18:28:03Z",
+      "minutos_consumidos": 23.916666666666668,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-23T14:36:43Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-23T14:36:50Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

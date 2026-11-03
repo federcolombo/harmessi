@@ -1,0 +1,243 @@
+{
+  "schema_version": 1,
+  "change_id": "20260918-eda-profile",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-18T18:00:59Z",
+  "baseline": {
+    "commit": "cabcf80c96f21f5bcafdfb36d28eaf4ad9e1ca99",
+    "rama": "v0.6-dev",
+    "capturado_utc": "2026-09-18T18:00:59Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260918-eda-profile/proposal.md",
+      "openspec/changes/20260918-eda-profile/tasks.md",
+      "openspec/changes/20260918-eda-profile/spec.md",
+      "openspec/changes/20260918-eda-profile/design.md",
+      "openspec/changes/20260918-eda-profile/control.json",
+      "openspec/changes/20260918-eda-profile/verification.md",
+      "tools/reporting/profiles/__init__.py",
+      "tools/reporting/profiles/eda.py",
+      "tools/reporting/examples/__init__.py",
+      "tools/reporting/examples/eda_generic.py",
+      "tools/reporting/tests/test_eda_profile.py",
+      "tools/reporting/tests/test_eda_example.py",
+      "tools/reporting/tests/test_installability.py",
+      "tools/ds_init/manifest.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.6.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "bb41dc5e3403c633eb8c1d20634c7a5f2cab1c9ca49e8aecc4daaccc79980a30",
+      "registrado_utc": "2026-09-18T18:08:19Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 2 - eda-profile (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "c7bd5f1ef2f5341e38553745f9a52ae726b47b0d58a4b475818560392dc91650",
+      "registrado_utc": "2026-09-18T18:08:20Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 2 - eda-profile (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "aff09a05ceda2f9cdd907c4fa93347f31bf5dd399df34d69d17a8d5d61412ed3",
+      "registrado_utc": "2026-09-18T18:08:21Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 2 - eda-profile (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "b909352adf3af484ba7a2276afa3325e8066a581ae745613f0e63de6267bb09c",
+      "registrado_utc": "2026-09-18T18:08:21Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 2 - eda-profile (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "595b36aa94ebff8c3d9a0c6fd9743fafada9ee5351238229e1eb961e84563978",
+      "registrado_utc": "2026-09-21T13:19:11Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 2 - eda-profile (enmiendas post-review)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md). Re-aprobación por enmiendas del ciclo reviewer 1/2."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "4e254b4cde245ee4163683f6f73dce93a4f7314b0aa822f7216ace489fef3473",
+      "registrado_utc": "2026-09-21T13:19:12Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 2 - eda-profile (enmiendas post-review)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md). Re-aprobación por enmiendas del ciclo reviewer 1/2."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-18T18:08:23Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-18T18:08:24Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-21T13:19:13Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-21T13:19:14Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-18T18:08:22Z",
+      "cierre_utc": "2026-09-21T13:04:18Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 6,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-19T02:08:22Z",
+      "minutos_consumidos": 4015.9333333333334,
+      "resultado": "excedida",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-18T18:17:38Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-18T18:22:41Z"
+        }
+      },
+      "tareas": [],
+      "roles": [
+        "python-data-engineer"
+      ],
+      "reintentos": 1,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-09-21T13:04:28Z",
+      "cierre_utc": "2026-09-21T13:19:15Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 720,
+        "max_tareas": 6,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-22T01:04:28Z",
+      "minutos_consumidos": 14.783333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-21T13:04:48Z"
+        }
+      },
+      "tareas": [],
+      "roles": [
+        "python-data-engineer"
+      ],
+      "reintentos": 1,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "remediaciones": [
+    {
+      "remediation_id": "r1",
+      "finding_id": null,
+      "origen": "python-data-engineer",
+      "tipo": "retry_tecnico",
+      "estado": "abierta",
+      "creado_utc": "2026-09-21T13:04:11Z",
+      "ventanas": [
+        {
+          "ventana": 1,
+          "max_intentos": 2,
+          "autorizado_por": null,
+          "fecha_autorizacion": null,
+          "motivo": null,
+          "intentos": [
+            {
+              "attempt": 1,
+              "causa": "un test propio declaraba un bloque applicable sin capitulo y esperaba cero FAIL, error del test y no de eda.py",
+              "cambio_aplicado": "reinvocacion del writer, el test ahora incluye el capitulo del unico bloque applicable",
+              "resultado": "412 passed tras la correccion",
+              "session_id": "s1",
+              "utc": "2026-09-21T13:04:11Z"
+            }
+          ]
+        }
+      ],
+      "resuelto_utc": null,
+      "resultado_final": null
+    },
+    {
+      "remediation_id": "r2",
+      "finding_id": "rev1-c2",
+      "origen": "python-data-engineer",
+      "tipo": "bug",
+      "estado": "abierta",
+      "creado_utc": "2026-09-21T13:12:12Z",
+      "ventanas": [
+        {
+          "ventana": 1,
+          "max_intentos": 2,
+          "autorizado_por": null,
+          "fecha_autorizacion": null,
+          "motivo": null,
+          "intentos": [
+            {
+              "attempt": 1,
+              "causa": "Reviewer: guard de leakage evadible via omitir target, not_applicable manual o bloque x_; tests que no pueden fallar; texto del ejemplo",
+              "cambio_aplicado": "Fixes ciclo 1 de 2, eda.py y tests y ejemplo en paralelo",
+              "resultado": "pendiente de re-tests",
+              "session_id": "s2",
+              "utc": "2026-09-21T13:12:12Z"
+            }
+          ]
+        }
+      ],
+      "resuelto_utc": null,
+      "resultado_final": null
+    }
+  ]
+}

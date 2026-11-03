@@ -1,0 +1,3 @@
+# Diseño — 20261023-v014-evidence-comparison-decisions
+
+`decision.py`: `EvidenciaInvalida`, `PromocionNoRespaldada`, `decidir` (puro respecto del disco salvo escritura de `decision.json` en `registrar=True`), `aplicar_decision`, `verificar_promotable`, `cargar_decision`. Agregación a dicts con la forma de `storage.load_run` (`resultados[{scenario_id, ok, score{passed,score}, duration_s}]`, `suite`, `cases_hash`, `evaluator_version`, `run_manifest`) y llamada a `compare_runs`. `decision_hash` canónico: JSON con `sort_keys`, `ensure_ascii`, sin el propio campo. Escritura atómica y bajo `budget.bloqueo`.

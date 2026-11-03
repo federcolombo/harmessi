@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "change_id": "20260915-progressive-capability-installation-and-scaffold",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-15T14:31:19Z",
+  "baseline": {
+    "commit": "0bbbce247c252b8e72c579753cadec056d8836e3",
+    "rama": "main",
+    "capturado_utc": "2026-09-15T14:31:19Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260915-progressive-capability-installation-and-scaffold/proposal.md",
+      "openspec/changes/20260915-progressive-capability-installation-and-scaffold/tasks.md",
+      "openspec/changes/20260915-progressive-capability-installation-and-scaffold/spec.md",
+      "openspec/changes/20260915-progressive-capability-installation-and-scaffold/design.md",
+      "openspec/changes/20260915-progressive-capability-installation-and-scaffold/control.json",
+      "openspec/changes/20260915-progressive-capability-installation-and-scaffold/verification.md",
+      "tools/ds_init/cli.py",
+      "tools/ds_init/control.py",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/planner.py",
+      "tools/ds_init/writer.py",
+      "tools/ds_init/legacy.py",
+      "tools/ds_init/profiles/python_jupyter_data/templates/operations.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/production-readiness.md.tmpl",
+      "tools/ds_init/tests/test_cli.py",
+      "tools/ds_init/tests/test_control_file.py",
+      "tools/ds_init/tests/test_manifest.py",
+      "tools/ds_init/tests/test_writer_staging.py",
+      "tools/ds_init/tests/test_legacy.py",
+      "tools/harmessi/doctor.py",
+      "tools/harmessi/tests/test_doctor.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "1e906ba859925746b300eb8fbcc8a6b9e7a736f7fd254cfee92c74fa757d29f0",
+      "registrado_utc": "2026-09-15T14:35:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "progressive-capability-installation-and-scaffold: bundles discovery/experiment/production_candidate/production, ds_init --stage/sync, installation_stage en control.json, migracion legacy por inferencia, doctor stage-aware",
+      "cita": "BOUNDED AUTONOMY ... project_stage describe madurez alcanzada; installation capabilities describen que componentes fisicos estan instalados. NO deben convertirse en la misma cosa ni escribirse implicitamente entre si."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f10a1ca71db87adcb947e3136fb94b83aceae0a1aa3c9ebd429b30cd59953b29",
+      "registrado_utc": "2026-09-15T14:35:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "progressive-capability-installation-and-scaffold: bundles discovery/experiment/production_candidate/production, ds_init --stage/sync, installation_stage en control.json, migracion legacy por inferencia, doctor stage-aware",
+      "cita": "BOUNDED AUTONOMY ... project_stage describe madurez alcanzada; installation capabilities describen que componentes fisicos estan instalados. NO deben convertirse en la misma cosa ni escribirse implicitamente entre si."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "8f8e5aad68bc65fcaacbb12f68ad85bece496c0b8424f6dc69a9776fe964e3ec",
+      "registrado_utc": "2026-09-15T14:35:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "progressive-capability-installation-and-scaffold: bundles discovery/experiment/production_candidate/production, ds_init --stage/sync, installation_stage en control.json, migracion legacy por inferencia, doctor stage-aware",
+      "cita": "BOUNDED AUTONOMY ... project_stage describe madurez alcanzada; installation capabilities describen que componentes fisicos estan instalados. NO deben convertirse en la misma cosa ni escribirse implicitamente entre si."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "2ff9014e03813ff74630e43b762ced0c6b033136cc71c5d9741f2e5157706699",
+      "registrado_utc": "2026-09-15T14:35:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "progressive-capability-installation-and-scaffold: bundles discovery/experiment/production_candidate/production, ds_init --stage/sync, installation_stage en control.json, migracion legacy por inferencia, doctor stage-aware",
+      "cita": "BOUNDED AUTONOMY ... project_stage describe madurez alcanzada; installation capabilities describen que componentes fisicos estan instalados. NO deben convertirse en la misma cosa ni escribirse implicitamente entre si."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-15T14:35:18Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-09-15T14:35:19Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-15T14:35:21Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-15T15:20:56Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-15T15:22:12Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-15T14:35:20Z",
+      "cierre_utc": "2026-09-15T15:22:13Z",
+      "modo": "bounded_autonomy",
+      "presupuesto": {
+        "minutos": 300,
+        "max_tareas": 60,
+        "max_roles": 4,
+        "max_reintentos": 3,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-15T19:35:20Z",
+      "minutos_consumidos": 46.88333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-15T14:35:54Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-15T15:05:45Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "session_id": "00000000-0000-4000-8000-000000000001",
+  "prompt_id": "00000000-0000-4000-8000-000000000002",
+  "permission_mode": "default",
+  "effort": {"level": "medium"},
+  "hook_event_name": "PreToolUse",
+  "agent_id": "a0000000000000001",
+  "agent_type": "general-purpose",
+  "tool_name": "Glob",
+  "tool_input": {"pattern": "*"},
+  "tool_use_id": "toolu_FIXTURE0001",
+  "cwd": "/ruta/ficticia/proyecto",
+  "transcript_path": "/ruta/ficticia/transcript.jsonl"
+}

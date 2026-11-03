@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "source_id": "fuente-ejemplo",
+      "role": "input",
+      "observer": "modulo_ejemplo.observer:crear_observer",
+      "access_mode": "read",
+      "sensitivity": "internal",
+      "config_ref": null,
+      "options": {},
+      "extra": {}
+    }
+  ]
+}

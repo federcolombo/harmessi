@@ -1,0 +1,70 @@
+{
+  "candidate_id": "cand-65cb2b47345e",
+  "candidate_status": "promotable",
+  "contract_version": 1,
+  "decision_hash": "a8817ef79e03aa92b320c34ec45ef3eb37d356b444b8e1457bd9c8048d285f77",
+  "dimensiones_soportadas": [
+    "passed",
+    "mean_score"
+  ],
+  "evidence_kind": "deterministic_scorers",
+  "evidencia": [
+    {
+      "identity_hash": "701a26c8cc4731881671cc0087b67d9ca9c9bd170fc82801fd41a0a46ce7931c",
+      "repetition": 1,
+      "role": "baseline",
+      "run_id": "p1-base-r1",
+      "sha256": "32e38de674992f5f5e3bf64927a2b983a793243e798a97ed706ce41b5f2b5b62"
+    },
+    {
+      "identity_hash": "c4314237584245171be63b99fd752c6665683907a2361ae9d02e8f95940514d3",
+      "repetition": 1,
+      "role": "candidate",
+      "run_id": "p1-cand-r1",
+      "sha256": "11e8410fe07663c8493cc479410d088e5c9f222c359ac1f826c38574e6156e16"
+    },
+    {
+      "identity_hash": "701a26c8cc4731881671cc0087b67d9ca9c9bd170fc82801fd41a0a46ce7931c",
+      "repetition": 2,
+      "role": "baseline",
+      "run_id": "p1-base-r2",
+      "sha256": "ea68c9b41c9e18423138385ce450b08843928e7a067ce9c6ff72aa95f3c82a20"
+    },
+    {
+      "identity_hash": "c4314237584245171be63b99fd752c6665683907a2361ae9d02e8f95940514d3",
+      "repetition": 2,
+      "role": "candidate",
+      "run_id": "p1-cand-r2",
+      "sha256": "380f966aac7177c81b2757de03437161d8502826441c40e8988728ab01f62dec"
+    }
+  ],
+  "inestables": [],
+  "n_escenarios": 3,
+  "n_estables": 3,
+  "outcome": "success",
+  "policy": {
+    "min_delta": 0.0,
+    "min_scenarios": 3,
+    "min_stable_ratio": 1.0,
+    "policy_version": 1,
+    "primary": "passed",
+    "repeats": 2,
+    "secondary": [],
+    "tie_policy": "equivalent"
+  },
+  "policy_hash": "a560ca7e2738ed7bd09aa8e0c453862fc0b1bd636bba349e6e25ee33e7fca68a",
+  "probe_id": "p1",
+  "reason": "2 mejora(s) y ninguna regresión (n=3; pasan baseline 1/3, candidate 3/3; una sola muestra)",
+  "seed": null,
+  "suite": {
+    "suite_hash": "a9ed4ed8683d7f12fd5fc4de4474555c6ddd00e80d03f723fc177d4863c25e49",
+    "suite_id": "suite-fake",
+    "suite_version": 1
+  },
+  "target": {
+    "effort": "low",
+    "model": "m1",
+    "provider_id": "fake"
+  },
+  "verdict": "candidate_better"
+}

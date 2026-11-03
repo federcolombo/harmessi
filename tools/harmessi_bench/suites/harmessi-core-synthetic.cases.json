@@ -1,0 +1,69 @@
+{
+  "case_contract_version": 1,
+  "_nota": "Casos sinteticos y genericos. Scorers deterministas: proxy superficial de texto, no medicion semantica.",
+  "escenarios": [
+    {
+      "scenario_id": "framing-aclarar-pedido",
+      "prompt": "Un equipo pide 'mejorar el informe mensual' sin dar mas detalles. Respondé con una sola pregunta de aclaración que empiece exactamente con 'Pregunta:'.",
+      "category": "problem-framing",
+      "tags": ["sintetico", "framing"],
+      "expected": {"tipo": "regex", "patron": "(?i)^\\s*pregunta:"}
+    },
+    {
+      "scenario_id": "framing-supuesto-explicito",
+      "prompt": "El pedido es ambiguo pero no bloqueante. Respondé en una línea que declare un supuesto con la etiqueta 'Supuesto:' y diga que hay que validarlo.",
+      "category": "problem-framing",
+      "tags": ["sintetico", "framing"],
+      "expected": {"tipo": "contains", "valores": ["Supuesto:", "validar"]}
+    },
+    {
+      "scenario_id": "debugging-primer-paso",
+      "prompt": "Un test falla de forma intermitente. Respondé con una sola palabra, en minúscula, que nombre el primer paso del diagnóstico (el verbo en infinitivo).",
+      "category": "debugging",
+      "tags": ["sintetico", "debugging"],
+      "expected": {"tipo": "exact", "valor": "reproducir"}
+    },
+    {
+      "scenario_id": "debugging-causa-raiz",
+      "prompt": "Se encontró la falla de una función. Indicá en una frase qué se corrige primero y qué se agrega para que no vuelva a ocurrir; usá las expresiones 'causa raíz' y 'prueba de regresión'.",
+      "category": "debugging",
+      "tags": ["sintetico", "debugging"],
+      "expected": {"tipo": "contains", "valores": ["causa raíz", "prueba de regresión"]}
+    },
+    {
+      "scenario_id": "domain-modeling-termino-ambiguo",
+      "prompt": "Dos personas usan la palabra 'cliente' con significados distintos. Respondé en una frase qué artefacto usarías para fijar el significado; mencioná 'glosario' y 'definición'.",
+      "category": "domain-modeling",
+      "tags": ["sintetico", "dominio"],
+      "expected": {"tipo": "contains", "valores": ["glosario", "definición"]}
+    },
+    {
+      "scenario_id": "codebase-design-reuso",
+      "prompt": "Necesitás una capacidad que ya existe parcialmente en el código. Respondé en una frase cuál es la preferencia de diseño; usá la palabra 'reutilizar'.",
+      "category": "codebase-design",
+      "tags": ["sintetico", "diseno"],
+      "expected": {"tipo": "regex", "patron": "(?i)reutilizar"}
+    },
+    {
+      "scenario_id": "recovery-idempotencia",
+      "prompt": "Un proceso de carga se interrumpió a la mitad. Para poder reanudarlo sin duplicar efectos, ¿la operación debe ser 'idempotente' o 'volatil'? Respondé solo con esa palabra.",
+      "category": "recovery",
+      "tags": ["sintetico", "recuperacion"],
+      "expected": {"tipo": "exact", "valor": "idempotente"}
+    },
+    {
+      "scenario_id": "tool-contract-json",
+      "prompt": "Respondé únicamente con este objeto JSON, sin texto adicional: {\"estado\": \"ok\"}",
+      "category": "tool-contract",
+      "tags": ["sintetico", "contrato"],
+      "expected": {"tipo": "regex", "patron": "^\\s*\\{\\s*\"estado\"\\s*:\\s*\"ok\"\\s*\\}\\s*$"}
+    },
+    {
+      "scenario_id": "tool-contract-codigo-salida",
+      "prompt": "Una herramienta terminó con un código de salida distinto de cero. En una frase, ¿qué debe reportarse? Mencioná 'código de salida' y la palabra 'error'.",
+      "category": "tool-contract",
+      "tags": ["sintetico", "contrato"],
+      "expected": {"tipo": "contains", "valores": ["código de salida", "error"]}
+    }
+  ]
+}

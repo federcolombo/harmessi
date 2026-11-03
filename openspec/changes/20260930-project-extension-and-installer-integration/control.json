@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "change_id": "20260930-project-extension-and-installer-integration",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-30T17:07:46Z",
+  "baseline": {
+    "commit": "417fcae16eb663599c8bb3942c54a1a26952912c",
+    "rama": "v0.8-dev",
+    "capturado_utc": "2026-09-30T17:07:46Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.8.md",
+      "openspec/changes/20260930-project-extension-and-installer-integration/control.json",
+      "openspec/changes/20260930-project-extension-and-installer-integration/design.md",
+      "openspec/changes/20260930-project-extension-and-installer-integration/proposal.md",
+      "openspec/changes/20260930-project-extension-and-installer-integration/spec.md",
+      "openspec/changes/20260930-project-extension-and-installer-integration/tasks.md",
+      "openspec/changes/20260930-project-extension-and-installer-integration/verification.md",
+      "tools/datasources/file_observer.py",
+      "tools/datasources/runtime.py",
+      "tools/datasources/tests/test_runtime.py",
+      "tools/datasources/tests/test_file_observer.py",
+      "tools/ds_guard.py",
+      "tools/ds_init/cli.py",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/planner.py",
+      "tools/ds_init/preflight.py",
+      "tools/ds_init/tests/test_cli.py",
+      "tools/ds_init/tests/test_manifest.py",
+      "tools/dsguard/pathguard.py",
+      "tools/dsguard/sdd.py",
+      "tools/harmessi/doctor.py",
+      "tools/harmessi/tests/test_doctor.py",
+      "tools/launcher_common.py",
+      "tools/leadrun/allowlist.py",
+      "tools/leadrun/core.py",
+      "tools/leadrun/runtime.py",
+      "tools/leadrun/tests/test_dependency_install_form.py",
+      "tools/tests/test_autonomy_sdd.py",
+      "tools/tests/test_ds_guard_config_layering.py",
+      "tools/tests/test_ds_guard_dependency_install.py",
+      "tools/tests/test_ds_guard_source_cli.py",
+      "tools/tests/test_ds_guard_source_integrity.py",
+      "tools/tests/test_pathguard.py",
+      "tools/tests/test_v08_change4_leadrun_diff.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a25e25987585e48647e6fc7111454282726775da2c6e3a3a8bfe918168484ec1",
+      "registrado_utc": "2026-09-30T17:43:07Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-30",
+      "alcance_aprobado": "Change 4 - project-extension-and-installer-integration (docs/roadmap/v0.8.md, M8-M12, B4-B5)",
+      "cita": "Apruebo explicitamente proposal.md, spec.md y design.md del Change 4 project-extension-and-installer-integration, incluida la resolucion M11 aditiva (5a forma dependency_install sobre el runtime publico de Change 2, sin reabrirlo materialmente) con las cuatro guardas de contrato: interprete .venv construido por el runtime (nunca recibido libre); identidad de paquete validada/canonicalizada PEP 503 con rechazo explicito de URL/path/VCS/extras/multiples paquetes/metacaracteres; rango aprobado que nunca llega a pip, solo version exacta verificada contra el rango antes de construir el comando; evidencia de entorno pre/post via importlib.metadata, diferencia inesperada reportada como technical_error sin STOP nuevo. Reafirma ademas el resto del SDD: capabilities M8, fuentes externas read-only M9, layering de configuracion M10, integridad detectiva M12, adopcion de proyecto existente B5 (sin --adopt-existing nuevo, ya soportado), Doctor de 5 vias de ownership. Autoriza implementar Change 4 autonomamente: implementacion, tests dirigidos, reviewer, fixes, re-tests, verification, cierre ds_guard, commit local; maximo 2 ciclos writer-reviewer; sin pedir nuevas aprobaciones por decisiones ya cubiertas aqui. No push, no tag, no release."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "4126a8e9930fc670d4bfb87e611c258588fa6e608c7514ae10f7dec3ff2d7edb",
+      "registrado_utc": "2026-09-30T17:43:08Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-30",
+      "alcance_aprobado": "Change 4 - project-extension-and-installer-integration (docs/roadmap/v0.8.md, M8-M12, B4-B5)",
+      "cita": "Apruebo explicitamente proposal.md, spec.md y design.md del Change 4 project-extension-and-installer-integration, incluida la resolucion M11 aditiva (5a forma dependency_install sobre el runtime publico de Change 2, sin reabrirlo materialmente) con las cuatro guardas de contrato: interprete .venv construido por el runtime (nunca recibido libre); identidad de paquete validada/canonicalizada PEP 503 con rechazo explicito de URL/path/VCS/extras/multiples paquetes/metacaracteres; rango aprobado que nunca llega a pip, solo version exacta verificada contra el rango antes de construir el comando; evidencia de entorno pre/post via importlib.metadata, diferencia inesperada reportada como technical_error sin STOP nuevo. Reafirma ademas el resto del SDD: capabilities M8, fuentes externas read-only M9, layering de configuracion M10, integridad detectiva M12, adopcion de proyecto existente B5 (sin --adopt-existing nuevo, ya soportado), Doctor de 5 vias de ownership. Autoriza implementar Change 4 autonomamente: implementacion, tests dirigidos, reviewer, fixes, re-tests, verification, cierre ds_guard, commit local; maximo 2 ciclos writer-reviewer; sin pedir nuevas aprobaciones por decisiones ya cubiertas aqui. No push, no tag, no release."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "5b3e79e00e2aefb5af52cc1d357f37b7bf5fd19eebf1fa93c028485e94fc5c5a",
+      "registrado_utc": "2026-09-30T17:43:09Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-30",
+      "alcance_aprobado": "Change 4 - project-extension-and-installer-integration (docs/roadmap/v0.8.md, M8-M12, B4-B5)",
+      "cita": "Apruebo explicitamente proposal.md, spec.md y design.md del Change 4 project-extension-and-installer-integration, incluida la resolucion M11 aditiva (5a forma dependency_install sobre el runtime publico de Change 2, sin reabrirlo materialmente) con las cuatro guardas de contrato: interprete .venv construido por el runtime (nunca recibido libre); identidad de paquete validada/canonicalizada PEP 503 con rechazo explicito de URL/path/VCS/extras/multiples paquetes/metacaracteres; rango aprobado que nunca llega a pip, solo version exacta verificada contra el rango antes de construir el comando; evidencia de entorno pre/post via importlib.metadata, diferencia inesperada reportada como technical_error sin STOP nuevo. Reafirma ademas el resto del SDD: capabilities M8, fuentes externas read-only M9, layering de configuracion M10, integridad detectiva M12, adopcion de proyecto existente B5 (sin --adopt-existing nuevo, ya soportado), Doctor de 5 vias de ownership. Autoriza implementar Change 4 autonomamente: implementacion, tests dirigidos, reviewer, fixes, re-tests, verification, cierre ds_guard, commit local; maximo 2 ciclos writer-reviewer; sin pedir nuevas aprobaciones por decisiones ya cubiertas aqui. No push, no tag, no release."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-30T17:43:33Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-01T14:28:43Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-01T14:28:51Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-01T14:28:59Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-30T17:44:21Z",
+      "cierre_utc": "2026-09-30T19:10:22Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-30T19:14:21Z",
+      "minutos_consumidos": 86.01666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-30T18:56:04Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-01T12:28:13Z",
+      "cierre_utc": "2026-10-01T14:05:35Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-01T13:58:13Z",
+      "minutos_consumidos": 97.36666666666666,
+      "resultado": "excedida",
+      "subagentes": {
+        "conteo": 0,
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-01T13:45:07Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s3",
+      "inicio_utc": "2026-10-01T14:05:54Z",
+      "cierre_utc": "2026-10-01T14:29:08Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-01T15:35:54Z",
+      "minutos_consumidos": 23.233333333333334,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

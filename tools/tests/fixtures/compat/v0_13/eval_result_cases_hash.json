@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "evaluator_version": "1",
+  "run_id": "run-nuevo",
+  "target": {"provider_id": "proveedor-ejemplo", "model": null, "effort": null},
+  "harmessi_version": "0.13.0",
+  "timestamp_utc": "2020-01-02T00:00:00+00:00",
+  "cases_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "resultados": [
+    {"scenario_id": "caso-a", "ok": true, "score": {"passed": true, "detail": "ok"}},
+    {"scenario_id": "caso-b", "ok": true, "score": {"passed": false, "detail": "no cumple"}}
+  ]
+}

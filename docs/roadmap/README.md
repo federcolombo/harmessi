@@ -1,0 +1,85 @@
+# Harmessi — Roadmap de versiones
+
+Este directorio es la fuente de planificación de alto nivel para el desarrollo autónomo de Harmessi.
+
+## Cómo usarlo con Claude Code
+
+1. Leer este archivo.
+2. Leer el archivo de la versión activa.
+3. Detectar el estado real del repositorio antes de ejecutar.
+4. Continuar desde el primer Change pendiente.
+5. Ejecutar la versión en autonomía acotada.
+6. Detenerse solo ante una decisión material o al finalizar el hardening de la versión.
+
+El roadmap define **qué** debe construirse y el orden.
+Los artefactos SDD de cada Change definen **cómo** se implementa ese Change.
+
+## Principio operativo
+
+> LLM decide lo semántico; el binario calcula y hace cumplir lo determinista.
+
+## Contrato de autonomía
+
+Para cada Change:
+
+`audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close`
+
+No pedir confirmación humana entre pasos normales.
+
+Detenerse únicamente ante:
+
+1. cambio arquitectónico material;
+2. cambio incompatible de schema/contrato;
+3. backward compatibility comprometida;
+4. dependencia nueva relevante;
+5. riesgo de pérdida o corrupción;
+6. contradicción real entre requisitos;
+7. necesidad de bypass/exemption no prevista;
+8. expansión sustancial de scope;
+9. reviewer demuestra que el enfoque aprobado es incorrecto;
+10. bounded remediation agotada.
+
+Máximo 2 ciclos writer ↔ reviewer.
+
+## Eficiencia
+
+- No agentes de espera/no-op.
+- No auditorías duplicadas.
+- No delegar si el Lead puede resolverlo.
+- Un solo writer: `python-data-engineer`.
+- Reviewer y metodólogo son read-only.
+- Reanudar el mismo task-id ante turn limit.
+- No repetir suites completas si un fix aislado no puede afectarlas, salvo gate final.
+
+## Commits y publicación
+
+La unidad lógica de trazabilidad es el **Change**.
+
+Recomendación:
+- cerrar cada Change con un commit local;
+- no hacer tag ni GitHub Release hasta terminar el release hardening;
+- no publicar una versión sin aprobación humana final.
+
+Si el usuario define otra política de commits para una versión concreta, esa instrucción prevalece.
+
+## Versiones
+
+- `v0.3.0`: publicada.
+- `v0.4.0`: publicada.
+- `v0.5.0`: publicada.
+- `v0.6.0`: publicada — Governed Reporting + EDA.
+- `v0.7.0`: publicada — ML Quality & Data Contracts.
+- `v0.8.0`: publicada — Autonomous Project Runtime (autonomía del harness instalado + abstracción de
+  fuentes de datos). Ver `v0.8.md`.
+- `v0.9.0`: publicada — Cards & Model Governance (Data/Model Cards, Responsible AI / model risk evidence, correctivos operativos). Ver `v0.9.md`.
+- `v0.10.0`: publicada — Integration & Stabilization + Composable Data Science Skills. Ver `v0.10.md`.
+- `v0.11.0`: publicada — Operational Robustness & Recovery. Ver `v0.11.md` y `docs/releases/v0.11.0.md`.
+- `v0.12.0`: publicada — Data Scientist Experience & Composable Skills. Ver `v0.12.md` y `docs/releases/v0.12.0.md`.
+- `v0.13.0`: publicada — Portability, Evaluation & Contract Hardening. Ver `v0.13.md` y `docs/releases/v0.13.0.md`.
+- `v0.14.0`: publicada — Evidence-Driven Harness Improvement. Ver `v0.14.md` y `docs/releases/v0.14.0.md`.
+- `v0.15.0`: en curso — Pre-1.0 Consolidation & Debt Closure. Ver `v0.15.md` y `v0.15-debt-matrix.md`.
+- `v1.0`: Stable Public Contracts.
+
+Nota: el contrato de autonomía de arriba gobierna **cómo se desarrolla Harmessi**. La autonomía del
+harness **instalado en un proyecto** (modos `autonomous`/`supervised`) es un contrato distinto y se
+define en `v0.8.md`, Change 0.

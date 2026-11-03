@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "access_mode": "read",
+      "config_ref": "env:DEMO_ORDERS_REF",
+      "extra": {
+        "x_nota": "fixture"
+      },
+      "observer": "observers.demo:crear_observer",
+      "options": {
+        "formato": "csv"
+      },
+      "role": "raw_table",
+      "sensitivity": "internal",
+      "source_id": "demo-orders"
+    },
+    {
+      "access_mode": "read",
+      "config_ref": null,
+      "extra": {},
+      "observer": "observers.demo:crear_observer",
+      "options": {},
+      "role": "feature_table",
+      "sensitivity": "public",
+      "source_id": "demo-features"
+    }
+  ]
+}

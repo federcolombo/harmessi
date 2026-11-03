@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "change_id": "20260910-decision-ledger-bounded-remediation",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-10T19:41:43Z",
+  "baseline": {
+    "commit": "24c07e4a7c10b7754169567791f1b465d1e8d8be",
+    "rama": "main",
+    "capturado_utc": "2026-09-10T19:41:43Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260910-decision-ledger-bounded-remediation/proposal.md",
+      "openspec/changes/20260910-decision-ledger-bounded-remediation/tasks.md",
+      "openspec/changes/20260910-decision-ledger-bounded-remediation/spec.md",
+      "openspec/changes/20260910-decision-ledger-bounded-remediation/design.md",
+      "openspec/changes/20260910-decision-ledger-bounded-remediation/control.json",
+      ".claude/skills/lead-data-scientist/SKILL.md",
+      ".claude/skills/lead-data-scientist/sdd.md",
+      ".claude/skills/lead-data-scientist/verificador.md",
+      ".claude/skills/lead-data-scientist/decision-ledger.md",
+      "tools/ds_guard.py",
+      "tools/dsguard/decision.py",
+      "tools/dsguard/sdd.py",
+      "tools/dsguard/hook_presupuesto.py",
+      "tools/tests/test_decision.py",
+      "tools/tests/test_remediation.py",
+      "openspec/changes/20260910-decision-ledger-bounded-remediation/verification.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "cea444d270c72562f6f78ae4b836ef338eaf57783b8534d30511cd2669d34033",
+      "registrado_utc": "2026-09-10T19:46:11Z",
+      "usuario": "federico.colombo",
+      "fecha_declarada": "2026-09-10",
+      "alcance_aprobado": "Diseno completo del decision ledger y bounded remediation, Bloque 5 Harmessi v0.2.0, con los 14 ajustes del usuario",
+      "cita": "Aprobado el diseno del Bloque 5 con estos ajustes antes de implementar (mensaje completo del usuario, puntos 1-14: DECISION LEDGER 1-3, BOUNDED REMEDIATION 4-12, TESTS 13-14)"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "17875da6da0839c0ce6fc26bbc3982a5600c70c6352b40782e7da5f48d71efd1",
+      "registrado_utc": "2026-09-10T19:46:11Z",
+      "usuario": "federico.colombo",
+      "fecha_declarada": "2026-09-10",
+      "alcance_aprobado": "Diseno completo del decision ledger y bounded remediation, Bloque 5 Harmessi v0.2.0, con los 14 ajustes del usuario",
+      "cita": "Aprobado el diseno del Bloque 5 con estos ajustes antes de implementar (mensaje completo del usuario, puntos 1-14: DECISION LEDGER 1-3, BOUNDED REMEDIATION 4-12, TESTS 13-14)"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "f6f7b8011888ca6e2f269f7c07f0e42e7b1e527bdef32e5e4cf9069c15cdbb5e",
+      "registrado_utc": "2026-09-10T19:46:11Z",
+      "usuario": "federico.colombo",
+      "fecha_declarada": "2026-09-10",
+      "alcance_aprobado": "Diseno completo del decision ledger y bounded remediation, Bloque 5 Harmessi v0.2.0, con los 14 ajustes del usuario",
+      "cita": "Aprobado el diseno del Bloque 5 con estos ajustes antes de implementar (mensaje completo del usuario, puntos 1-14: DECISION LEDGER 1-3, BOUNDED REMEDIATION 4-12, TESTS 13-14)"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-10T19:46:20Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-10T19:46:37Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-10T20:11:36Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-10T23:15:33Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-10T19:46:29Z",
+      "cierre_utc": "2026-09-10T22:57:07Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 120,
+        "max_tareas": 4,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-10T21:46:29Z",
+      "minutos_consumidos": 190.63333333333333,
+      "resultado": "excedida",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-10T20:08:04Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-10T20:01:09Z"
+        }
+      },
+      "tareas": [
+        "implementacion",
+        "correccion-hallazgos-reviewer",
+        "fix-test-helper-git-init"
+      ],
+      "roles": [
+        "python-data-engineer"
+      ],
+      "reintentos": 2,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-09-10T22:57:16Z",
+      "cierre_utc": "2026-09-10T23:15:42Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 60,
+        "max_tareas": 2,
+        "max_roles": 1,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-10T23:57:16Z",
+      "minutos_consumidos": 18.433333333333334,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-10T23:14:53Z"
+        }
+      },
+      "tareas": [
+        "cierre-verification",
+        "ampliar-alcance-control-json"
+      ],
+      "roles": [
+        "python-data-engineer"
+      ],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

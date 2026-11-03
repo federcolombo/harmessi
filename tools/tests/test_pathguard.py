@@ -1,0 +1,1000 @@
+"""Tests de `tools.dsguard.pathguard` (Bloque 3, reliability v0.2.0):
+protección de rutas -- holdouts, `data/raw`, secretos, `.claude/
+guardrails.json` y `write_scopes`. Usa repositorios temporales propios
+(nunca este repositorio)."""
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import tempfile
+import unittest
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+from tools.dsguard import pathguard
+
+
+def _crear_repo_temporal(prefix: str = "pathguard_test_") -> Path:
+    return Path(tempfile.mkdtemp(prefix=prefix))
+
+
+def _escribir_config(repo: Path, datos: dict) -> Path:
+    dir_claude = repo / ".claude"
+    dir_claude.mkdir(parents=True, exist_ok=True)
+    ruta = dir_claude / "guardrails.json"
+    ruta.write_text(json.dumps(datos, indent=2), encoding="utf-8")
+    return ruta
+
+
+def _fecha(delta_horas: float) -> str:
+    momento = datetime.now(timezone.utc) + timedelta(hours=delta_horas)
+    return momento.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+class TestResolverRutaRelativa(unittest.TestCase):
+    def setUp(self):
+        self.repo = _crear_repo_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_ruta_relativa_dentro_del_repo(self):
+        ruta_relativa, dentro = pathguard.resolver_ruta_relativa("notebooks/a.ipynb", self.repo)
+        self.assertTrue(dentro)
+        self.assertEqual(ruta_relativa, "notebooks/a.ipynb")
+
+    def test_ruta_absoluta_dentro_del_repo(self):
+        absoluta = str(self.repo / "notebooks" / "a.ipynb")
+        ruta_relativa, dentro = pathguard.resolver_ruta_relativa(absoluta, self.repo)
+        self.assertTrue(dentro)
+        self.assertEqual(ruta_relativa, "notebooks/a.ipynb")
+
+    def test_traversal_hacia_afuera_del_repo(self):
+        _, dentro = pathguard.resolver_ruta_relativa("../fuera.txt", self.repo)
+        self.assertFalse(dentro)
+
+    def test_traversal_que_vuelve_adentro_es_valido(self):
+        ruta_relativa, dentro = pathguard.resolver_ruta_relativa("sub/../notebooks/a.ipynb", self.repo)
+        self.assertTrue(dentro)
+        self.assertEqual(ruta_relativa, "notebooks/a.ipynb")
+
+    def test_absoluta_fuera_del_repo(self):
+        otra = _crear_repo_temporal("pathguard_test_otra_")
+        try:
+            _, dentro = pathguard.resolver_ruta_relativa(str(otra / "x.txt"), self.repo)
+            self.assertFalse(dentro)
+        finally:
+            shutil.rmtree(otra, ignore_errors=True)
+
+    def test_windows_backslash_y_posix_slash_equivalentes(self):
+        rel_posix, dentro_posix = pathguard.resolver_ruta_relativa("data/raw/x.csv", self.repo)
+        rel_back, dentro_back = pathguard.resolver_ruta_relativa("data\\raw\\x.csv", self.repo)
+        self.assertTrue(dentro_posix and dentro_back)
+        self.assertEqual(rel_posix, rel_back)
+
+    def test_archivo_inexistente_se_resuelve_igual_por_su_ubicacion_prevista(self):
+        ruta_relativa, dentro = pathguard.resolver_ruta_relativa("data/raw/no_existe_todavia.csv", self.repo)
+        self.assertTrue(dentro)
+        self.assertEqual(ruta_relativa, "data/raw/no_existe_todavia.csv")
+
+    def test_symlink_que_escapa_del_repo(self):
+        externo = _crear_repo_temporal("pathguard_test_externo_")
+        try:
+            enlace = self.repo / "escape_link"
+            try:
+                os.symlink(str(externo), str(enlace), target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest("El entorno no permite crear symlinks (falta privilegio/Developer Mode)")
+            _, dentro = pathguard.resolver_ruta_relativa("escape_link/nuevo.txt", self.repo)
+            self.assertFalse(dentro)
+        finally:
+            shutil.rmtree(externo, ignore_errors=True)
+
+    def test_ruta_invalida_no_lanza(self):
+        # Caracteres nulos son inválidos como ruta en cualquier SO.
+        _, dentro = pathguard.resolver_ruta_relativa("archivo\0malo.txt", self.repo)
+        self.assertFalse(dentro)
+
+
+class TestCargarConfig(unittest.TestCase):
+    def setUp(self):
+        self.repo = _crear_repo_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_config_ausente_usa_defaults_seguros(self):
+        config = pathguard.cargar_config(self.repo)
+        self.assertEqual(config.holdouts, ())
+        self.assertEqual(config.data_raw, pathguard.DATA_RAW_DEFAULT)
+        self.assertEqual(config.write_scopes, {})
+        self.assertEqual(config.excepciones, ())
+
+    def test_config_valida_se_carga_completa(self):
+        _escribir_config(
+            self.repo,
+            {
+                "holdouts": ["data/holdout/**"],
+                "data_raw": ["data/raw/**", "data/external/**"],
+                "secretos_extra": ["config/interno.json"],
+                "write_scopes": {"python-data-engineer": ["notebooks/**"]},
+                "excepciones": [{"ruta": "data/holdout/x.parquet", "accion": "read"}],
+            },
+        )
+        config = pathguard.cargar_config(self.repo)
+        self.assertEqual(config.holdouts, ("data/holdout/**",))
+        self.assertEqual(config.data_raw, ("data/raw/**", "data/external/**"))
+        self.assertEqual(config.secretos_extra, ("config/interno.json",))
+        self.assertEqual(config.write_scopes, {"python-data-engineer": ("notebooks/**",)})
+        self.assertEqual(len(config.excepciones), 1)
+
+    def test_json_invalido_levanta_error_config(self):
+        ruta = self.repo / ".claude"
+        ruta.mkdir(parents=True)
+        (ruta / "guardrails.json").write_text("{ esto no es json valido", encoding="utf-8")
+        with self.assertRaises(pathguard.ConfigGuardrailsError):
+            pathguard.cargar_config(self.repo)
+
+    def test_no_es_un_objeto_json_levanta_error_config(self):
+        ruta = self.repo / ".claude"
+        ruta.mkdir(parents=True)
+        (ruta / "guardrails.json").write_text("[1, 2, 3]", encoding="utf-8")
+        with self.assertRaises(pathguard.ConfigGuardrailsError):
+            pathguard.cargar_config(self.repo)
+
+    def test_holdouts_con_tipo_invalido_levanta_error_config(self):
+        _escribir_config(self.repo, {"holdouts": "no-es-una-lista"})
+        with self.assertRaises(pathguard.ConfigGuardrailsError):
+            pathguard.cargar_config(self.repo)
+
+    def test_write_scopes_con_tipo_invalido_levanta_error_config(self):
+        _escribir_config(self.repo, {"write_scopes": {"agente": "no-es-una-lista"}})
+        with self.assertRaises(pathguard.ConfigGuardrailsError):
+            pathguard.cargar_config(self.repo)
+
+    def test_excepciones_con_tipo_invalido_levanta_error_config(self):
+        _escribir_config(self.repo, {"excepciones": ["no-es-un-objeto"]})
+        with self.assertRaises(pathguard.ConfigGuardrailsError):
+            pathguard.cargar_config(self.repo)
+
+
+class TestVersionDeGuardrails(unittest.TestCase):
+    """v0.8 R12: `version` de guardrails.json, aditivo y fail-closed."""
+
+    def setUp(self):
+        self.repo = _crear_repo_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_policy_version_max_es_2(self):
+        self.assertEqual(pathguard.POLICY_VERSION_MAX, 2)
+
+    def test_version_ausente_carga(self):
+        _escribir_config(self.repo, {"holdouts": ["data/holdout/**"]})
+        self.assertEqual(pathguard.cargar_config(self.repo).holdouts, ("data/holdout/**",))
+
+    def test_versiones_soportadas_cargan(self):
+        for version in (1, 2):
+            with self.subTest(version=version):
+                _escribir_config(self.repo, {"version": version, "holdouts": ["data/holdout/**"]})
+                self.assertEqual(pathguard.cargar_config(self.repo).holdouts, ("data/holdout/**",))
+
+    def test_versiones_no_soportadas_levantan_error_config(self):
+        for version in (0, 3, "2", "1", True, 2.5, None, -1, []):
+            with self.subTest(version=version):
+                _escribir_config(self.repo, {"version": version})
+                with self.assertRaises(pathguard.ConfigGuardrailsError) as ctx:
+                    pathguard.cargar_config(self.repo)
+                self.assertIn("Harmessi", str(ctx.exception))
+
+    def test_guardrails_json_real_del_repo_carga(self):
+        repo_origen = Path(__file__).resolve().parents[2]
+        pathguard.cargar_config(repo_origen)
+
+    def _correr_hook(self, config: dict) -> tuple:
+        import io
+        import sys
+        from contextlib import redirect_stderr, redirect_stdout
+        from unittest.mock import patch
+
+        directorio_hook = str(Path(__file__).resolve().parents[1] / "dsguard")
+        sys.path.insert(0, directorio_hook)
+        try:
+            import hook_rutas
+        finally:
+            if directorio_hook in sys.path:
+                sys.path.remove(directorio_hook)
+
+        _escribir_config(self.repo, config)
+        payload = json.dumps({"tool_name": "Read", "tool_input": {"file_path": "README.md"}})
+        stdin_original = sys.stdin
+        sys.stdin = io.StringIO(payload)
+        stdout, stderr = io.StringIO(), io.StringIO()
+        try:
+            with patch.object(hook_rutas, "REPO_ROOT", self.repo), redirect_stdout(stdout), redirect_stderr(stderr):
+                codigo = hook_rutas.main()
+        finally:
+            sys.stdin = stdin_original
+        return codigo, stderr.getvalue()
+
+    def test_hook_deniega_ante_version_no_soportada(self):
+        codigo, stderr = self._correr_hook({"version": 3})
+        self.assertEqual(codigo, 2)
+        self.assertIn("version", stderr)
+        self.assertIn("3", stderr)
+        self.assertNotIn("Traceback", stderr)
+
+    def test_hook_permite_lectura_con_version_2(self):
+        codigo, stderr = self._correr_hook({"version": 2})
+        self.assertEqual(codigo, 0, stderr)
+
+    def test_doctor_reporta_error_ante_version_no_soportada(self):
+        from tools.dsguard import checks
+        from tools.harmessi import doctor as doctor_mod
+
+        _escribir_config(self.repo, {"version": 3})
+        resultados = doctor_mod._check_guardrails_json(self.repo)
+        self.assertEqual(resultados[0].status, checks.STATUS_FAIL)
+        self.assertIn("no soportada", resultados[0].message)
+
+
+class TestExcepcionVigente(unittest.TestCase):
+    def test_sin_vencimiento_es_vigente(self):
+        excepciones = ({"ruta": "data/holdout/x.parquet", "accion": "read"},)
+        self.assertTrue(
+            pathguard._excepcion_vigente(excepciones, "data/holdout/x.parquet", "read", datetime.now(timezone.utc))
+        )
+
+    def test_vencimiento_futuro_es_vigente(self):
+        excepciones = (
+            {"ruta": "data/holdout/x.parquet", "accion": "read", "vence_utc": _fecha(24)},
+        )
+        self.assertTrue(
+            pathguard._excepcion_vigente(excepciones, "data/holdout/x.parquet", "read", datetime.now(timezone.utc))
+        )
+
+    def test_vencimiento_pasado_no_es_vigente(self):
+        excepciones = (
+            {"ruta": "data/holdout/x.parquet", "accion": "read", "vence_utc": _fecha(-24)},
+        )
+        self.assertFalse(
+            pathguard._excepcion_vigente(excepciones, "data/holdout/x.parquet", "read", datetime.now(timezone.utc))
+        )
+
+    def test_fecha_ilegible_no_es_vigente(self):
+        excepciones = (
+            {"ruta": "data/holdout/x.parquet", "accion": "read", "vence_utc": "no-es-una-fecha"},
+        )
+        self.assertFalse(
+            pathguard._excepcion_vigente(excepciones, "data/holdout/x.parquet", "read", datetime.now(timezone.utc))
+        )
+
+    def test_accion_distinta_no_matchea(self):
+        excepciones = ({"ruta": "data/holdout/x.parquet", "accion": "write"},)
+        self.assertFalse(
+            pathguard._excepcion_vigente(excepciones, "data/holdout/x.parquet", "read", datetime.now(timezone.utc))
+        )
+
+    def test_ruta_distinta_no_matchea(self):
+        excepciones = ({"ruta": "data/holdout/otro.parquet", "accion": "read"},)
+        self.assertFalse(
+            pathguard._excepcion_vigente(excepciones, "data/holdout/x.parquet", "read", datetime.now(timezone.utc))
+        )
+
+    def test_case_insensitive(self):
+        excepciones = ({"ruta": "Data/Holdout/X.Parquet", "accion": "read"},)
+        self.assertTrue(
+            pathguard._excepcion_vigente(excepciones, "data/holdout/x.parquet", "read", datetime.now(timezone.utc))
+        )
+
+
+class TestEvaluarRutaEstructurada(unittest.TestCase):
+    def setUp(self):
+        self.repo = _crear_repo_temporal()
+        self.config = pathguard.ConfigGuardrails(holdouts=("data/holdout/**",))
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _evaluar(self, tool_name, tool_input, agent_type=None, config=None):
+        payload = {"tool_name": tool_name, "tool_input": tool_input}
+        if agent_type:
+            payload["agent_type"] = agent_type
+        return pathguard.evaluar_tool_call(payload, config or self.config, self.repo)
+
+    # -- allow del camino feliz --
+
+    def test_write_ruta_legitima_permitida(self):
+        permitido, _ = self._evaluar("Write", {"file_path": "notebooks/a.ipynb"})
+        self.assertTrue(permitido)
+
+    def test_edit_ruta_legitima_permitida(self):
+        permitido, _ = self._evaluar("Edit", {"file_path": "tools/utils.py"})
+        self.assertTrue(permitido)
+
+    def test_read_ruta_legitima_permitida(self):
+        permitido, _ = self._evaluar("Read", {"file_path": "README.md"})
+        self.assertTrue(permitido)
+
+    # -- secretos: deny siempre, lectura y escritura --
+
+    def test_read_env_denegado(self):
+        permitido, motivo = self._evaluar("Read", {"file_path": ".env"})
+        self.assertFalse(permitido)
+        self.assertIn("secreto", motivo)
+
+    def test_write_env_denegado(self):
+        permitido, _ = self._evaluar("Write", {"file_path": ".env"})
+        self.assertFalse(permitido)
+
+    def test_read_env_variante_denegado(self):
+        permitido, _ = self._evaluar("Read", {"file_path": ".env.local"})
+        self.assertFalse(permitido)
+
+    def test_read_clave_privada_pem_denegado(self):
+        permitido, _ = self._evaluar("Read", {"file_path": "certs/server.pem"})
+        self.assertFalse(permitido)
+
+    def test_read_id_rsa_denegado(self):
+        permitido, _ = self._evaluar("Read", {"file_path": ".ssh/id_rsa"})
+        self.assertFalse(permitido)
+
+    def test_read_dentro_de_ssh_denegado(self):
+        permitido, _ = self._evaluar("Read", {"file_path": ".ssh/config"})
+        self.assertFalse(permitido)
+
+    def test_read_credentials_json_denegado(self):
+        permitido, _ = self._evaluar("Read", {"file_path": "config/aws_credentials.json"})
+        self.assertFalse(permitido)
+
+    def test_read_dentro_de_aws_denegado(self):
+        permitido, _ = self._evaluar("Read", {"file_path": "home/.aws/credentials"})
+        self.assertFalse(permitido)
+
+    def test_read_kdbx_denegado(self):
+        permitido, _ = self._evaluar("Read", {"file_path": "vault.kdbx"})
+        self.assertFalse(permitido)
+
+    def test_read_secreto_case_insensitive(self):
+        permitido, _ = self._evaluar("Read", {"file_path": ".ENV"})
+        self.assertFalse(permitido)
+
+    def test_secretos_extra_del_config_denegado(self):
+        config = pathguard.ConfigGuardrails(secretos_extra=("config/interno.json",))
+        permitido, _ = self._evaluar("Read", {"file_path": "config/interno.json"}, config=config)
+        self.assertFalse(permitido)
+
+    def test_archivo_no_secreto_similar_permitido(self):
+        # No debe haber falso positivo sobre nombres parecidos pero no
+        # cubiertos por la denylist conservadora.
+        permitido, _ = self._evaluar("Read", {"file_path": "notebooks/feature_keys.py"})
+        self.assertTrue(permitido)
+
+    # -- holdout --
+
+    def test_write_holdout_denegado_siempre(self):
+        permitido, motivo = self._evaluar("Write", {"file_path": "data/holdout/eval.parquet"})
+        self.assertFalse(permitido)
+        self.assertIn("holdout", motivo)
+
+    def test_read_holdout_sin_excepcion_denegado(self):
+        permitido, _ = self._evaluar("Read", {"file_path": "data/holdout/eval.parquet"})
+        self.assertFalse(permitido)
+
+    def test_read_holdout_con_excepcion_vigente_permitido(self):
+        config = pathguard.ConfigGuardrails(
+            holdouts=("data/holdout/**",),
+            excepciones=({"ruta": "data/holdout/eval.parquet", "accion": "read"},),
+        )
+        permitido, motivo = self._evaluar("Read", {"file_path": "data/holdout/eval.parquet"}, config=config)
+        self.assertTrue(permitido)
+        self.assertIn("excepción", motivo)
+
+    def test_read_holdout_con_excepcion_vencida_denegado(self):
+        config = pathguard.ConfigGuardrails(
+            holdouts=("data/holdout/**",),
+            excepciones=(
+                {"ruta": "data/holdout/eval.parquet", "accion": "read", "vence_utc": _fecha(-1)},
+            ),
+        )
+        permitido, _ = self._evaluar("Read", {"file_path": "data/holdout/eval.parquet"}, config=config)
+        self.assertFalse(permitido)
+
+    def test_write_holdout_no_se_habilita_por_excepcion_de_lectura(self):
+        config = pathguard.ConfigGuardrails(
+            holdouts=("data/holdout/**",),
+            excepciones=({"ruta": "data/holdout/eval.parquet", "accion": "read"},),
+        )
+        permitido, _ = self._evaluar("Write", {"file_path": "data/holdout/eval.parquet"}, config=config)
+        self.assertFalse(permitido)
+
+    def test_notebookedit_sobre_holdout_denegado(self):
+        permitido, _ = self._evaluar("NotebookEdit", {"notebook_path": "data/holdout/eval.ipynb"})
+        self.assertFalse(permitido)
+
+    # -- data/raw --
+
+    def test_write_data_raw_denegado(self):
+        permitido, motivo = self._evaluar("Write", {"file_path": "data/raw/x.csv"}, config=pathguard.ConfigGuardrails())
+        self.assertFalse(permitido)
+        self.assertIn("solo lectura", motivo)
+
+    def test_edit_data_raw_denegado(self):
+        permitido, _ = self._evaluar("Edit", {"file_path": "data/raw/x.csv"}, config=pathguard.ConfigGuardrails())
+        self.assertFalse(permitido)
+
+    def test_read_data_raw_permitido(self):
+        permitido, _ = self._evaluar("Read", {"file_path": "data/raw/x.csv"}, config=pathguard.ConfigGuardrails())
+        self.assertTrue(permitido)
+
+    def test_write_data_raw_archivo_inexistente_denegado(self):
+        # No existe en disco todavía -- igual debe evaluarse por su ubicación
+        # prevista, no por si el archivo ya está ahí.
+        permitido, _ = self._evaluar(
+            "Write", {"file_path": "data/raw/nuevo_no_creado.csv"}, config=pathguard.ConfigGuardrails()
+        )
+        self.assertFalse(permitido)
+
+    # -- guardrails.json: protegido de escritura, lectura permitida --
+
+    def test_write_guardrails_json_denegado(self):
+        permitido, motivo = self._evaluar("Write", {"file_path": ".claude/guardrails.json"})
+        self.assertFalse(permitido)
+        self.assertIn("guardrails.json", motivo)
+
+    def test_edit_guardrails_json_denegado(self):
+        permitido, _ = self._evaluar("Edit", {"file_path": ".claude/guardrails.json"})
+        self.assertFalse(permitido)
+
+    def test_read_guardrails_json_permitido(self):
+        permitido, _ = self._evaluar("Read", {"file_path": ".claude/guardrails.json"})
+        self.assertTrue(permitido)
+
+    # -- fuera del repo / no resoluble --
+
+    def test_write_fuera_del_repo_denegado(self):
+        permitido, motivo = self._evaluar("Write", {"file_path": "../fuera.txt"})
+        self.assertFalse(permitido)
+        self.assertIn("fuera del repositorio", motivo)
+
+    def test_sin_ruta_determinable_denegado_fail_closed(self):
+        permitido, motivo = self._evaluar("Write", {"content": "sin file_path"})
+        self.assertFalse(permitido)
+        self.assertIn("fail-closed", motivo)
+
+    # -- symlink: la resolución debe seguirlo antes de comparar --
+
+    def test_symlink_hacia_secreto_denegado(self):
+        (self.repo / ".env").write_text("SECRET=1\n", encoding="utf-8")
+        enlace = self.repo / "notas.txt"
+        try:
+            os.symlink(str(self.repo / ".env"), str(enlace))
+        except (OSError, NotImplementedError):
+            self.skipTest("El entorno no permite crear symlinks (falta privilegio/Developer Mode)")
+        permitido, motivo = self._evaluar("Read", {"file_path": "notas.txt"})
+        self.assertFalse(permitido)
+        self.assertIn("secreto", motivo)
+
+    # -- Windows vs POSIX --
+
+    def test_backslash_windows_matchea_igual_que_posix(self):
+        permitido_back, _ = self._evaluar(
+            "Write", {"file_path": "data\\raw\\x.csv"}, config=pathguard.ConfigGuardrails()
+        )
+        permitido_posix, _ = self._evaluar(
+            "Write", {"file_path": "data/raw/x.csv"}, config=pathguard.ConfigGuardrails()
+        )
+        self.assertEqual(permitido_back, permitido_posix)
+        self.assertFalse(permitido_back)
+
+    # -- write_scopes --
+
+    def test_write_scopes_vacio_no_restringe(self):
+        permitido, _ = self._evaluar(
+            "Write", {"file_path": "tools/otra_cosa.py"}, agent_type="python-data-engineer",
+            config=pathguard.ConfigGuardrails(),
+        )
+        self.assertTrue(permitido)
+
+    def test_write_scopes_dentro_del_scope_permitido(self):
+        config = pathguard.ConfigGuardrails(write_scopes={"python-data-engineer": ("notebooks/**",)})
+        permitido, _ = self._evaluar(
+            "Write", {"file_path": "notebooks/a.ipynb"}, agent_type="python-data-engineer", config=config
+        )
+        self.assertTrue(permitido)
+
+    def test_write_scopes_fuera_del_scope_denegado(self):
+        config = pathguard.ConfigGuardrails(write_scopes={"python-data-engineer": ("notebooks/**",)})
+        permitido, motivo = self._evaluar(
+            "Write", {"file_path": "tools/otra_cosa.py"}, agent_type="python-data-engineer", config=config
+        )
+        self.assertFalse(permitido)
+        self.assertIn("write_scope", motivo)
+
+    def test_write_scopes_agente_no_listado_denegado(self):
+        config = pathguard.ConfigGuardrails(write_scopes={"python-data-engineer": ("notebooks/**",)})
+        permitido, _ = self._evaluar(
+            "Write", {"file_path": "notebooks/a.ipynb"}, agent_type="otro-agente", config=config
+        )
+        self.assertFalse(permitido)
+
+    def test_write_scopes_no_aplica_al_lead(self):
+        # agent_type ausente = Lead/sesión raíz: no se rediseñan sus
+        # capacidades en este bloque, write_scopes no lo restringe.
+        config = pathguard.ConfigGuardrails(write_scopes={"python-data-engineer": ("notebooks/**",)})
+        permitido, _ = self._evaluar("Write", {"file_path": "tools/otra_cosa.py"}, agent_type=None, config=config)
+        self.assertTrue(permitido)
+
+
+class TestEvaluarGrep(unittest.TestCase):
+    def setUp(self):
+        self.repo = _crear_repo_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _evaluar(self, tool_input, config=None):
+        payload = {"tool_name": "Grep", "tool_input": tool_input}
+        return pathguard.evaluar_tool_call(payload, config or pathguard.ConfigGuardrails(), self.repo)
+
+    def test_grep_con_path_legitimo_permitido(self):
+        permitido, _ = self._evaluar({"pattern": "TODO", "path": "notebooks"})
+        self.assertTrue(permitido)
+
+    def test_grep_sobre_secreto_denegado(self):
+        permitido, _ = self._evaluar({"pattern": "SECRET", "path": ".env"})
+        self.assertFalse(permitido)
+
+    def test_grep_sobre_holdout_sin_excepcion_denegado(self):
+        config = pathguard.ConfigGuardrails(holdouts=("data/holdout/**",))
+        permitido, _ = self._evaluar({"pattern": "x", "path": "data/holdout/eval.parquet"}, config=config)
+        self.assertFalse(permitido)
+
+    def test_grep_sobre_holdout_con_excepcion_permitido(self):
+        config = pathguard.ConfigGuardrails(
+            holdouts=("data/holdout/**",),
+            excepciones=({"ruta": "data/holdout/eval.parquet", "accion": "read"},),
+        )
+        permitido, _ = self._evaluar({"pattern": "x", "path": "data/holdout/eval.parquet"}, config=config)
+        self.assertTrue(permitido)
+
+    def test_grep_sin_path_no_bloqueado_limitacion_documentada(self):
+        permitido, motivo = self._evaluar({"pattern": "SECRET"})
+        self.assertTrue(permitido)
+        self.assertIn("fuera de alcance", motivo)
+
+
+class TestEvaluarShell(unittest.TestCase):
+    """Best-effort: ver limitaciones documentadas en el módulo. Estos tests
+    cubren tanto lo que SÍ se detecta como, explícitamente, casos de
+    indirección que NO se detectan -- para que ese comportamiento quede
+    como regresión consciente, no como sorpresa futura."""
+
+    def setUp(self):
+        self.repo = _crear_repo_temporal()
+        self.config = pathguard.ConfigGuardrails(holdouts=("data/holdout/**",))
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _evaluar(self, tool_name, comando, config=None):
+        payload = {"tool_name": tool_name, "tool_input": {"command": comando}}
+        return pathguard.evaluar_tool_call(payload, config or self.config, self.repo)
+
+    def test_bash_comando_benigno_permitido(self):
+        permitido, _ = self._evaluar("Bash", "git status")
+        self.assertTrue(permitido)
+
+    def test_bash_lectura_directa_de_secreto_denegado(self):
+        permitido, motivo = self._evaluar("Bash", "cat .env")
+        self.assertFalse(permitido)
+        self.assertIn("secreto", motivo)
+
+    def test_bash_git_show_de_secreto_denegado(self):
+        permitido, _ = self._evaluar("Bash", "git show HEAD:.env")
+        self.assertFalse(permitido)
+
+    def test_bash_referencia_directa_a_holdout_denegado(self):
+        permitido, _ = self._evaluar("Bash", "cat data/holdout/eval.parquet")
+        self.assertFalse(permitido)
+
+    def test_bash_holdout_con_excepcion_vigente_igual_denegado(self):
+        # Decisión de diseño explícita: las excepciones NO aplican vía
+        # Bash/PowerShell (solo a Read/Grep, donde se sabe con certeza que
+        # es una lectura pura).
+        config = pathguard.ConfigGuardrails(
+            holdouts=("data/holdout/**",),
+            excepciones=({"ruta": "data/holdout/eval.parquet", "accion": "read"},),
+        )
+        permitido, motivo = self._evaluar("Bash", "cat data/holdout/eval.parquet", config=config)
+        self.assertFalse(permitido)
+        self.assertIn("no aplican vía Bash", motivo)
+
+    def test_bash_escritura_a_data_raw_con_redireccion_denegado(self):
+        comando = "echo x " + chr(62) + " data/raw/y.csv"
+        permitido, motivo = self._evaluar("Bash", comando, config=pathguard.ConfigGuardrails())
+        self.assertFalse(permitido)
+        self.assertIn("data/raw", motivo)
+
+    def test_bash_borrado_de_data_raw_con_rm_denegado(self):
+        permitido, _ = self._evaluar("Bash", "rm data/raw/y.csv", config=pathguard.ConfigGuardrails())
+        self.assertFalse(permitido)
+
+    def test_bash_lectura_de_data_raw_permitida(self):
+        permitido, _ = self._evaluar("Bash", "cat data/raw/y.csv", config=pathguard.ConfigGuardrails())
+        self.assertTrue(permitido)
+
+    def test_bash_escritura_a_guardrails_json_denegado(self):
+        comando = "echo x " + chr(62) + " .claude/guardrails.json"
+        permitido, motivo = self._evaluar("Bash", comando)
+        self.assertFalse(permitido)
+        self.assertIn("guardrails.json", motivo)
+
+    def test_bash_lectura_de_guardrails_json_permitida(self):
+        permitido, _ = self._evaluar("Bash", "cat .claude/guardrails.json")
+        self.assertTrue(permitido)
+
+    def test_bash_arrow_de_tipos_no_es_falso_positivo_de_redireccion(self):
+        comando = "python script.py " + chr(45) + chr(62) + " ok"
+        permitido, _ = self._evaluar("Bash", comando, config=pathguard.ConfigGuardrails())
+        self.assertTrue(permitido)
+
+    def test_powershell_mismas_reglas_que_bash(self):
+        permitido, _ = self._evaluar("PowerShell", "Get-Content .env")
+        self.assertFalse(permitido)
+
+    def test_powershell_remove_item_en_data_raw_denegado(self):
+        permitido, _ = self._evaluar("PowerShell", "Remove-Item data/raw/y.csv", config=pathguard.ConfigGuardrails())
+        self.assertFalse(permitido)
+
+    def test_bash_indireccion_no_detectada_limitacion_documentada(self):
+        """`cd` + comando separado: el token que borra ('x.csv') no
+        contiene 'data/raw' en el mismo texto. No se detecta -- documentado
+        como limitación de diseño (best-effort, no un parser de shell), no
+        un bug a corregir en v0.2."""
+        permitido, _ = self._evaluar(
+            "Bash", "cd data/raw && rm x.csv", config=pathguard.ConfigGuardrails()
+        )
+        self.assertTrue(permitido)
+
+    def test_bash_comando_vacio_permitido(self):
+        permitido, _ = self._evaluar("Bash", "")
+        self.assertTrue(permitido)
+
+
+class TestFuentesExternasReadOnly(unittest.TestCase):
+    """M9 (Change 4/T4b), R7: excepción SOLO para `Read`/`Grep` sobre una
+    fuente externa declarada en `.harmessi/local-overrides.json`. El
+    bloqueo de escritura hacia rutas externas ya existe hoy sin tocar
+    nada (`resolver_ruta_relativa` las marca como fuera del repo) -- estos
+    tests confirman que la excepción nueva no lo afecta."""
+
+    def setUp(self):
+        self.repo = _crear_repo_temporal()
+        self.externo_dir = _crear_repo_temporal("pathguard_test_externo_m9_")
+        self.archivo_externo = self.externo_dir / "fuente.csv"
+        self.archivo_externo.write_text("col_a,col_b\n1,2\n", encoding="utf-8")
+        self.config = pathguard.ConfigGuardrails()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+        shutil.rmtree(self.externo_dir, ignore_errors=True)
+
+    def _declarar_fuente_externa(self, source_id: str, ruta: Path):
+        dir_harmessi = self.repo / ".harmessi"
+        dir_harmessi.mkdir(parents=True, exist_ok=True)
+        (dir_harmessi / "local-overrides.json").write_text(
+            json.dumps({"fuentes_externas": {source_id: {"path": str(ruta)}}}, indent=2),
+            encoding="utf-8",
+        )
+
+    def _evaluar(self, tool_name, tool_input):
+        payload = {"tool_name": tool_name, "tool_input": tool_input}
+        return pathguard.evaluar_tool_call(payload, self.config, self.repo)
+
+    def test_read_sobre_fuente_externa_declarada_permitido(self):
+        # Given una fuente externa declarada read-only
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        # When el Lead intenta leerla
+        permitido, motivo = self._evaluar("Read", {"file_path": str(self.archivo_externo)})
+        # Then se permite
+        self.assertTrue(permitido)
+        self.assertIn("Fuente externa de solo lectura", motivo)
+
+    def test_write_sobre_fuente_externa_declarada_denegado(self):
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        permitido, motivo = self._evaluar("Write", {"file_path": str(self.archivo_externo)})
+        self.assertFalse(permitido)
+        self.assertIn("fuera del repositorio", motivo)
+
+    def test_edit_sobre_fuente_externa_declarada_denegado(self):
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        permitido, _ = self._evaluar("Edit", {"file_path": str(self.archivo_externo)})
+        self.assertFalse(permitido)
+
+    def test_notebookedit_sobre_fuente_externa_declarada_denegado(self):
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        permitido, _ = self._evaluar("NotebookEdit", {"notebook_path": str(self.archivo_externo)})
+        self.assertFalse(permitido)
+
+    def test_read_sobre_ruta_externa_no_declarada_denegado(self):
+        # Se declara una fuente distinta de la que se intenta leer.
+        otra = self.externo_dir / "otra.csv"
+        otra.write_text("x\n", encoding="utf-8")
+        self._declarar_fuente_externa("clientes", otra)
+        permitido, motivo = self._evaluar("Read", {"file_path": str(self.archivo_externo)})
+        self.assertFalse(permitido)
+        self.assertIn("fuera del repositorio", motivo)
+
+    def test_read_sin_local_overrides_json_denegado(self):
+        # No hay .harmessi/local-overrides.json en absoluto: sin declaración,
+        # no hay excepción posible -- fail-closed.
+        permitido, motivo = self._evaluar("Read", {"file_path": str(self.archivo_externo)})
+        self.assertFalse(permitido)
+        self.assertIn("fuera del repositorio", motivo)
+
+    def test_read_con_local_overrides_json_corrupto_denegado(self):
+        dir_harmessi = self.repo / ".harmessi"
+        dir_harmessi.mkdir(parents=True, exist_ok=True)
+        (dir_harmessi / "local-overrides.json").write_text("{ esto no es json", encoding="utf-8")
+        permitido, motivo = self._evaluar("Read", {"file_path": str(self.archivo_externo)})
+        self.assertFalse(permitido)
+        self.assertIn("fuera del repositorio", motivo)
+
+    def test_grep_sobre_fuente_externa_declarada_permitido(self):
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        payload = {"tool_name": "Grep", "tool_input": {"pattern": "col_a", "path": str(self.archivo_externo)}}
+        permitido, motivo = pathguard.evaluar_tool_call(payload, self.config, self.repo)
+        self.assertTrue(permitido)
+        self.assertIn("Fuente externa de solo lectura", motivo)
+
+    def test_read_case_insensitive_en_casing_de_la_ruta_declarada(self):
+        # La ruta declarada en el override difiere en casing de la ruta
+        # solicitada (comportamiento esperado en Windows/NTFS).
+        self._declarar_fuente_externa("clientes", self.archivo_externo)
+        ruta_otro_casing = str(self.archivo_externo).upper()
+        permitido, _ = self._evaluar("Read", {"file_path": ruta_otro_casing})
+        self.assertTrue(permitido)
+
+    def test_lector_fuentes_externas_sin_archivo_devuelve_vacio(self):
+        self.assertEqual(pathguard.leer_fuentes_externas_declaradas(self.repo), {})
+
+    def test_lector_fuentes_externas_json_invalido_devuelve_vacio(self):
+        dir_harmessi = self.repo / ".harmessi"
+        dir_harmessi.mkdir(parents=True, exist_ok=True)
+        (dir_harmessi / "local-overrides.json").write_text("no es json", encoding="utf-8")
+        self.assertEqual(pathguard.leer_fuentes_externas_declaradas(self.repo), {})
+
+    def test_lector_fuentes_externas_raiz_no_dict_devuelve_vacio(self):
+        dir_harmessi = self.repo / ".harmessi"
+        dir_harmessi.mkdir(parents=True, exist_ok=True)
+        (dir_harmessi / "local-overrides.json").write_text("[1, 2, 3]", encoding="utf-8")
+        self.assertEqual(pathguard.leer_fuentes_externas_declaradas(self.repo), {})
+
+    def test_ruta_dentro_del_repo_no_pasa_por_el_helper_de_fuentes_externas(self):
+        # Sanity: una ruta dentro del repo sigue su camino normal
+        # (`dentro_del_repo=True`), sin necesidad de ninguna declaración de
+        # fuente externa -- comportamiento existente, no afectado por M9.
+        permitido, motivo = self._evaluar("Read", {"file_path": "README.md"})
+        self.assertTrue(permitido)
+        self.assertNotIn("Fuente externa", motivo)
+
+
+class TestEvaluarToolCallGenerico(unittest.TestCase):
+    def setUp(self):
+        self.repo = _crear_repo_temporal()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_tool_desconocida_permitida_passthrough(self):
+        payload = {"tool_name": "Glob", "tool_input": {"pattern": "*.py"}}
+        permitido, motivo = pathguard.evaluar_tool_call(payload, pathguard.ConfigGuardrails(), self.repo)
+        self.assertTrue(permitido)
+        self.assertIn("fuera del alcance", motivo)
+
+    def test_tool_input_ausente_no_lanza(self):
+        payload = {"tool_name": "Write"}
+        permitido, _ = pathguard.evaluar_tool_call(payload, pathguard.ConfigGuardrails(), self.repo)
+        self.assertFalse(permitido)
+
+
+class TestRegistrosGobernadosProtegidos(unittest.TestCase):
+    """`amendments.jsonl` y `guardrails-adoptions.jsonl` (M1, D11, R61-R63): escritura denegada
+    como `guardrails.json`; lectura y comandos legítimos de `ds_guard` permitidos."""
+
+    REGISTROS = (
+        "openspec/changes/abc/amendments.jsonl",
+        "openspec/archive/abc/amendments.jsonl",
+        "openspec/decisions/guardrails-adoptions.jsonl",
+        "openspec/changes/ñandú con espacio/amendments.jsonl",
+    )
+
+    def setUp(self):
+        self.repo = _crear_repo_temporal()
+        self.config = pathguard.ConfigGuardrails()
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _evaluar(self, tool_name, tool_input):
+        payload = {"tool_name": tool_name, "tool_input": tool_input}
+        return pathguard.evaluar_tool_call(payload, self.config, self.repo)
+
+    def test_atestaciones_protected_write_edit_denegados_en_changes_y_archive(self):
+        for ruta in (
+            "openspec/changes/abc/protected-attestations.jsonl",
+            "openspec/archive/abc/protected-attestations.jsonl",
+        ):
+            for tool, campo in (("Write", "file_path"), ("Edit", "file_path"), ("NotebookEdit", "notebook_path")):
+                with self.subTest(ruta=ruta, tool=tool):
+                    self.assertFalse(self._evaluar(tool, {campo: ruta})[0])
+            with self.subTest(ruta=ruta, tool="Read"):
+                self.assertTrue(self._evaluar("Read", {"file_path": ruta})[0])
+
+    def test_write_edit_notebookedit_denegados(self):
+        for ruta in self.REGISTROS:
+            for tool, campo in (("Write", "file_path"), ("Edit", "file_path"), ("NotebookEdit", "notebook_path")):
+                with self.subTest(ruta=ruta, tool=tool):
+                    permitido, motivo = self._evaluar(tool, {campo: ruta})
+                    self.assertFalse(permitido)
+                    self.assertIn("solo escribe `ds_guard`", motivo)
+
+    def test_write_ruta_absoluta_y_casing_denegados(self):
+        absoluta = str(self.repo / "openspec" / "changes" / "abc" / "amendments.jsonl")
+        self.assertFalse(self._evaluar("Write", {"file_path": absoluta})[0])
+        self.assertFalse(self._evaluar("Write", {"file_path": "OpenSpec/Changes/ABC/Amendments.jsonl"})[0])
+
+    def test_read_permitido(self):
+        for ruta in self.REGISTROS:
+            with self.subTest(ruta=ruta):
+                self.assertTrue(self._evaluar("Read", {"file_path": ruta})[0])
+
+    def test_vecinos_siguen_editables(self):
+        for ruta in ("openspec/changes/abc/tasks.md", "openspec/changes/abc/control.json",
+                     "openspec/decisions/ledger.jsonl"):
+            with self.subTest(ruta=ruta):
+                self.assertTrue(self._evaluar("Write", {"file_path": ruta})[0])
+                self.assertTrue(self._evaluar("Edit", {"file_path": ruta})[0])
+
+    def test_shell_lectura_permitida(self):
+        for comando in (
+            "cat openspec/changes/abc/amendments.jsonl",
+            "git diff openspec/changes/abc/amendments.jsonl",
+            "git log -p -- openspec/decisions/guardrails-adoptions.jsonl",
+            "git show HEAD:openspec/changes/abc/amendments.jsonl",
+            "python tools/ds_guard.py validate --change-id abc",
+            "python tools/ds_guard.py scope show --change-id abc",
+            "python tools/ds_guard.py scope amend --change-id abc --add x --dry-run",
+        ):
+            for tool in ("Bash", "PowerShell"):
+                with self.subTest(comando=comando, tool=tool):
+                    self.assertTrue(self._evaluar(tool, {"command": comando})[0])
+
+    def test_shell_escritura_denegada(self):
+        for comando in (
+            "echo x >> openspec/changes/abc/amendments.jsonl",
+            "echo x > openspec/decisions/guardrails-adoptions.jsonl",
+            "Set-Content openspec/changes/abc/amendments.jsonl 'x'",
+            "echo x | tee openspec/changes/abc/amendments.jsonl",
+            "Add-Content -Path openspec/archive/abc/amendments.jsonl -Value x",
+            "rm openspec/changes/abc/amendments.jsonl",
+            "sed -i s/a/b/ openspec/changes/abc/amendments.jsonl",
+            "cp otro.jsonl openspec/changes/abc/amendments.jsonl",
+        ):
+            for tool in ("Bash", "PowerShell"):
+                with self.subTest(comando=comando, tool=tool):
+                    permitido, motivo = self._evaluar(tool, {"command": comando})
+                    self.assertFalse(permitido)
+                    self.assertIn("Registro de enmiendas gobernadas", motivo)
+
+    def test_comandos_legitimos_de_ds_guard_permitidos(self):
+        for comando in (
+            "python tools/ds_guard.py scope amend --change-id abc --add x --motivo razon",
+            "python tools/ds_guard.py guardrails readopt --dry-run",
+            "python tools/ds_guard.py guardrails readopt",
+        ):
+            with self.subTest(comando=comando):
+                self.assertTrue(self._evaluar("Bash", {"command": comando})[0])
+
+    def test_guardrails_json_sin_cambios_de_comportamiento(self):
+        permitido, motivo = self._evaluar("Write", {"file_path": ".claude/guardrails.json"})
+        self.assertFalse(permitido)
+        self.assertIn("guardrails.json está protegido", motivo)
+        self.assertTrue(self._evaluar("Read", {"file_path": ".claude/guardrails.json"})[0])
+        permitido, motivo = self._evaluar("Bash", {"command": "echo x >> .claude/guardrails.json"})
+        self.assertFalse(permitido)
+        self.assertIn("guardrails.json", motivo)
+
+    # -- comandos git mutantes (A3.4) --
+
+    def test_git_mutantes_sobre_registros_denegados(self):
+        for comando in (
+            "git checkout HEAD~1 -- openspec/changes/abc/amendments.jsonl",
+            "git restore openspec/changes/abc/amendments.jsonl",
+            "git restore --source=HEAD~1 openspec/decisions/guardrails-adoptions.jsonl",
+            "git apply openspec/changes/abc/amendments.jsonl",
+            "git reset HEAD~1 -- openspec/changes/abc/amendments.jsonl",
+            "git rm openspec/changes/abc/amendments.jsonl",
+            "git mv openspec/changes/abc/amendments.jsonl otro.jsonl",
+        ):
+            for tool in ("Bash", "PowerShell"):
+                with self.subTest(comando=comando, tool=tool):
+                    permitido, motivo = self._evaluar(tool, {"command": comando})
+                    self.assertFalse(permitido)
+                    self.assertIn("Registro de enmiendas gobernadas", motivo)
+
+    def test_git_mutantes_sobre_guardrails_json_denegados(self):
+        for comando in (
+            "git checkout HEAD~1 -- .claude/guardrails.json",
+            "git restore .claude/guardrails.json",
+            "git apply .claude/guardrails.json",
+        ):
+            with self.subTest(comando=comando):
+                permitido, motivo = self._evaluar("Bash", {"command": comando})
+                self.assertFalse(permitido)
+                self.assertIn("guardrails.json", motivo)
+
+    def test_git_lectura_sobre_registros_permitida(self):
+        for comando in (
+            "git diff HEAD~1 -- openspec/changes/abc/amendments.jsonl",
+            "git show HEAD:openspec/changes/abc/amendments.jsonl",
+            "git log --oneline -- openspec/decisions/guardrails-adoptions.jsonl",
+            "git blame openspec/changes/abc/amendments.jsonl",
+            "git status openspec/changes/abc/amendments.jsonl",
+        ):
+            with self.subTest(comando=comando):
+                self.assertTrue(self._evaluar("Bash", {"command": comando})[0])
+
+    def test_git_add_sobre_registros_permitido_y_sobre_guardrails_denegado(self):
+        for comando in (
+            "git add openspec/changes/abc/amendments.jsonl",
+            "git add openspec/decisions/guardrails-adoptions.jsonl",
+        ):
+            with self.subTest(comando=comando):
+                self.assertTrue(self._evaluar("Bash", {"command": comando})[0])
+        # Como hoy: `git add` sobre guardrails.json sigue denegado.
+        self.assertFalse(self._evaluar("Bash", {"command": "git add .claude/guardrails.json"})[0])
+
+    def test_git_add_encadenado_con_escritura_sigue_denegado(self):
+        comando = ("git add x.txt openspec/changes/abc/amendments.jsonl; "
+                   "rm openspec/changes/abc/amendments.jsonl")
+        self.assertFalse(self._evaluar("Bash", {"command": comando})[0])
+
+    def test_shell_stream_ntfs_denegado_y_cat_permitido(self):
+        for tool in ("Bash", "PowerShell"):
+            with self.subTest(tool=tool):
+                permitido, motivo = self._evaluar(
+                    tool, {"command": "echo x > openspec/changes/abc/amendments.jsonl::$DATA"})
+                self.assertFalse(permitido)
+                self.assertIn("Registro de enmiendas gobernadas", motivo)
+                self.assertTrue(self._evaluar(
+                    tool, {"command": "cat openspec/changes/abc/amendments.jsonl"})[0])
+        self.assertFalse(self._evaluar(
+            "Bash", {"command": "echo x > .claude/guardrails.json::$DATA"})[0])
+
+    # -- stream alternativo NTFS (A3.6) --
+
+    def test_write_stream_alternativo_ntfs_denegado(self):
+        for ruta in (
+            "openspec/changes/abc/amendments.jsonl::$DATA",
+            "openspec/changes/abc/amendments.jsonl:stream",
+            "openspec/decisions/guardrails-adoptions.jsonl::$DATA",
+            ".claude/guardrails.json::$DATA",
+            str(self.repo / "openspec" / "changes" / "abc" / "amendments.jsonl") + "::$DATA",
+        ):
+            for tool, campo in (("Write", "file_path"), ("Edit", "file_path"), ("NotebookEdit", "notebook_path")):
+                with self.subTest(ruta=ruta, tool=tool):
+                    permitido, motivo = self._evaluar(tool, {campo: ruta})
+                    self.assertFalse(permitido)
+                    self.assertIn("stream alternativo NTFS", motivo)
+
+    def test_stream_ntfs_en_archivo_vecino_no_activa_la_regla(self):
+        permitido, motivo = self._evaluar("Write", {"file_path": "openspec/changes/abc/tasks.md:s"})
+        self.assertNotIn("stream alternativo NTFS", motivo)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "change_id": "20261014-domain-modeling",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-15T02:47:39Z",
+  "baseline": {
+    "commit": "71f16ccbb170a8938fb3d475f28a2d0ba08f33ca",
+    "rama": "v0.10-dev",
+    "capturado_utc": "2026-10-15T02:47:39Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/SKILL.md",
+      ".claude/skills/lead-data-scientist/methodology.md",
+      ".claude/skills/lead-data-scientist/skills/domain-modeling.md",
+      ".claude/skills/lead-data-scientist/verificador.md",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.10.md",
+      "openspec/changes/20261014-domain-modeling/amendments.jsonl",
+      "openspec/changes/20261014-domain-modeling/control.json",
+      "openspec/changes/20261014-domain-modeling/design.md",
+      "openspec/changes/20261014-domain-modeling/proposal.md",
+      "openspec/changes/20261014-domain-modeling/spec.md",
+      "openspec/changes/20261014-domain-modeling/tasks.md",
+      "openspec/changes/20261014-domain-modeling/verification.md",
+      "tools/ds_guard.py",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/profiles/python_jupyter_data/templates/SKILL_lead_data_scientist.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/methodology.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/verificador.md.tmpl",
+      "tools/ds_init/tests/test_glossary_install.py",
+      "tools/ds_init/tests/test_manifest.py",
+      "tools/dsguard/glossary.py",
+      "tools/harmessi/doctor.py",
+      "tools/harmessi/tests/test_doctor_skill_contract.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/tests/test_ds_guard_glossary_cli.py",
+      "tools/tests/test_glossary.py",
+      "tools/tests/test_skill_methodology.py"
+    ],
+    "scope_hash": "e7cf0a3352bb76a61b45acb41b1688b23717401c177915c5fee01bcd54447333"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "7ae77a4b633d94e980c9f399f7dbf9d702c7fb4ea92206d65032ef80bb71b1e6",
+      "registrado_utc": "2026-10-15T02:49:23Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-14",
+      "alcance_aprobado": "Implementación y validación de Change 5 Domain Modeling",
+      "cita": "Autorización anticipada explícita del usuario (2026-10-14) para el loop autónomo v0.10.0, Change 5 Domain Modeling"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ceeb0fb9663ac437f70c7fea48337b88577070ab5d3cada753afe2a4d6d5571c",
+      "registrado_utc": "2026-10-15T02:49:24Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-14",
+      "alcance_aprobado": "Implementación y validación de Change 5 Domain Modeling",
+      "cita": "Autorización anticipada explícita del usuario (2026-10-14) para el loop autónomo v0.10.0, Change 5 Domain Modeling"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e48653fb481b61b1e1379ac56d179c00d029031b03f242e0740c11f86f225611",
+      "registrado_utc": "2026-10-15T02:49:25Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-14",
+      "alcance_aprobado": "Implementación y validación de Change 5 Domain Modeling",
+      "cita": "Autorización anticipada explícita del usuario (2026-10-14) para el loop autónomo v0.10.0, Change 5 Domain Modeling"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-15T02:49:28Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-15T02:49:29Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-15T02:49:30Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-15T03:23:11Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-15T03:23:15Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-15T02:49:27Z",
+      "cierre_utc": "2026-10-15T03:23:17Z",
+      "modo": "prolongada",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 12,
+        "max_roles": 3,
+        "max_reintentos": 8,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 5
+      },
+      "deadline_utc": "2026-10-15T10:49:27Z",
+      "minutos_consumidos": 33.833333333333336,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-15T03:22:28Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-15T03:07:24Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

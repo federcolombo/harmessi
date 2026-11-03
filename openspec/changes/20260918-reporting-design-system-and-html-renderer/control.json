@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "change_id": "20260918-reporting-design-system-and-html-renderer",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-21T14:25:35Z",
+  "baseline": {
+    "commit": "5aa6f4a78dcf541ed29cc6ba954a03878829ca3e",
+    "rama": "v0.6-dev",
+    "capturado_utc": "2026-09-21T14:25:35Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260918-reporting-design-system-and-html-renderer/proposal.md",
+      "openspec/changes/20260918-reporting-design-system-and-html-renderer/tasks.md",
+      "openspec/changes/20260918-reporting-design-system-and-html-renderer/spec.md",
+      "openspec/changes/20260918-reporting-design-system-and-html-renderer/design.md",
+      "openspec/changes/20260918-reporting-design-system-and-html-renderer/control.json",
+      "openspec/changes/20260918-reporting-design-system-and-html-renderer/verification.md",
+      "tools/reporting/style.py",
+      "tools/reporting/plotly_backend.py",
+      "tools/reporting/render_html.py",
+      "tools/reporting/publish.py",
+      "tools/reporting/cli.py",
+      "tools/reporting/tests/test_style.py",
+      "tools/reporting/tests/test_plotly_backend.py",
+      "tools/reporting/tests/test_render_html.py",
+      "tools/reporting/tests/test_publish.py",
+      "tools/reporting/tests/test_cli_render.py",
+      "tools/reporting/tests/test_installability.py",
+      "tools/ds_init/manifest.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.6.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e986fa2f21bb8e0e36d1615800f1bfdacf52a6425bbdbbf3db6c8e75ff715097",
+      "registrado_utc": "2026-09-21T14:29:59Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 4 - reporting-design-system-and-html-renderer (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e1dc6983b219bef7e1f8f7444c7c521e5efd17f684875a0ab02aeb01300a6316",
+      "registrado_utc": "2026-09-21T14:30:00Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 4 - reporting-design-system-and-html-renderer (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "d4c3e9515d515b3546eaf76dd7a9f371948addd944237e49b9e906df42475305",
+      "registrado_utc": "2026-09-21T14:30:01Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 4 - reporting-design-system-and-html-renderer (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "6ba14a9ab92153deea31acad9cc8102c33cab30c4c493c85ce53eb49714f2d00",
+      "registrado_utc": "2026-09-21T14:30:02Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-18",
+      "alcance_aprobado": "Change 4 - reporting-design-system-and-html-renderer (docs/roadmap/v0.6.md)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "3f7619a07a2a4ab0a21e6c7f9beb161201a16a4f8ea5851f862d12d7dd996169",
+      "registrado_utc": "2026-09-21T15:28:52Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-21",
+      "alcance_aprobado": "Change 4 - reporting-design-system-and-html-renderer (enmiendas post-review)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md). NO instales Plotly ni ninguna dependencia nueva (2026-09-21). Re-aprobación por enmiendas del ciclo reviewer 1/2."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "2108bc82efe17b4909725d79a2ca50fe4399cde0d58a591a9c6dee40a6d1490e",
+      "registrado_utc": "2026-09-21T15:28:52Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-21",
+      "alcance_aprobado": "Change 4 - reporting-design-system-and-html-renderer (enmiendas post-review)",
+      "cita": "Ejecutá autónomamente Harmessi v0.6 completa ... Para cada Change: audit → SDD → implementación → tests → reviewer → fixes → re-tests → verification → close → commit local (instrucción explícita del usuario, 2026-09-18, bajo el Contrato de autonomía de docs/roadmap/README.md). NO instales Plotly ni ninguna dependencia nueva (2026-09-21). Re-aprobación por enmiendas del ciclo reviewer 1/2."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-21T14:30:03Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-21T14:30:04Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-21T15:28:53Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-21T15:28:55Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-21T14:30:02Z",
+      "cierre_utc": "2026-09-21T15:28:56Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 720,
+        "max_tareas": 6,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-22T02:30:02Z",
+      "minutos_consumidos": 58.9,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-21T14:56:50Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-21T15:11:00Z"
+        }
+      },
+      "tareas": [],
+      "roles": [
+        "python-data-engineer"
+      ],
+      "reintentos": 1,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "remediaciones": [
+    {
+      "remediation_id": "r1",
+      "finding_id": "rev1-c4",
+      "origen": "python-data-engineer",
+      "tipo": "bug",
+      "estado": "abierta",
+      "creado_utc": "2026-09-21T15:18:23Z",
+      "ventanas": [
+        {
+          "ventana": 1,
+          "max_intentos": 2,
+          "autorizado_por": null,
+          "fecha_autorizacion": null,
+          "motivo": null,
+          "intentos": [
+            {
+              "attempt": 1,
+              "causa": "Reviewer: backend_payload con recursos externos, reescritura del bundle, fallo silencioso sin JS, report.html obsoleto tras re-publicacion fallida, resultados duplicados, ids sensibles",
+              "cambio_aplicado": "Fixes ciclo 1 de 2 repartidos por archivos entre style, backend, render, publish y cli",
+              "resultado": "pendiente de re-tests",
+              "session_id": "s1",
+              "utc": "2026-09-21T15:18:23Z"
+            }
+          ]
+        }
+      ],
+      "resuelto_utc": null,
+      "resultado_final": null
+    }
+  ]
+}

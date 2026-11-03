@@ -1,0 +1,21 @@
+{
+  "applicability": {
+    "contexts": [
+      "python-debugging"
+    ]
+  },
+  "contract_version": 1,
+  "created_utc": "2026-10-23T14:00:00Z",
+  "evidence_refs": [
+    {
+      "decision_hash": "a8817ef79e03aa92b320c34ec45ef3eb37d356b444b8e1457bd9c8048d285f77",
+      "probe_id": "p1",
+      "suite_id": "suite-fake"
+    }
+  ],
+  "lesson_hash": "e5ca982c36004f70c1255197d9b582358eb9bdf77b3259ac374389983c4056fe",
+  "lesson_id": "les-387ae960d073",
+  "pattern": "Las variantes con pasos numerados mejoran el seguimiento",
+  "recommendation": "Preferir pasos numerados",
+  "status": "evidence-backed"
+}

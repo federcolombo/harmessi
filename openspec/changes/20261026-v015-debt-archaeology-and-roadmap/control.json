@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "change_id": "20261026-v015-debt-archaeology-and-roadmap",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-26T15:15:35Z",
+  "baseline": {
+    "commit": "0207977917c439892ad7ec580d28d2fe2553160d",
+    "rama": "v0.15-dev",
+    "capturado_utc": "2026-10-26T15:15:35Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "docs/roadmap/README.md",
+      "docs/roadmap/v0.15-debt-matrix.md",
+      "docs/roadmap/v0.15.md",
+      "openspec/changes/20261026-v015-debt-archaeology-and-roadmap/amendments.jsonl",
+      "openspec/changes/20261026-v015-debt-archaeology-and-roadmap/control.json",
+      "openspec/changes/20261026-v015-debt-archaeology-and-roadmap/design.md",
+      "openspec/changes/20261026-v015-debt-archaeology-and-roadmap/proposal.md",
+      "openspec/changes/20261026-v015-debt-archaeology-and-roadmap/spec.md",
+      "openspec/changes/20261026-v015-debt-archaeology-and-roadmap/tasks.md",
+      "openspec/changes/20261026-v015-debt-archaeology-and-roadmap/verification.md"
+    ],
+    "scope_hash": "9488a5f54687ac370cc25dbe7aaca57ce77c0de1db10de948320716a820ea37c"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "23218c24bd35c7bdf74ad55ec438c0d75cd9d2639d8c0023ae3071487f190943",
+      "registrado_utc": "2026-10-26T15:19:59Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-debt-archaeology-and-roadmap",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "c295c08538a52949ff6a1a29b4f9a3af2165fa5438f9a896842e198307d9174d",
+      "registrado_utc": "2026-10-26T15:20:01Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-debt-archaeology-and-roadmap",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "482c60f1fea29b59c213bc4254c35ba495616794d030ad36d278d0a12a12b1d3",
+      "registrado_utc": "2026-10-26T15:20:02Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-debt-archaeology-and-roadmap",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-26T15:20:03Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-26T15:20:04Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-26T15:20:44Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-26T15:20:47Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-26T15:15:36Z",
+      "cierre_utc": "2026-10-26T15:20:48Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-26T16:45:36Z",
+      "minutos_consumidos": 5.2,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-26T15:20:21Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

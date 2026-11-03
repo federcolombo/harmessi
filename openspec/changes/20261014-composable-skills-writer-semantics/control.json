@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "change_id": "20261014-composable-skills-writer-semantics",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-15T00:11:31Z",
+  "baseline": {
+    "commit": "1c6a4f035e93ac5d9c7ad2398cd1cd7a7f8cd591",
+    "rama": "v0.10-dev",
+    "capturado_utc": "2026-10-15T00:11:31Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/agents/data-science-reviewer.md",
+      ".claude/agents/metodologo.md",
+      ".claude/agents/python-data-engineer.md",
+      ".claude/skills/lead-data-scientist/SKILL.md",
+      ".claude/skills/lead-data-scientist/methodology.md",
+      ".claude/skills/lead-data-scientist/sdd.md",
+      ".claude/skills/lead-data-scientist/templates/skill.md",
+      ".claude/skills/lead-data-scientist/templates/tasks.md",
+      ".claude/skills/lead-data-scientist/verificador.md",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.10.md",
+      "openspec/changes/20261014-composable-skills-writer-semantics/amendments.jsonl",
+      "openspec/changes/20261014-composable-skills-writer-semantics/control.json",
+      "openspec/changes/20261014-composable-skills-writer-semantics/design.md",
+      "openspec/changes/20261014-composable-skills-writer-semantics/proposal.md",
+      "openspec/changes/20261014-composable-skills-writer-semantics/spec.md",
+      "openspec/changes/20261014-composable-skills-writer-semantics/tasks.md",
+      "openspec/changes/20261014-composable-skills-writer-semantics/verification.md",
+      "tools/ds_guard.py",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/profiles/python_jupyter_data/templates/SKILL_lead_data_scientist.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/agent_data_science_reviewer.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/agent_metodologo.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/agent_python_data_engineer.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/methodology.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/sdd.md.tmpl",
+      "tools/ds_init/profiles/python_jupyter_data/templates/verificador.md.tmpl",
+      "tools/ds_init/tests/test_manifest.py",
+      "tools/ds_init/tests/test_manifest_dsguard_parity.py",
+      "tools/dsguard/hook_presupuesto.py",
+      "tools/dsguard/ownership.py",
+      "tools/dsguard/sdd.py",
+      "tools/dsguard/skill_contract.py",
+      "tools/harmessi/doctor.py",
+      "tools/harmessi/tests/test_doctor_skill_contract.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/tests/test_ds_guard_ownership_cli.py",
+      "tools/tests/test_operational_session_recovery.py",
+      "tools/tests/test_ownership.py",
+      "tools/tests/test_sdd_estado_divergente.py",
+      "tools/tests/test_skill_contract.py",
+      "tools/tests/test_skill_methodology.py"
+    ],
+    "scope_hash": "befa0c9d60c477b1956438885c133f4681df51cdface369c521dbc141c7bcede"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "045296d312eb9cf0ce6cf0dbbfc484cc9ee85ce387b13298fc488bea3eed950f",
+      "registrado_utc": "2026-10-15T01:15:31Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-14",
+      "alcance_aprobado": "Implementación y validación de Change 4 Composable Skills Foundation + Writer Semantics",
+      "cita": "Aprobación humana explícita del SDD de Change 4 y decisiones M1-M7"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "643fc7029a65a3ae61887b9bf3904f6ff21fb5b287ac8e2da525b6d90eff0159",
+      "registrado_utc": "2026-10-15T01:15:32Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-14",
+      "alcance_aprobado": "Implementación y validación de Change 4 Composable Skills Foundation + Writer Semantics",
+      "cita": "Aprobación humana explícita del SDD de Change 4 y decisiones M1-M7"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "9c69e5e3bcc6c1d69d5ab0230e8f880e697cb273507db9ae5c58288b7f72e6b0",
+      "registrado_utc": "2026-10-15T01:15:33Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-14",
+      "alcance_aprobado": "Implementación y validación de Change 4 Composable Skills Foundation + Writer Semantics",
+      "cita": "Aprobación humana explícita del SDD de Change 4 y decisiones M1-M7"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-15T01:15:48Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-15T01:15:49Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-15T01:15:50Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-15T02:18:24Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-15T02:18:50Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-15T01:15:46Z",
+      "cierre_utc": "2026-10-15T02:19:17Z",
+      "modo": "prolongada",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 12,
+        "max_roles": 3,
+        "max_reintentos": 8,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-15T09:15:46Z",
+      "minutos_consumidos": 63.516666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-15T02:17:12Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-15T02:02:16Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

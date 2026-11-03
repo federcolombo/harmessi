@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "change_id": "20260922-data-contract-validation",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-22T13:25:20Z",
+  "baseline": {
+    "commit": "713457e5659d9931f9fad9dc116a677e120b4736",
+    "rama": "v0.7-dev",
+    "capturado_utc": "2026-09-22T13:25:20Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260922-data-contract-validation/proposal.md",
+      "openspec/changes/20260922-data-contract-validation/tasks.md",
+      "openspec/changes/20260922-data-contract-validation/spec.md",
+      "openspec/changes/20260922-data-contract-validation/design.md",
+      "openspec/changes/20260922-data-contract-validation/control.json",
+      "openspec/changes/20260922-data-contract-validation/verification.md",
+      "tools/datacontracts/validation.py",
+      "tools/datacontracts/tests/test_validation.py",
+      "tools/tests/test_v07_validation_neutrality.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.7.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e5589d38acee7f6b30f6d1055b18040e585e9ff7cd2f96190ea3fa2daf3935dc",
+      "registrado_utc": "2026-09-22T13:38:52Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 1 - data-contract-validation (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 1 -- data-contract-validation ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "152825a8f2e4b94b51770eda839f10d46da982ebbd4ba542a4c7e2f0dea525c5",
+      "registrado_utc": "2026-09-22T13:38:53Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 1 - data-contract-validation (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 1 -- data-contract-validation ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "d8adff477468aa933bca50e0139407e21c3294f81eb62d78945e218d061c8d1a",
+      "registrado_utc": "2026-09-22T13:38:54Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 1 - data-contract-validation (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 1 -- data-contract-validation ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "4dfa4c8cd8296d49bb6c02fbb6df0be4be10cb437bd9ab1c16085f11ae36cca2",
+      "registrado_utc": "2026-09-22T13:38:55Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 1 - data-contract-validation (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 1 -- data-contract-validation ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md)."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-22T13:38:56Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-22T13:38:58Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-22T14:28:39Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion",
+      "reconciliado": true
+    },
+    {
+      "utc": "2026-09-22T14:28:49Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-22T13:38:57Z",
+      "cierre_utc": "2026-09-22T14:28:50Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 8,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-22T21:38:57Z",
+      "minutos_consumidos": 49.88333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-22T14:27:51Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-22T14:19:24Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

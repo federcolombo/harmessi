@@ -1,0 +1,28 @@
+{
+  "fixtures": {
+    "budget_state.json": {
+      "sha256": "57f04df3b7651e1fe715636b22085f147051b6eb37dc11cbed5c1293e6855821"
+    },
+    "candidate.json": {
+      "sha256": "efbeab8fd41981994e012e625c050954b226c1507e537593cba8033624f9ea42"
+    },
+    "decision.json": {
+      "sha256": "146217fa90fe80ec710ac6d6ae533c7954c44f911918e5b25995dc7e2b4971df"
+    },
+    "lesson.json": {
+      "sha256": "bc487e4be05e1f46c7ff287296177d417716e0ac8782bda9344aa0a2b63ad7bf"
+    },
+    "policy.json": {
+      "sha256": "015c316f649e1e7d82ca7f7c010a051ac97245bb985033865c0dd4515ea761d7"
+    },
+    "probe.json": {
+      "sha256": "a3350d1bb0cd94f9089ebd05dd8fd4ee7072a6be63a7664395bd48e69d867671"
+    },
+    "proposal.json": {
+      "sha256": "74f09423623300d80feca87e37fe4ea9412f4c78f72cdaaa696490a6a6171efa"
+    }
+  },
+  "generador": "tools/tests/fixtures/compat/generate_v014.py",
+  "harmessi_version": "0.14.0",
+  "tag_origen": "v0.14.0"
+}

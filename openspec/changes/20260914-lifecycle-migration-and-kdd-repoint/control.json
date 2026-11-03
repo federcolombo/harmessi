@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "change_id": "20260914-lifecycle-migration-and-kdd-repoint",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-14T14:48:56Z",
+  "baseline": {
+    "commit": "e24bfbae7952263e117303a2752fbbdd624cdb68",
+    "rama": "main",
+    "capturado_utc": "2026-09-14T14:48:56Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260914-lifecycle-migration-and-kdd-repoint/proposal.md",
+      "openspec/changes/20260914-lifecycle-migration-and-kdd-repoint/tasks.md",
+      "openspec/changes/20260914-lifecycle-migration-and-kdd-repoint/spec.md",
+      "openspec/changes/20260914-lifecycle-migration-and-kdd-repoint/design.md",
+      "openspec/changes/20260914-lifecycle-migration-and-kdd-repoint/control.json",
+      "tools/dsguard/kdd_compat.py",
+      "tools/dsguard/kdd.py",
+      "tools/dsguard/lifecycle.py",
+      "tools/ds_guard.py",
+      "tools/ds_init/manifest.py",
+      "tools/tests/test_manifest_dsguard_parity.py",
+      "tools/tests/test_kdd.py",
+      "tools/tests/test_kdd_compat.py",
+      "tools/tests/test_lifecycle.py",
+      ".claude/skills/lead-data-scientist/kdd.md",
+      "tools/ds_init/profiles/python_jupyter_data/templates/kdd.md.tmpl",
+      "tools/ds_init/tests/test_integracion_instalacion.py",
+      "tools/ds_init/tests/test_manifest.py",
+      "openspec/changes/20260914-lifecycle-migration-and-kdd-repoint/verification.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "6fc4a6efa66bfb24178ef142c6ca0d5c7689d95b353450a23fb4050ea5909a17",
+      "registrado_utc": "2026-09-14T15:04:42Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Migracion openspec/kdd/state.json v0.2 -> openspec/lifecycle/state.json + repunte CLI kdd via kdd_compat.py (arquitectura de 3 modulos), con roll-up determinista de fase CRISP-DM desde pasos KDD, segun proposal/spec/design.md con los ajustes K1-K7 incorporados",
+      "cita": "Revision aprobada con ajustes. K1 MODIFICAR (modulo kdd_compat.py separado)... K4 RECHAZAR ultima escritura gana, definir roll-up determinista... Incorpora estas decisiones a proposal/spec/design/tasks. Despues segui el flujo SDD normal e implementa unicamente Change 2."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "1bf005cab39265e60eb6bb98da881a1951c82c20e150f1cb8c9174dcd79ea03c",
+      "registrado_utc": "2026-09-14T15:04:43Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Migracion openspec/kdd/state.json v0.2 -> openspec/lifecycle/state.json + repunte CLI kdd via kdd_compat.py (arquitectura de 3 modulos), con roll-up determinista de fase CRISP-DM desde pasos KDD, segun proposal/spec/design.md con los ajustes K1-K7 incorporados",
+      "cita": "Revision aprobada con ajustes. K1 MODIFICAR (modulo kdd_compat.py separado)... K4 RECHAZAR ultima escritura gana, definir roll-up determinista... Incorpora estas decisiones a proposal/spec/design/tasks. Despues segui el flujo SDD normal e implementa unicamente Change 2."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "29daa679d119357eb0f27dbd82793485153560134cbc9a16dad7ce6d9b29e3d1",
+      "registrado_utc": "2026-09-14T15:04:43Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Migracion openspec/kdd/state.json v0.2 -> openspec/lifecycle/state.json + repunte CLI kdd via kdd_compat.py (arquitectura de 3 modulos), con roll-up determinista de fase CRISP-DM desde pasos KDD, segun proposal/spec/design.md con los ajustes K1-K7 incorporados",
+      "cita": "Revision aprobada con ajustes. K1 MODIFICAR (modulo kdd_compat.py separado)... K4 RECHAZAR ultima escritura gana, definir roll-up determinista... Incorpora estas decisiones a proposal/spec/design/tasks. Despues segui el flujo SDD normal e implementa unicamente Change 2."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "842a8e1653072517a8b04cd254a7f3f8c3fd57fded09d34ff6f639d5f8ced11f",
+      "registrado_utc": "2026-09-14T15:04:44Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-14",
+      "alcance_aprobado": "Migracion openspec/kdd/state.json v0.2 -> openspec/lifecycle/state.json + repunte CLI kdd via kdd_compat.py (arquitectura de 3 modulos), con roll-up determinista de fase CRISP-DM desde pasos KDD, segun proposal/spec/design.md con los ajustes K1-K7 incorporados",
+      "cita": "Revision aprobada con ajustes. K1 MODIFICAR (modulo kdd_compat.py separado)... K4 RECHAZAR ultima escritura gana, definir roll-up determinista... Incorpora estas decisiones a proposal/spec/design/tasks. Despues segui el flujo SDD normal e implementa unicamente Change 2."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-14T15:04:53Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-14T15:08:22Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-14T15:36:06Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-14T15:37:55Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-14T15:08:21Z",
+      "cierre_utc": "2026-09-14T15:37:56Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 120,
+        "max_tareas": 30,
+        "max_roles": 3,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-14T17:08:21Z",
+      "minutos_consumidos": 29.583333333333332,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-14T15:36:36Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-14T15:28:50Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

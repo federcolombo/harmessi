@@ -1,0 +1,2238 @@
+{
+  "clis": {
+    "cli-ds-guard": {
+      "": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "approve": {
+        "flags": {
+          "--alcance": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--artefacto": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--channel": {
+            "choices": [
+              "console_confirmed",
+              "declared"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--cita": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--fecha": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--usuario": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "archive": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--dry-run": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--execute": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "cards": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "cards report": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--out-dir": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--path": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "cards validate": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--kind": {
+            "choices": [
+              "data",
+              "governance",
+              "model"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--path": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "contract": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "contract diff": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--new": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--old": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--policy": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "contract impact": {
+        "flags": {
+          "--contract": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--fields": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--since": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--staged": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "contract validate": {
+        "flags": {
+          "--contract": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--observation": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--profile": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--record-evidence": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "decision": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "decision add": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--cita": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--decision-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--evidencia": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--fecha": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--kdd-etapa": {
+            "choices": [
+              "data_preparation",
+              "data_understanding",
+              "deployment",
+              "evaluation",
+              "feature_engineering",
+              "interpretation",
+              "modeling",
+              "monitoring",
+              "problem_understanding",
+              "production_readiness"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--rationale": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--resumen": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--tipo": {
+            "choices": [
+              "baseline",
+              "criterio_metodologico",
+              "cutoff",
+              "excepcion_metodologica",
+              "feature_decision",
+              "metrica_primaria",
+              "model_decision",
+              "produccion",
+              "split_strategy",
+              "target",
+              "threshold",
+              "unidad_de_analisis"
+            ],
+            "nargs": null,
+            "required": true
+          },
+          "--usuario": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "decision correct": {
+        "flags": {
+          "--decision-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--evidencia": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--fecha": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--motivo": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--set": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--usuario": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "decision list": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--estado": {
+            "choices": [
+              "activa",
+              "revocada",
+              "superseded"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--tipo": {
+            "choices": [
+              "baseline",
+              "criterio_metodologico",
+              "cutoff",
+              "excepcion_metodologica",
+              "feature_decision",
+              "metrica_primaria",
+              "model_decision",
+              "produccion",
+              "split_strategy",
+              "target",
+              "threshold",
+              "unidad_de_analisis"
+            ],
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "decision revoke": {
+        "flags": {
+          "--fecha": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--motivo": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--referencia": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--usuario": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "decision show": {
+        "flags": {
+          "--decision-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "decision supersede": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--cita": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--decision-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--evidencia": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--fecha": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--kdd-etapa": {
+            "choices": [
+              "data_preparation",
+              "data_understanding",
+              "deployment",
+              "evaluation",
+              "feature_engineering",
+              "interpretation",
+              "modeling",
+              "monitoring",
+              "problem_understanding",
+              "production_readiness"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--rationale": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--referencia": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--resumen": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--tipo": {
+            "choices": [
+              "baseline",
+              "criterio_metodologico",
+              "cutoff",
+              "excepcion_metodologica",
+              "feature_decision",
+              "metrica_primaria",
+              "model_decision",
+              "produccion",
+              "split_strategy",
+              "target",
+              "threshold",
+              "unidad_de_analisis"
+            ],
+            "nargs": null,
+            "required": true
+          },
+          "--usuario": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "decision verify": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "dependency": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "dependency classify": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--nombre": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--version": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "dependency install": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--nombre": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--version": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "efficiency": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "efficiency report": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "exec": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "exec approve": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "exec approve notebook": {
+        "flags": {
+          "--alcance": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--channel": {
+            "choices": [
+              "console_confirmed",
+              "declared"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--cita": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--dry-run": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--execute": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--fecha": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--interpreter": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--manifest": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--usuario": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "exec approve pytest": {
+        "flags": {
+          "--alcance": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--channel": {
+            "choices": [
+              "console_confirmed",
+              "declared"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--cita": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--fecha": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--interpreter": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--paths": {
+            "choices": null,
+            "nargs": "+",
+            "required": true
+          },
+          "--usuario": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {
+          "pytest_args": {
+            "choices": null,
+            "nargs": "...",
+            "required": true
+          }
+        }
+      },
+      "exec approve script": {
+        "flags": {
+          "--alcance": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--channel": {
+            "choices": [
+              "console_confirmed",
+              "declared"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--cita": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--fecha": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--interpreter": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--script": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--usuario": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {
+          "script_args": {
+            "choices": null,
+            "nargs": "...",
+            "required": true
+          }
+        }
+      },
+      "exec notebook": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--dry-run": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--execute": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--interpreter": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--manifest": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--timeout": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "exec pytest": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--interpreter": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--paths": {
+            "choices": null,
+            "nargs": "+",
+            "required": true
+          },
+          "--timeout": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {
+          "pytest_args": {
+            "choices": null,
+            "nargs": "...",
+            "required": true
+          }
+        }
+      },
+      "exec script": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--interpreter": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--script": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--timeout": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {
+          "script_args": {
+            "choices": null,
+            "nargs": "...",
+            "required": true
+          }
+        }
+      },
+      "glossary": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "glossary check": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--strict": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "glossary hash": {
+        "flags": {
+          "--term": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "guardrails": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "guardrails readopt": {
+        "flags": {
+          "--destino": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--dry-run": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--expected-guardrails-hash": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--fecha": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--motivo": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--usuario": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "impact": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "impact scan": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--since": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--staged": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "init": {
+        "flags": {
+          "--approval-mode": {
+            "choices": [
+              "checkpoints",
+              "per_change"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--modo": {
+            "choices": [
+              "abreviado",
+              "completo"
+            ],
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "kdd": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "kdd init": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "kdd status": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "kdd transition": {
+        "flags": {
+          "--a": {
+            "choices": [
+              "cerrada",
+              "en_progreso",
+              "no_iniciada"
+            ],
+            "nargs": null,
+            "required": true
+          },
+          "--etapa": {
+            "choices": [
+              "data_preparation",
+              "data_understanding",
+              "deployment",
+              "evaluation",
+              "feature_engineering",
+              "interpretation",
+              "modeling",
+              "monitoring",
+              "problem_understanding",
+              "production_readiness"
+            ],
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--motivo": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "lifecycle": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "lifecycle migrate": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "mlops": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "mlops evidence": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "mlops evidence add": {
+        "flags": {
+          "--artifact": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--capability": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--reason": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--tier": {
+            "choices": [
+              "operations",
+              "production_readiness"
+            ],
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "mlops record": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "mlops status": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "notebook-diff": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--contra": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--max-celdas": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--path": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--tocados": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "output-roots": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "output-roots list": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "ownership": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "ownership check": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "project": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "project calibrate": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--reason": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--stage": {
+            "choices": [
+              "discovery",
+              "experiment",
+              "production",
+              "production_candidate"
+            ],
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "project init": {
+        "flags": {
+          "--adopt": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--stage": {
+            "choices": [
+              "discovery",
+              "experiment"
+            ],
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "project promote": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--reason": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {
+          "stage": {
+            "choices": [
+              "experiment",
+              "production",
+              "production_candidate"
+            ],
+            "nargs": null,
+            "required": true
+          }
+        }
+      },
+      "project promote experiment": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "project promote production": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "project promote production_candidate": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "project readiness": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--target": {
+            "choices": [
+              "experiment",
+              "production",
+              "production_candidate"
+            ],
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "project set-risk": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--reason": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {
+          "nivel": {
+            "choices": [
+              "high",
+              "low",
+              "medium"
+            ],
+            "nargs": null,
+            "required": true
+          }
+        }
+      },
+      "project set-risk high": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "project set-risk low": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "project set-risk medium": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "project status": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "quality": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "quality drift": {
+        "flags": {
+          "--baseline-label": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--baseline-profile": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--column": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--current-label": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--current-profile": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--field": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--metric": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--mode": {
+            "choices": [
+              "absolute_diff",
+              "relative_diff"
+            ],
+            "nargs": null,
+            "required": true
+          },
+          "--threshold": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "quality evaluate": {
+        "flags": {
+          "--baselines": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--metrics": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--policy": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--record-evidence": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "quality evidence": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "quality evidence show": {
+        "flags": {
+          "--evidence-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "remediation": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "remediation extend": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--fecha": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--max-intentos": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--motivo": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--remediation-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--usuario": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "remediation resolve": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--remediation-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--resultado": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "science": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "science status": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "scope": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "scope amend": {
+        "flags": {
+          "--add": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--dry-run": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--expected-scope-hash": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--fecha": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--motivo": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--remove": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--usuario": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "scope attest-protected": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--dry-run": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--fecha": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--motivo": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--path": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--usuario": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "scope show": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--reparar-cache": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "session": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "session aggregate": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "session close": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--estado": {
+            "choices": [
+              "completada",
+              "pausada"
+            ],
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "session efficiency": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "session note": {
+        "flags": {
+          "--cambio-aplicado": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--causa": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--finding-id": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--remediation-tipo": {
+            "choices": [
+              "bug",
+              "metodologica",
+              "retry_tecnico"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--resultado": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--rol": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--tarea": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--tipo": {
+            "choices": [
+              "planificada",
+              "reintento",
+              "ronda"
+            ],
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "session start": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--max-continuaciones": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--max-reintentos": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--max-roles": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--max-rondas": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--max-tareas": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--minutos": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--modo": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--retomar": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "session status": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "source": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "source check": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "source check-stale": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--observation": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "source list": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "source observe": {
+        "flags": {
+          "--as-of": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--exactness": {
+            "choices": [
+              "any",
+              "exact"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--facet": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--source-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          }
+        },
+        "posicionales": {}
+      },
+      "status": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--verbose": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "transition": {
+        "flags": {
+          "--a": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--motivo": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "validate": {
+        "flags": {
+          "--change-id": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--gate": {
+            "choices": [
+              "cierre",
+              "implementacion"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      }
+    },
+    "cli-ds-init": {
+      "": {
+        "flags": {
+          "--destino": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--disable-capability": {
+            "choices": [
+              "data_cards",
+              "model_governance",
+              "predictive_modeling"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--dry-run": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--enable-capability": {
+            "choices": [
+              "data_cards",
+              "model_governance",
+              "predictive_modeling"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--execute": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--forzar": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--integrar-claude": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--nombre": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--notebooks-dir": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--stage": {
+            "choices": [
+              "discovery",
+              "experiment",
+              "production",
+              "production_candidate"
+            ],
+            "nargs": null,
+            "required": false
+          },
+          "--venv-dir": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {
+          "accion": {
+            "choices": [
+              "install",
+              "migrate-hashes",
+              "recover",
+              "sync",
+              "upgrade"
+            ],
+            "nargs": "?",
+            "required": false
+          }
+        }
+      },
+      "install": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "migrate-hashes": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "recover": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "sync": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "upgrade": {
+        "flags": {},
+        "posicionales": {}
+      }
+    },
+    "cli-harmessi": {
+      "": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "doctor": {
+        "flags": {
+          "--destino": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "fallback": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "fallback invoke": {
+        "flags": {
+          "--effort": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--model": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--policy": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--prompt": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--role": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--task-type": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "fallback resolve-chain": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--policy": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--role": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--task-type": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "providers": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "providers list": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "routing": {
+        "flags": {},
+        "posicionales": {}
+      },
+      "routing resolve": {
+        "flags": {
+          "--check-availability": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--policy": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          },
+          "--role": {
+            "choices": null,
+            "nargs": null,
+            "required": true
+          },
+          "--task-type": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {}
+      },
+      "routing show": {
+        "flags": {
+          "--json": {
+            "choices": null,
+            "nargs": "0",
+            "required": false
+          },
+          "--policy": {
+            "choices": null,
+            "nargs": null,
+            "required": false
+          }
+        },
+        "posicionales": {}
+      }
+    }
+  },
+  "snapshot_version": 2,
+  "tag_origen": "v0.15.0"
+}

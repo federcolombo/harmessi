@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "change_id": "20260922-model-quality-policies",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-22T14:29:23Z",
+  "baseline": {
+    "commit": "e964109d6ac825cd8146f558184550dad7aa376a",
+    "rama": "v0.7-dev",
+    "capturado_utc": "2026-09-22T14:29:23Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260922-model-quality-policies/proposal.md",
+      "openspec/changes/20260922-model-quality-policies/tasks.md",
+      "openspec/changes/20260922-model-quality-policies/spec.md",
+      "openspec/changes/20260922-model-quality-policies/design.md",
+      "openspec/changes/20260922-model-quality-policies/control.json",
+      "openspec/changes/20260922-model-quality-policies/verification.md",
+      "tools/modelquality/__init__.py",
+      "tools/modelquality/core.py",
+      "tools/modelquality/validation.py",
+      "tools/modelquality/tests/__init__.py",
+      "tools/modelquality/tests/test_core.py",
+      "tools/modelquality/tests/test_validation.py",
+      "tools/modelquality/tests/test_installability.py",
+      "tools/tests/test_v07_modelquality_neutrality.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/ds_init/manifest.py",
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.7.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "3ee26d5a63cead01deefc4eaefb1f17dbb753ec144f46cd2efe562a6fb4ac3b7",
+      "registrado_utc": "2026-09-22T14:41:41Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 2 - model-quality-policies (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 2 -- model-quality-policies ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md). Incluye la confirmacion explicita del usuario del orden de evaluacion: ObservedMetric -> evidencia vigente -> threshold -> baseline/reference -> PASS/WARN/FAIL/N-A, cada etapa solo puede conservar o empeorar el resultado."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "7f93b89a673d2943d1ded318d36e4885a57b004a245e59abb6a32300935ddaa7",
+      "registrado_utc": "2026-09-22T14:41:42Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 2 - model-quality-policies (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 2 -- model-quality-policies ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md). Incluye la confirmacion explicita del usuario del orden de evaluacion: ObservedMetric -> evidencia vigente -> threshold -> baseline/reference -> PASS/WARN/FAIL/N-A, cada etapa solo puede conservar o empeorar el resultado."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "156635c25b842f1bb76cfdbb5200dec6efb009c673508deec1f2641a279785fe",
+      "registrado_utc": "2026-09-22T14:41:43Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 2 - model-quality-policies (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 2 -- model-quality-policies ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md). Incluye la confirmacion explicita del usuario del orden de evaluacion: ObservedMetric -> evidencia vigente -> threshold -> baseline/reference -> PASS/WARN/FAIL/N-A, cada etapa solo puede conservar o empeorar el resultado."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "3005ef82f5abf9da8221790efdb35d437c5356a24d1cc112e1c4c292a43bb4c3",
+      "registrado_utc": "2026-09-22T14:41:44Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-22",
+      "alcance_aprobado": "Change 2 - model-quality-policies (docs/roadmap/v0.7.md)",
+      "cita": "Ejecuta autonomamente los Changes de docs/roadmap/v0.7.md ... Change 2 -- model-quality-policies ... audit acotado -> SDD -> validacion contra roadmap/arquitectura -> implementacion -> tests -> reviewer -> fixes -> re-tests -> verification -> cierre -> commit local (instruccion explicita del usuario, 2026-09-22, bajo el Contrato de autonomia de docs/roadmap/README.md). Incluye la confirmacion explicita del usuario del orden de evaluacion: ObservedMetric -> evidencia vigente -> threshold -> baseline/reference -> PASS/WARN/FAIL/N-A, cada etapa solo puede conservar o empeorar el resultado."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-22T14:41:45Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-22T14:41:47Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-22T15:40:41Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion",
+      "reconciliado": true
+    },
+    {
+      "utc": "2026-09-22T15:40:51Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-22T14:41:46Z",
+      "cierre_utc": "2026-09-22T15:40:52Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 8,
+        "max_roles": 3,
+        "max_reintentos": 4,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-22T22:41:46Z",
+      "minutos_consumidos": 59.1,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-22T15:39:54Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-22T15:38:00Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

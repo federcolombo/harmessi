@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "change_id": "20261016-v011-decision-ledger-corrections",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-16T18:01:01Z",
+  "baseline": {
+    "commit": "9451d30314f85f986dae20739af1095167a74385",
+    "rama": "v0.11-dev",
+    "capturado_utc": "2026-10-16T18:01:01Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      ".claude/skills/lead-data-scientist/decision-ledger.md",
+      ".claude/skills/lead-data-scientist/verificador.md",
+      "docs/roadmap/v0.11.md",
+      "openspec/changes/20261016-v011-decision-ledger-corrections/**",
+      "openspec/changes/20261016-v011-decision-ledger-corrections/amendments.jsonl",
+      "openspec/changes/20261016-v011-decision-ledger-corrections/control.json",
+      "openspec/changes/20261016-v011-decision-ledger-corrections/design.md",
+      "openspec/changes/20261016-v011-decision-ledger-corrections/proposal.md",
+      "openspec/changes/20261016-v011-decision-ledger-corrections/spec.md",
+      "openspec/changes/20261016-v011-decision-ledger-corrections/tasks.md",
+      "openspec/changes/20261016-v011-decision-ledger-corrections/verification.md",
+      "tools/ds_guard.py",
+      "tools/ds_init/profiles/**",
+      "tools/dsguard/decision.py",
+      "tools/tests/**"
+    ],
+    "scope_hash": "a2c15d0fc0f64a8b14d8b12e6062b27ecfac91a2765027259eb5d4eb4c4ddf1e"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "30df422d781a48380cb9e03a06ec37118a507fac4658ac00c48d47679b06a7f0",
+      "registrado_utc": "2026-10-16T18:01:03Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261016-v011-decision-ledger-corrections",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "6551f4997ff20da7ac2a09f32c8efd7763b75091f992a0a203b731da9509c71c",
+      "registrado_utc": "2026-10-16T18:01:05Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261016-v011-decision-ledger-corrections",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "76c806de3c8670d8b7c52f015f0ed993cf9ecf1fb6d501adf31cf9a1e759e899",
+      "registrado_utc": "2026-10-16T18:01:06Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-16",
+      "alcance_aprobado": "Harmessi v0.11.0 según roadmap congelado: 20261016-v011-decision-ledger-corrections",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.11.0 según el roadmap congelado"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-16T18:01:07Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-16T18:01:09Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-16T18:15:09Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-16T18:15:11Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-16T18:01:08Z",
+      "cierre_utc": "2026-10-16T18:01:18Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-16T19:31:08Z",
+      "minutos_consumidos": 0.16666666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "pausada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-16T18:01:19Z",
+      "cierre_utc": "2026-10-16T18:15:12Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 480,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-17T02:01:19Z",
+      "minutos_consumidos": 13.883333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-16T18:01:30Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-16T18:08:08Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

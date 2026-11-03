@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "change_id": "20261021-v013-provider-adapter-conformance",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-21T17:49:45Z",
+  "baseline": {
+    "commit": "72bf54e0542eccbb84d6fff21416691b89d03e59",
+    "rama": "v0.13-dev",
+    "capturado_utc": "2026-10-21T17:49:45Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "README.md",
+      "docs/roadmap/v0.13.md",
+      "openspec/changes/20261021-v013-provider-adapter-conformance/**",
+      "openspec/changes/20261021-v013-provider-adapter-conformance/amendments.jsonl",
+      "openspec/changes/20261021-v013-provider-adapter-conformance/control.json",
+      "openspec/changes/20261021-v013-provider-adapter-conformance/design.md",
+      "openspec/changes/20261021-v013-provider-adapter-conformance/proposal.md",
+      "openspec/changes/20261021-v013-provider-adapter-conformance/spec.md",
+      "openspec/changes/20261021-v013-provider-adapter-conformance/tasks.md",
+      "openspec/changes/20261021-v013-provider-adapter-conformance/verification.md",
+      "tools/datasources/__init__.py",
+      "tools/datasources/conformance.py",
+      "tools/datasources/tests/*.py",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/tests/test_manifest.py",
+      "tools/providers/__init__.py",
+      "tools/providers/conformance.py",
+      "tools/providers/tests/*.py",
+      "tools/tests/test_architecture_boundaries.py",
+      "tools/tests/test_v013_conformance_smoke.py",
+      "tools/tests/test_v08_datasources_neutrality.py"
+    ],
+    "scope_hash": "7a9e6ef34da2741799465115e77829d611f3727f6ea8a02714000dad2cb02000"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "c2658e81cf8667fefc11f0d8d17b4f36a687cbda1221398c3c236696237c42b9",
+      "registrado_utc": "2026-10-21T17:50:37Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-provider-adapter-conformance",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "d8e86566999e2bad3d4c103b4f91e3160c2dcb6c8c26e42a1d805af29d73a3cd",
+      "registrado_utc": "2026-10-21T17:50:38Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-provider-adapter-conformance",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "bf6dc33e9c2005457e4a10e8ce1019cbd3076c138eba449c20023d95338b1c0a",
+      "registrado_utc": "2026-10-21T17:50:39Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-21",
+      "alcance_aprobado": "Harmessi v0.13 20261021-v013-provider-adapter-conformance",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.13.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-21T17:50:40Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-21T17:50:42Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-21T18:11:27Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-21T18:11:30Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-21T17:50:41Z",
+      "cierre_utc": "2026-10-21T18:11:31Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-21T21:50:41Z",
+      "minutos_consumidos": 20.833333333333332,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T17:50:54Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-21T18:08:04Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

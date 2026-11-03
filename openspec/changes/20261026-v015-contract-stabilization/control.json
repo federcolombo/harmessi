@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "change_id": "20261026-v015-contract-stabilization",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-26T15:25:38Z",
+  "baseline": {
+    "commit": "fd25eb836f65e4bb4569e2d497a49e28c14995e0",
+    "rama": "v0.15-dev",
+    "capturado_utc": "2026-10-26T15:25:38Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "docs/contracts/README.md",
+      "docs/contracts/inventory.json",
+      "docs/deprecation.md",
+      "docs/roadmap/v0.15-debt-matrix.md",
+      "docs/roadmap/v0.15.md",
+      "docs/versioning.md",
+      "openspec/changes/20261026-v015-contract-stabilization/amendments.jsonl",
+      "openspec/changes/20261026-v015-contract-stabilization/control.json",
+      "openspec/changes/20261026-v015-contract-stabilization/design.md",
+      "openspec/changes/20261026-v015-contract-stabilization/proposal.md",
+      "openspec/changes/20261026-v015-contract-stabilization/spec.md",
+      "openspec/changes/20261026-v015-contract-stabilization/tasks.md",
+      "openspec/changes/20261026-v015-contract-stabilization/verification.md",
+      "tools/ds_init/tests/test_cli.py",
+      "tools/harmessi/deprecation.py",
+      "tools/harmessi/tests/test_cli.py",
+      "tools/harmessi/tests/test_deprecation.py",
+      "tools/harmessi_bench/cli.py",
+      "tools/harmessi_bench/runmanifest.py",
+      "tools/harmessi_bench/tests/test_cli.py",
+      "tools/harmessi_bench/tests/test_runmanifest.py",
+      "tools/harmessi_improve/tests/test_cli.py",
+      "tools/tests/fixtures/compat/generate_v014.py",
+      "tools/tests/fixtures/compat/v0_13/**",
+      "tools/tests/fixtures/compat/v0_14/**",
+      "tools/tests/test_v013_compat_window.py",
+      "tools/tests/test_v013_contract_inventory.py",
+      "tools/tests/test_v013_release_hardening_smoke.py",
+      "tools/tests/test_v014_release_hardening_smoke.py",
+      "tools/tests/test_v015_compat_window.py"
+    ],
+    "scope_hash": "cb301b9fa22b5e76b307b508480319d5683b822b445db0647b74e0eca88cd06f"
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "b5c4253586085e1d4fbc8dd1e86c5475fe1af90ee39c2074b0e61766405e35e3",
+      "registrado_utc": "2026-10-26T15:27:51Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-contract-stabilization",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "6b8cf3237a798837dfc4b6fface8394b2401507e64b6da5791de3559ac649c54",
+      "registrado_utc": "2026-10-26T15:27:52Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-contract-stabilization",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "150c5268952770e1e913bc1748dd922580a0054544e08b53c43ccd7c7e62eac1",
+      "registrado_utc": "2026-10-26T15:27:54Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-26",
+      "alcance_aprobado": "Harmessi v0.15 20261026-v015-contract-stabilization",
+      "cita": "Autorización humana anticipada para ejecutar autónomamente Harmessi v0.15.0 como consolidación pre-v1.0"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-26T15:27:55Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-26T15:27:56Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-26T15:50:01Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-26T15:50:03Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada",
+      "reconciliado": true
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-26T15:25:39Z",
+      "cierre_utc": "2026-10-26T15:50:05Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 90,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-26T16:55:39Z",
+      "minutos_consumidos": 24.433333333333334,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-26T15:49:34Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-26T15:43:05Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

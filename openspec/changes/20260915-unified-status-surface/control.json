@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "change_id": "20260915-unified-status-surface",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-15T16:23:59Z",
+  "baseline": {
+    "commit": "f818987c2cdeafbaf20160b15f54379ad106ba72",
+    "rama": "main",
+    "capturado_utc": "2026-09-15T16:23:59Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260915-unified-status-surface/proposal.md",
+      "openspec/changes/20260915-unified-status-surface/tasks.md",
+      "openspec/changes/20260915-unified-status-surface/spec.md",
+      "openspec/changes/20260915-unified-status-surface/design.md",
+      "openspec/changes/20260915-unified-status-surface/control.json",
+      "openspec/changes/20260915-unified-status-surface/verification.md",
+      "tools/dsguard/status.py",
+      "tools/ds_guard.py",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/tests/test_integracion_instalacion.py",
+      "tools/tests/test_manifest_dsguard_parity.py",
+      "tools/tests/test_status.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "4149a19dac94a745b3d3d730ae586f2e6f579aa9f085b3e2e8d9863c7d405d21",
+      "registrado_utc": "2026-09-15T16:27:13Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "unified-status-surface: ds_guard status sin --change-id, vista unificada read-only",
+      "cita": "Unified status: NO decide, NO promueve, NO instala, NO calibra, NO registra evidencia, NO modifica lifecycle. Solo observa y explica el estado que ya existe."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "dd262b99d4d5c8093c0b2c6bab302943ead190959e318dce37228a7077d792d9",
+      "registrado_utc": "2026-09-15T16:27:13Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "unified-status-surface: ds_guard status sin --change-id, vista unificada read-only",
+      "cita": "Unified status: NO decide, NO promueve, NO instala, NO calibra, NO registra evidencia, NO modifica lifecycle. Solo observa y explica el estado que ya existe."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "8bfdc40250a3684378f23e882c26ae749d591b17b85e49195e8d3381ff93e946",
+      "registrado_utc": "2026-09-15T16:27:13Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "unified-status-surface: ds_guard status sin --change-id, vista unificada read-only",
+      "cita": "Unified status: NO decide, NO promueve, NO instala, NO calibra, NO registra evidencia, NO modifica lifecycle. Solo observa y explica el estado que ya existe."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "da3767895d9a72d92ea7590d84dd695dd594cbfc99305f0af52142f758675156",
+      "registrado_utc": "2026-09-15T16:27:13Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-15",
+      "alcance_aprobado": "unified-status-surface: ds_guard status sin --change-id, vista unificada read-only",
+      "cita": "Unified status: NO decide, NO promueve, NO instala, NO calibra, NO registra evidencia, NO modifica lifecycle. Solo observa y explica el estado que ya existe."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-15T16:27:13Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-09-15T16:27:14Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-15T16:27:16Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-15T17:07:42Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-15T17:08:40Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-15T16:27:15Z",
+      "cierre_utc": "2026-09-15T17:08:41Z",
+      "modo": "bounded_autonomy",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 40,
+        "max_roles": 4,
+        "max_reintentos": 3,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-15T20:27:15Z",
+      "minutos_consumidos": 41.43333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-15T16:27:45Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-15T16:51:08Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

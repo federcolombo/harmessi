@@ -1,0 +1,39 @@
+{
+  "base_hash": "c4cd47dc853d0a7f07e08a9cb2b2cb01a7b78423a1dd1aa172f59cb50d0c30ca",
+  "base_surface": ".claude/skills/lead-data-scientist/skills/diagnosing-bugs.md",
+  "budget_version": 1,
+  "candidate_id": "cand-65cb2b47345e",
+  "content_hash": "6a62928cb86688d199c9b8219a1fc5e3325c5a59a39b0a534d39f82a75880bc1",
+  "contract_version": 1,
+  "created_utc": "2026-10-26T15:35:06Z",
+  "hypothesis": "la variante mejora el orden",
+  "provenance": {
+    "harness_version": "0.14.0",
+    "proposer_kind": "script",
+    "proposer_label": "test-proposer"
+  },
+  "status": "promotable",
+  "status_history": [
+    {
+      "status": "proposed",
+      "utc": "2026-10-26T15:35:06Z"
+    },
+    {
+      "evidence": {
+        "decision_hash": "a8817ef79e03aa92b320c34ec45ef3eb37d356b444b8e1457bd9c8048d285f77",
+        "probe_id": "p1"
+      },
+      "status": "evaluated",
+      "utc": "2026-10-23T14:00:00Z"
+    },
+    {
+      "evidence": {
+        "decision_hash": "a8817ef79e03aa92b320c34ec45ef3eb37d356b444b8e1457bd9c8048d285f77",
+        "probe_id": "p1"
+      },
+      "status": "promotable",
+      "utc": "2026-10-23T14:00:00Z"
+    }
+  ],
+  "suite_ids": []
+}

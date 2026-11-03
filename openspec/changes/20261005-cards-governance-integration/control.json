@@ -1,0 +1,458 @@
+{
+  "schema_version": 1,
+  "change_id": "20261005-cards-governance-integration",
+  "modo": "completo",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-06T14:42:51Z",
+  "baseline": {
+    "commit": "64df7f3432d1260c87410ee1fd1c1a7647826ead",
+    "rama": "v0.9-dev",
+    "capturado_utc": "2026-10-06T14:42:51Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "ARCHITECTURE.md",
+      "docs/roadmap/v0.10.md",
+      "docs/roadmap/v0.9.md",
+      "openspec/changes/20261005-cards-governance-integration/**",
+      "openspec/changes/20261005-cards-governance-integration/control.json",
+      "openspec/changes/20261005-cards-governance-integration/design.md",
+      "openspec/changes/20261005-cards-governance-integration/proposal.md",
+      "openspec/changes/20261005-cards-governance-integration/spec.md",
+      "openspec/changes/20261005-cards-governance-integration/tasks.md",
+      "openspec/changes/20261005-cards-governance-integration/verification.md",
+      "tools/autonomy/tests/**",
+      "tools/cards/**",
+      "tools/datacontracts/tests/**",
+      "tools/datasources/tests/**",
+      "tools/ds_guard.py",
+      "tools/ds_init/cli.py",
+      "tools/ds_init/control.py",
+      "tools/ds_init/manifest.py",
+      "tools/ds_init/planner.py",
+      "tools/ds_init/tests/**",
+      "tools/harmessi/doctor.py",
+      "tools/harmessi/tests/**",
+      "tools/leadrun/tests/**",
+      "tools/modelquality/tests/**",
+      "tools/qualityevidence/tests/**",
+      "tools/reporting/core.py",
+      "tools/reporting/tests/**",
+      "tools/tests/**"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "563a1095dfaf0e6839628a6b2f7b40f65112a5709b168c32edf1641cd57d5636",
+      "registrado_utc": "2026-10-06T14:43:01Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ef2e0eab5d786114ae77c77552ae41eb31e6c120d564e3f70f518f42fcfc3746",
+      "registrado_utc": "2026-10-06T14:43:02Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "1b03ddb6520fd0e4f57fa9324d60a114a4437ed63d0d2acc28914ec9ac64f391",
+      "registrado_utc": "2026-10-06T14:43:04Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_govconfig.py|tools/cards/tests/test_approvals.py|tools/cards/tests/test_discovery.py|tools/cards/tests/test_report.py|tools/ds_init/tests/test_cards_capabilities.py|tools/harmessi/tests/test_doctor_governance.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "663edda5a1f6139e82d08bfd5f5f8e5dae4d996a3919e69daeb8dc550013691b",
+      "registrado_utc": "2026-10-06T14:53:03Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: dirigida inicial",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_govconfig.py|tools/cards/tests/test_approvals.py|tools/cards/tests/test_integration_hooks.py|tools/cards/tests/test_discovery.py|tools/cards/tests/test_report.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "b448ff29a9e98f0eed04ba9f7057d6d10f3219607a53cb46c46e8eabd1d967d8",
+      "registrado_utc": "2026-10-06T14:57:11Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: dirigida 2",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_govconfig.py|tools/cards/tests/test_approvals.py|tools/cards/tests/test_integration_hooks.py|tools/cards/tests/test_discovery.py|tools/cards/tests/test_report.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "74562541073cb97c69815c674493af40f32656ac806c895143daedd53b598124",
+      "registrado_utc": "2026-10-06T14:57:34Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: dirigida 2 lista",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_integration_hooks.py|tools/ds_init/tests/test_cards_capabilities.py|tools/harmessi/tests/test_doctor_governance.py|tools/tests/test_cards_cli.py|tools/reporting/tests/test_governance_kind.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "be18707d8a9009c60df3f95d4d9d7357f85cf53064db5f3cc6ebe395a75948fb",
+      "registrado_utc": "2026-10-06T14:58:03Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: dirigida 3 resto",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/ds_init/tests/test_cards_capabilities.py::TestInstallCapabilities::test_default_sin_flags_identico_a_v08|tools/ds_init/tests/test_cards_capabilities.py::TestSyncCapabilities::test_disable_no_borra_archivos|tools/ds_init/tests/test_cards_capabilities.py::TestGovernanceExcluido::test_install_con_todo_nunca_crea_governance",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "6bc68ce09667869e0ff124e8eeabbf3507b4aa4eaadd05a047e266bb09f77937",
+      "registrado_utc": "2026-10-06T15:02:37Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: diagnostico 3 fallos ds_init",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/ds_init/tests/test_cards_capabilities.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "faba20cb1ad6c06f41109bb955c67e07474a0ae2a41c78204b4448e846126f3c",
+      "registrado_utc": "2026-10-06T15:03:47Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: dirigida 4 ds_init",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9d3133ebda6cfefcdc4f520fdc62e03e12db45fae06545d134b5395b6afcd197",
+      "registrado_utc": "2026-10-06T15:07:18Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: regresión lote 1 tools/tests (diagnóstico)",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_datacards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_modelcards_inert.py|tools/tests/test_v09_modelcards_parity.py|tools/tests/test_v09_modelgov_inert.py|tools/tests/test_v09_modelgov_parity.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9e5660c823bbb8b1422d6d77530b541a634cd387a5331e15005f10d9a76c11b5",
+      "registrado_utc": "2026-10-06T15:30:47Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: diagnóstico tests v09",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_datacards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_modelcards_inert.py|tools/tests/test_v09_modelcards_parity.py|tools/tests/test_v09_modelgov_inert.py|tools/tests/test_v09_modelgov_parity.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9e5660c823bbb8b1422d6d77530b541a634cd387a5331e15005f10d9a76c11b5",
+      "registrado_utc": "2026-10-06T15:34:37Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: tests v09 tras enmienda parcial",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_datacards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_modelcards_inert.py|tools/tests/test_v09_modelcards_parity.py|tools/tests/test_v09_modelgov_inert.py|tools/tests/test_v09_modelgov_parity.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9e5660c823bbb8b1422d6d77530b541a634cd387a5331e15005f10d9a76c11b5",
+      "registrado_utc": "2026-10-06T15:36:12Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: tests v09 tras enmienda completa",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_govconfig.py|tools/cards/tests/test_approvals.py|tools/cards/tests/test_integration_hooks.py|tools/cards/tests/test_discovery.py|tools/cards/tests/test_report.py|tools/tests/test_cards_cli.py|tools/reporting/tests/test_governance_kind.py|tools/harmessi/tests/test_doctor_governance.py|tools/harmessi/tests/test_doctor.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "3ae055006d73a0397c829e3b1268ec5584b36c87bd32a097dab9548a3c5854d0",
+      "registrado_utc": "2026-10-06T15:46:08Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: dirigida tras fixes ciclo 1",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_govconfig.py|tools/ds_init/tests/test_cards_capabilities.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "86c9f08538d539b0efee507c1a9947998624ea6b94adadfc92e1c8b3f764c1eb",
+      "registrado_utc": "2026-10-06T15:57:44Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: dirigida govconfig",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests/test_govconfig.py|tools/cards/tests/test_approvals.py|tools/cards/tests/test_integration_hooks.py|tools/cards/tests/test_discovery.py|tools/cards/tests/test_report.py|tools/tests/test_cards_cli.py|tools/reporting/tests/test_governance_kind.py|tools/reporting/tests/test_core.py|tools/harmessi/tests/test_doctor_governance.py|tools/harmessi/tests/test_doctor.py|tools/ds_init/tests/test_cards_capabilities.py|tools/tests/test_v09_cards_inert.py|tools/tests/test_v09_cards_neutrality.py|tools/tests/test_v09_cards_parity.py|tools/tests/test_v09_datacards_inert.py|tools/tests/test_v09_datacards_parity.py|tools/tests/test_v09_modelcards_inert.py|tools/tests/test_v09_modelcards_parity.py|tools/tests/test_v09_modelgov_inert.py|tools/tests/test_v09_modelgov_parity.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ffe6b1d16ee9010593ff423987f3864043a2df406cbff554c5c5abf120d05fc0",
+      "registrado_utc": "2026-10-06T16:08:20Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: dirigida final tras ciclo 2",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/harmessi/tests/test_doctor.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "38c76d6290bcb89f4b26950a024cffd8e5bc25aa1c4c44029de852db0c9e959c",
+      "registrado_utc": "2026-10-06T16:24:40Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: dirigida doctor",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "9d3133ebda6cfefcdc4f520fdc62e03e12db45fae06545d134b5395b6afcd197",
+      "registrado_utc": "2026-10-06T16:34:12Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: regresión final lote 1 tools/tests",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/modelquality/tests|tools/qualityevidence/tests|tools/datasources/tests|tools/datacontracts/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ea72af6491fa1f5566b372f1791040cf52d270ff59ee64bf964401da218d29c1",
+      "registrado_utc": "2026-10-06T16:55:22Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: regresión final lote 2 modelquality qualityevidence datasources datacontracts",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/autonomy/tests|tools/leadrun/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "0083a2213a3aee8caf0ffeb6bb32b99615f8f63fffe6586208caad4e420d3f63",
+      "registrado_utc": "2026-10-06T16:55:32Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: regresión final lote 3 autonomy leadrun",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/cards/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "f5da7879e3ee99afbf94ec2bbaac404176136c155eef2703b29e7b14794e230c",
+      "registrado_utc": "2026-10-06T16:55:41Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: regresión final lote 4 cards",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/ds_init/tests|tools/harmessi/tests|tools/reporting/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "25f7e20744856e600aaa769b544568cbb5874c885e3b230f318f22fed7e687cd",
+      "registrado_utc": "2026-10-06T16:57:47Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: regresión final lote 5 ds_init harmessi reporting",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/ds_init/tests/test_manifest.py",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "2631fe253c06cff2e725f3ba46fa47c776c0ed8f4f5af55708ec4f589a2ecb81",
+      "registrado_utc": "2026-10-06T17:22:02Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: dirigida test_manifest",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    },
+    {
+      "artefacto": "pytest:tools/ds_init/tests",
+      "algoritmo": "sha256/argv-canonical-json",
+      "hash": "ab419ffa99ee71dee9615e76f477f7cc6f5986283512db25aba46578c1143591",
+      "registrado_utc": "2026-10-06T17:22:14Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-06",
+      "alcance_aprobado": "Implementación, validación y cierre de Change 4 cards-governance-integration: regresión final lote 5b ds_init completo tras enmienda test_manifest",
+      "cita": "Aprobación humana explícita de Change 4 y del nuevo report_kind governance"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-06T14:43:05Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-10-06T14:43:06Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-06T14:43:09Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-06T17:37:01Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-06T17:37:32Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-06T14:43:08Z",
+      "cierre_utc": "2026-10-06T17:37:33Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 900,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-07T05:43:08Z",
+      "minutos_consumidos": 174.41666666666666,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-06T14:44:53Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-06T16:03:39Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ],
+  "metricas_eficiencia": {
+    "ejecuciones": [
+      {
+        "execution_id": "pytest__66cefb56f682",
+        "duration_seconds": 231.71900000000096,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__70254f62fe0e",
+        "duration_seconds": 13.514999999999418,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__535ad473358e",
+        "duration_seconds": 14.406000000000859,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__1f919bc2708e",
+        "duration_seconds": 262.8279999999995,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__c614e9543812",
+        "duration_seconds": 31.96899999999914,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__ebfa2a6c1285",
+        "duration_seconds": 198.85900000000038,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__959c4c1eaea0",
+        "duration_seconds": 1383.5160000000014,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__e68bd529a500",
+        "duration_seconds": 13.32799999999952,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__b093d08fcaa9",
+        "duration_seconds": 18.0,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__60926fee9336",
+        "duration_seconds": 12.875,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__c0ed558346eb",
+        "duration_seconds": 674.0,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__5d6cd56ef842",
+        "duration_seconds": 333.32800000000134,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__b4354d9b3044",
+        "duration_seconds": 960.0470000000005,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__85f2fa4b2fd3",
+        "duration_seconds": 548.9689999999991,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__a87d3ae8ed35",
+        "duration_seconds": 1266.3289999999997,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__6dadfee48c54",
+        "duration_seconds": 6.343000000000757,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__a5b6d158008b",
+        "duration_seconds": 6.452999999997701,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__8780182f1715",
+        "duration_seconds": 121.65699999999924,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__e9d5ffb36e59",
+        "duration_seconds": 1423.9370000000017,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__eef11aa2e099",
+        "duration_seconds": 1.7029999999977008,
+        "command_form": "pytest"
+      },
+      {
+        "execution_id": "pytest__5c78828dd0ce",
+        "duration_seconds": 829.219000000001,
+        "command_form": "pytest"
+      }
+    ]
+  }
+}

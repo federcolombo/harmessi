@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "change_id": "20260916-v0-3-release-hardening",
+  "modo": "completo",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-09-16T12:46:05Z",
+  "baseline": {
+    "commit": "ad0ec876f289a9179f8834fe6c4966b759a77bc4",
+    "rama": "main",
+    "capturado_utc": "2026-09-16T12:46:05Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "openspec/changes/20260916-v0-3-release-hardening/proposal.md",
+      "openspec/changes/20260916-v0-3-release-hardening/tasks.md",
+      "openspec/changes/20260916-v0-3-release-hardening/spec.md",
+      "openspec/changes/20260916-v0-3-release-hardening/design.md",
+      "openspec/changes/20260916-v0-3-release-hardening/control.json",
+      "openspec/changes/20260916-v0-3-release-hardening/verification.md",
+      ".ds_init/control.json",
+      "CITATION.cff",
+      "README.md",
+      "tools/ds_init/version.py",
+      "openspec/changes/20260914-fix-harness-version-drift/tasks.md",
+      "openspec/changes/20260915-checks-engine-foundation/spec.md"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "12dced4e52eb1bb228e2497fd01a5d936c0b42614f5ff7394685b452e340ef3a",
+      "registrado_utc": "2026-09-16T12:49:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-16",
+      "alcance_aprobado": "v0.3-release-hardening: audit final transversal, version bump, fix de privacidad, validacion E2E completa, doctor 0 ERROR, README minimo, release notes, control.json regenerado",
+      "cita": "Este change es SOLO hardening de release. Si aparece una mejora deseable pero no bloqueante: registrarla como deuda para v0.4, NO implementarla ahora."
+    },
+    {
+      "artefacto": "spec.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "e8e40550c299bdbe810ff5cf9354a3dc5a39494aaa2dcb2512943a0e52255772",
+      "registrado_utc": "2026-09-16T12:49:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-16",
+      "alcance_aprobado": "v0.3-release-hardening: audit final transversal, version bump, fix de privacidad, validacion E2E completa, doctor 0 ERROR, README minimo, release notes, control.json regenerado",
+      "cita": "Este change es SOLO hardening de release. Si aparece una mejora deseable pero no bloqueante: registrarla como deuda para v0.4, NO implementarla ahora."
+    },
+    {
+      "artefacto": "design.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "ff26c4a61e68ff27c7faefcd721648f33722a907b289dac99708f38164f4f86d",
+      "registrado_utc": "2026-09-16T12:49:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-16",
+      "alcance_aprobado": "v0.3-release-hardening: audit final transversal, version bump, fix de privacidad, validacion E2E completa, doctor 0 ERROR, README minimo, release notes, control.json regenerado",
+      "cita": "Este change es SOLO hardening de release. Si aparece una mejora deseable pero no bloqueante: registrarla como deuda para v0.4, NO implementarla ahora."
+    },
+    {
+      "artefacto": "tasks.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "54fa37e6f8d0bad3356bf0c8825463a35ca7f8eee3f2f2b54859a5ea5e4f0d85",
+      "registrado_utc": "2026-09-16T12:49:10Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-09-16",
+      "alcance_aprobado": "v0.3-release-hardening: audit final transversal, version bump, fix de privacidad, validacion E2E completa, doctor 0 ERROR, README minimo, release notes, control.json regenerado",
+      "cita": "Este change es SOLO hardening de release. Si aparece una mejora deseable pero no bloqueante: registrarla como deuda para v0.4, NO implementarla ahora."
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-09-16T12:49:11Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_diseño"
+    },
+    {
+      "utc": "2026-09-16T12:49:12Z",
+      "desde": "aprobada_diseño",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-09-16T12:49:14Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-09-16T13:11:18Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-09-16T13:13:04Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-09-16T12:49:13Z",
+      "cierre_utc": "2026-09-16T13:13:05Z",
+      "modo": "bounded_autonomy",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 50,
+        "max_roles": 4,
+        "max_reintentos": 3,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-09-16T16:49:13Z",
+      "minutos_consumidos": 23.866666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-09-16T13:06:39Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}

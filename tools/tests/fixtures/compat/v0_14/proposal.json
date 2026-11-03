@@ -1,0 +1,60 @@
+{
+  "base_hash": "c4cd47dc853d0a7f07e08a9cb2b2cb01a7b78423a1dd1aa172f59cb50d0c30ca",
+  "base_surface": ".claude/skills/lead-data-scientist/skills/diagnosing-bugs.md",
+  "candidate_id": "cand-65cb2b47345e",
+  "content_hash": "6a62928cb86688d199c9b8219a1fc5e3325c5a59a39b0a534d39f82a75880bc1",
+  "contract_version": 1,
+  "decision_hash": "a8817ef79e03aa92b320c34ec45ef3eb37d356b444b8e1457bd9c8048d285f77",
+  "diff_sha256": "07ae8ec7181a3bcbe5836d0637f1b2cce85ef34c63311473e77078836e2898bd",
+  "evidencia": {
+    "n_escenarios": 3,
+    "runs": [
+      {
+        "repetition": 1,
+        "role": "baseline",
+        "run_id": "p1-base-r1",
+        "sha256": "32e38de674992f5f5e3bf64927a2b983a793243e798a97ed706ce41b5f2b5b62"
+      },
+      {
+        "repetition": 1,
+        "role": "candidate",
+        "run_id": "p1-cand-r1",
+        "sha256": "11e8410fe07663c8493cc479410d088e5c9f222c359ac1f826c38574e6156e16"
+      },
+      {
+        "repetition": 2,
+        "role": "baseline",
+        "run_id": "p1-base-r2",
+        "sha256": "ea68c9b41c9e18423138385ce450b08843928e7a067ce9c6ff72aa95f3c82a20"
+      },
+      {
+        "repetition": 2,
+        "role": "candidate",
+        "run_id": "p1-cand-r2",
+        "sha256": "380f966aac7177c81b2757de03437161d8502826441c40e8988728ab01f62dec"
+      }
+    ],
+    "suite": {
+      "suite_hash": "a9ed4ed8683d7f12fd5fc4de4474555c6ddd00e80d03f723fc177d4863c25e49",
+      "suite_id": "suite-fake",
+      "suite_version": 1
+    }
+  },
+  "governance": {
+    "distributed": true,
+    "managed_baseline_note": "Actualizar el managed baseline es tarea del release/Change, no de esta API.",
+    "release_verification_required": true,
+    "requires": "console_confirmed",
+    "steps": [
+      "Citar proposal_hash en el proposal.md del Change y aprobar proposal/spec/design (T1).",
+      "Implementar dentro del scope del Change y aplicar con aplicar_promocion.",
+      "Correr tests, reviewer y verificación de release: la promoción no los sustituye."
+    ],
+    "surface_class": "optimizable"
+  },
+  "ledger_text": "Promoción propuesta de .claude/skills/lead-data-scientist/skills/diagnosing-bugs.md (candidate cand-65cb2b47345e).\nEvidencia: probe p1, decision_hash a8817ef79e03aa92b320c34ec45ef3eb37d356b444b8e1457bd9c8048d285f77, veredicto candidate_better.\nRequiere Change SDD con aprobaciones T1; la verificación de release sigue siendo obligatoria.",
+  "probe_id": "p1",
+  "proposal_hash": "97c89d3148a130f67524d55def5607c3557d96d6615e21cc8f57f56e5ceda747",
+  "proposal_id": "cand-65cb2b47345e",
+  "verdict": "candidate_better"
+}

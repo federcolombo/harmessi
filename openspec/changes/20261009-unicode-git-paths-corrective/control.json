@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "change_id": "20261009-unicode-git-paths-corrective",
+  "modo": "abreviado",
+  "aprobacion_modo": "per_change",
+  "origen": "ds_guard init",
+  "creado_utc": "2026-10-09T15:03:48Z",
+  "baseline": {
+    "commit": "4e368840838cbdad95ca37571f4256c88dac524e",
+    "rama": "v0.10-dev",
+    "capturado_utc": "2026-10-09T15:03:48Z"
+  },
+  "alcance": {
+    "rutas_autorizadas": [
+      "docs/roadmap/v0.10.md",
+      "openspec/changes/20261009-unicode-git-paths-corrective/control.json",
+      "openspec/changes/20261009-unicode-git-paths-corrective/proposal.md",
+      "openspec/changes/20261009-unicode-git-paths-corrective/tasks.md",
+      "openspec/changes/20261009-unicode-git-paths-corrective/verification.md",
+      "tools/dsguard/repo.py",
+      "tools/dsguard/scope.py",
+      "tools/dsimpact/git_source.py",
+      "tools/dsimpact/tests/test_git_source.py",
+      "tools/tests/test_git_name_status_z.py",
+      "tools/tests/test_git_paths_unicode_consumers.py",
+      "tools/tests/test_scope.py"
+    ]
+  },
+  "aprobaciones": [
+    {
+      "artefacto": "proposal.md",
+      "algoritmo": "sha256/lf/v1",
+      "hash": "a94ecf3bfc45c4701e23d94f2b3c61af476fc86be5f851d7d0286cf28418c7b1",
+      "registrado_utc": "2026-10-09T15:05:04Z",
+      "usuario": "Federico Colombo",
+      "fecha_declarada": "2026-10-09",
+      "alcance_aprobado": "Implementación, validación y cierre del Corrective v0.10 Unicode git paths",
+      "cita": "Autorización anticipada del usuario en el pedido del Corrective: flujo autónomo audit, SDD, implementación, tests, reviewer, cierre y commit local"
+    }
+  ],
+  "transiciones": [
+    {
+      "utc": "2026-10-09T15:05:07Z",
+      "desde": "propuesta_pendiente",
+      "hacia": "aprobada_implementacion"
+    },
+    {
+      "utc": "2026-10-09T15:05:09Z",
+      "desde": "aprobada_implementacion",
+      "hacia": "en_implementacion"
+    },
+    {
+      "utc": "2026-10-09T15:21:39Z",
+      "desde": "en_implementacion",
+      "hacia": "en_verificacion"
+    },
+    {
+      "utc": "2026-10-09T15:22:27Z",
+      "desde": "en_verificacion",
+      "hacia": "cerrada"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": "s1",
+      "inicio_utc": "2026-10-09T15:05:08Z",
+      "cierre_utc": "2026-10-09T15:21:45Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 240,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-09T19:05:08Z",
+      "minutos_consumidos": 16.616666666666667,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0,
+        "python-data-engineer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-09T15:20:42Z"
+        },
+        "data-science-reviewer": {
+          "continuaciones": 0,
+          "ultimo_evento_utc": "2026-10-09T15:10:34Z"
+        }
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    },
+    {
+      "id": "s2",
+      "inicio_utc": "2026-10-09T15:22:24Z",
+      "cierre_utc": "2026-10-09T15:22:29Z",
+      "modo": "estandar",
+      "presupuesto": {
+        "minutos": 120,
+        "max_tareas": 3,
+        "max_roles": 2,
+        "max_reintentos": 2,
+        "max_rondas_revision": 2,
+        "max_continuaciones_por_subagente": 1
+      },
+      "deadline_utc": "2026-10-09T17:22:24Z",
+      "minutos_consumidos": 0.08333333333333333,
+      "resultado": "dentro_de_presupuesto",
+      "subagentes": {
+        "conteo": 0
+      },
+      "tareas": [],
+      "roles": [],
+      "reintentos": 0,
+      "rondas_revision": 0,
+      "estado_final": "completada"
+    }
+  ]
+}
