@@ -134,5 +134,6 @@ Codigos de salida generales de `ds_guard`: ver [cli-reference.md](cli-reference.
 
 ## Limites
 
-La ejecucion de la suite de tests se observo solo en Windows. Linux y macOS no
-estan validados por ejecucion. Ver `docs/portability.md`.
+La suite completa de tests se ejecuto solo en Windows. En Linux y macOS se observo
+en CI (Python 3.12) unicamente el workflow `portability-smoke`, con una lista
+acotada de tests; Python 3.9 no se ejecuta. Ver `docs/portability.md`.

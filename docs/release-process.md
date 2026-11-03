@@ -149,17 +149,17 @@ El push publica el contenido: confirmarlo con el usuario antes de ejecutarlo.
 
 ## Estado de observación
 
-Estado al redactar la actualización a v1.0.0 (2026-11-02): Python 3.12 es el verificado (CI en
-ubuntu, windows y macos, lista acotada de tests) y 3.9 queda como mínimo declarado no ejecutado; el
+Estado tras publicar v1.0.0 (actualizado el 2026-11-03): Python 3.12 es el verificado (CI en
+ubuntu, windows y macos, lista acotada de tests, observado GREEN sobre `5f4a0ca`) y 3.9 queda como mínimo declarado no ejecutado; el
 GitHub Release de v1.0.0 es un paso manual; el baseline se regenera una sola vez, al final, tras
 congelar el contenido managed (incluido `HARMESSI-LICENSE.txt`). El resto de la tabla se redactó en
 v0.15 (2026-10-26) y no se reobservó:
 
 | Elemento | Estado |
 |---|---|
-| CI remoto `portability-smoke` (checkout@v5, setup-python@v6) | Observado en success sobre el commit de v0.15.0 (`7e7c681`, 2026-10-30); sobre el commit de 1.0.0, pending observation |
-| Compatibilidad de las acciones checkout@v5 / setup-python@v6 | Observada en esa corrida de v0.15.0 |
-| Linux y macOS | Observados en success en esa corrida (Python 3.12, lista acotada); no la suite completa |
+| CI remoto `portability-smoke` (checkout@v5, setup-python@v6) | Observado en success sobre el commit de v0.15.0 (`7e7c681`, 2026-10-30) y, post-release, sobre el push a `main` y el tag `v1.0.0` (commit `5f4a0ca`) |
+| Compatibilidad de las acciones checkout@v5 / setup-python@v6 | Observada en esas corridas |
+| Linux y macOS | Observados en success (Python 3.12, lista acotada); no la suite completa |
 | Python 3.9 (mínimo declarado) | No está en la matriz de CI |
 | Procedimiento de regeneración del baseline | Sin comando dedicado verificado (ver paso 7) |
 | GitHub Release | Pendiente, acción manual (sin `gh`) |

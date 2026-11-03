@@ -967,7 +967,7 @@ Change `20261021-v013-portability-hardening`. Sin cambios a hooks, permisos, rol
 - **Traza duplicada.** `validar_referencias_skills` emite `SKILL-TRAZA-SECCION-DUPLICADA` (una vez por archivo) si `## Skills cargados` aparece más de una vez como título real (fuera de fences ``` / ~~~ y de comentarios HTML). No se fusiona: las referencias se leen de la primera sección REAL (mismo criterio que el contador). `verificador.md` no se actualizó con el nuevo hallazgo (deuda).
 - **Consola.** `_consola_segura()` (best-effort, `reconfigure(errors="replace")`) en `harmessi_bench.cli` y `providers.conformance`.
 - **Auditoría y tests.** `docs/portability.md` es el inventario vivo; `test_v013_portability_audit.py` (AST) impide patrones no portables en los módulos v0.13 y `test_v013_portability_smoke.py` ejercita el host real.
-- **CI.** `.github/workflows/portability-smoke.yml` (ubuntu/windows/macos × Python 3.12, `contents: read`, solo `pytest`, lista acotada de tests). Real: Windows (este host). Contractual: Linux/macOS — workflow presente; ejecución remota no observada.
+- **CI.** `.github/workflows/portability-smoke.yml` (ubuntu/windows/macos × Python 3.12, `contents: read`, solo `pytest`, lista acotada de tests). Real: suite completa en Windows (este host). Linux/macOS: workflow `portability-smoke` observado GREEN (Python 3.12, lista acotada, push a `main` y tag `v1.0.0`); suite completa no ejecutada.
 
 ### 10.4 Contract Inventory, Compatibility & Deprecation (v0.13 Change 5)
 

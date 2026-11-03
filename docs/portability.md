@@ -6,11 +6,11 @@ Inventario vivo de supuestos de plataforma en `tools/**`. Estados: `resuelto`, `
 
 | Plataforma | Estado |
 |---|---|
-| Windows | **Real**: desarrollo y tests ejecutados en este host. |
-| Linux | Contrato / CI: no validado por ejecución en este release. |
-| macOS | Contrato / CI: no validado por ejecución en este release. |
+| Windows | **Real**: desarrollo y suite de tests ejecutados en este host; además, `portability-smoke` en CI. |
+| Linux | `portability-smoke` observado GREEN en CI (Ubuntu, Python 3.12, lista acotada de tests); suite completa no ejecutada. |
+| macOS | `portability-smoke` observado GREEN en CI (macOS, Python 3.12, lista acotada de tests); suite completa no ejecutada. |
 
-El workflow `.github/workflows/portability-smoke.yml` existe y fue verificado estructuralmente (`tools/tests/test_v013_ci_workflow.py`); su ejecución remota no fue observada. Ninguna afirmación de este documento sobre Linux/macOS proviene de una corrida.
+El workflow `.github/workflows/portability-smoke.yml` fue verificado estructuralmente (`tools/tests/test_v013_ci_workflow.py`) y su ejecución remota fue observada GREEN sobre el push a `main` y el tag `v1.0.0` (commit `5f4a0ca`) en ubuntu, windows y macos con Python 3.12. Corre una lista acotada de tests, no la suite completa en cada plataforma. Python 3.9 sigue siendo el mínimo declarado y no se ejecuta. Las filas de la tabla de auditoría siguientes describen la auditoría de v0.13/v0.14 y no se reobservaron una a una.
 
 ## Tabla de auditoría
 

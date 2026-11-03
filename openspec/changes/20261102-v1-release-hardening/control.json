@@ -230,7 +230,7 @@
     {
       "id": "s4",
       "inicio_utc": "2026-11-03T16:29:18Z",
-      "cierre_utc": null,
+      "cierre_utc": "2026-11-03T19:39:44Z",
       "modo": "estandar",
       "presupuesto": {
         "minutos": 90,
@@ -241,8 +241,8 @@
         "max_continuaciones_por_subagente": 1
       },
       "deadline_utc": "2026-11-03T17:59:18Z",
-      "minutos_consumidos": 0.0,
-      "resultado": null,
+      "minutos_consumidos": 190.43333333333334,
+      "resultado": "excedida",
       "subagentes": {
         "conteo": 0,
         "a22188403ae988c94": {
@@ -280,13 +280,23 @@
           "fin_utc": "2026-11-03T16:48:09Z",
           "arranque_actual_utc": null,
           "ultimo_evento_utc": "2026-11-03T16:48:09Z"
+        },
+        "a6517b848f93018d8": {
+          "rol": "desconocido",
+          "continuaciones": 0,
+          "arranques": 0,
+          "paradas": 1,
+          "duracion_s": 0.0,
+          "fin_utc": "2026-11-03T18:10:11Z",
+          "arranque_actual_utc": null,
+          "ultimo_evento_utc": "2026-11-03T18:10:11Z"
         }
       },
       "tareas": [],
       "roles": [],
       "reintentos": 0,
       "rondas_revision": 0,
-      "estado_final": "activa",
+      "estado_final": "pausada",
       "retomada_de": "s3"
     }
   ]
