@@ -13,6 +13,8 @@ inputs and outputs a run explicitly declares. It does not replace your
 notebooks, Python code, libraries or infrastructure; it governs how an agent
 works on them.
 
+![Harmessi demo](docs/assets/harmessi-demo.gif)
+
 The core difference is that governance does not live only in prompts. Approvals,
 scope, path protection and notebook execution are enforced by deterministic code
 (`PreToolUse` hooks and CLIs that fail closed), so they apply to every agent and
